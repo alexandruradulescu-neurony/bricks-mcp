@@ -1,0 +1,614 @@
+<?php
+/**
+ * Bricks core infrastructure shared by all sub-services.
+ *
+ * Holds locking, filter management, sanitization, CSS regeneration,
+ * meta key resolution, element I/O, and other shared utilities that
+ * multiple domain-specific sub-services depend on.
+ *
+ * @package BricksMCP
+ * @license GPL-2.0-or-later
+ */
+
+declare(strict_types=1);
+
+namespace BricksMCP\MCP\Services;
+
+// Prevent direct access.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * BricksCore class.
+ *
+ * Shared infrastructure passed to all sub-services via constructor injection.
+ */
+class BricksCore {
+
+	/**
+	 * Post meta key for Bricks page content.
+	 *
+	 * @var string
+	 */
+	public const META_KEY = '_bricks_page_content_2';
+
+	/**
+	 * Post meta key for Bricks editor mode.
+	 *
+	 * @var string
+	 */
+	public const EDITOR_MODE_KEY = '_bricks_editor_mode';
+
+	/**
+	 * Element normalizer instance.
+	 *
+	 * @var ElementNormalizer
+	 */
+	private ElementNormalizer $normalizer;
+
+	/**
+	 * Validation service instance.
+	 *
+	 * Optional — when set, validates element settings against Bricks schemas before saving.
+	 *
+	 * @var ValidationService|null
+	 */
+	private ?ValidationService $validation_service = null;
+
+	/**
+	 * Stored Bricks meta filter callbacks for temporary removal.
+	 *
+	 * @var array<string, mixed>
+	 */
+	private array $stored_filters = [];
+
+	/**
+	 * Constructor.
+	 *
+	 * @param ElementNormalizer $normalizer Element normalizer instance.
+	 */
+	public function __construct( ElementNormalizer $normalizer ) {
+		$this->normalizer = $normalizer;
+	}
+
+	/**
+	 * Get the element normalizer instance.
+	 *
+	 * @return ElementNormalizer
+	 */
+	public function get_normalizer(): ElementNormalizer {
+		return $this->normalizer;
+	}
+
+	/**
+	 * Set the validation service.
+	 *
+	 * @param ValidationService $service Validation service instance.
+	 * @return void
+	 */
+	public function set_validation_service( ValidationService $service ): void {
+		$this->validation_service = $service;
+	}
+
+	/**
+	 * Get the validation service.
+	 *
+	 * @return ValidationService|null
+	 */
+	public function get_validation_service(): ?ValidationService {
+		return $this->validation_service;
+	}
+
+	/**
+	 * Check if Bricks Builder is active.
+	 *
+	 * @return bool True if Bricks Builder is installed and active.
+	 */
+	public function is_bricks_active(): bool {
+		return class_exists( '\Bricks\Elements' );
+	}
+
+	/**
+	 * Check if a post is using the Bricks editor.
+	 *
+	 * @param int $post_id The post ID to check.
+	 * @return bool True if the post uses Bricks editor.
+	 */
+	public function is_bricks_page( int $post_id ): bool {
+		return get_post_meta( $post_id, self::EDITOR_MODE_KEY, true ) === 'bricks';
+	}
+
+	/**
+	 * Enable the Bricks editor for a post.
+	 *
+	 * @param int $post_id The post ID.
+	 * @return void
+	 */
+	public function enable_bricks_editor( int $post_id ): void {
+		update_post_meta( $post_id, self::EDITOR_MODE_KEY, 'bricks' );
+	}
+
+	/**
+	 * Disable the Bricks editor for a post.
+	 *
+	 * @param int $post_id The post ID.
+	 * @return void
+	 */
+	public function disable_bricks_editor( int $post_id ): void {
+		delete_post_meta( $post_id, self::EDITOR_MODE_KEY );
+	}
+
+	/**
+	 * Normalize element input using the ElementNormalizer.
+	 *
+	 * @param array<int, array<string, mixed>> $input             Input elements.
+	 * @param array<int, array<string, mixed>> $existing_elements Existing elements for collision-free IDs.
+	 * @return array<int, array<string, mixed>> Normalized flat element array.
+	 */
+	public function normalize_elements( array $input, array $existing_elements = [] ): array {
+		return $this->normalizer->normalize( $input, $existing_elements );
+	}
+
+	/**
+	 * Get Bricks elements for a post.
+	 *
+	 * @param int $post_id The post ID.
+	 * @return array<int, array<string, mixed>> Flat array of elements, empty array if none.
+	 */
+	public function get_elements( int $post_id ): array {
+		$elements = get_post_meta( $post_id, $this->resolve_elements_meta_key( $post_id ), true );
+
+		if ( ! is_array( $elements ) ) {
+			return [];
+		}
+
+		return $elements;
+	}
+
+	/**
+	 * Resolve the correct Bricks meta key for reading element content.
+	 *
+	 * @param int $post_id The post ID.
+	 * @return string The meta key to use for reading element content.
+	 */
+	public function resolve_elements_meta_key( int $post_id ): string {
+		$template_type = get_post_meta( $post_id, '_bricks_template_type', true );
+		return match ( $template_type ) {
+			'header' => defined( 'BRICKS_DB_PAGE_HEADER' ) ? BRICKS_DB_PAGE_HEADER : '_bricks_page_header_2',
+			'footer' => defined( 'BRICKS_DB_PAGE_FOOTER' ) ? BRICKS_DB_PAGE_FOOTER : '_bricks_page_footer_2',
+			default  => self::META_KEY,
+		};
+	}
+
+	/**
+	 * Save Bricks elements for a post.
+	 *
+	 * @param int                              $post_id  The post ID.
+	 * @param array<int, array<string, mixed>> $elements Flat array of elements to save.
+	 * @return true|\WP_Error True on success, WP_Error on failure.
+	 */
+	public function save_elements( int $post_id, array $elements ): true|\WP_Error {
+		// Always run structural linkage validation.
+		$linkage_validation = $this->validate_element_linkage( $elements );
+
+		if ( is_wp_error( $linkage_validation ) ) {
+			return $linkage_validation;
+		}
+
+		// Run schema validation when Bricks is active and ValidationService is available.
+		if ( null !== $this->validation_service && $this->is_bricks_active() ) {
+			$schema_validation = $this->validation_service->validate_elements( $elements );
+
+			if ( is_wp_error( $schema_validation ) ) {
+				return $schema_validation;
+			}
+		}
+
+		// Resolve the correct meta key — header/footer templates use dedicated keys.
+		$meta_key = $this->resolve_elements_meta_key( $post_id );
+
+		// Clear stale object cache so update_post_meta sees current DB state.
+		wp_cache_delete( $post_id, 'post_meta' );
+
+		// Temporarily unhook Bricks sanitize/update filters that block programmatic meta writes.
+		$this->unhook_bricks_meta_filters( $meta_key );
+		try {
+			$updated = update_post_meta( $post_id, $meta_key, $elements );
+
+			if ( false === $updated ) {
+				// Back up existing data before destructive delete+add fallback.
+				$backup = get_post_meta( $post_id, $meta_key, true );
+
+				delete_post_meta( $post_id, $meta_key );
+				$added = add_post_meta( $post_id, $meta_key, $elements, true );
+
+				// Restore backup if add also failed to prevent data loss.
+				if ( false === $added && is_array( $backup ) && count( $backup ) > 0 ) {
+					add_post_meta( $post_id, $meta_key, $backup, true );
+				}
+			}
+
+			update_post_meta( $post_id, self::EDITOR_MODE_KEY, 'bricks' );
+
+			// Trigger CSS regeneration so frontend styles reflect new content.
+			$this->trigger_css_regeneration( $post_id );
+
+			// Verify write persisted — bypass cache, read raw from database.
+			wp_cache_delete( $post_id, 'post_meta' );
+			$stored = get_post_meta( $post_id, $meta_key, true );
+		} finally {
+			$this->rehook_bricks_meta_filters();
+		}
+
+		if ( ! is_array( $stored ) || count( $stored ) !== count( $elements ) ) {
+			return new \WP_Error(
+				'save_elements_failed',
+				__( 'Elements appeared to save but verification read-back failed. The database may have rejected the write.', 'bricks-mcp' )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Remove Bricks meta sanitize/update filters that block programmatic writes.
+	 *
+	 * @param string $meta_key Optional meta key for targeted filter removal.
+	 * @return void
+	 */
+	public function unhook_bricks_meta_filters( string $meta_key = '' ): void {
+		global $wp_filter;
+
+		$keys_to_unhook = array_unique( array_filter( [
+			$meta_key,
+			self::META_KEY,
+			defined( 'BRICKS_DB_PAGE_HEADER' ) ? BRICKS_DB_PAGE_HEADER : '_bricks_page_header_2',
+			defined( 'BRICKS_DB_PAGE_FOOTER' ) ? BRICKS_DB_PAGE_FOOTER : '_bricks_page_footer_2',
+		] ) );
+
+		foreach ( $keys_to_unhook as $key ) {
+			$sanitize_key = 'sanitize_post_meta_' . $key;
+			if ( isset( $wp_filter[ $sanitize_key ] ) ) {
+				$this->stored_filters[ $sanitize_key ] = $wp_filter[ $sanitize_key ];
+				unset( $wp_filter[ $sanitize_key ] );
+			}
+		}
+
+		if ( isset( $wp_filter['update_post_metadata'] ) ) {
+			$this->stored_filters['update_post_metadata_bricks'] = [];
+			foreach ( $wp_filter['update_post_metadata']->callbacks as $priority => $callbacks ) {
+				foreach ( $callbacks as $id => $callback ) {
+					if ( is_array( $callback['function'] ) && is_object( $callback['function'][0] ) && $callback['function'][0] instanceof \Bricks\Ajax ) {
+						$this->stored_filters['update_post_metadata_bricks'][] = [
+							'priority' => $priority,
+							'id'       => $id,
+							'callback' => $callback,
+						];
+						unset( $wp_filter['update_post_metadata']->callbacks[ $priority ][ $id ] );
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Re-hook Bricks meta filters after programmatic write.
+	 *
+	 * @return void
+	 */
+	public function rehook_bricks_meta_filters(): void {
+		global $wp_filter;
+
+		foreach ( $this->stored_filters as $key => $filter ) {
+			if ( str_starts_with( $key, 'sanitize_post_meta_' ) ) {
+				$wp_filter[ $key ] = $filter;
+				unset( $this->stored_filters[ $key ] );
+			}
+		}
+
+		if ( ! empty( $this->stored_filters['update_post_metadata_bricks'] ) && isset( $wp_filter['update_post_metadata'] ) ) {
+			foreach ( $this->stored_filters['update_post_metadata_bricks'] as $entry ) {
+				$wp_filter['update_post_metadata']->callbacks[ $entry['priority'] ][ $entry['id'] ] = $entry['callback'];
+			}
+			unset( $this->stored_filters['update_post_metadata_bricks'] );
+		}
+	}
+
+	/**
+	 * Recursively sanitize a styles array for global classes.
+	 *
+	 * @param array<string, mixed> $styles The styles array to sanitize.
+	 * @return array<string, mixed> Sanitized styles array.
+	 */
+	public function sanitize_styles_array( array $styles ): array {
+		$sanitized = [];
+		foreach ( $styles as $key => $value ) {
+			$safe_key = wp_strip_all_tags( (string) $key );
+			if ( is_array( $value ) ) {
+				$sanitized[ $safe_key ] = $this->sanitize_styles_array( $value );
+			} elseif ( is_string( $value ) ) {
+				$sanitized[ $safe_key ] = wp_strip_all_tags( $value );
+			} elseif ( is_int( $value ) || is_float( $value ) || is_bool( $value ) ) {
+				$sanitized[ $safe_key ] = $value;
+			}
+		}
+		return $sanitized;
+	}
+
+	/**
+	 * Trigger Bricks CSS regeneration for a post after programmatic save.
+	 *
+	 * @param int $post_id The post ID.
+	 * @return void
+	 */
+	public function trigger_css_regeneration( int $post_id ): void {
+		if ( ! $this->is_bricks_active() ) {
+			return;
+		}
+		try {
+			if ( class_exists( '\Bricks\Database' ) && method_exists( '\Bricks\Database', 'get_setting' ) ) {
+				$upload_dir = wp_upload_dir();
+				$css_dir    = trailingslashit( $upload_dir['basedir'] ) . 'bricks/css/';
+				$post_file  = $css_dir . 'post-' . $post_id . '.min.css';
+				if ( file_exists( $post_file ) ) {
+					wp_delete_file( $post_file );
+				}
+			}
+
+			do_action( 'bricks/save_post', $post_id );
+
+			if ( class_exists( '\Bricks\Assets' ) && method_exists( '\Bricks\Assets', 'generate_css_from_elements' ) ) {
+				$elements = $this->get_elements( $post_id );
+				\Bricks\Assets::generate_css_from_elements( $elements, $post_id );
+			}
+
+			$this->regenerate_style_manager_css();
+		} catch ( \Throwable $e ) {
+			error_log( 'BricksMCP: CSS regen failed for post ' . $post_id . ': ' . $e->getMessage() );
+		}
+	}
+
+	/**
+	 * Regenerate the Bricks style manager CSS file.
+	 *
+	 * @return bool True if CSS was regenerated, false if method not available.
+	 */
+	public function regenerate_style_manager_css(): bool {
+		if ( class_exists( '\Bricks\Ajax' ) && method_exists( '\Bricks\Ajax', 'generate_style_manager_css_file' ) ) {
+			\Bricks\Ajax::generate_style_manager_css_file();
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Acquire a simple mutex lock using the object cache.
+	 *
+	 * @param string $key Lock key suffix.
+	 * @param int    $ttl Time-to-live in seconds (default 5).
+	 * @return bool True if lock was acquired, false otherwise.
+	 */
+	public function acquire_lock( string $key, int $ttl = 5 ): bool {
+		return (bool) wp_cache_add( 'bricks_mcp_lock_' . $key, 1, 'bricks_mcp', $ttl );
+	}
+
+	/**
+	 * Release a previously acquired mutex lock.
+	 *
+	 * @param string $key Lock key suffix (must match the acquire call).
+	 * @return void
+	 */
+	public function release_lock( string $key ): void {
+		wp_cache_delete( 'bricks_mcp_lock_' . $key, 'bricks_mcp' );
+	}
+
+	/**
+	 * Validate Bricks element parent/children dual-linkage integrity.
+	 *
+	 * @param array<int, array<string, mixed>> $elements Flat array of elements.
+	 * @return true|\WP_Error True if valid, WP_Error on failure.
+	 */
+	public function validate_element_linkage( array $elements ): true|\WP_Error {
+		$id_map = [];
+
+		foreach ( $elements as $index => $element ) {
+			foreach ( [ 'id', 'name', 'parent', 'children' ] as $key ) {
+				if ( ! array_key_exists( $key, $element ) ) {
+					return new \WP_Error(
+						'invalid_element_structure',
+						sprintf( 'Element at index %d is missing required key "%s".', $index, $key ),
+						[
+							'path'   => "elements[{$index}]",
+							'reason' => sprintf( 'Missing required key: "%s"', $key ),
+						]
+					);
+				}
+			}
+
+			if ( ! is_string( $element['id'] ) ) {
+				return new \WP_Error(
+					'invalid_element_structure',
+					sprintf( 'Element at index %d has a non-string id.', $index ),
+					[
+						'path'   => "elements[{$index}].id",
+						'reason' => 'Element ID must be a string.',
+					]
+				);
+			}
+
+			if ( ! preg_match( '/^[a-z0-9]{6}$/', $element['id'] ) ) {
+				return new \WP_Error(
+					'invalid_element_structure',
+					sprintf( 'Element at index %d has an invalid ID format: "%s".', $index, $element['id'] ),
+					[
+						'path'   => "elements[{$index}].id",
+						'reason' => 'Element ID must be exactly 6 lowercase alphanumeric characters (a-z, 0-9).',
+					]
+				);
+			}
+
+			if ( ! is_string( $element['name'] ) ) {
+				return new \WP_Error(
+					'invalid_element_structure',
+					sprintf( 'Element at index %d has a non-string name.', $index ),
+					[
+						'path'   => "elements[{$index}].name",
+						'reason' => 'Element name must be a string.',
+					]
+				);
+			}
+
+			if ( ! is_array( $element['children'] ) ) {
+				return new \WP_Error(
+					'invalid_element_structure',
+					sprintf( 'Element at index %d has a non-array children value.', $index ),
+					[
+						'path'   => "elements[{$index}].children",
+						'reason' => 'Element children must be an array.',
+					]
+				);
+			}
+
+			if ( isset( $id_map[ $element['id'] ] ) ) {
+				return new \WP_Error(
+					'invalid_element_structure',
+					sprintf( 'Duplicate element ID "%s" found at index %d.', $element['id'], $index ),
+					[
+						'path'   => "elements[{$index}].id",
+						'reason' => sprintf( 'Duplicate element ID: "%s" already used at index %d.', $element['id'], $id_map[ $element['id'] ] ),
+					]
+				);
+			}
+
+			$id_map[ $element['id'] ] = $index;
+		}
+
+		foreach ( $elements as $index => $element ) {
+			$parent = $element['parent'];
+
+			if ( 0 !== $parent ) {
+				$parent_str = (string) $parent;
+				if ( ! isset( $id_map[ $parent_str ] ) ) {
+					return new \WP_Error(
+						'invalid_element_structure',
+						sprintf( 'Element "%s" at index %d references non-existent parent "%s".', $element['id'], $index, $parent ),
+						[
+							'path'   => "elements[{$index}].parent",
+							'reason' => sprintf( 'Parent element "%s" does not exist in the elements array.', $parent ),
+						]
+					);
+				}
+
+				$parent_index    = $id_map[ $parent_str ];
+				$parent_children = $elements[ $parent_index ]['children'];
+
+				if ( ! in_array( $element['id'], $parent_children, true ) ) {
+					return new \WP_Error(
+						'invalid_element_structure',
+						sprintf( 'Element "%s" lists parent "%s", but parent\'s children array does not include "%s".', $element['id'], $parent, $element['id'] ),
+						[
+							'path'   => "elements[{$index}].parent",
+							'reason' => sprintf( 'Linkage mismatch: parent "%s" does not list "%s" in its children array.', $parent, $element['id'] ),
+						]
+					);
+				}
+			}
+
+			foreach ( $element['children'] as $child_index => $child_id ) {
+				if ( ! isset( $id_map[ $child_id ] ) ) {
+					return new \WP_Error(
+						'invalid_element_structure',
+						sprintf( 'Element "%s" lists non-existent child "%s".', $element['id'], $child_id ),
+						[
+							'path'   => "elements[{$index}].children[{$child_index}]",
+							'reason' => sprintf( 'Child element "%s" does not exist in the elements array.', $child_id ),
+						]
+					);
+				}
+
+				$child_element = $elements[ $id_map[ $child_id ] ];
+				if ( (string) $child_element['parent'] !== $element['id'] ) {
+					return new \WP_Error(
+						'invalid_element_structure',
+						sprintf( 'Element "%s" lists "%s" as a child, but "%s" has a different parent.', $element['id'], $child_id, $child_id ),
+						[
+							'path'   => "elements[{$index}].children[{$child_index}]",
+							'reason' => sprintf( 'Child "%s" does not list "%s" as its parent.', $child_id, $element['id'] ),
+						]
+					);
+				}
+			}
+		}
+
+		$visited  = [];
+		$in_stack = [];
+
+		foreach ( $elements as $element ) {
+			if ( isset( $visited[ $element['id'] ] ) ) {
+				continue;
+			}
+
+			$cycle_error = $this->detect_cycle( $element['id'], $elements, $id_map, $visited, $in_stack );
+			if ( is_wp_error( $cycle_error ) ) {
+				return $cycle_error;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Detect cycles in element hierarchy using depth-first search.
+	 *
+	 * @param string                           $element_id  Current element ID.
+	 * @param array<int, array<string, mixed>> $elements    All elements.
+	 * @param array<string, int>               $id_map      Map of element ID to array index.
+	 * @param array<string, bool>              $visited     Set of fully visited nodes.
+	 * @param array<string, bool>              $in_stack    Set of nodes currently in recursion stack.
+	 * @return true|\WP_Error True if no cycle, WP_Error if cycle detected.
+	 */
+	private function detect_cycle( string $element_id, array $elements, array $id_map, array &$visited, array &$in_stack ): true|\WP_Error {
+		$visited[ $element_id ]  = true;
+		$in_stack[ $element_id ] = true;
+
+		if ( ! isset( $id_map[ $element_id ] ) ) {
+			$in_stack[ $element_id ] = false;
+			return true;
+		}
+
+		$element = $elements[ $id_map[ $element_id ] ];
+
+		foreach ( $element['children'] as $child_id ) {
+			if ( ! isset( $visited[ $child_id ] ) ) {
+				$result = $this->detect_cycle( $child_id, $elements, $id_map, $visited, $in_stack );
+				if ( is_wp_error( $result ) ) {
+					return $result;
+				}
+			} elseif ( isset( $in_stack[ $child_id ] ) && $in_stack[ $child_id ] ) {
+				return new \WP_Error(
+					'invalid_element_structure',
+					sprintf( 'Cycle detected: element "%s" is its own ancestor.', $child_id ),
+					[
+						'path'   => "elements[{$id_map[$element_id]}].children",
+						'reason' => sprintf( 'Circular reference: "%s" creates a cycle in the element hierarchy.', $child_id ),
+					]
+				);
+			}
+		}
+
+		$in_stack[ $element_id ] = false;
+		return true;
+	}
+
+	/**
+	 * Check if dangerous actions mode is enabled.
+	 *
+	 * @return bool True if dangerous actions mode is enabled.
+	 */
+	public function is_dangerous_actions_enabled(): bool {
+		$settings = get_option( 'bricks_mcp_settings', [] );
+		return ! empty( $settings['dangerous_actions'] );
+	}
+}
