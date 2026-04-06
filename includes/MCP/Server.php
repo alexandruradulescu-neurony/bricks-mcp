@@ -138,6 +138,7 @@ final class Server {
 		if ( '/.well-known/oauth-authorization-server' === $path ) {
 			status_header( 404 );
 			header( 'Content-Type: application/json' );
+			header( 'Access-Control-Allow-Origin: *' );
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo wp_json_encode( [
 				'error'                   => 'oauth_not_supported',
@@ -150,12 +151,13 @@ final class Server {
 
 		// oauth-protected-resource: RFC 9728 metadata.
 		header( 'Content-Type: application/json' );
+		header( 'Access-Control-Allow-Origin: *' );
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo wp_json_encode( [
 			'resource'                 => $resource_url,
 			'authorization_servers'    => [],
 			'bearer_methods_supported' => [ 'header' ],
-			'resource_documentation'   => '',
+			'resource_documentation'   => 'https://aiforbricks.com/docs/authentication',
 			'bricks_mcp_auth_method'   => 'application_password',
 			'bricks_mcp_auth_hint'     => $auth_hint,
 			'bricks_mcp_settings_url'  => $settings_url,
@@ -261,12 +263,7 @@ final class Server {
 		}
 
 		// Check if authentication is required.
-		$require_auth = ! empty( $settings['require_auth'] );
-		if ( ! $require_auth && ! $this->is_local_environment() ) {
-			$require_auth = true; // Force auth on non-local sites.
-		}
-
-		if ( $require_auth ) {
+		if ( ! empty( $settings['require_auth'] ) ) {
 			if ( ! is_user_logged_in() ) {
 				return new \WP_Error(
 					'bricks_mcp_unauthorized',
@@ -283,15 +280,6 @@ final class Server {
 					[ 'status' => 403 ]
 				);
 			}
-		}
-
-		// Require HTTPS on non-local sites when auth is required.
-		if ( $require_auth && ! is_ssl() && ! $this->is_local_environment() ) {
-			return new \WP_Error(
-				'https_required',
-				__( 'MCP endpoint requires HTTPS.', 'bricks-mcp' ),
-				[ 'status' => 403 ]
-			);
 		}
 
 		// Rate limit all requests (authenticated by user ID, anonymous by IP).
@@ -323,29 +311,5 @@ final class Server {
 	 */
 	public function get_namespace(): string {
 		return self::API_NAMESPACE;
-	}
-
-	/**
-	 * Check if the site is running in a local/development environment.
-	 *
-	 * @return bool True if the site is localhost, .local, .test, .localhost, or WP environment is local/development.
-	 */
-	private function is_local_environment(): bool {
-		$host = wp_parse_url( home_url(), PHP_URL_HOST );
-
-		$local_hosts = [ 'localhost', '127.0.0.1', '::1' ];
-		if ( in_array( $host, $local_hosts, true ) ) {
-			return true;
-		}
-
-		if ( str_ends_with( $host, '.local' ) || str_ends_with( $host, '.test' ) || str_ends_with( $host, '.localhost' ) ) {
-			return true;
-		}
-
-		if ( function_exists( 'wp_get_environment_type' ) && in_array( wp_get_environment_type(), [ 'local', 'development' ], true ) ) {
-			return true;
-		}
-
-		return false;
 	}
 }

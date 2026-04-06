@@ -31,7 +31,7 @@ final class Response {
 	 */
 	public static function success( mixed $data, int $status = 200 ): \WP_REST_Response {
 		$response = new \WP_REST_Response( $data, $status );
-		$response->header( 'X-MCP-Server', 'bricks-mcp' );
+		$response->header( 'X-MCP-Server', 'bricks-mcp/' . BRICKS_MCP_VERSION );
 
 		return $response;
 	}
@@ -69,7 +69,7 @@ final class Response {
 			$status
 		);
 
-		$response->header( 'X-MCP-Server', 'bricks-mcp' );
+		$response->header( 'X-MCP-Server', 'bricks-mcp/' . BRICKS_MCP_VERSION );
 
 		return $response;
 	}
@@ -145,7 +145,7 @@ final class Response {
 			400
 		);
 
-		$response->header( 'X-MCP-Server', 'bricks-mcp' );
+		$response->header( 'X-MCP-Server', 'bricks-mcp/' . BRICKS_MCP_VERSION );
 
 		return $response;
 	}

@@ -101,11 +101,8 @@ final class StreamableHttpHandler {
 	 * Validates Content-Type, decodes JSON, detects batch vs single message,
 	 * handles notifications (202 no body), and emits SSE responses.
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param \WP_REST_Request $request The REST request.
 	 * @return void Outputs SSE stream and exits.
-	 * @throws \Exception When JSON parsing fails or request processing errors occur.
 	 */
 	public function handle_post( \WP_REST_Request $request ): void {
 		// Rate limiting is handled upstream by Server::check_permissions() (permission_callback).
@@ -124,7 +121,7 @@ final class StreamableHttpHandler {
 
 		// Check body size before parsing.
 		$body     = $request->get_body();
-		$max_body = min( (int) apply_filters( 'bricks_mcp_max_body_size', self::MAX_BODY_SIZE ), 10 * 1024 * 1024 );
+		$max_body = (int) apply_filters( 'bricks_mcp_max_body_size', self::MAX_BODY_SIZE );
 		if ( strlen( $body ) > $max_body ) {
 			status_header( 413 );
 			header( 'Content-Type: application/json' );
@@ -152,16 +149,6 @@ final class StreamableHttpHandler {
 				$this->emit_sse_headers();
 				$this->emit_sse_event(
 					$this->jsonrpc_error( null, self::INVALID_REQUEST, 'Batch too large (max 20 messages)' )
-				);
-				exit;
-			}
-
-			// Check memory usage before processing large batches.
-			$memory_limit = wp_convert_hr_to_bytes( ini_get( 'memory_limit' ) );
-			if ( $memory_limit > 0 && memory_get_usage( true ) > ( $memory_limit * 0.8 ) ) {
-				$this->emit_sse_headers();
-				$this->emit_sse_event(
-					$this->jsonrpc_error( null, self::INTERNAL_ERROR, 'Memory limit approaching, reduce batch size' )
 				);
 				exit;
 			}
@@ -218,13 +205,8 @@ final class StreamableHttpHandler {
 	 */
 	public function handle_get( \WP_REST_Request $request ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		$this->emit_sse_headers();
-		$timeout    = min( (int) apply_filters( 'bricks_mcp_sse_timeout', 1800 ), 7200 );
-		$start_time = time();
 		while ( true ) {
 			if ( connection_aborted() ) {
-				break;
-			}
-			if ( ( time() - $start_time ) > $timeout ) {
 				break;
 			}
 			echo ": keepalive\n\n";
@@ -435,7 +417,7 @@ final class StreamableHttpHandler {
 			ob_end_flush();
 		}
 
-		$timeout = min( (int) apply_filters( 'bricks_mcp_sse_timeout', 1800 ), 7200 );
+		$timeout = (int) apply_filters( 'bricks_mcp_sse_timeout', 1800 );
 		set_time_limit( $timeout );
 		ignore_user_abort( true );
 
