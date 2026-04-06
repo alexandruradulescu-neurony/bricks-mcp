@@ -815,9 +815,15 @@ class TemplateService {
 			return new \WP_Error( 'fetch_failed', sprintf( __( 'Remote URL returned HTTP %d. Expected 200.', 'bricks-mcp' ), $status_code ) );
 		}
 
+		// Validate Content-Type to ensure we're receiving JSON, not arbitrary content.
+		$content_type = wp_remote_retrieve_header( $response, 'content-type' );
+		if ( ! empty( $content_type ) && false === stripos( $content_type, 'json' ) ) {
+			return new \WP_Error( 'bricks_mcp_invalid_content_type', __( 'Remote URL must return JSON content (Content-Type containing "json").', 'bricks-mcp' ) );
+		}
+
 		$body = wp_remote_retrieve_body( $response );
 		if ( strlen( $body ) > 10485760 ) {
-			return new \WP_Error( 'response_too_large', __( 'Remote response exceeds 10MB size limit.', 'bricks-mcp' ) );
+			return new \WP_Error( 'bricks_mcp_response_too_large', __( 'Remote response exceeds 10MB size limit.', 'bricks-mcp' ) );
 		}
 
 		$data = json_decode( $body, true );

@@ -104,6 +104,9 @@ final class RateLimiter {
 	 * The transient key uses the global namespace (no CACHE_GROUP prefix) to
 	 * ensure persistence across requests.
 	 *
+	 * Note: This path has a TOCTOU race under concurrent requests (read-increment-write
+	 * is not atomic). For strict rate limiting, enable a persistent object cache (Redis/Memcached).
+	 *
 	 * @param string $identifier Rate limit identifier.
 	 * @return int New counter value.
 	 */

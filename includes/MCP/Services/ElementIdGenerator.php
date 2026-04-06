@@ -71,6 +71,11 @@ class ElementIdGenerator {
 	 * @return bool True if a collision exists, false if the ID is unique.
 	 */
 	public function is_collision( string $id, array $elements ): bool {
+		// Use isset for O(1) lookup when elements are keyed by ID (batch operations).
+		if ( isset( $elements[ $id ] ) ) {
+			return true;
+		}
+		// Fallback to linear scan for numerically-indexed arrays.
 		foreach ( $elements as $element ) {
 			if ( isset( $element['id'] ) && $element['id'] === $id ) {
 				return true;

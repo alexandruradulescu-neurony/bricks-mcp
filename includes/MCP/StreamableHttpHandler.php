@@ -121,7 +121,7 @@ final class StreamableHttpHandler {
 
 		// Check body size before parsing.
 		$body     = $request->get_body();
-		$max_body = (int) apply_filters( 'bricks_mcp_max_body_size', self::MAX_BODY_SIZE );
+		$max_body = min( (int) apply_filters( 'bricks_mcp_max_body_size', self::MAX_BODY_SIZE ), 10 * 1024 * 1024 );
 		if ( strlen( $body ) > $max_body ) {
 			status_header( 413 );
 			header( 'Content-Type: application/json' );

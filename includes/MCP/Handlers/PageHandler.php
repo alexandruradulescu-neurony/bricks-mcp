@@ -342,8 +342,8 @@ final class PageHandler {
 		$bricks_only = isset( $args['bricks_only'] ) ? (bool) $args['bricks_only'] : true;
 
 		$query_args = array(
-			'post_type'      => sanitize_key( $post_type ),
-			'post_status'    => sanitize_key( $status ),
+			'post_type'      => sanitize_text_field( $post_type ),
+			'post_status'    => sanitize_text_field( $status ),
 			'posts_per_page' => $per_page,
 			'paged'          => $page,
 			'no_found_rows'  => false,

@@ -57,11 +57,12 @@ class BricksCore {
 	private ?ValidationService $validation_service = null;
 
 	/**
-	 * Stored Bricks meta filter callbacks for temporary removal.
+	 * Stack of stored Bricks meta filter callbacks for temporary removal.
+	 * Stack-based to support reentrant unhook/rehook calls safely.
 	 *
-	 * @var array<string, mixed>
+	 * @var array<int, array<string, mixed>>
 	 */
-	private array $stored_filters = [];
+	private array $filter_stack = [];
 
 	/**
 	 * Constructor.
@@ -217,16 +218,20 @@ class BricksCore {
 			$updated = update_post_meta( $post_id, $meta_key, $elements );
 
 			if ( false === $updated ) {
-				// Back up existing data before destructive delete+add fallback.
-				$backup = get_post_meta( $post_id, $meta_key, true );
+				// update_post_meta returns false both on failure AND when value is unchanged.
+				$existing = get_post_meta( $post_id, $meta_key, true );
+				if ( $existing !== $elements ) {
+					// Genuine failure — try delete+add with backup.
+					$backup = $existing;
+					delete_post_meta( $post_id, $meta_key );
+					$added = add_post_meta( $post_id, $meta_key, $elements, true );
 
-				delete_post_meta( $post_id, $meta_key );
-				$added = add_post_meta( $post_id, $meta_key, $elements, true );
-
-				// Restore backup if add also failed to prevent data loss.
-				if ( false === $added && is_array( $backup ) && count( $backup ) > 0 ) {
-					add_post_meta( $post_id, $meta_key, $backup, true );
+					// Restore backup if add also failed to prevent data loss.
+					if ( false === $added && is_array( $backup ) && count( $backup ) > 0 ) {
+						add_post_meta( $post_id, $meta_key, $backup, true );
+					}
 				}
+				// else: value already matches, no action needed.
 			}
 
 			update_post_meta( $post_id, self::EDITOR_MODE_KEY, 'bricks' );
@@ -260,6 +265,8 @@ class BricksCore {
 	public function unhook_bricks_meta_filters( string $meta_key = '' ): void {
 		global $wp_filter;
 
+		$stored = [];
+
 		$keys_to_unhook = array_unique( array_filter( [
 			$meta_key,
 			self::META_KEY,
@@ -270,17 +277,17 @@ class BricksCore {
 		foreach ( $keys_to_unhook as $key ) {
 			$sanitize_key = 'sanitize_post_meta_' . $key;
 			if ( isset( $wp_filter[ $sanitize_key ] ) ) {
-				$this->stored_filters[ $sanitize_key ] = $wp_filter[ $sanitize_key ];
+				$stored[ $sanitize_key ] = $wp_filter[ $sanitize_key ];
 				unset( $wp_filter[ $sanitize_key ] );
 			}
 		}
 
 		if ( isset( $wp_filter['update_post_metadata'] ) ) {
-			$this->stored_filters['update_post_metadata_bricks'] = [];
+			$stored['update_post_metadata_bricks'] = [];
 			foreach ( $wp_filter['update_post_metadata']->callbacks as $priority => $callbacks ) {
 				foreach ( $callbacks as $id => $callback ) {
 					if ( is_array( $callback['function'] ) && is_object( $callback['function'][0] ) && $callback['function'][0] instanceof \Bricks\Ajax ) {
-						$this->stored_filters['update_post_metadata_bricks'][] = [
+						$stored['update_post_metadata_bricks'][] = [
 							'priority' => $priority,
 							'id'       => $id,
 							'callback' => $callback,
@@ -290,6 +297,8 @@ class BricksCore {
 				}
 			}
 		}
+
+		$this->filter_stack[] = $stored;
 	}
 
 	/**
@@ -300,18 +309,21 @@ class BricksCore {
 	public function rehook_bricks_meta_filters(): void {
 		global $wp_filter;
 
-		foreach ( $this->stored_filters as $key => $filter ) {
+		$stored = array_pop( $this->filter_stack );
+		if ( null === $stored ) {
+			return;
+		}
+
+		foreach ( $stored as $key => $filter ) {
 			if ( str_starts_with( $key, 'sanitize_post_meta_' ) ) {
 				$wp_filter[ $key ] = $filter;
-				unset( $this->stored_filters[ $key ] );
 			}
 		}
 
-		if ( ! empty( $this->stored_filters['update_post_metadata_bricks'] ) && isset( $wp_filter['update_post_metadata'] ) ) {
-			foreach ( $this->stored_filters['update_post_metadata_bricks'] as $entry ) {
+		if ( ! empty( $stored['update_post_metadata_bricks'] ) && isset( $wp_filter['update_post_metadata'] ) ) {
+			foreach ( $stored['update_post_metadata_bricks'] as $entry ) {
 				$wp_filter['update_post_metadata']->callbacks[ $entry['priority'] ][ $entry['id'] ] = $entry['callback'];
 			}
-			unset( $this->stored_filters['update_post_metadata_bricks'] );
 		}
 	}
 

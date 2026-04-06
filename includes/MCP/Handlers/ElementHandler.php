@@ -532,20 +532,4 @@ final class ElementHandler {
 	}
 
 	/**
-	 * Tool: Get all available template condition types (element-level).
-	 *
-	 * Returns condition type metadata to guide AI in writing valid conditions.
-	 *
-	 * @param array<string, mixed> $args Tool arguments (unused).
-	 * @return array<string, mixed>|\WP_Error Condition types or error.
-	 */
-	private function tool_get_condition_types( array $args ): array|\WP_Error { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		$types = $this->bricks_service->get_condition_types();
-
-		return array(
-			'condition_types'     => $types,
-			'scoring_explanation' => 'Higher score wins when multiple templates match. Score 10 (specific IDs) beats score 8 (post type) beats score 2 (entire site).',
-			'usage_note'          => 'Pass conditions as objects with "main" key plus any required extra_fields. Example: {"main":"any"} or {"main":"ids","ids":[42,99]}.',
-		);
-	}
 }

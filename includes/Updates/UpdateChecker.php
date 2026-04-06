@@ -240,8 +240,10 @@ final class UpdateChecker {
 			return $reply;
 		}
 
-		// If no expected hash is cached, degrade gracefully — allow the update to proceed.
+		// If no expected hash is cached, degrade gracefully — allow the update but log a warning.
 		if ( empty( $this->expected_sha256 ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional security warning.
+			error_log( 'BricksMCP: Update SHA-256 checksum not available. Allowing update without integrity verification.' );
 			return $reply;
 		}
 

@@ -367,9 +367,15 @@ class ElementNormalizer {
 			$is_css_key  = $this->is_css_style_key( $base_key );
 			$is_css_code = $this->is_css_code_key( $base_key );
 
-			// Raw code blocks (Code element, SVG element): preserve as-is.
+			// Raw code blocks (Code element, SVG element): require dangerous_actions toggle.
 			if ( in_array( $base_key, self::RAW_CODE_KEYS, true ) && in_array( $element_name, [ 'code', 'svg' ], true ) ) {
-				$sanitized[ $key ] = $value;
+				$settings_option = get_option( 'bricks_mcp_settings', [] );
+				if ( ! empty( $settings_option['dangerous_actions'] ) ) {
+					$sanitized[ $key ] = $value;
+				} else {
+					// Strip to safe HTML when dangerous_actions is disabled.
+					$sanitized[ $key ] = is_string( $value ) ? wp_kses_post( $value ) : $value;
+				}
 				continue;
 			}
 
@@ -458,6 +464,9 @@ class ElementNormalizer {
 		$s = (string) preg_replace( '/\bexpression\s*\(/i', '', $s );
 		$s = (string) preg_replace( '/@import\b/i', '', $s );
 		$s = (string) preg_replace( '/-moz-binding\s*:/i', '', $s );
+		$s = (string) preg_replace( '/\bbehavior\s*:/i', '', $s );
+		// Strip data: URIs inside url() to prevent HTML/JS injection via data: scheme.
+		$s = (string) preg_replace( '/url\s*\(\s*["\']?\s*data\s*:/i', 'url(about:', $s );
 		return $s;
 	}
 

@@ -111,7 +111,7 @@ final class Server {
 	 * @return void
 	 */
 	public function handle_well_known_request( \WP $wp ): void {
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- wp_parse_url handles sanitization on next line.
 		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
 		$path        = wp_parse_url( $request_uri, PHP_URL_PATH );
 
@@ -278,6 +278,15 @@ final class Server {
 					'bricks_mcp_forbidden',
 					__( 'You do not have permission to access the MCP server.', 'bricks-mcp' ),
 					[ 'status' => 403 ]
+				);
+			}
+		} else {
+			// Even when require_auth is disabled, write operations always need authentication.
+			if ( 'GET' !== $request->get_method() && ! is_user_logged_in() ) {
+				return new \WP_Error(
+					'bricks_mcp_unauthorized',
+					__( 'Authentication is required for write operations.', 'bricks-mcp' ),
+					[ 'status' => 401 ]
 				);
 			}
 		}

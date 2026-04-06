@@ -380,6 +380,7 @@ class MediaService {
 			return '';
 		}
 
+		// Bricks >= 1.9 uses 'apiKeyUnsplash'; older versions used 'unsplashAccessKey'.
 		return $settings['apiKeyUnsplash'] ?? $settings['unsplashAccessKey'] ?? '';
 	}
 }

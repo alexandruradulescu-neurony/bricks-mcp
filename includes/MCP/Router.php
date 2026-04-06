@@ -265,6 +265,15 @@ final class Router {
 		 * @param array $tools Registered tools.
 		 */
 		$this->tools = apply_filters( 'bricks_mcp_tools', $this->tools );
+
+		// Validate filtered tools — reject malformed entries from third-party plugins.
+		foreach ( $this->tools as $name => $tool ) {
+			if ( ! is_array( $tool ) || ! isset( $tool['handler'] ) || ! is_callable( $tool['handler'] ) ) {
+				unset( $this->tools[ $name ] );
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional debug logging.
+				error_log( 'BricksMCP: Rejected invalid tool from bricks_mcp_tools filter: ' . sanitize_text_field( $name ) );
+			}
+		}
 	}
 
 	/**
@@ -285,15 +294,6 @@ final class Router {
 			'handler'     => $handler,
 			'annotations' => $annotations,
 		);
-	}
-
-	/**
-	 * Register routes.
-	 *
-	 * @return void
-	 */
-	public function register_routes(): void {
-		// Additional routes can be registered here.
 	}
 
 	/**
@@ -400,7 +400,6 @@ final class Router {
 	private function get_tool_capability( string $tool_name ): ?string {
 		$public_tools = array(
 			'get_builder_guide',
-			'wordpress', // Per-action checks handled inside tool_wordpress().
 		);
 
 		if ( in_array( $tool_name, $public_tools, true ) ) {
@@ -2554,14 +2553,20 @@ final class Router {
 	 * @return array{guide: string}|array{section: string, content: string} Guide content.
 	 */
 	public function tool_get_builder_guide( array $args ): array {
+		static $cached_content = null;
+
 		$guide_path = BRICKS_MCP_PLUGIN_DIR . 'docs/BUILDER_GUIDE.md';
 
 		if ( ! file_exists( $guide_path ) ) {
 			return array( 'guide' => 'Builder guide not found. Use get_element_schemas to discover available elements.' );
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local file read.
-		$content = file_get_contents( $guide_path );
+		if ( null === $cached_content ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local file read.
+			$cached_content = file_get_contents( $guide_path );
+		}
+
+		$content = $cached_content;
 
 		if ( false === $content ) {
 			return array( 'guide' => 'Failed to read builder guide.' );

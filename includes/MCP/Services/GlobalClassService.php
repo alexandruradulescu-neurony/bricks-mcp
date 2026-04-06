@@ -24,6 +24,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 class GlobalClassService {
 
 	/**
+	 * Maximum number of posts to scan when finding class references.
+	 */
+	private const MAX_REFERENCE_POSTS = 200;
+
+	/**
 	 * Core infrastructure.
 	 *
 	 * @var BricksCore
@@ -320,7 +325,7 @@ class GlobalClassService {
 			[
 				'post_type'      => 'any',
 				'post_status'    => 'any',
-				'posts_per_page' => 200,
+				'posts_per_page' => self::MAX_REFERENCE_POSTS,
 				'meta_query'     => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 					'relation' => 'OR',
 					[
@@ -341,7 +346,7 @@ class GlobalClassService {
 			]
 		);
 
-		$truncated         = count( $query->posts ) >= 200;
+		$truncated         = count( $query->posts ) >= self::MAX_REFERENCE_POSTS;
 		$referencing_posts = [];
 
 		foreach ( $query->posts as $post_id ) {

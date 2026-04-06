@@ -290,7 +290,8 @@ class SettingsService {
 			$settings = [];
 		}
 
-		$js_gated_keys   = [ 'customScriptsHeader', 'customScriptsBodyHeader', 'customScriptsBodyFooter' ];
+		$dangerous_keys  = [ 'customScriptsHeader', 'customScriptsBodyHeader', 'customScriptsBodyFooter', 'customCss' ];
+		$js_gated_keys   = $dangerous_keys;
 		$text_fields     = [ 'bodyClasses', 'postTitle', 'documentTitle', 'metaKeywords', 'sharingTitle' ];
 		$textarea_fields = [ 'metaDescription', 'sharingDescription' ];
 
