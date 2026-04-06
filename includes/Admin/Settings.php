@@ -368,7 +368,7 @@ final class Settings {
 			BRICKS_MCP_PLUGIN_URL . 'assets/js/admin-updates.js',
 			[],
 			BRICKS_MCP_VERSION,
-			true
+			false
 		);
 
 		$current_user = wp_get_current_user();
