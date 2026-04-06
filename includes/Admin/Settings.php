@@ -286,6 +286,7 @@ final class Settings {
 		<p class="description">
 			<?php esc_html_e( 'When enabled, only authenticated users with manage_options capability can access the MCP server.', 'bricks-mcp' ); ?>
 		</p>
+		<?php
 	}
 
 	/**
