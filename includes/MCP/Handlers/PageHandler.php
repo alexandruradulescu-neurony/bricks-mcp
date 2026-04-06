@@ -57,7 +57,7 @@ final class PageHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		// Map 'search' param alias: the schema uses 'search' but tool_search_pages reads 'query'.
 		if ( 'search' === $action && isset( $args['search'] ) && ! isset( $args['query'] ) ) {

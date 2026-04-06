@@ -47,7 +47,7 @@ final class GlobalClassHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		// Param aliasing: category_name -> name for create_category handler.
 		if ( 'create_category' === $action && isset( $args['category_name'] ) && ! isset( $args['name'] ) ) {

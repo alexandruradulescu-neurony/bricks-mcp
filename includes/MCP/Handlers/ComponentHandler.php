@@ -56,7 +56,7 @@ final class ComponentHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
 			'list'              => $this->tool_list_components( $args ),

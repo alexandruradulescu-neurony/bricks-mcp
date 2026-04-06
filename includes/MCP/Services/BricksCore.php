@@ -340,12 +340,31 @@ class BricksCore {
 			if ( is_array( $value ) ) {
 				$sanitized[ $safe_key ] = $this->sanitize_styles_array( $value );
 			} elseif ( is_string( $value ) ) {
-				$sanitized[ $safe_key ] = wp_strip_all_tags( $value );
+				$sanitized[ $safe_key ] = self::strip_dangerous_css( wp_strip_all_tags( $value ) );
 			} elseif ( is_int( $value ) || is_float( $value ) || is_bool( $value ) ) {
 				$sanitized[ $safe_key ] = $value;
 			}
 		}
 		return $sanitized;
+	}
+
+	/**
+	 * Strip dangerous CSS patterns from a string value.
+	 *
+	 * Shared utility used by ElementNormalizer, BricksCore, and any code path
+	 * that stores CSS values. Filters javascript:, expression(), data: URIs,
+	 * -moz-binding, and behavior: properties.
+	 *
+	 * @param string $css The CSS string to sanitize.
+	 * @return string Sanitized CSS string.
+	 */
+	public static function strip_dangerous_css( string $css ): string {
+		$s = (string) preg_replace( '/\bjavascript\s*:/i', '', $css );
+		$s = (string) preg_replace( '/\bexpression\s*\(/i', '', $s );
+		$s = (string) preg_replace( '/url\s*\(\s*["\']?\s*data\s*:/i', 'url(about:', $s );
+		$s = (string) preg_replace( '/-moz-binding\s*:/i', '', $s );
+		$s = (string) preg_replace( '/\bbehavior\s*:/i', '', $s );
+		return $s;
 	}
 
 	/**

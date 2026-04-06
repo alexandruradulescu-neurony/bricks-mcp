@@ -65,7 +65,7 @@ final class WooCommerceHandler {
 			);
 		}
 
-		$action        = $args['action'] ?? '';
+		$action        = sanitize_text_field( $args['action'] ?? '' );
 
 
 		return match ( $action ) {

@@ -54,7 +54,7 @@ final class MenuHandler {
 	 * @return array<string, mixed>|\WP_Error Result data or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
 			'list'           => $this->tool_list_menus( $args ),

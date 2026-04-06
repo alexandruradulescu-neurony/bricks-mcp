@@ -562,6 +562,14 @@ class SettingsService {
 			);
 		}
 
+		// Gate template_interactions behind dangerous_actions (interactions can contain JS).
+		if ( isset( $popup_settings['template_interactions'] ) && ! $this->is_dangerous_actions_enabled() ) {
+			return new \WP_Error(
+				'bricks_mcp_dangerous_action',
+				__( 'template_interactions requires dangerous actions mode (Settings > Bricks MCP > Enable Dangerous Actions) because interactions can contain JavaScript.', 'bricks-mcp' )
+			);
+		}
+
 		// Read-merge-write pattern — preserve all other settings keys.
 		$this->core->unhook_bricks_meta_filters();
 		try {

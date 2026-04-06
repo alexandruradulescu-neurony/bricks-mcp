@@ -77,6 +77,13 @@ class DiagnosticRunner {
 		 * @param array<string, DiagnosticCheck> $checks Checks keyed by ID.
 		 */
 		$this->checks = apply_filters( 'bricks_mcp_diagnostic_checks', $this->checks );
+
+		// Validate filtered checks — reject entries that aren't DiagnosticCheck instances.
+		foreach ( $this->checks as $id => $check ) {
+			if ( ! $check instanceof DiagnosticCheck ) {
+				unset( $this->checks[ $id ] );
+			}
+		}
 	}
 
 	/**

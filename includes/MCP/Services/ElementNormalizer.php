@@ -380,6 +380,10 @@ class ElementNormalizer {
 			}
 
 			// CSS code blocks: preserve newlines, braces, combinators.
+			// CSS code blocks (_cssCustom, customCss, etc.): sanitized but NOT gated behind
+			// dangerous_actions. This is intentional — element-level custom CSS is a core Bricks
+			// feature. JS vectors are stripped by sanitize_css_string(). Page-level customCss in
+			// page settings IS gated (see SettingsService::update_page_settings).
 			if ( $is_css_code ) {
 				if ( is_string( $value ) ) {
 					$sanitized[ $key ] = $this->sanitize_css_string( $value );
@@ -439,7 +443,13 @@ class ElementNormalizer {
 		$sanitized = [];
 		foreach ( $value as $k => $v ) {
 			if ( ! is_string( $k ) ) {
-				$sanitized[ $k ] = $v;
+				if ( is_string( $v ) ) {
+					$sanitized[ $k ] = $this->sanitize_css_value( $v );
+				} elseif ( is_array( $v ) ) {
+					$sanitized[ $k ] = $this->sanitize_style_value( $v );
+				} else {
+					$sanitized[ $k ] = $v;
+				}
 				continue;
 			}
 			if ( is_array( $v ) ) {
@@ -460,13 +470,9 @@ class ElementNormalizer {
 	 */
 	private function sanitize_css_string( string $css ): string {
 		$s = wp_strip_all_tags( $css );
-		$s = (string) preg_replace( '/\bjavascript\s*:/i', '', $s );
-		$s = (string) preg_replace( '/\bexpression\s*\(/i', '', $s );
+		$s = BricksCore::strip_dangerous_css( $s );
+		// Additional block-level filters: @import is dangerous in code blocks but not in property values.
 		$s = (string) preg_replace( '/@import\b/i', '', $s );
-		$s = (string) preg_replace( '/-moz-binding\s*:/i', '', $s );
-		$s = (string) preg_replace( '/\bbehavior\s*:/i', '', $s );
-		// Strip data: URIs inside url() to prevent HTML/JS injection via data: scheme.
-		$s = (string) preg_replace( '/url\s*\(\s*["\']?\s*data\s*:/i', 'url(about:', $s );
 		return $s;
 	}
 
@@ -474,7 +480,7 @@ class ElementNormalizer {
 	 * Sanitize a single CSS value string (units, vars, keywords, colors).
 	 */
 	private function sanitize_css_value( string $value ): string {
-		return wp_strip_all_tags( trim( $value ) );
+		return BricksCore::strip_dangerous_css( wp_strip_all_tags( trim( $value ) ) );
 	}
 
 	/**

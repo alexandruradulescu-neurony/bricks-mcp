@@ -480,8 +480,8 @@ final class Router {
 				$css = file_get_contents( $child_style ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 			}
 			if ( is_string( $css ) && '' !== trim( $css ) ) {
-				// Strip the theme header comment block.
-				$css = (string) preg_replace( '/\/\*[\s\S]*?\*\/\s*/', '', $css, 1 );
+				// Strip all CSS comments (theme header and any others that may contain sensitive info).
+				$css = (string) preg_replace( '/\/\*[\s\S]*?\*\/\s*/', '', $css );
 				$css = trim( $css );
 				if ( '' !== $css ) {
 					$info['child_theme_css'] = $css;
@@ -1753,14 +1753,26 @@ final class Router {
 			'get_plugins' => 'activate_plugins',
 		);
 
-		$required_cap = $action_caps[ $action ] ?? null;
-		if ( null !== $required_cap && ! current_user_can( $required_cap ) ) {
+		// Reject unknown actions before capability check to prevent future actions
+		// from accidentally bypassing caps if added to match but not to $action_caps.
+		if ( ! isset( $action_caps[ $action ] ) ) {
+			return new \WP_Error(
+				'invalid_action',
+				sprintf(
+					/* translators: %s: Action name */
+					__( 'Invalid action "%s". Valid actions: get_posts, get_post, get_users, get_plugins', 'bricks-mcp' ),
+					sanitize_text_field( $action )
+				)
+			);
+		}
+
+		if ( ! current_user_can( $action_caps[ $action ] ) ) {
 			return new \WP_Error(
 				'bricks_mcp_forbidden',
 				sprintf(
 					/* translators: %s: Required capability */
 					__( 'You do not have the required capability (%s) to perform this action.', 'bricks-mcp' ),
-					$required_cap
+					$action_caps[ $action ]
 				)
 			);
 		}
@@ -1775,7 +1787,7 @@ final class Router {
 				sprintf(
 					/* translators: %s: Action name */
 					__( 'Invalid action "%s". Valid actions: get_posts, get_post, get_users, get_plugins', 'bricks-mcp' ),
-					$action
+					sanitize_text_field( $action )
 				)
 			),
 		};
@@ -1793,7 +1805,7 @@ final class Router {
 			return $bricks_error;
 		}
 
-		$action        = $args['action'] ?? '';
+		$action        = sanitize_text_field( $args['action'] ?? '' );
 
 
 		return match ( $action ) {
@@ -1867,8 +1879,9 @@ final class Router {
 			return new \WP_Error( 'missing_settings', __( 'settings (object with query configuration) is required for set_global_query.', 'bricks-mcp' ) );
 		}
 
-		// Security: strip queryEditor/useQueryEditor from settings.
+		// Security: strip queryEditor/useQueryEditor and sanitize settings recursively.
 		unset( $settings['queryEditor'], $settings['useQueryEditor'] );
+		$settings = $this->sanitize_query_settings( $settings );
 
 		$existing_index = false;
 		if ( ! empty( $query_id ) ) {
@@ -1907,6 +1920,27 @@ final class Router {
 			'query'      => $entry,
 			'usage_hint' => sprintf( 'Reference this global query on any loop element: set query.id to "%s".', $entry['id'] ),
 		);
+	}
+
+	/**
+	 * Recursively sanitize global query settings to prevent XSS/injection via stored values.
+	 *
+	 * @param array<string, mixed> $settings The query settings array.
+	 * @return array<string, mixed> Sanitized settings.
+	 */
+	private function sanitize_query_settings( array $settings ): array {
+		$sanitized = [];
+		foreach ( $settings as $key => $value ) {
+			$safe_key = sanitize_text_field( (string) $key );
+			if ( is_array( $value ) ) {
+				$sanitized[ $safe_key ] = $this->sanitize_query_settings( $value );
+			} elseif ( is_string( $value ) ) {
+				$sanitized[ $safe_key ] = sanitize_text_field( $value );
+			} elseif ( is_int( $value ) || is_float( $value ) || is_bool( $value ) ) {
+				$sanitized[ $safe_key ] = $value;
+			}
+		}
+		return $sanitized;
 	}
 
 	/**
@@ -2203,7 +2237,7 @@ final class Router {
 			return $bricks_error;
 		}
 
-		$action        = $args['action'] ?? '';
+		$action        = sanitize_text_field( $args['action'] ?? '' );
 
 
 		// Map 'image_size' to 'size' for get_image_settings handler.
@@ -2321,7 +2355,7 @@ final class Router {
 			return $bricks_error;
 		}
 
-		$action        = $args['action'] ?? '';
+		$action        = sanitize_text_field( $args['action'] ?? '' );
 
 
 		return match ( $action ) {
@@ -2402,7 +2436,7 @@ final class Router {
 			return $bricks_error;
 		}
 
-		$action        = $args['action'] ?? '';
+		$action        = sanitize_text_field( $args['action'] ?? '' );
 
 
 		if ( 'set_page_scripts' === $action ) {

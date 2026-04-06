@@ -47,7 +47,7 @@ final class TemplateHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
 			'list'                => $this->tool_list_templates( $args ),
@@ -79,7 +79,7 @@ final class TemplateHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_condition( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
 			'get_types' => $this->tool_get_condition_types( $args ),
@@ -103,7 +103,7 @@ final class TemplateHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_taxonomy( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
 			'list_tags'      => $this->tool_list_template_tags( $args ),

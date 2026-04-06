@@ -47,7 +47,7 @@ final class ElementHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
 			'add'            => $this->tool_add_element( $args ),

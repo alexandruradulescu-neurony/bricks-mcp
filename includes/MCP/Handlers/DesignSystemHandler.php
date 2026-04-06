@@ -47,7 +47,7 @@ final class DesignSystemHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_theme_style( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		// Map 'name' param to 'label' for theme style handlers that expect 'label'.
 		if ( isset( $args['name'] ) && ! isset( $args['label'] ) ) {
@@ -78,7 +78,7 @@ final class DesignSystemHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_typography_scale( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		// Map 'scale_id' param to 'category_id' for handlers that expect 'category_id'.
 		if ( isset( $args['scale_id'] ) && ! isset( $args['category_id'] ) ) {
@@ -108,7 +108,7 @@ final class DesignSystemHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_color_palette( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		// Map consolidated 'color' object to flat params for underlying handlers.
 		if ( isset( $args['color'] ) && is_array( $args['color'] ) ) {
@@ -145,7 +145,7 @@ final class DesignSystemHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_global_variable( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		// Map 'category_name' to 'name' for category handlers.
 		if ( isset( $args['category_name'] ) && ! isset( $args['name'] ) ) {

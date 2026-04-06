@@ -53,7 +53,7 @@ class MediaService {
 			);
 		}
 
-		$response = wp_remote_get(
+		$response = wp_safe_remote_get(
 			add_query_arg(
 				array(
 					'query'    => $query,
@@ -168,6 +168,13 @@ class MediaService {
 		$tmp = download_url( $url, 30 );
 		if ( is_wp_error( $tmp ) ) {
 			return $tmp;
+		}
+
+		// Reject files over 20MB to prevent disk/memory exhaustion.
+		$file_size = filesize( $tmp );
+		if ( false === $file_size || $file_size > 20 * 1024 * 1024 ) {
+			wp_delete_file( $tmp );
+			return new \WP_Error( 'bricks_mcp_file_too_large', __( 'Downloaded file exceeds 20MB size limit.', 'bricks-mcp' ) );
 		}
 
 		// Build clean filename: strip query string, sanitize.
