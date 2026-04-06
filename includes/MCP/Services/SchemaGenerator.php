@@ -427,9 +427,9 @@ class SchemaGenerator {
 				],
 			],
 			'accordion'  => [
-				'items' => [
-					[ 'title' => 'Accordion Item 1', 'content' => 'Content of accordion item 1.' ],
-					[ 'title' => 'Accordion Item 2', 'content' => 'Content of accordion item 2.' ],
+				'accordions' => [
+					[ 'id' => 'acc001', 'title' => 'Accordion Item 1', 'content' => '<p>Content of accordion item 1.</p>' ],
+					[ 'id' => 'acc002', 'title' => 'Accordion Item 2', 'content' => '<p>Content of accordion item 2.</p>' ],
 				],
 			],
 			'alert'      => [
@@ -462,8 +462,8 @@ class SchemaGenerator {
 			],
 			'tabs'       => [
 				'tabs' => [
-					[ 'title' => 'Tab 1', 'content' => 'Tab 1 content goes here.' ],
-					[ 'title' => 'Tab 2', 'content' => 'Tab 2 content goes here.' ],
+					[ 'id' => 'tab001', 'title' => 'Tab 1', 'content' => '<p>Tab 1 content goes here.</p>' ],
+					[ 'id' => 'tab002', 'title' => 'Tab 2', 'content' => '<p>Tab 2 content goes here.</p>' ],
 				],
 			],
 			'pricing-tables' => [
