@@ -1371,7 +1371,7 @@ final class Router {
 		// Page consolidated tool (replaces list_pages, search_pages, get_bricks_content, create_bricks_page, update_bricks_content, update_page, delete_page, duplicate_page, get_page_settings, update_page_settings + SEO).
 		$this->register_tool(
 			'page',
-			__( "Manage pages and Bricks content.\n\n⚠️ CRITICAL: Before using 'create', 'update_content', or 'append_content' actions, you MUST call get_site_info, global_class:list, and get_builder_guide(section='professional') first. Use _cssGlobalClasses on every element. Create global classes if none exist. Inline styles only for instance overrides.\n\nActions: list, search, get (views: detail/summary/context), create, update_content, append_content (add without replacing), import_clipboard, update_meta, delete, duplicate, get_settings, update_settings, get_seo, update_seo, snapshot, restore, list_snapshots.", 'bricks-mcp' ),
+			__( "Manage pages and Bricks content.\n\n⚠️ CRITICAL: Before using 'create', 'update_content', or 'append_content' actions, you MUST call get_site_info, global_class:list, and get_builder_guide(section='professional') first. Use _cssGlobalClasses on every element. Create global classes if none exist. Inline styles only for instance overrides.\n\nActions: list, search, get (views: detail/summary/context/describe), create, update_content, append_content (add without replacing), import_clipboard, update_meta, delete, duplicate, get_settings, update_settings, get_seo, update_seo, snapshot, restore, list_snapshots.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(

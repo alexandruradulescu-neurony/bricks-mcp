@@ -2,8 +2,8 @@
 Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
-Tested up to: 6.8
-Stable tag: 1.0
+Tested up to: 6.9
+Stable tag: 1.4.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -20,21 +20,31 @@ Tell your AI assistant "create a hero section with a headline and a call-to-acti
 
 The plugin registers a REST API endpoint on your WordPress site that speaks the MCP protocol. You add the endpoint URL to your AI client's MCP configuration, authenticate with a WordPress Application Password, and your AI can start working with your site immediately.
 
-= Available Tools =
+= Available Tools (20 tools) =
 
-* **get_site_info** — Retrieve site name, description, URL, and active theme
-* **get_posts** — List posts and pages with filtering and pagination
-* **get_post** — Fetch the full content of any post or page
-* **get_users** — List WordPress users
-* **get_plugins** — List installed and active plugins
-* **get_bricks_page** — Read the full Bricks Builder element tree for any page
-* **get_builder_guide** — Fetch the built-in builder reference guide for AI context
-* **search_media** — Search for images via the Unsplash API (requires your own Unsplash API key)
-* **create_bricks_page** — Create a new page with a complete Bricks Builder layout
-* **update_bricks_page** — Modify the element tree of an existing Bricks Builder page
-* **delete_bricks_element** — Remove a specific element from a page
+* **get_site_info** — Site config, design tokens, child theme CSS, color palette, page summaries, class groups, design patterns
+* **get_builder_guide** — Complete builder reference with sections: professional, workflow, recipes, gotchas, and more
+* **page** — List, search, get (detail/summary/context/describe views), create, update content, append, delete, duplicate, snapshots, SEO
+* **element** — Add, update, remove, move, bulk add/update, duplicate, find elements on pages
+* **template** — Manage Bricks templates (header, footer, content, popup), import/export
+* **template_condition** — Set template display conditions
+* **template_taxonomy** — Manage template tags and bundles
+* **bricks** — Builder settings, element schemas, breakpoints, dynamic tags, pattern library (analyze/save/use), AI notes
+* **global_class** — Create/edit/delete CSS classes, batch operations, import CSS, categories
+* **global_variable** — Manage CSS variables and categories
+* **color_palette** — Manage color palettes and individual colors
+* **typography_scale** — Manage typography scale variables
+* **theme_style** — Manage Bricks theme styles
+* **component** — List/create/update components, instantiate, fill slots
+* **font** — Adobe Fonts, font settings
+* **code** — Page CSS and custom scripts
+* **media** — Unsplash search, sideload images, manage featured images
+* **menu** — Create/edit/delete menus, assign to locations
+* **wordpress** — Get posts/users/plugins, activate/deactivate plugins, create/update users
+* **woocommerce** — WooCommerce status, elements, template scaffolding
+* **metabox** — Read Meta Box custom fields, list field groups, get dynamic tags
 
-All tools are free to use. The plugin is open source and hosted on [GitHub].
+All tools are free to use. The plugin is open source and hosted on [GitHub](https://github.com/alexandruradulescu-neurony/bricks-mcp).
 
 = Authentication =
 
@@ -89,7 +99,7 @@ MCP is an open protocol created by Anthropic that gives AI assistants a standard
 
 = Does this plugin work without Bricks Builder? =
 
-Yes, partially. The core WordPress tools (get_site_info, get_posts, get_post, get_users, get_plugins) work on any WordPress site regardless of the active theme. The Bricks-specific tools (get_bricks_page, create_bricks_page, update_bricks_page) require Bricks Builder to be installed and active.
+Yes, partially. The core WordPress tools (get_site_info, wordpress, media, menu) work on any WordPress site regardless of the active theme. The Bricks-specific tools (page, element, template, bricks, global_class, component, etc.) require Bricks Builder to be installed and active.
 
 = Which AI tools and clients are supported? =
 
@@ -97,7 +107,7 @@ Any MCP-compatible client can connect to this plugin. Verified clients include C
 
 = Is it safe to expose a REST API endpoint for AI access? =
 
-Yes, when configured correctly. The plugin enforces WordPress Application Password authentication by default. Only users with the appropriate WordPress capabilities can use the tools. For extra security, you can restrict access by IP or role. Never disable authentication on a publicly accessible site.
+Yes, when configured correctly. The plugin includes multiple security layers: WordPress Application Password authentication (enabled by default), per-tool capability checks, configurable rate limiting (120-1000 RPM), a Dangerous Actions toggle that gates JavaScript/code injection, delete confirmation requirements (`confirm: true`), protected pages that block AI modifications, element count safety checks that prevent accidental content wipes, and centralized CSS sanitization. Never disable authentication on a publicly accessible site.
 
 == Screenshots ==
 
