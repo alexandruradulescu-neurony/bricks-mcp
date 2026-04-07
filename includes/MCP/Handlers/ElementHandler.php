@@ -531,5 +531,4 @@ final class ElementHandler {
 		return $result;
 	}
 
-	/**
 }
