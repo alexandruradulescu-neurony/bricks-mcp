@@ -267,6 +267,10 @@ final class PageHandler {
 			);
 		}
 
+		if ( 'describe' === $view ) {
+			return $this->bricks_service->describe_page( $post_id );
+		}
+
 		$elements = $this->bricks_service->get_elements( $post_id );
 
 		// Subtree filter: return only root element and all descendants.

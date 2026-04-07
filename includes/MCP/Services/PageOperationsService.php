@@ -595,4 +595,322 @@ class PageOperationsService {
 
 		return null;
 	}
+
+	/**
+	 * Describe a page: human-readable section-by-section descriptions.
+	 *
+	 * Gives AI assistants "eyes" — they can understand what a page looks like
+	 * without screenshots by getting a structured description of each section.
+	 *
+	 * @param int $post_id The post ID.
+	 * @return array<string, mixed>|\WP_Error Page description with section details.
+	 */
+	public function describe_page( int $post_id ): array|\WP_Error {
+		$post = get_post( $post_id );
+
+		if ( ! $post ) {
+			return new \WP_Error(
+				'post_not_found',
+				sprintf(
+					/* translators: %d: Post ID */
+					__( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ),
+					$post_id
+				)
+			);
+		}
+
+		$elements = $this->core->get_elements( $post_id );
+
+		if ( ! is_array( $elements ) ) {
+			$elements = [];
+		}
+
+		// Load global classes for reference.
+		$global_classes = get_option( 'bricks_global_classes', [] );
+		$class_map      = [];
+
+		if ( is_array( $global_classes ) ) {
+			foreach ( $global_classes as $gc ) {
+				$class_map[ $gc['id'] ] = $gc;
+			}
+		}
+
+		// Build element lookup by ID.
+		$by_id = [];
+		foreach ( $elements as $el ) {
+			$by_id[ $el['id'] ] = $el;
+		}
+
+		// Find top-level sections (parent === 0 and name === 'section').
+		$sections = [];
+		foreach ( $elements as $el ) {
+			if ( 0 === ( $el['parent'] ?? 0 ) && 'section' === ( $el['name'] ?? '' ) ) {
+				$sections[] = $this->describe_section( $el, $by_id, $class_map );
+			}
+		}
+
+		$section_count = count( $sections );
+
+		return [
+			'metadata'         => $this->get_page_metadata( $post_id ),
+			'page_description' => sprintf(
+				'%s — %d section%s',
+				$post->post_title,
+				$section_count,
+				1 === $section_count ? '' : 's'
+			),
+			'sections'         => $sections,
+			'total_elements'   => count( $elements ),
+		];
+	}
+
+	/**
+	 * Describe a single section with human-readable details.
+	 *
+	 * @param array<string, mixed> $section   The section element.
+	 * @param array<string, mixed> $by_id     All elements keyed by ID.
+	 * @param array<string, mixed> $class_map Global classes keyed by ID.
+	 * @return array<string, mixed> Section description.
+	 */
+	private function describe_section( array $section, array $by_id, array $class_map ): array {
+		// Count all descendants.
+		$descendants   = $this->collect_descendants( $section['id'], $by_id );
+		$element_count = count( $descendants ) + 1; // +1 for section itself.
+
+		// Collect all class names used in this section tree.
+		$class_ids    = [];
+		$all_elements = array_merge( [ $section ], array_map( static fn( $id ) => $by_id[ $id ] ?? [], $descendants ) );
+
+		foreach ( $all_elements as $el ) {
+			foreach ( ( $el['settings']['_cssGlobalClasses'] ?? [] ) as $cid ) {
+				$class_ids[] = $cid;
+			}
+		}
+
+		$class_names = [];
+		foreach ( array_unique( $class_ids ) as $cid ) {
+			if ( isset( $class_map[ $cid ] ) ) {
+				$class_names[] = $class_map[ $cid ]['name'];
+			}
+		}
+
+		// Detect background and layout.
+		$bg     = $this->detect_background( $section, $class_map );
+		$layout = $this->detect_layout( $section, $by_id, $class_map );
+
+		// Categorize content elements.
+		$content_types = [];
+		foreach ( $all_elements as $el ) {
+			$name = $el['name'] ?? '';
+			if ( in_array( $name, [ 'heading', 'text-basic', 'text', 'text-link', 'button', 'image', 'video', 'icon', 'form', 'accordion', 'tabs', 'map', 'map-leaflet' ], true ) ) {
+				$tag = $el['settings']['tag'] ?? '';
+				if ( 'heading' === $name && $tag ) {
+					$content_types[] = $tag;
+				} else {
+					$content_types[] = $name;
+				}
+			}
+		}
+
+		// Build description.
+		$desc_parts   = [];
+		$desc_parts[] = ucfirst( $bg ) . ' section';
+
+		// Check for background image.
+		$has_bg_image = ! empty( $section['settings']['_background']['image'] );
+		$has_overlay  = ! empty( $section['settings']['_gradient'] );
+
+		if ( $has_bg_image && $has_overlay ) {
+			$desc_parts[0] .= ' with background image and overlay';
+		} elseif ( $has_bg_image ) {
+			$desc_parts[0] .= ' with background image';
+		}
+
+		// Describe content.
+		$type_counts   = array_count_values( $content_types );
+		$content_parts = [];
+		foreach ( $type_counts as $type => $count ) {
+			if ( $count > 1 ) {
+				$content_parts[] = "{$count} {$type}s";
+			} else {
+				$content_parts[] = $type;
+			}
+		}
+
+		if ( ! empty( $content_parts ) ) {
+			$desc_parts[] = 'Contains ' . implode( ', ', $content_parts );
+		}
+
+		// Check for grid layout.
+		if ( str_contains( $layout, 'grid' ) ) {
+			$desc_parts[] = ucfirst( $layout );
+		}
+
+		$label = $section['settings']['label'] ?? $section['label'] ?? 'Section';
+
+		return [
+			'label'         => $label,
+			'description'   => implode( '. ', $desc_parts ) . '.',
+			'element_count' => $element_count,
+			'classes_used'  => $class_names,
+			'layout'        => $layout,
+			'background'    => $bg,
+		];
+	}
+
+	/**
+	 * Collect all descendant element IDs for a given parent.
+	 *
+	 * @param string               $element_id The parent element ID.
+	 * @param array<string, mixed> $by_id      All elements keyed by ID.
+	 * @return array<int, string> List of descendant element IDs.
+	 */
+	private function collect_descendants( string $element_id, array $by_id ): array {
+		$result   = [];
+		$children = $by_id[ $element_id ]['children'] ?? [];
+
+		foreach ( $children as $child_id ) {
+			$result[] = $child_id;
+			$result   = array_merge( $result, $this->collect_descendants( $child_id, $by_id ) );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Detect the background style of an element (dark or light).
+	 *
+	 * Checks inline background color and global class settings for dark indicators.
+	 *
+	 * @param array<string, mixed> $element   The element to check.
+	 * @param array<string, mixed> $class_map Global classes keyed by ID.
+	 * @return string 'dark' or 'light'.
+	 */
+	private function detect_background( array $element, array $class_map ): string {
+		// Check inline background color.
+		$bg_color = $element['settings']['_background']['color']['raw'] ?? '';
+
+		if ( $bg_color ) {
+			if ( str_contains( $bg_color, '900' ) || str_contains( $bg_color, '800' ) || str_contains( $bg_color, '950' ) || str_contains( $bg_color, 'dark' ) ) {
+				return 'dark';
+			}
+			if ( str_contains( $bg_color, 'overlay' ) ) {
+				return 'dark';
+			}
+		}
+
+		// Check classes for background hints.
+		foreach ( ( $element['settings']['_cssGlobalClasses'] ?? [] ) as $cid ) {
+			$class = $class_map[ $cid ] ?? null;
+
+			if ( ! $class ) {
+				continue;
+			}
+
+			$class_bg = $class['settings']['_background']['color']['raw'] ?? '';
+
+			if ( $class_bg && ( str_contains( $class_bg, '900' ) || str_contains( $class_bg, '800' ) || str_contains( $class_bg, '950' ) || str_contains( $class_bg, 'dark' ) ) ) {
+				return 'dark';
+			}
+
+			// Check class name for hints.
+			if ( str_contains( $class['name'], 'article-section' ) || str_contains( $class['name'], 'cta-section' ) ) {
+				return 'dark';
+			}
+		}
+
+		return 'light';
+	}
+
+	/**
+	 * Detect the layout pattern of a section.
+	 *
+	 * Looks at direct children and grandchildren for grid/layout patterns
+	 * in both global classes and inline settings.
+	 *
+	 * @param array<string, mixed> $section   The section element.
+	 * @param array<string, mixed> $by_id     All elements keyed by ID.
+	 * @param array<string, mixed> $class_map Global classes keyed by ID.
+	 * @return string Layout description (e.g., 'stacked', 'grid', '3-column grid').
+	 */
+	private function detect_layout( array $section, array $by_id, array $class_map ): string {
+		// Look at direct children and grandchildren for grid/layout patterns.
+		$children = $section['children'] ?? [];
+
+		foreach ( $children as $child_id ) {
+			$child         = $by_id[ $child_id ] ?? [];
+			$child_classes = $child['settings']['_cssGlobalClasses'] ?? [];
+
+			foreach ( $child_classes as $cid ) {
+				$class = $class_map[ $cid ] ?? null;
+
+				if ( ! $class ) {
+					continue;
+				}
+
+				$name = $class['name'];
+
+				if ( str_contains( $name, 'grid' ) ) {
+					// Try to detect column count from class settings.
+					$cols = $class['settings']['_gridTemplateColumns'] ?? '';
+
+					if ( str_contains( $cols, 'grid-4' ) ) {
+						return '4-column grid';
+					}
+					if ( str_contains( $cols, 'grid-3' ) ) {
+						return '3-column grid';
+					}
+					if ( str_contains( $cols, 'grid-2' ) ) {
+						return '2-column grid';
+					}
+
+					return 'grid';
+				}
+			}
+
+			// Check inline grid.
+			if ( ! empty( $child['settings']['_display'] ) && 'grid' === $child['settings']['_display'] ) {
+				$cols = $child['settings']['_gridTemplateColumns'] ?? '';
+
+				if ( str_contains( $cols, '1fr 1fr 1fr 1fr' ) ) {
+					return '4-column grid';
+				}
+				if ( str_contains( $cols, '1fr 1fr 1fr' ) ) {
+					return '3-column grid';
+				}
+				if ( str_contains( $cols, '1fr 1fr' ) ) {
+					return '2-column grid';
+				}
+
+				return 'grid';
+			}
+
+			// Check grandchildren for grids.
+			foreach ( ( $child['children'] ?? [] ) as $gc_id ) {
+				$gc = $by_id[ $gc_id ] ?? [];
+
+				foreach ( ( $gc['settings']['_cssGlobalClasses'] ?? [] ) as $gcid ) {
+					$gc_class = $class_map[ $gcid ] ?? null;
+
+					if ( $gc_class && str_contains( $gc_class['name'], 'grid' ) ) {
+						$cols = $gc_class['settings']['_gridTemplateColumns'] ?? '';
+
+						if ( str_contains( $cols, 'grid-4' ) ) {
+							return '4-column grid';
+						}
+						if ( str_contains( $cols, 'grid-3' ) ) {
+							return '3-column grid';
+						}
+						if ( str_contains( $cols, 'grid-2' ) ) {
+							return '2-column grid';
+						}
+
+						return 'grid';
+					}
+				}
+			}
+		}
+
+		return 'stacked';
+	}
 }

@@ -501,6 +501,16 @@ class BricksService {
 	}
 
 	/**
+	 * Describe a page: human-readable section-by-section descriptions.
+	 *
+	 * @param int $post_id The post ID.
+	 * @return array<string, mixed>|\WP_Error Page description with section details.
+	 */
+	public function describe_page( int $post_id ): array|\WP_Error {
+		return $this->page_operations_service->describe_page( $post_id );
+	}
+
+	/**
 	 * Get all post types that have Bricks editing enabled.
 	 *
 	 * Checks Bricks database settings if Bricks is active, falls back to defaults.

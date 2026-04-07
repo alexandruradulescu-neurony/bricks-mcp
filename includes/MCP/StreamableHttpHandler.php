@@ -320,22 +320,7 @@ final class StreamableHttpHandler {
 			'version' => BRICKS_MCP_VERSION,
 		];
 
-		$instructions = "Bricks MCP connects AI assistants to a WordPress site running Bricks Builder.\n\n"
-			. "⚠️ MANDATORY FIRST STEP: Before ANY page/template/element creation or modification, you MUST:\n"
-			. "1. Call get_site_info - Understand design tokens, child theme CSS, and color palette\n"
-			. "2. Call global_class:list - Discover existing global classes (if none exist, create them)\n"
-			. "3. Call get_builder_guide(section='professional') - Learn the global-class-first approach\n"
-			. "4. Call get_builder_guide(section='gotchas') - Learn common mistakes to avoid\n\n"
-			. "CRITICAL REMINDERS:\n"
-			. "- Design system: Site has Fancy color palette + 109 CSS variables + child theme CSS. Child theme CSS handles section padding, container gaps, heading sizes, text styles. Do NOT duplicate these inline.\n"
-			. "- Global classes: Use _cssGlobalClasses on EVERY element. Create classes with global_class:batch_create if none exist. Classes use var(--space-*), var(--grid-*), var(--primary), etc.\n"
-			. "- Labels: Add label to every structural element (sections, containers, blocks, divs)\n"
-			. "- Semantic HTML: Use tag: 'ul', 'li', 'figure', 'address' on block/div elements\n"
-			. "- Element hierarchy: section > container > block/div > content. Use block and div for grouping, not nested containers.\n"
-			. "- Inline styles: ONLY for instance-specific overrides (_padding.top: '0', _order: '-1', unique background color)\n"
-			. "- Style properties: Use _widthMax NOT _maxWidth, _typography['text-align'] NOT _textAlign\n"
-			. "- Unfamiliar elements: Before using ANY element type you haven't used before (accordion, tabs, slider, etc.), ALWAYS call bricks:get_element_schemas(element='element_name') first. The working_example shows the exact settings format Bricks expects. Do NOT guess repeater keys or item structure.\n\n"
-			. "The page:create, element:add, and template:create tool descriptions contain additional guidance. READ THEM.";
+		$instructions = $this->generate_dynamic_instructions();
 
 		return $this->jsonrpc_success(
 			$id,
@@ -487,5 +472,99 @@ final class StreamableHttpHandler {
 				'message' => $message,
 			],
 		];
+	}
+
+	/**
+	 * Generate dynamic MCP instructions with site-specific context.
+	 *
+	 * @return string Instructions text for the AI client.
+	 */
+	private function generate_dynamic_instructions(): string {
+		$site_name = get_bloginfo( 'name' );
+
+		// Count pages and global classes.
+		$page_count  = 0;
+		$class_count = 0;
+
+		$pages_query = new \WP_Query( [
+			'post_type'      => array_values( get_post_types( [ 'public' => true ] ) ),
+			'post_status'    => 'publish',
+			'posts_per_page' => 100,
+			'meta_query'     => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				[ 'key' => '_bricks_page_content_2', 'compare' => 'EXISTS' ],
+			],
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		] );
+		$page_count = count( $pages_query->posts );
+
+		$global_classes = get_option( 'bricks_global_classes', [] );
+		$class_count    = is_array( $global_classes ) ? count( $global_classes ) : 0;
+
+		// Detect design system from class naming.
+		$design_system = '';
+		if ( is_array( $global_classes ) ) {
+			foreach ( $global_classes as $gc ) {
+				$name = $gc['name'] ?? '';
+				if ( str_starts_with( $name, 'brxw-' ) ) {
+					$design_system = 'Auron wireframe';
+					break;
+				}
+			}
+		}
+
+		// Detect recurring patterns.
+		$patterns = [];
+		foreach ( $pages_query->posts as $pid ) {
+			$raw = get_post_meta( (int) $pid, '_bricks_page_content_2', true );
+			if ( ! is_array( $raw ) ) {
+				continue;
+			}
+			foreach ( $raw as $el ) {
+				if ( 'section' !== ( $el['name'] ?? '' ) || 0 !== ( $el['parent'] ?? 0 ) ) {
+					continue;
+				}
+				$label = $el['settings']['label'] ?? $el['label'] ?? '';
+				if ( $label && ! in_array( $label, $patterns, true ) ) {
+					$patterns[] = $label;
+				}
+			}
+		}
+
+		// Build site context line.
+		$context_parts = [];
+		$context_parts[] = sprintf( 'Site "%s"', $site_name );
+		$context_parts[] = sprintf( '%d Bricks page%s', $page_count, 1 === $page_count ? '' : 's' );
+		$context_parts[] = sprintf( '%d global class%s', $class_count, 1 === $class_count ? '' : 'es' );
+		if ( $design_system ) {
+			$context_parts[] = $design_system . ' design system';
+		}
+		$site_context = implode( ', ', $context_parts ) . '.';
+
+		if ( ! empty( $patterns ) ) {
+			$site_context .= ' Section patterns found: ' . implode( ', ', array_slice( $patterns, 0, 8 ) ) . '.';
+		}
+
+		$instructions = "Bricks MCP connects AI assistants to a WordPress site running Bricks Builder.\n\n"
+			. "SITE CONTEXT: {$site_context}\n\n"
+			. "⚠️ MANDATORY FIRST STEP: Before ANY page/template/element creation or modification, you MUST:\n"
+			. "1. Call get_site_info - Understand design tokens, child theme CSS, color palette, and page summaries\n"
+			. "2. Call global_class:list - Discover existing global classes (if none exist, create them)\n"
+			. "3. Call get_builder_guide(section='professional') - Learn the global-class-first approach\n"
+			. "4. Call page:get(view='describe') on a similar page - Understand existing patterns before building\n\n"
+			. "CRITICAL REMINDERS:\n"
+			. "- Reuse patterns: Check existing pages with page:get(view='describe') before building new sections. Match the site's existing style.\n"
+			. "- Global classes: Use _cssGlobalClasses on EVERY element. Create classes with global_class:batch_create if none exist.\n"
+			. "- Child theme CSS: Handles section padding, container gaps, heading sizes, text styles. Do NOT duplicate these inline.\n"
+			. "- Labels: Add label to every structural element (sections, containers, blocks, divs)\n"
+			. "- Semantic HTML: Use tag: 'ul', 'li', 'figure', 'address' on block/div elements\n"
+			. "- Element hierarchy: section > container > block/div > content. Use block and div for grouping, not nested containers.\n"
+			. "- Inline styles: ONLY for instance-specific overrides (_padding.top: '0', _order: '-1', unique background color)\n"
+			. "- Style properties: Use _widthMax NOT _maxWidth, _typography['text-align'] NOT _textAlign\n"
+			. "- Unfamiliar elements: Before using ANY element type you haven't used before (accordion, tabs, slider, etc.), ALWAYS call bricks:get_element_schemas(element='element_name') first. Do NOT guess repeater keys or item structure.\n"
+			. "- Destructive actions: delete operations require confirm: true. Protected pages block all write operations.\n\n"
+			. "The page:create, element:add, and template:create tool descriptions contain additional guidance. READ THEM.";
+
+		return $instructions;
 	}
 }

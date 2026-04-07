@@ -510,6 +510,152 @@ final class Router {
 			}
 		}
 
+		// Pages summary: brief overview of all Bricks-enabled pages.
+		$pages_query = new \WP_Query( [
+			'post_type'      => array_values( get_post_types( [ 'public' => true ] ) ),
+			'post_status'    => 'publish',
+			'posts_per_page' => 50,
+			'meta_query'     => [
+				[
+					'key'     => '_bricks_page_content_2',
+					'compare' => 'EXISTS',
+				],
+			],
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		] );
+
+		$pages_summary = [];
+		foreach ( $pages_query->posts as $pid ) {
+			$raw      = get_post_meta( (int) $pid, '_bricks_page_content_2', true );
+			$elements = is_array( $raw ) ? $raw : [];
+
+			$section_count = 0;
+			$section_types = [];
+			foreach ( $elements as $el ) {
+				if ( ( $el['name'] ?? '' ) === 'section' && (string) ( $el['parent'] ?? '0' ) === '0' ) {
+					$section_count++;
+					$label = $el['settings']['label'] ?? $el['label'] ?? '';
+					if ( $label ) {
+						$section_types[] = $label;
+					}
+				}
+			}
+
+			$post_obj        = get_post( (int) $pid );
+			$pages_summary[] = [
+				'id'       => (int) $pid,
+				'title'    => $post_obj ? $post_obj->post_title : '',
+				'slug'     => $post_obj ? $post_obj->post_name : '',
+				'sections' => $section_count,
+				'elements' => count( $elements ),
+				'summary'  => $section_types ? implode( ', ', $section_types ) : 'No labeled sections',
+			];
+		}
+		$info['pages_summary'] = $pages_summary;
+
+		// Class groups: organize global classes by component type.
+		$all_classes = get_option( 'bricks_global_classes', [] );
+		if ( ! is_array( $all_classes ) ) {
+			$all_classes = [];
+		}
+		if ( ! empty( $all_classes ) ) {
+			$groups = [
+				'heroes'     => [],
+				'sections'   => [],
+				'containers' => [],
+				'grids'      => [],
+				'cards'      => [],
+				'typography' => [],
+				'navigation' => [],
+				'media'      => [],
+				'other'      => [],
+			];
+
+			foreach ( $all_classes as $class ) {
+				$name = $class['name'] ?? '';
+				if ( empty( $name ) ) {
+					continue;
+				}
+
+				$n = strtolower( $name );
+				if ( str_contains( $n, 'hero' ) ) {
+					$groups['heroes'][] = $name;
+				} elseif ( str_contains( $n, 'grid' ) || str_contains( $n, 'logos-' ) ) {
+					$groups['grids'][] = $name;
+				} elseif ( str_contains( $n, 'card' ) || str_contains( $n, 'profile' ) ) {
+					$groups['cards'][] = $name;
+				} elseif ( str_contains( $n, 'section' ) || str_contains( $n, 'cta' ) || str_contains( $n, 'contact' ) ) {
+					$groups['sections'][] = $name;
+				} elseif ( str_contains( $n, 'container' ) || str_contains( $n, 'wrapper' ) || str_contains( $n, 'content-wrapper' ) || str_contains( $n, 'intro' ) ) {
+					$groups['containers'][] = $name;
+				} elseif ( str_contains( $n, 'heading' ) || str_contains( $n, 'tagline' ) || str_contains( $n, 'lede' ) || str_contains( $n, 'text' ) ) {
+					$groups['typography'][] = $name;
+				} elseif ( str_contains( $n, 'header' ) || str_contains( $n, 'footer' ) || str_contains( $n, 'nav' ) || str_contains( $n, 'menu' ) || str_contains( $n, 'toggle' ) || str_contains( $n, 'subfooter' ) ) {
+					$groups['navigation'][] = $name;
+				} elseif ( str_contains( $n, 'media' ) || str_contains( $n, 'image' ) || str_contains( $n, 'logo' ) ) {
+					$groups['media'][] = $name;
+				} else {
+					$groups['other'][] = $name;
+				}
+			}
+
+			// Remove empty groups.
+			$info['class_groups']      = array_filter( $groups, fn( $g ) => ! empty( $g ) );
+			$info['class_groups_note'] = 'Global classes grouped by component type. Use global_class:list for full details with IDs and styles.';
+		}
+
+		// Design patterns: detect recurring section patterns across pages.
+		$pattern_fingerprints = [];
+		foreach ( $pages_query->posts as $pid ) {
+			$raw      = get_post_meta( (int) $pid, '_bricks_page_content_2', true );
+			$elements = is_array( $raw ) ? $raw : [];
+			foreach ( $elements as $el ) {
+				if ( ( $el['name'] ?? '' ) === 'section' && (string) ( $el['parent'] ?? '0' ) === '0' ) {
+					// Create fingerprint from section's own classes.
+					$section_classes = $el['settings']['_cssGlobalClasses'] ?? [];
+					if ( empty( $section_classes ) ) {
+						continue;
+					}
+
+					// Use sorted class names as fingerprint.
+					$class_names_for_fp = [];
+					foreach ( $section_classes as $cid ) {
+						foreach ( $all_classes as $gc ) {
+							if ( ( $gc['id'] ?? '' ) === $cid ) {
+								$class_names_for_fp[] = $gc['name'];
+								break;
+							}
+						}
+					}
+					sort( $class_names_for_fp );
+					$fp = implode( '+', $class_names_for_fp );
+
+					if ( ! isset( $pattern_fingerprints[ $fp ] ) ) {
+						$pattern_fingerprints[ $fp ] = [
+							'classes' => $class_names_for_fp,
+							'pages'   => [],
+							'label'   => $el['settings']['label'] ?? $el['label'] ?? '',
+						];
+					}
+					$pattern_fingerprints[ $fp ]['pages'][] = (int) $pid;
+				}
+			}
+		}
+
+		// Only report patterns used on 2+ pages.
+		$design_patterns = [];
+		foreach ( $pattern_fingerprints as $fp => $data ) {
+			$unique_pages = array_unique( $data['pages'] );
+			if ( count( $unique_pages ) >= 2 ) {
+				$name              = $data['label'] ?: implode( ' + ', $data['classes'] );
+				$design_patterns[] = sprintf( '%s (used on %d pages)', $name, count( $unique_pages ) );
+			}
+		}
+		if ( ! empty( $design_patterns ) ) {
+			$info['design_patterns'] = $design_patterns;
+		}
+
 		return $info;
 	}
 
@@ -823,8 +969,8 @@ final class Router {
 					),
 					'view'                => array(
 						'type'        => 'string',
-						'enum'        => array( 'detail', 'summary', 'context' ),
-						'description' => __( 'Detail level (get: detail=full settings, summary=tree outline, context=tree with text content and classes but no style settings)', 'bricks-mcp' ),
+						'enum'        => array( 'detail', 'summary', 'context', 'describe' ),
+						'description' => __( 'Detail level (get: detail=full settings, summary=tree outline, context=tree with text content and classes but no style settings, describe=human-readable section descriptions)', 'bricks-mcp' ),
 					),
 					'offset'              => array(
 						'type'        => 'integer',
