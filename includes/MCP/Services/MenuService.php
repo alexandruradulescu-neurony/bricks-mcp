@@ -122,6 +122,30 @@ class MenuService {
 		// Get location assignments before deletion.
 		$locations = $this->get_menu_locations_for_menu( $menu_id );
 
+		// Backup menu data before permanent deletion.
+		$backup = array(
+			'menu_id'    => $menu_id,
+			'name'       => $menu->name,
+			'slug'       => $menu->slug,
+			'items'      => is_array( $items ) ? array_map( function ( $item ) {
+				return array(
+					'title'     => $item->title,
+					'url'       => $item->url,
+					'type'      => $item->type,
+					'object'    => $item->object,
+					'object_id' => $item->object_id,
+					'parent'    => $item->menu_item_parent,
+				);
+			}, $items ) : array(),
+			'deleted_at' => current_time( 'mysql' ),
+		);
+		$trash              = get_option( 'bricks_mcp_menu_trash', array() );
+		$trash[ $menu_id ]  = $backup;
+		if ( count( $trash ) > 20 ) {
+			$trash = array_slice( $trash, -20, null, true );
+		}
+		update_option( 'bricks_mcp_menu_trash', $trash, false );
+
 		$result = wp_delete_nav_menu( $menu_id );
 
 		if ( is_wp_error( $result ) ) {

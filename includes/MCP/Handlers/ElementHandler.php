@@ -86,6 +86,12 @@ final class ElementHandler {
 			return new \WP_Error( 'missing_name', __( 'name is required. Provide the Bricks element type (e.g. heading, container, section).', 'bricks-mcp' ) );
 		}
 
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( (int) $args['post_id'] );
+		if ( $protected ) {
+			return $protected;
+		}
+
 		$post_id   = (int) $args['post_id'];
 		$parent_id = isset( $args['parent_id'] ) ? (string) $args['parent_id'] : '0';
 		$position  = isset( $args['position'] ) ? (int) $args['position'] : null;
@@ -116,6 +122,12 @@ final class ElementHandler {
 			return new \WP_Error( 'missing_settings', __( 'settings object is required. Provide the settings keys and values to update.', 'bricks-mcp' ) );
 		}
 
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( (int) $args['post_id'] );
+		if ( $protected ) {
+			return $protected;
+		}
+
 		$post_id    = (int) $args['post_id'];
 		$element_id = sanitize_text_field( $args['element_id'] );
 		$settings   = $args['settings'];
@@ -140,8 +152,48 @@ final class ElementHandler {
 
 		$post_id    = (int) $args['post_id'];
 		$element_id = sanitize_text_field( $args['element_id'] );
+		$cascade    = ! empty( $args['cascade'] );
 
-		$cascade = ! empty( $args['cascade'] );
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
+		}
+
+		// Confirm check: only when cascade is true and would remove >3 descendants.
+		if ( $cascade && empty( $args['confirm'] ) ) {
+			$elements = $this->bricks_service->get_elements( $post_id );
+			// Count descendants via BFS.
+			$children_map = array();
+			foreach ( $elements as $el ) {
+				$eid = $el['id'] ?? '';
+				if ( ! empty( $el['children'] ) ) {
+					$children_map[ $eid ] = $el['children'];
+				}
+			}
+			$descendant_count = 0;
+			$queue            = $children_map[ $element_id ] ?? array();
+			while ( ! empty( $queue ) ) {
+				$cid = array_shift( $queue );
+				++$descendant_count;
+				if ( ! empty( $children_map[ $cid ] ) ) {
+					foreach ( $children_map[ $cid ] as $grandchild ) {
+						$queue[] = $grandchild;
+					}
+				}
+			}
+			if ( $descendant_count > 3 ) {
+				return new \WP_Error(
+					'bricks_mcp_confirm_required',
+					sprintf(
+						__( 'Cascade remove of element "%s" would also delete %d descendant element(s). Set confirm: true to proceed.', 'bricks-mcp' ),
+						$element_id,
+						$descendant_count
+					)
+				);
+			}
+		}
+
 		return $this->bricks_service->remove_element( $post_id, $element_id, $cascade );
 	}
 
@@ -164,6 +216,12 @@ final class ElementHandler {
 			return new \WP_Error( 'missing_element_id', __( 'element_id is required.', 'bricks-mcp' ) );
 		}
 
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
+		}
+
 		return $this->bricks_service->move_element( $post_id, $element_id, $target_parent_id, $position );
 	}
 
@@ -182,6 +240,12 @@ final class ElementHandler {
 		}
 		if ( empty( $updates ) || ! is_array( $updates ) ) {
 			return new \WP_Error( 'missing_updates', __( 'updates array is required with at least one {element_id, settings} object.', 'bricks-mcp' ) );
+		}
+
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
 		}
 
 		return $this->bricks_service->bulk_update_elements( $post_id, $updates );
@@ -204,6 +268,12 @@ final class ElementHandler {
 			return new \WP_Error( 'missing_elements', __( 'elements array is required for bulk_add.', 'bricks-mcp' ) );
 		}
 
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
+		}
+
 		$parent_id = isset( $args['parent_id'] ) ? sanitize_text_field( (string) $args['parent_id'] ) : '0';
 		$position  = isset( $args['position'] ) ? (int) $args['position'] : null;
 
@@ -222,6 +292,12 @@ final class ElementHandler {
 		}
 		if ( empty( $args['element_id'] ) ) {
 			return new \WP_Error( 'missing_element_id', __( 'element_id is required.', 'bricks-mcp' ) );
+		}
+
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( (int) $args['post_id'] );
+		if ( $protected ) {
+			return $protected;
 		}
 
 		$post_id         = (int) $args['post_id'];

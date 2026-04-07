@@ -927,6 +927,14 @@ final class Router {
 						'type'        => 'string',
 						'description' => __( 'Human-readable label for the snapshot (snapshot: optional)', 'bricks-mcp' ),
 					),
+					'confirm'             => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+					),
+					'force'               => array(
+						'type'        => 'boolean',
+						'description' => __( 'When true, permanently delete instead of moving to trash (delete action only).', 'bricks-mcp' ),
+					),
 				),
 				'required'   => array( 'action' ),
 			),
@@ -1022,6 +1030,10 @@ final class Router {
 						'type'        => 'string',
 						'description' => __( 'Filter by text content containing string (find: optional, case-insensitive)', 'bricks-mcp' ),
 					),
+					'confirm'          => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+					),
 				),
 				'required'   => array( 'action' ),
 			),
@@ -1104,6 +1116,14 @@ final class Router {
 						'type'        => 'string',
 						'description' => __( 'Remote URL to fetch template JSON from (import_url: required)', 'bricks-mcp' ),
 					),
+					'confirm'     => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+					),
+					'force'       => array(
+						'type'        => 'boolean',
+						'description' => __( 'When true, permanently delete instead of moving to trash (delete action only).', 'bricks-mcp' ),
+					),
 				),
 				'required'   => array( 'action' ),
 			),
@@ -1163,6 +1183,10 @@ final class Router {
 					'term_id' => array(
 						'type'        => 'integer',
 						'description' => __( 'Term ID to delete (delete_tag, delete_bundle: required)', 'bricks-mcp' ),
+					),
+					'confirm' => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -1247,6 +1271,10 @@ final class Router {
 						'type'        => 'object',
 						'description' => __( 'Global classes JSON data to import (import_json: required). Array of class objects with "name" key, or {classes: [...], categories: [...]}.', 'bricks-mcp' ),
 					),
+					'confirm'        => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+					),
 				),
 				'required'   => array( 'action' ),
 			),
@@ -1294,6 +1322,10 @@ final class Router {
 						'type'        => 'boolean',
 						'description' => __( 'If true, permanently delete the style; if false (default), only remove conditions to deactivate (delete: optional)', 'bricks-mcp' ),
 					),
+					'confirm'         => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+					),
 				),
 				'required'   => array( 'action' ),
 			),
@@ -1336,6 +1368,10 @@ final class Router {
 						'type'        => 'array',
 						'description' => __( 'Utility class definitions (create, update: optional)', 'bricks-mcp' ),
 					),
+					'confirm'         => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+					),
 				),
 				'required'   => array( 'action' ),
 			),
@@ -1377,6 +1413,10 @@ final class Router {
 					'position'   => array(
 						'type'        => 'integer',
 						'description' => __( 'Position in palette (add_color: optional)', 'bricks-mcp' ),
+					),
+					'confirm'    => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -1436,6 +1476,10 @@ final class Router {
 					'value_query'   => array(
 						'type'        => 'string',
 						'description' => __( 'Value substring to search for (search: optional, case-insensitive)', 'bricks-mcp' ),
+					),
+					'confirm'       => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -1533,6 +1577,10 @@ final class Router {
 					'location' => array(
 						'type'        => 'string',
 						'description' => __( 'Theme menu location slug (assign: required; unassign: required)', 'bricks-mcp' ),
+					),
+					'confirm'  => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),

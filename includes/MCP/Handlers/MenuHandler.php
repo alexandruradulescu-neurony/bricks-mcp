@@ -147,7 +147,25 @@ final class MenuHandler {
 			);
 		}
 
-		return $this->menu_service->delete_menu( (int) $args['menu_id'] );
+		$menu_id = (int) $args['menu_id'];
+
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			$menu  = wp_get_nav_menu_object( $menu_id );
+			$items = $menu ? wp_get_nav_menu_items( $menu_id ) : false;
+			$count = is_array( $items ) ? count( $items ) : 0;
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete menu "%s" (ID: %d) with %d item(s). This is a permanent delete and cannot be undone. Set confirm: true to proceed.', 'bricks-mcp' ),
+					$menu ? $menu->name : "ID $menu_id",
+					$menu_id,
+					$count
+				)
+			);
+		}
+
+		return $this->menu_service->delete_menu( $menu_id );
 	}
 
 	/**

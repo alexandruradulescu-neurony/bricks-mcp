@@ -340,6 +340,17 @@ final class DesignSystemHandler {
 			);
 		}
 
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete theme style "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
+					sanitize_text_field( $args['style_id'] )
+				)
+			);
+		}
+
 		return $this->bricks_service->delete_theme_style(
 			$args['style_id'],
 			! empty( $args['hard_delete'] )
@@ -459,6 +470,17 @@ final class DesignSystemHandler {
 			);
 		}
 
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete typography scale "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
+					sanitize_text_field( $args['category_id'] )
+				)
+			);
+		}
+
 		$result = $this->bricks_service->delete_typography_scale( $args['category_id'] );
 
 		if ( is_wp_error( $result ) ) {
@@ -556,6 +578,17 @@ final class DesignSystemHandler {
 			return new \WP_Error(
 				'missing_palette_id',
 				__( 'palette_id is required. Use color_palette:list to discover available palette IDs.', 'bricks-mcp' )
+			);
+		}
+
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete color palette "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
+					sanitize_text_field( $args['palette_id'] )
+				)
 			);
 		}
 
@@ -692,6 +725,18 @@ final class DesignSystemHandler {
 			);
 		}
 
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete color "%s" from palette "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
+					sanitize_text_field( $args['color_id'] ),
+					sanitize_text_field( $args['palette_id'] )
+				)
+			);
+		}
+
 		return $this->bricks_service->delete_color_from_palette(
 			$args['palette_id'],
 			$args['color_id']
@@ -764,6 +809,17 @@ final class DesignSystemHandler {
 			return new \WP_Error(
 				'missing_category_id',
 				__( 'category_id is required. Use list_global_variables to discover available category IDs.', 'bricks-mcp' )
+			);
+		}
+
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete variable category "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
+					sanitize_text_field( $args['category_id'] )
+				)
 			);
 		}
 
@@ -850,6 +906,17 @@ final class DesignSystemHandler {
 			);
 		}
 
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete global variable "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
+					sanitize_text_field( $args['variable_id'] )
+				)
+			);
+		}
+
 		return $this->bricks_service->delete_global_variable( $args['variable_id'] );
 	}
 
@@ -884,6 +951,17 @@ final class DesignSystemHandler {
 
 		if ( empty( $variable_ids ) || ! is_array( $variable_ids ) ) {
 			return new \WP_Error( 'missing_variable_ids', __( 'variable_ids array is required with at least one variable ID string.', 'bricks-mcp' ) );
+		}
+
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete %d global variable(s). Set confirm: true to proceed.', 'bricks-mcp' ),
+					count( $variable_ids )
+				)
+			);
 		}
 
 		return $this->bricks_service->batch_delete_global_variables( $variable_ids );

@@ -310,6 +310,17 @@ final class GlobalClassHandler {
 			);
 		}
 
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete global class "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
+					$class['name']
+				)
+			);
+		}
+
 		$refs   = $this->bricks_service->find_class_references( $class['id'] );
 		$result = $this->bricks_service->trash_global_class( $class['id'] );
 
@@ -359,6 +370,19 @@ final class GlobalClassHandler {
 			return new \WP_Error(
 				'missing_class_names',
 				__( 'class_names is required and must be a non-empty array of class name strings. Use global_class:list to find names.', 'bricks-mcp' )
+			);
+		}
+
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			$names = array_map( 'sanitize_text_field', $args['class_names'] );
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete %d global class(es): %s. Set confirm: true to proceed.', 'bricks-mcp' ),
+					count( $names ),
+					implode( ', ', $names )
+				)
 			);
 		}
 
@@ -434,6 +458,17 @@ final class GlobalClassHandler {
 			return new \WP_Error(
 				'missing_category_id',
 				__( 'category_id is required. Use list_global_class_categories to find category IDs.', 'bricks-mcp' )
+			);
+		}
+
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete global class category "%s". Classes in it will be moved to uncategorized. Set confirm: true to proceed.', 'bricks-mcp' ),
+					sanitize_text_field( $args['category_id'] )
+				)
 			);
 		}
 

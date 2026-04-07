@@ -267,6 +267,37 @@ final class TemplateHandler {
 			);
 		}
 
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			$template_type = get_post_meta( $template_id, '_bricks_template_type', true );
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete %s template "%s" (ID: %d). Set confirm: true to proceed.', 'bricks-mcp' ),
+					$template_type ?: 'unknown',
+					$post->post_title,
+					$template_id
+				)
+			);
+		}
+
+		// Force delete: permanently delete instead of trashing.
+		if ( ! empty( $args['force'] ) ) {
+			$deleted = wp_delete_post( $template_id, true );
+			if ( ! $deleted ) {
+				return new \WP_Error(
+					'delete_failed',
+					sprintf( __( 'Failed to permanently delete template %d.', 'bricks-mcp' ), $template_id )
+				);
+			}
+			return array(
+				'template_id' => $template_id,
+				'title'       => $post->post_title,
+				'status'      => 'deleted',
+				'message'     => __( 'Template permanently deleted. This cannot be undone.', 'bricks-mcp' ),
+			);
+		}
+
 		$trashed = wp_trash_post( $template_id );
 
 		if ( ! $trashed ) {
@@ -637,7 +668,39 @@ final class TemplateHandler {
 		}
 
 		$term_id = (int) $args['term_id'];
-		$result  = $this->bricks_service->delete_template_term( 'template_tag', $term_id );
+
+		// Confirm check.
+		$term = get_term( $term_id, 'template_tag' );
+		if ( $term && ! is_wp_error( $term ) ) {
+			if ( empty( $args['confirm'] ) ) {
+				return new \WP_Error(
+					'bricks_mcp_confirm_required',
+					sprintf(
+						__( 'You are about to permanently delete tag "%s" (ID: %d) assigned to %d template(s). This cannot be undone. Set confirm: true to proceed.', 'bricks-mcp' ),
+						$term->name,
+						$term_id,
+						$term->count
+					)
+				);
+			}
+
+			// Backup term data before deletion.
+			$trash   = get_option( 'bricks_mcp_term_trash', array() );
+			$trash[] = array(
+				'term_id'    => $term_id,
+				'name'       => $term->name,
+				'slug'       => $term->slug,
+				'taxonomy'   => $term->taxonomy,
+				'count'      => $term->count,
+				'deleted_at' => current_time( 'mysql' ),
+			);
+			if ( count( $trash ) > 50 ) {
+				$trash = array_slice( $trash, -50 );
+			}
+			update_option( 'bricks_mcp_term_trash', $trash, false );
+		}
+
+		$result = $this->bricks_service->delete_template_term( 'template_tag', $term_id );
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -664,7 +727,39 @@ final class TemplateHandler {
 		}
 
 		$term_id = (int) $args['term_id'];
-		$result  = $this->bricks_service->delete_template_term( 'template_bundle', $term_id );
+
+		// Confirm check.
+		$term = get_term( $term_id, 'template_bundle' );
+		if ( $term && ! is_wp_error( $term ) ) {
+			if ( empty( $args['confirm'] ) ) {
+				return new \WP_Error(
+					'bricks_mcp_confirm_required',
+					sprintf(
+						__( 'You are about to permanently delete bundle "%s" (ID: %d) assigned to %d template(s). This cannot be undone. Set confirm: true to proceed.', 'bricks-mcp' ),
+						$term->name,
+						$term_id,
+						$term->count
+					)
+				);
+			}
+
+			// Backup term data before deletion.
+			$trash   = get_option( 'bricks_mcp_term_trash', array() );
+			$trash[] = array(
+				'term_id'    => $term_id,
+				'name'       => $term->name,
+				'slug'       => $term->slug,
+				'taxonomy'   => $term->taxonomy,
+				'count'      => $term->count,
+				'deleted_at' => current_time( 'mysql' ),
+			);
+			if ( count( $trash ) > 50 ) {
+				$trash = array_slice( $trash, -50 );
+			}
+			update_option( 'bricks_mcp_term_trash', $trash, false );
+		}
+
+		$result = $this->bricks_service->delete_template_term( 'template_bundle', $term_id );
 
 		if ( is_wp_error( $result ) ) {
 			return $result;

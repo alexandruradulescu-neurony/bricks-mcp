@@ -140,6 +140,15 @@ final class Settings {
 			self::PAGE_SLUG,
 			'bricks_mcp_general'
 		);
+
+		// Protected pages field.
+		add_settings_field(
+			'protected_pages',
+			__( 'Protected Pages', 'bricks-mcp' ),
+			[ $this, 'render_protected_pages_field' ],
+			self::PAGE_SLUG,
+			'bricks_mcp_general'
+		);
 	}
 
 	/**
@@ -154,6 +163,7 @@ final class Settings {
 			'custom_base_url'   => '',
 			'dangerous_actions' => false,
 			'rate_limit_rpm'    => 120,
+			'protected_pages'   => '',
 		];
 	}
 
@@ -174,6 +184,9 @@ final class Settings {
 
 		$sanitized['dangerous_actions'] = ! empty( $input['dangerous_actions'] );
 		$sanitized['rate_limit_rpm']    = max( 10, min( 1000, (int) ( $input['rate_limit_rpm'] ?? 120 ) ) );
+		$sanitized['protected_pages']   = isset( $input['protected_pages'] )
+			? sanitize_text_field( $input['protected_pages'] )
+			: '';
 
 		return $sanitized;
 	}
@@ -342,6 +355,24 @@ final class Settings {
 		<span><?php esc_html_e( 'requests per minute per user', 'bricks-mcp' ); ?></span>
 		<p class="description">
 			<?php esc_html_e( 'Maximum number of MCP requests allowed per authenticated user per minute. Default: 120. Increase to 300 for intensive AI building sessions. Applies only when authentication is required.', 'bricks-mcp' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render protected pages field.
+	 *
+	 * @return void
+	 */
+	public function render_protected_pages_field(): void {
+		$settings = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$value    = $settings['protected_pages'] ?? '';
+		?>
+		<input type="text" id="bricks-mcp-protected-pages" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[protected_pages]"
+			value="<?php echo esc_attr( $value ); ?>" class="regular-text"
+			placeholder="<?php esc_attr_e( 'e.g. 2, 15, 42', 'bricks-mcp' ); ?>">
+		<p class="description">
+			<?php esc_html_e( 'Comma-separated list of post/page IDs that AI tools cannot modify or delete. Use this to protect critical pages like the homepage or landing pages from accidental changes.', 'bricks-mcp' ); ?>
 		</p>
 		<?php
 	}

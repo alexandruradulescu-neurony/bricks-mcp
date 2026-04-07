@@ -545,6 +545,16 @@ class BricksService {
 		return $this->page_operations_service->delete_page( $post_id );
 	}
 
+	/**
+	 * Check if a page is protected from AI modifications.
+	 *
+	 * @param int $post_id Post ID to check.
+	 * @return \WP_Error|null WP_Error if protected, null if allowed.
+	 */
+	public function check_protected_page( int $post_id ): ?\WP_Error {
+		return $this->page_operations_service->check_protected_page( $post_id );
+	}
+
 	public function duplicate_page( int $post_id ): int|\WP_Error {
 		return $this->page_operations_service->duplicate_page( $post_id );
 	}

@@ -563,4 +563,36 @@ class PageOperationsService {
 
 		return $node;
 	}
+
+	/**
+	 * Check if a page is protected from AI modifications.
+	 *
+	 * @param int $post_id Post ID to check.
+	 * @return \WP_Error|null WP_Error if protected, null if allowed.
+	 */
+	public function check_protected_page( int $post_id ): ?\WP_Error {
+		$settings      = get_option( 'bricks_mcp_settings', [] );
+		$protected_raw = $settings['protected_pages'] ?? '';
+
+		if ( empty( $protected_raw ) ) {
+			return null;
+		}
+
+		$protected_ids = array_map( 'intval', array_filter( array_map( 'trim', explode( ',', $protected_raw ) ) ) );
+
+		if ( in_array( $post_id, $protected_ids, true ) ) {
+			$post  = get_post( $post_id );
+			$title = $post ? $post->post_title : "ID $post_id";
+			return new \WP_Error(
+				'bricks_mcp_page_protected',
+				sprintf(
+					__( "Page '%s' (ID: %d) is protected. Remove it from protected pages in Settings > Bricks MCP to allow modifications.", 'bricks-mcp' ),
+					$title,
+					$post_id
+				)
+			);
+		}
+
+		return null;
+	}
 }

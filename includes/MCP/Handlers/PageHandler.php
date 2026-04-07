@@ -479,9 +479,35 @@ final class PageHandler {
 			);
 		}
 
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
+		}
+
 		// Normalize via ElementNormalizer (handles both native and simplified format).
 		$elements = $this->bricks_service->normalize_elements( $args['elements'] );
-		$saved    = $this->bricks_service->save_elements( $post_id, $elements );
+
+		// Element count safety check.
+		$meta_key         = defined( 'BRICKS_DB_PAGE_CONTENT' ) ? BRICKS_DB_PAGE_CONTENT : '_bricks_page_content_2';
+		$current_elements = get_post_meta( $post_id, $meta_key, true );
+		$old_count        = is_array( $current_elements ) ? count( $current_elements ) : 0;
+		$new_count        = count( $elements );
+
+		if ( $old_count > 0 && $new_count < (int) ( $old_count * 0.5 ) && empty( $args['confirm'] ) ) {
+			$reduction_pct = (int) round( ( 1 - ( $new_count / $old_count ) ) * 100 );
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'This update would reduce elements from %d to %d (%d%% reduction). Set confirm: true to proceed, or use page:append_content to add without replacing.', 'bricks-mcp' ),
+					$old_count,
+					$new_count,
+					$reduction_pct
+				)
+			);
+		}
+
+		$saved = $this->bricks_service->save_elements( $post_id, $elements );
 
 		if ( is_wp_error( $saved ) ) {
 			return $saved;
@@ -511,7 +537,14 @@ final class PageHandler {
 			return new \WP_Error( 'missing_elements', __( 'elements array is required for append_content.', 'bricks-mcp' ) );
 		}
 
-		$post_id   = (int) $args['post_id'];
+		$post_id = (int) $args['post_id'];
+
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
+		}
+
 		$parent_id = isset( $args['parent_id'] ) ? sanitize_text_field( (string) $args['parent_id'] ) : '0';
 		$position  = isset( $args['position'] ) ? (int) $args['position'] : null;
 
@@ -567,7 +600,14 @@ final class PageHandler {
 		}
 
 		$post_id = (int) $args['post_id'];
-		$result  = $this->bricks_service->update_page_meta( $post_id, $args );
+
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
+		}
+
+		$result = $this->bricks_service->update_page_meta( $post_id, $args );
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -588,7 +628,53 @@ final class PageHandler {
 		}
 
 		$post_id = (int) $args['post_id'];
-		$result  = $this->bricks_service->delete_page( $post_id );
+		$post    = get_post( $post_id );
+
+		if ( ! $post ) {
+			return new \WP_Error(
+				'post_not_found',
+				sprintf( __( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ), $post_id )
+			);
+		}
+
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
+		}
+
+		// Confirm check.
+		if ( empty( $args['confirm'] ) ) {
+			$raw_elements  = get_post_meta( $post_id, '_bricks_page_content_2', true );
+			$element_count = is_array( $raw_elements ) ? count( $raw_elements ) : 0;
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to delete page "%s" (ID: %d) with %d elements. Set confirm: true to proceed.', 'bricks-mcp' ),
+					$post->post_title,
+					$post_id,
+					$element_count
+				)
+			);
+		}
+
+		// Force delete: permanently delete instead of trashing.
+		if ( ! empty( $args['force'] ) ) {
+			$deleted = wp_delete_post( $post_id, true );
+			if ( ! $deleted ) {
+				return new \WP_Error(
+					'delete_failed',
+					sprintf( __( 'Failed to permanently delete post %d.', 'bricks-mcp' ), $post_id )
+				);
+			}
+			return array(
+				'post_id' => $post_id,
+				'status'  => 'deleted',
+				'message' => __( 'Post permanently deleted. This cannot be undone.', 'bricks-mcp' ),
+			);
+		}
+
+		$result = $this->bricks_service->delete_page( $post_id );
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -662,6 +748,12 @@ final class PageHandler {
 			);
 		}
 
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( (int) $args['post_id'] );
+		if ( $protected ) {
+			return $protected;
+		}
+
 		if ( ! isset( $args['settings'] ) || ! is_array( $args['settings'] ) ) {
 			return new \WP_Error(
 				'missing_settings',
@@ -713,6 +805,12 @@ final class PageHandler {
 				'missing_post_id',
 				__( 'post_id is required. Use page tool (action: list) to find valid post IDs.', 'bricks-mcp' )
 			);
+		}
+
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( (int) $args['post_id'] );
+		if ( $protected ) {
+			return $protected;
 		}
 
 		// Extract all SEO fields from args.
