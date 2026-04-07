@@ -393,22 +393,27 @@ class SchemaGenerator {
 			],
 			'text-basic' => [ 'text' => 'Paragraph text' ],
 			'text'       => [ 'text' => '<p>Paragraph text</p>' ],
-			'text-link'  => [ 'text' => 'Link text', 'link' => [ 'url' => '#' ] ],
+			'text-link'  => [ 'text' => 'Link text', 'link' => [ 'type' => 'external', 'url' => '#' ] ],
 			'button'     => [
 				'text'  => 'Click Me',
 				'style' => 'primary',
-				'link'  => [ 'url' => '#' ],
+				'link'  => [ 'type' => 'external', 'url' => '#' ],
 			],
 			'image'      => [
 				'image' => [
-					'id'  => 0,
-					'url' => 'https://placeholder.example/800x400',
+					'id'       => 0,
+					'filename' => 'placeholder.jpg',
+					'size'     => 'full',
+					'full'     => 'https://placeholder.example/800x400',
+					'url'      => 'https://placeholder.example/800x400',
 				],
 			],
 			'video'      => [
-				'videoType'      => 'youtube',
-				'youTubeId'      => 'dQw4w9WgXcQ',
-				'youtubeControls' => true,
+				'videoType'                       => 'youtube',
+				'youTubeId'                       => 'dQw4w9WgXcQ',
+				'youtubeControls'                 => true,
+				'youtubeDisableFullscreenButton'  => false,
+				'youtubeHideAnnotationsByDefault' => false,
 			],
 			'icon'       => [
 				'icon' => [ 'library' => 'themify', 'icon' => 'ti-star' ],
@@ -422,27 +427,30 @@ class SchemaGenerator {
 			],
 			'list'       => [
 				'items' => [
-					[ 'title' => 'List item #1', 'meta' => '$10.00' ],
-					[ 'title' => 'List item #2', 'meta' => '$25.00' ],
+					[ 'id' => 'lst001', 'title' => 'List item #1', 'meta' => '$10.00', 'link' => [ 'type' => 'external', 'url' => '#' ] ],
+					[ 'id' => 'lst002', 'title' => 'List item #2', 'meta' => '$25.00' ],
 				],
 			],
 			'accordion'  => [
 				'accordions' => [
-					[ 'id' => 'acc001', 'title' => 'Accordion Item 1', 'content' => '<p>Content of accordion item 1.</p>' ],
-					[ 'id' => 'acc002', 'title' => 'Accordion Item 2', 'content' => '<p>Content of accordion item 2.</p>' ],
+					[ 'id' => 'acc001', 'title' => 'Accordion Item 1', 'subtitle' => 'More details', 'content' => 'Content of accordion item 1.' ],
+					[ 'id' => 'acc002', 'title' => 'Accordion Item 2', 'content' => 'Content of accordion item 2.' ],
 				],
+				'titleTag'     => 'h4',
+				'icon'         => [ 'library' => 'ionicons', 'icon' => 'ion-ios-arrow-forward' ],
+				'iconExpanded' => [ 'library' => 'ionicons', 'icon' => 'ion-ios-arrow-down' ],
 			],
 			'alert'      => [
-				'content' => 'This is an alert message.',
+				'content' => '<p>This is an alert message.</p>',
 				'type'    => 'info',
 			],
 			'animated-typing' => [
 				'prefix'    => 'We ',
 				'suffix'    => ' for you!',
 				'strings'   => [
-					[ 'text' => 'design' ],
-					[ 'text' => 'code' ],
-					[ 'text' => 'launch' ],
+					[ 'id' => 'aty001', 'text' => 'design' ],
+					[ 'id' => 'aty002', 'text' => 'code' ],
+					[ 'id' => 'aty003', 'text' => 'launch' ],
 				],
 				'typeSpeed' => 55,
 				'backSpeed' => 30,
@@ -451,10 +459,10 @@ class SchemaGenerator {
 			'countdown'  => [
 				'date'   => '2026-12-31 00:00',
 				'fields' => [
-					[ 'format' => '%D days' ],
-					[ 'format' => '%H hours' ],
-					[ 'format' => '%M minutes' ],
-					[ 'format' => '%S seconds' ],
+					[ 'id' => 'cdf001', 'format' => '%D days' ],
+					[ 'id' => 'cdf002', 'format' => '%H hours' ],
+					[ 'id' => 'cdf003', 'format' => '%M minutes' ],
+					[ 'id' => 'cdf004', 'format' => '%S seconds' ],
 				],
 			],
 			'counter'    => [
@@ -462,46 +470,54 @@ class SchemaGenerator {
 			],
 			'tabs'       => [
 				'tabs' => [
-					[ 'id' => 'tab001', 'title' => 'Tab 1', 'content' => '<p>Tab 1 content goes here.</p>' ],
-					[ 'id' => 'tab002', 'title' => 'Tab 2', 'content' => '<p>Tab 2 content goes here.</p>' ],
+					[ 'id' => 'tab001', 'title' => 'Tab 1', 'content' => 'Tab 1 content goes here.' ],
+					[ 'id' => 'tab002', 'title' => 'Tab 2', 'content' => 'Tab 2 content goes here.' ],
 				],
+				'titlePadding'   => [ 'top' => 15, 'right' => 20, 'bottom' => 15, 'left' => 20 ],
+				'contentPadding' => [ 'top' => 20, 'right' => 20, 'bottom' => 20, 'left' => 20 ],
 			],
 			'pricing-tables' => [
 				'pricingTables' => [
 					[
-						'title'       => 'Basic',
-						'subtitle'    => 'For individuals',
-						'pricePrefix' => '$',
-						'price'       => '9',
-						'priceSuffix' => '90',
-						'priceMeta'   => 'per month',
-						'features'    => "Feature 1\nFeature 2\nFeature 3",
-						'buttonText'  => 'Choose Plan',
+						'id'           => 'prc001',
+						'title'        => 'Basic',
+						'subtitle'     => 'For individuals',
+						'pricePrefix'  => '$',
+						'price'        => '9',
+						'priceSuffix'  => '90',
+						'priceMeta'    => 'per month',
+						'features'     => "Feature 1\nFeature 2\nFeature 3",
+						'featuresIcon' => [ 'library' => 'ionicons', 'icon' => 'ion-ios-checkmark-circle-outline' ],
+						'buttonText'   => 'Choose Plan',
+						'buttonStyle'  => 'primary',
 					],
 					[
-						'title'       => 'Pro',
-						'subtitle'    => 'For teams',
-						'pricePrefix' => '$',
-						'price'       => '29',
-						'priceSuffix' => '90',
-						'priceMeta'   => 'per month',
-						'features'    => "All Basic features\nFeature 4\nFeature 5",
-						'buttonText'  => 'Choose Plan',
+						'id'           => 'prc002',
+						'title'        => 'Pro',
+						'subtitle'     => 'For teams',
+						'pricePrefix'  => '$',
+						'price'        => '29',
+						'priceSuffix'  => '90',
+						'priceMeta'    => 'per month',
+						'features'     => "All Basic features\nFeature 4\nFeature 5",
+						'featuresIcon' => [ 'library' => 'ionicons', 'icon' => 'ion-ios-checkmark-circle-outline' ],
+						'buttonText'   => 'Choose Plan',
+						'buttonStyle'  => 'primary',
 					],
 				],
 			],
 			'progress-bar' => [
 				'bars' => [
-					[ 'title' => 'Web Design', 'percentage' => 80 ],
-					[ 'title' => 'SEO', 'percentage' => 90 ],
+					[ 'id' => 'prb001', 'title' => 'Web Design', 'percentage' => 80 ],
+					[ 'id' => 'prb002', 'title' => 'SEO', 'percentage' => 90 ],
 				],
 				'showPercentage' => true,
 			],
 			'pie-chart'  => [
 				'percent'    => 60,
 				'content'    => 'percent',
-				'barColor'   => [ 'raw' => 'var(--primary)' ],
-				'trackColor' => [ 'raw' => 'var(--base-light)' ],
+				'barColor'   => [ 'hex' => '#3b82f6' ],
+				'trackColor' => [ 'hex' => '#e5e7eb' ],
 			],
 			'rating'     => [
 				'rating' => 3.5,
@@ -509,46 +525,52 @@ class SchemaGenerator {
 			'social-icons' => [
 				'icons' => [
 					[
+						'id'         => 'soc001',
 						'label'      => 'Facebook',
 						'icon'       => [ 'library' => 'fontawesomeBrands', 'icon' => 'fab fa-facebook-f' ],
-						'background' => [ 'raw' => 'var(--primary)' ],
-						'link'       => [ 'url' => '#' ],
+						'background' => [ 'hex' => '#1877f2' ],
+						'link'       => [ 'type' => 'external', 'url' => '#' ],
 					],
 					[
+						'id'         => 'soc002',
 						'label'      => 'Instagram',
 						'icon'       => [ 'library' => 'fontawesomeBrands', 'icon' => 'fab fa-instagram' ],
-						'background' => [ 'raw' => 'var(--secondary)' ],
-						'link'       => [ 'url' => '#' ],
+						'background' => [ 'hex' => '#e4405f' ],
+						'link'       => [ 'type' => 'external', 'url' => '#' ],
 					],
 				],
+				'_padding'    => [ 'top' => 10, 'right' => 10, 'bottom' => 10, 'left' => 10 ],
+				'_typography' => [ 'font-size' => '16px' ],
 			],
 			'team-members' => [
 				'items' => [
-					[ 'title' => 'John Doe', 'subtitle' => 'CEO', 'description' => 'Team member description.' ],
-					[ 'title' => 'Jane Smith', 'subtitle' => 'Designer', 'description' => 'Another team member.' ],
+					[ 'id' => 'tmm001', 'title' => 'John Doe', 'subtitle' => 'CEO', 'description' => 'Team member description.' ],
+					[ 'id' => 'tmm002', 'title' => 'Jane Smith', 'subtitle' => 'Designer', 'description' => 'Another team member.' ],
 				],
 			],
 			'testimonials' => [
 				'items' => [
-					[ 'content' => 'Great service, highly recommended!', 'name' => 'Client A', 'job' => 'CEO' ],
-					[ 'content' => 'Excellent work and fast delivery.', 'name' => 'Client B', 'job' => 'Manager' ],
+					[ 'id' => 'tes001', 'content' => 'Great service, highly recommended!', 'name' => 'Client A', 'job' => 'CEO' ],
+					[ 'id' => 'tes002', 'content' => 'Excellent work and fast delivery.', 'name' => 'Client B', 'job' => 'Manager' ],
 				],
 			],
 			'slider'     => [
 				'items' => [
 					[
+						'id'         => 'sld001',
 						'title'      => 'Slide 1',
 						'content'    => 'Slide content goes here.',
 						'buttonText' => 'Click Me',
-						'buttonLink' => [ 'url' => '#' ],
-						'background' => [ 'color' => [ 'raw' => 'var(--base-ultra-dark)' ] ],
+						'buttonLink' => [ 'type' => 'external', 'url' => '#' ],
+						'background' => [ 'color' => [ 'hex' => '#1e293b' ] ],
 					],
 					[
+						'id'         => 'sld002',
 						'title'      => 'Slide 2',
 						'content'    => 'Another slide.',
 						'buttonText' => 'Learn More',
-						'buttonLink' => [ 'url' => '#' ],
-						'background' => [ 'color' => [ 'raw' => 'var(--base-dark)' ] ],
+						'buttonLink' => [ 'type' => 'external', 'url' => '#' ],
+						'background' => [ 'color' => [ 'hex' => '#334155' ] ],
 					],
 				],
 				'arrows' => true,
@@ -556,19 +578,25 @@ class SchemaGenerator {
 			'carousel'   => [
 				'fields' => [
 					[
+						'id'            => 'crf001',
 						'dynamicData'   => '{post_title:link}',
 						'tag'           => 'h3',
 						'dynamicMargin' => [ 'top' => 20, 'right' => 0, 'bottom' => 20, 'left' => 0 ],
 					],
-					[ 'dynamicData' => '{post_excerpt:20}' ],
+					[ 'id' => 'crf002', 'dynamicData' => '{post_excerpt:20}' ],
 				],
-				'arrows'   => true,
-				'infinite' => true,
+				'arrows'    => true,
+				'infinite'  => true,
+				'prevArrow' => [ 'library' => 'ionicons', 'icon' => 'ion-ios-arrow-back' ],
+				'nextArrow' => [ 'library' => 'ionicons', 'icon' => 'ion-ios-arrow-forward' ],
 			],
-			'code'       => [ 'code' => '<h1>Custom HTML/PHP</h1><?php echo date("Y"); ?>' ],
+			'code'       => [
+				'code'        => '<h1>Custom HTML/PHP</h1><?php echo date("Y"); ?>',
+				'executeCode' => true,
+			],
 			'map'        => [
 				'addresses' => [
-					[ 'latitude' => '40.7128', 'longitude' => '-74.0060' ],
+					[ 'id' => 'map001', 'latitude' => '40.7128', 'longitude' => '-74.0060' ],
 				],
 				'scrollwheel'       => true,
 				'draggable'         => true,
@@ -577,7 +605,7 @@ class SchemaGenerator {
 			],
 			'map-leaflet' => [
 				'layers' => [
-					[ 'name' => 'OpenStreetMap', 'url' => 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' ],
+					[ 'id' => 'mpl001', 'name' => 'OpenStreetMap', 'url' => 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' ],
 				],
 				'zoomControl'        => true,
 				'dragging'           => true,
@@ -617,13 +645,14 @@ class SchemaGenerator {
 						'width'       => 100,
 					],
 				],
-				'actions'          => [ 'email' ],
+				'actions'           => [ 'email' ],
 				'submitButtonStyle' => 'primary',
-				'successMessage'   => 'Message successfully sent. We will get back to you as soon as possible.',
-				'emailSubject'     => 'Contact form request',
-				'emailTo'          => 'admin_email',
-				'htmlEmail'        => true,
-				'submitButtonText' => 'Send',
+				'successMessage'    => 'Message successfully sent. We will get back to you as soon as possible.',
+				'emailSubject'      => 'Contact form request',
+				'emailTo'           => 'admin_email',
+				'fromName'          => '{site_name}',
+				'htmlEmail'         => true,
+				'submitButtonText'  => 'Send',
 			],
 			'custom-title' => [
 				'title'    => 'Custom Title',
@@ -632,7 +661,14 @@ class SchemaGenerator {
 
 			// === Media elements ===
 			'audio'          => [],
-			'image-gallery'  => [],
+			'image-gallery'  => [
+				'items' => [
+					'images' => [
+						[ 'id' => 0, 'filename' => 'gallery-1.jpg', 'size' => 'full', 'full' => 'https://placeholder.example/800x600', 'url' => 'https://placeholder.example/800x600' ],
+						[ 'id' => 0, 'filename' => 'gallery-2.jpg', 'size' => 'full', 'full' => 'https://placeholder.example/800x600', 'url' => 'https://placeholder.example/800x600' ],
+					],
+				],
+			],
 			'instagram-feed' => [
 				'followText' => 'Follow us @yourhandle',
 				'followIcon' => [ 'library' => 'ionicons', 'icon' => 'ion-logo-instagram' ],
@@ -649,9 +685,9 @@ class SchemaGenerator {
 			'post-content' => [],
 			'post-meta'    => [
 				'meta' => [
-					[ 'dynamicData' => '{author_name}' ],
-					[ 'dynamicData' => '{post_date}' ],
-					[ 'dynamicData' => '{post_comments}' ],
+					[ 'id' => 'mtd001', 'dynamicData' => '{author_name}' ],
+					[ 'id' => 'mtd002', 'dynamicData' => '{post_date}' ],
+					[ 'id' => 'mtd003', 'dynamicData' => '{post_comments}' ],
 				],
 			],
 			'post-author'  => [
@@ -664,6 +700,7 @@ class SchemaGenerator {
 			],
 			'post-taxonomy' => [
 				'taxonomy' => 'category',
+				'style'    => 'dark',
 			],
 			'post-comments' => [
 				'title'             => true,
@@ -686,10 +723,13 @@ class SchemaGenerator {
 			'post-reading-progress-bar' => [],
 			'post-sharing' => [
 				'items' => [
-					[ 'service' => 'facebook' ],
-					[ 'service' => 'twitter' ],
-					[ 'service' => 'linkedin' ],
-					[ 'service' => 'whatsapp' ],
+					[ 'id' => 'psh001', 'service' => 'facebook' ],
+					[ 'id' => 'psh002', 'service' => 'twitter' ],
+					[ 'id' => 'psh003', 'service' => 'linkedin' ],
+					[ 'id' => 'psh004', 'service' => 'whatsapp' ],
+					[ 'id' => 'psh005', 'service' => 'pinterest' ],
+					[ 'id' => 'psh006', 'service' => 'telegram' ],
+					[ 'id' => 'psh007', 'service' => 'email' ],
 				],
 				'brandColors' => true,
 			],
@@ -697,8 +737,8 @@ class SchemaGenerator {
 			'related-posts' => [
 				'taxonomies' => [ 'category', 'post_tag' ],
 				'content'    => [
-					[ 'dynamicData' => '{post_title:link}', 'tag' => 'h3' ],
-					[ 'dynamicData' => '{post_excerpt:20}' ],
+					[ 'id' => 'rpc001', 'dynamicData' => '{post_title:link}', 'tag' => 'h3', 'dynamicMargin' => [ 'top' => 10 ] ],
+					[ 'id' => 'rpc002', 'dynamicData' => '{post_excerpt:20}' ],
 				],
 			],
 
@@ -708,11 +748,12 @@ class SchemaGenerator {
 				'gutter' => '30px',
 				'fields' => [
 					[
+						'id'            => 'psf001',
 						'dynamicData'   => '{post_title:link}',
 						'tag'           => 'h3',
 						'dynamicMargin' => [ 'top' => 20, 'right' => 0, 'bottom' => 20, 'left' => 0 ],
 					],
-					[ 'dynamicData' => '{post_excerpt:20}' ],
+					[ 'id' => 'psf002', 'dynamicData' => '{post_excerpt:20}' ],
 				],
 			],
 			'search'      => [
@@ -726,7 +767,20 @@ class SchemaGenerator {
 
 			// === Misc elements ===
 			'breadcrumbs'  => [],
-			'back-to-top'  => [],
+			'back-to-top'  => [
+				'_nestable_children' => [
+					[
+						'name'     => 'icon',
+						'settings' => [
+							'icon' => [ 'library' => 'ionicons', 'icon' => 'ion-ios-arrow-up' ],
+						],
+					],
+					[
+						'name'     => 'text-basic',
+						'settings' => [ 'text' => 'Back to top' ],
+					],
+				],
+			],
 			'toggle-mode'  => [
 				'ariaLabel' => 'Toggle mode',
 			],
