@@ -765,94 +765,6 @@ final class Settings {
 			<h2><?php esc_html_e( 'MCP Configuration', 'bricks-mcp' ); ?></h2>
 			<p class="description"><?php esc_html_e( 'Add the following configuration to your AI tool to connect to this MCP server.', 'bricks-mcp' ); ?></p>
 
-			<!-- Generate Setup Command -->
-			<div class="bricks-mcp-quick-setup">
-				<h3><?php esc_html_e( 'Quick Setup', 'bricks-mcp' ); ?></h3>
-				<p class="description"><?php esc_html_e( 'Generate an Application Password and get a ready-to-paste setup command.', 'bricks-mcp' ); ?></p>
-				<p class="bricks-mcp-generate-btn-wrap">
-					<button type="button" id="bricks-mcp-generate-btn" class="button button-primary">
-						<?php esc_html_e( 'Generate Setup Command', 'bricks-mcp' ); ?>
-					</button>
-					<span id="bricks-mcp-generate-spinner" class="spinner"></span>
-				</p>
-				<div id="bricks-mcp-generate-error" class="bricks-mcp-generate-error" style="display:none;"></div>
-
-				<div id="bricks-mcp-generated-result" class="bricks-mcp-generated-result" style="display:none;">
-					<div class="bricks-mcp-important-notice">
-						<strong><?php esc_html_e( 'Important:', 'bricks-mcp' ); ?></strong>
-						<?php esc_html_e( 'This password is shown once. Copy your command now -- it cannot be retrieved later.', 'bricks-mcp' ); ?>
-					</div>
-
-					<h4><?php esc_html_e( 'Claude Code (one-liner):', 'bricks-mcp' ); ?></h4>
-					<div class="bricks-mcp-code-wrap bricks-mcp-code-wrap--breakall">
-						<pre><code id="bricks-mcp-generated-command"></code></pre>
-						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-command">
-							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
-						</button>
-					</div>
-
-					<hr>
-
-					<h4><?php esc_html_e( 'Claude Code / Claude Desktop (JSON config):', 'bricks-mcp' ); ?></h4>
-					<div class="bricks-mcp-code-wrap">
-						<pre><code id="bricks-mcp-generated-claude-config"></code></pre>
-						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-claude-config">
-							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
-						</button>
-					</div>
-
-					<h4><?php esc_html_e( 'Gemini CLI (one-liner):', 'bricks-mcp' ); ?></h4>
-					<div class="bricks-mcp-code-wrap bricks-mcp-code-wrap--breakall">
-						<pre><code id="bricks-mcp-generated-gemini-command"></code></pre>
-						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-gemini-command">
-							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
-						</button>
-					</div>
-
-					<h4><?php esc_html_e( 'Gemini (JSON config):', 'bricks-mcp' ); ?></h4>
-					<div class="bricks-mcp-code-wrap">
-						<pre><code id="bricks-mcp-generated-gemini-config"></code></pre>
-						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-gemini-config">
-							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
-						</button>
-					</div>
-
-					<h4><?php esc_html_e( 'Cursor (JSON config):', 'bricks-mcp' ); ?></h4>
-					<div class="bricks-mcp-code-wrap">
-						<pre><code id="bricks-mcp-generated-cursor-config"></code></pre>
-						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-cursor-config">
-							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
-						</button>
-					</div>
-
-					<h4><?php esc_html_e( 'VS Code / Open Code (JSON config):', 'bricks-mcp' ); ?></h4>
-					<div class="bricks-mcp-code-wrap">
-						<pre><code id="bricks-mcp-generated-vscode-config"></code></pre>
-						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-vscode-config">
-							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
-						</button>
-					</div>
-
-					<h4><?php esc_html_e( 'Augment (JSON config):', 'bricks-mcp' ); ?></h4>
-					<div class="bricks-mcp-code-wrap">
-						<pre><code id="bricks-mcp-generated-augment-config"></code></pre>
-						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-augment-config">
-							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
-						</button>
-					</div>
-
-					<h4><?php esc_html_e( 'Qwen Code (JSON config):', 'bricks-mcp' ); ?></h4>
-					<div class="bricks-mcp-code-wrap">
-						<pre><code id="bricks-mcp-generated-qwen-config"></code></pre>
-						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-qwen-config">
-							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
-						</button>
-					</div>
-				</div>
-			</div>
-
-			<h3><?php esc_html_e( 'Manual Setup', 'bricks-mcp' ); ?></h3>
-
 			<div class="bricks-mcp-tabs bricks-mcp-tabs-wrap">
 				<div role="tablist">
 					<button type="button" role="tab" id="bricks-mcp-tab-claude" data-tab="claude" aria-selected="true" aria-controls="bricks-mcp-panel-claude" tabindex="0" class="active">
@@ -893,7 +805,7 @@ final class Settings {
 					<p class="description">
 						<?php
 						echo wp_kses(
-							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>, or use the button below to generate a ready-to-paste config.', 'bricks-mcp' ),
 							[
 								'code'   => [],
 								'strong' => [],
@@ -901,6 +813,32 @@ final class Settings {
 						);
 						?>
 					</p>
+					<div class="bricks-mcp-tab-generate" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ccd0d4;">
+						<button type="button" class="button button-primary bricks-mcp-generate-for-client" data-client="claude">
+							<?php esc_html_e( 'Generate Claude Code Config', 'bricks-mcp' ); ?>
+						</button>
+						<span class="spinner" style="float: none;"></span>
+						<div class="bricks-mcp-generated-for-client" style="display: none; margin-top: 15px;">
+							<div class="bricks-mcp-important-notice">
+								<strong><?php esc_html_e( 'Important:', 'bricks-mcp' ); ?></strong>
+								<?php esc_html_e( 'This password is shown once. Copy your config now -- it cannot be retrieved later.', 'bricks-mcp' ); ?>
+							</div>
+							<h4><?php esc_html_e( 'One-liner:', 'bricks-mcp' ); ?></h4>
+							<div class="bricks-mcp-code-wrap bricks-mcp-code-wrap--breakall">
+								<pre><code class="bricks-mcp-gen-command"></code></pre>
+								<button type="button" class="button bricks-mcp-copy-btn" data-target-class="bricks-mcp-gen-command">
+									<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+								</button>
+							</div>
+							<h4><?php esc_html_e( 'JSON config (with real credentials):', 'bricks-mcp' ); ?></h4>
+							<div class="bricks-mcp-code-wrap">
+								<pre><code class="bricks-mcp-gen-config"></code></pre>
+								<button type="button" class="button bricks-mcp-copy-btn" data-target-class="bricks-mcp-gen-config">
+									<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				<!-- Claude Desktop Panel -->
@@ -917,7 +855,7 @@ final class Settings {
 					<p class="description">
 						<?php
 						echo wp_kses(
-							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>, or use the button below to generate a ready-to-paste config.', 'bricks-mcp' ),
 							[
 								'code'   => [],
 								'strong' => [],
@@ -925,6 +863,25 @@ final class Settings {
 						);
 						?>
 					</p>
+					<div class="bricks-mcp-tab-generate" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ccd0d4;">
+						<button type="button" class="button button-primary bricks-mcp-generate-for-client" data-client="claude-desktop">
+							<?php esc_html_e( 'Generate Claude Desktop Config', 'bricks-mcp' ); ?>
+						</button>
+						<span class="spinner" style="float: none;"></span>
+						<div class="bricks-mcp-generated-for-client" style="display: none; margin-top: 15px;">
+							<div class="bricks-mcp-important-notice">
+								<strong><?php esc_html_e( 'Important:', 'bricks-mcp' ); ?></strong>
+								<?php esc_html_e( 'This password is shown once. Copy your config now -- it cannot be retrieved later.', 'bricks-mcp' ); ?>
+							</div>
+							<h4><?php esc_html_e( 'JSON config (with real credentials):', 'bricks-mcp' ); ?></h4>
+							<div class="bricks-mcp-code-wrap">
+								<pre><code class="bricks-mcp-gen-config"></code></pre>
+								<button type="button" class="button bricks-mcp-copy-btn" data-target-class="bricks-mcp-gen-config">
+									<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				<!-- Gemini Panel -->
@@ -942,7 +899,7 @@ final class Settings {
 					<p class="description">
 						<?php
 						echo wp_kses(
-							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>, or use the button below to generate a ready-to-paste config.', 'bricks-mcp' ),
 							[
 								'code'   => [],
 								'strong' => [],
@@ -950,6 +907,32 @@ final class Settings {
 						);
 						?>
 					</p>
+					<div class="bricks-mcp-tab-generate" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ccd0d4;">
+						<button type="button" class="button button-primary bricks-mcp-generate-for-client" data-client="gemini">
+							<?php esc_html_e( 'Generate Gemini Config', 'bricks-mcp' ); ?>
+						</button>
+						<span class="spinner" style="float: none;"></span>
+						<div class="bricks-mcp-generated-for-client" style="display: none; margin-top: 15px;">
+							<div class="bricks-mcp-important-notice">
+								<strong><?php esc_html_e( 'Important:', 'bricks-mcp' ); ?></strong>
+								<?php esc_html_e( 'This password is shown once. Copy your config now -- it cannot be retrieved later.', 'bricks-mcp' ); ?>
+							</div>
+							<h4><?php esc_html_e( 'One-liner:', 'bricks-mcp' ); ?></h4>
+							<div class="bricks-mcp-code-wrap bricks-mcp-code-wrap--breakall">
+								<pre><code class="bricks-mcp-gen-command"></code></pre>
+								<button type="button" class="button bricks-mcp-copy-btn" data-target-class="bricks-mcp-gen-command">
+									<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+								</button>
+							</div>
+							<h4><?php esc_html_e( 'JSON config (with real credentials):', 'bricks-mcp' ); ?></h4>
+							<div class="bricks-mcp-code-wrap">
+								<pre><code class="bricks-mcp-gen-config"></code></pre>
+								<button type="button" class="button bricks-mcp-copy-btn" data-target-class="bricks-mcp-gen-config">
+									<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				<!-- Cursor Panel -->
@@ -966,7 +949,7 @@ final class Settings {
 					<p class="description">
 						<?php
 						echo wp_kses(
-							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>, or use the button below to generate a ready-to-paste config.', 'bricks-mcp' ),
 							[
 								'code'   => [],
 								'strong' => [],
@@ -974,6 +957,25 @@ final class Settings {
 						);
 						?>
 					</p>
+					<div class="bricks-mcp-tab-generate" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ccd0d4;">
+						<button type="button" class="button button-primary bricks-mcp-generate-for-client" data-client="cursor">
+							<?php esc_html_e( 'Generate Cursor Config', 'bricks-mcp' ); ?>
+						</button>
+						<span class="spinner" style="float: none;"></span>
+						<div class="bricks-mcp-generated-for-client" style="display: none; margin-top: 15px;">
+							<div class="bricks-mcp-important-notice">
+								<strong><?php esc_html_e( 'Important:', 'bricks-mcp' ); ?></strong>
+								<?php esc_html_e( 'This password is shown once. Copy your config now -- it cannot be retrieved later.', 'bricks-mcp' ); ?>
+							</div>
+							<h4><?php esc_html_e( 'JSON config (with real credentials):', 'bricks-mcp' ); ?></h4>
+							<div class="bricks-mcp-code-wrap">
+								<pre><code class="bricks-mcp-gen-config"></code></pre>
+								<button type="button" class="button bricks-mcp-copy-btn" data-target-class="bricks-mcp-gen-config">
+									<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				<!-- VS Code / Open Code Panel -->
@@ -990,7 +992,7 @@ final class Settings {
 					<p class="description">
 						<?php
 						echo wp_kses(
-							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>, or use the button below to generate a ready-to-paste config.', 'bricks-mcp' ),
 							[
 								'code'   => [],
 								'strong' => [],
@@ -998,6 +1000,25 @@ final class Settings {
 						);
 						?>
 					</p>
+					<div class="bricks-mcp-tab-generate" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ccd0d4;">
+						<button type="button" class="button button-primary bricks-mcp-generate-for-client" data-client="vscode">
+							<?php esc_html_e( 'Generate VS Code Config', 'bricks-mcp' ); ?>
+						</button>
+						<span class="spinner" style="float: none;"></span>
+						<div class="bricks-mcp-generated-for-client" style="display: none; margin-top: 15px;">
+							<div class="bricks-mcp-important-notice">
+								<strong><?php esc_html_e( 'Important:', 'bricks-mcp' ); ?></strong>
+								<?php esc_html_e( 'This password is shown once. Copy your config now -- it cannot be retrieved later.', 'bricks-mcp' ); ?>
+							</div>
+							<h4><?php esc_html_e( 'JSON config (with real credentials):', 'bricks-mcp' ); ?></h4>
+							<div class="bricks-mcp-code-wrap">
+								<pre><code class="bricks-mcp-gen-config"></code></pre>
+								<button type="button" class="button bricks-mcp-copy-btn" data-target-class="bricks-mcp-gen-config">
+									<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				<!-- Augment Panel -->
@@ -1014,7 +1035,7 @@ final class Settings {
 					<p class="description">
 						<?php
 						echo wp_kses(
-							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>, or use the button below to generate a ready-to-paste config.', 'bricks-mcp' ),
 							[
 								'code'   => [],
 								'strong' => [],
@@ -1022,6 +1043,25 @@ final class Settings {
 						);
 						?>
 					</p>
+					<div class="bricks-mcp-tab-generate" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ccd0d4;">
+						<button type="button" class="button button-primary bricks-mcp-generate-for-client" data-client="augment">
+							<?php esc_html_e( 'Generate Augment Config', 'bricks-mcp' ); ?>
+						</button>
+						<span class="spinner" style="float: none;"></span>
+						<div class="bricks-mcp-generated-for-client" style="display: none; margin-top: 15px;">
+							<div class="bricks-mcp-important-notice">
+								<strong><?php esc_html_e( 'Important:', 'bricks-mcp' ); ?></strong>
+								<?php esc_html_e( 'This password is shown once. Copy your config now -- it cannot be retrieved later.', 'bricks-mcp' ); ?>
+							</div>
+							<h4><?php esc_html_e( 'JSON config (with real credentials):', 'bricks-mcp' ); ?></h4>
+							<div class="bricks-mcp-code-wrap">
+								<pre><code class="bricks-mcp-gen-config"></code></pre>
+								<button type="button" class="button bricks-mcp-copy-btn" data-target-class="bricks-mcp-gen-config">
+									<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				<!-- Qwen Code Panel -->
@@ -1033,12 +1073,12 @@ final class Settings {
 						</button>
 					</div>
 					<p class="description bricks-mcp-tab-description">
-						<?php esc_html_e( 'Add this to your settings.json, or use: qwen mcp add (if supported by your version).', 'bricks-mcp' ); ?>
+						<?php esc_html_e( 'Add this to your settings.json configuration file.', 'bricks-mcp' ); ?>
 					</p>
 					<p class="description">
 						<?php
 						echo wp_kses(
-							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>, or use the button below to generate a ready-to-paste config.', 'bricks-mcp' ),
 							[
 								'code'   => [],
 								'strong' => [],
@@ -1046,6 +1086,25 @@ final class Settings {
 						);
 						?>
 					</p>
+					<div class="bricks-mcp-tab-generate" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ccd0d4;">
+						<button type="button" class="button button-primary bricks-mcp-generate-for-client" data-client="qwen">
+							<?php esc_html_e( 'Generate Qwen Code Config', 'bricks-mcp' ); ?>
+						</button>
+						<span class="spinner" style="float: none;"></span>
+						<div class="bricks-mcp-generated-for-client" style="display: none; margin-top: 15px;">
+							<div class="bricks-mcp-important-notice">
+								<strong><?php esc_html_e( 'Important:', 'bricks-mcp' ); ?></strong>
+								<?php esc_html_e( 'This password is shown once. Copy your config now -- it cannot be retrieved later.', 'bricks-mcp' ); ?>
+							</div>
+							<h4><?php esc_html_e( 'JSON config (with real credentials):', 'bricks-mcp' ); ?></h4>
+							<div class="bricks-mcp-code-wrap">
+								<pre><code class="bricks-mcp-gen-config"></code></pre>
+								<button type="button" class="button bricks-mcp-copy-btn" data-target-class="bricks-mcp-gen-config">
+									<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 

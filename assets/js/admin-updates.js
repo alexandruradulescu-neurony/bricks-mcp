@@ -153,11 +153,16 @@
 		}
 
 		var targetId = btn.getAttribute('data-target');
-		if (!targetId) {
-			return;
+		var targetClass = btn.getAttribute('data-target-class');
+		var codeEl;
+
+		if (targetId) {
+			codeEl = document.getElementById(targetId);
+		} else if (targetClass) {
+			// Find the element within the same parent code-wrap container.
+			codeEl = btn.closest('.bricks-mcp-code-wrap').querySelector('.' + targetClass);
 		}
 
-		var codeEl = document.getElementById(targetId);
 		if (!codeEl) {
 			return;
 		}
@@ -310,112 +315,108 @@
 	// -------------------------------------------------------------------------
 
 	function initGenerateCommand() {
-		var btn = document.getElementById('bricks-mcp-generate-btn');
-		var spinner = document.getElementById('bricks-mcp-generate-spinner');
-		var resultDiv = document.getElementById('bricks-mcp-generated-result');
-		var errorDiv = document.getElementById('bricks-mcp-generate-error');
-		var commandEl = document.getElementById('bricks-mcp-generated-command');
-		var claudeConfigEl = document.getElementById('bricks-mcp-generated-claude-config');
-		var geminiConfigEl = document.getElementById('bricks-mcp-generated-gemini-config');
-		var geminiCommandEl = document.getElementById('bricks-mcp-generated-gemini-command');
-		var cursorConfigEl = document.getElementById('bricks-mcp-generated-cursor-config');
-		var vscodeConfigEl = document.getElementById('bricks-mcp-generated-vscode-config');
-		var augmentConfigEl = document.getElementById('bricks-mcp-generated-augment-config');
-		var qwenConfigEl = document.getElementById('bricks-mcp-generated-qwen-config');
-		var claudeDesktopConfigEl = document.getElementById('bricks-mcp-generated-claude-desktop-config');
+		var buttons = document.querySelectorAll('.bricks-mcp-generate-for-client');
 
-		if (!btn) {
+		if (!buttons.length) {
 			return;
 		}
 
-		btn.addEventListener('click', function() {
-			btn.disabled = true;
-			if (spinner) {
-				spinner.classList.add('is-active');
-			}
-			if (errorDiv) {
-				errorDiv.style.display = 'none';
-				errorDiv.innerHTML = '';
-			}
+		// Map client keys to their AJAX response data keys.
+		var configMap = {
+			'claude':         { command: 'claude_command',  config: 'claude_config' },
+			'claude-desktop': { config: 'claude_desktop_config' },
+			'gemini':         { command: 'gemini_command',  config: 'gemini_config' },
+			'cursor':         { config: 'cursor_config' },
+			'vscode':         { config: 'vscode_config' },
+			'augment':        { config: 'augment_config' },
+			'qwen':           { config: 'qwen_config' }
+		};
 
-			var formData = new FormData();
-			formData.append('action', 'bricks_mcp_generate_app_password');
-			formData.append('nonce', bricksMcpUpdates.nonce);
+		buttons.forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				var client = btn.getAttribute('data-client');
+				var tabPanel = btn.closest('[role="tabpanel"]');
+				var spinner = tabPanel.querySelector('.bricks-mcp-tab-generate .spinner');
+				var resultDiv = tabPanel.querySelector('.bricks-mcp-generated-for-client');
 
-			fetch(bricksMcpUpdates.ajaxUrl, {
-				method: 'POST',
-				body: formData
-			})
-			.then(function(response) {
-				return response.json();
-			})
-			.then(function(data) {
-				if (data.success && data.data) {
-					// Populate the generated output fields.
-					if (commandEl) {
-						commandEl.textContent = data.data.claude_command;
-					}
-					if (claudeConfigEl) {
-						claudeConfigEl.textContent = data.data.claude_config;
-					}
-					if (geminiConfigEl) {
-						geminiConfigEl.textContent = data.data.gemini_config;
-					}
-					if (geminiCommandEl) {
-						geminiCommandEl.textContent = data.data.gemini_command;
-					}
-					if (cursorConfigEl) {
-						cursorConfigEl.textContent = data.data.cursor_config;
-					}
-					if (vscodeConfigEl) {
-						vscodeConfigEl.textContent = data.data.vscode_config;
-					}
-					if (augmentConfigEl) {
-						augmentConfigEl.textContent = data.data.augment_config;
-					}
-					if (qwenConfigEl) {
-						qwenConfigEl.textContent = data.data.qwen_config;
-					}
-					if (claudeDesktopConfigEl) {
-						claudeDesktopConfigEl.textContent = data.data.claude_desktop_config;
-					}
-
-					// Show the result container.
-					if (resultDiv) {
-						resultDiv.style.display = '';
-						resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-					}
-
-					// Auto-fill the test connection password field.
-					var passwordInput = document.getElementById('bricks-mcp-test-app-password');
-					if (passwordInput && data.data.password) {
-						passwordInput.value = data.data.password;
-					}
-
-					// Disable the button permanently (password is one-time).
-					btn.textContent = 'Generated';
-					btn.disabled = true;
-					btn.classList.remove('button-primary');
-				} else {
-					var message = (data.data && data.data.message) ? data.data.message : 'Failed to generate Application Password.';
-					if (errorDiv) {
-						errorDiv.innerHTML = '<span style="color:#d63638;">' + escapeHtml(message) + '</span>';
-						errorDiv.style.display = '';
-					}
-					btn.disabled = false;
-				}
-			})
-			.catch(function() {
-				if (errorDiv) {
-					errorDiv.innerHTML = '<span style="color:#d63638;">Network error. Please try again.</span>';
-					errorDiv.style.display = '';
-				}
-				btn.disabled = false;
-			})
-			.finally(function() {
+				btn.disabled = true;
 				if (spinner) {
-					spinner.classList.remove('is-active');
+					spinner.classList.add('is-active');
 				}
+
+				var formData = new FormData();
+				formData.append('action', 'bricks_mcp_generate_app_password');
+				formData.append('nonce', bricksMcpUpdates.nonce);
+
+				fetch(bricksMcpUpdates.ajaxUrl, {
+					method: 'POST',
+					body: formData
+				})
+				.then(function(response) {
+					return response.json();
+				})
+				.then(function(data) {
+					if (spinner) {
+						spinner.classList.remove('is-active');
+					}
+
+					if (data.success && data.data) {
+						var clientMap = configMap[client];
+						if (!clientMap) {
+							btn.disabled = false;
+							return;
+						}
+
+						// Populate one-liner command (Claude Code & Gemini only).
+						var commandEl = resultDiv.querySelector('.bricks-mcp-gen-command');
+						if (commandEl) {
+							var commandWrap = commandEl.closest('.bricks-mcp-code-wrap');
+							var commandHeading = commandWrap ? commandWrap.previousElementSibling : null;
+							if (clientMap.command && data.data[clientMap.command]) {
+								commandEl.textContent = data.data[clientMap.command];
+								if (commandWrap) {
+									commandWrap.style.display = '';
+								}
+								if (commandHeading && commandHeading.tagName === 'H4') {
+									commandHeading.style.display = '';
+								}
+							} else {
+								if (commandWrap) {
+									commandWrap.style.display = 'none';
+								}
+								if (commandHeading && commandHeading.tagName === 'H4') {
+									commandHeading.style.display = 'none';
+								}
+							}
+						}
+
+						// Populate JSON config.
+						var configEl = resultDiv.querySelector('.bricks-mcp-gen-config');
+						if (configEl && clientMap.config && data.data[clientMap.config]) {
+							configEl.textContent = data.data[clientMap.config];
+						}
+
+						// Show the result container.
+						resultDiv.style.display = 'block';
+						resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+						// Disable the button permanently (password is one-time).
+						btn.textContent = 'Generated';
+						btn.disabled = true;
+						btn.classList.remove('button-primary');
+					} else {
+						var message = (data.data && data.data.message) ? data.data.message : 'Failed to generate Application Password.';
+						alert(escapeHtml(message));
+						btn.disabled = false;
+					}
+				})
+				.catch(function() {
+					if (spinner) {
+						spinner.classList.remove('is-active');
+					}
+					alert('Network error. Please try again.');
+					btn.disabled = false;
+				});
 			});
 		});
 	}
