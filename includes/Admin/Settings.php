@@ -216,147 +216,214 @@ final class Settings {
 			}
 			if ( $has_issues ) {
 				echo '<div class="notice notice-warning is-dismissible"><p><strong>' . esc_html__( 'Bricks MCP: Some configuration issues were detected during activation.', 'bricks-mcp' ) . '</strong> ';
-				echo esc_html__( 'Click "Run Diagnostics" below for details and fix instructions.', 'bricks-mcp' ) . '</p></div>';
+				echo esc_html__( 'Click "Run Diagnostics" in the Diagnostics tab for details and fix instructions.', 'bricks-mcp' ) . '</p></div>';
 			}
 		}
 
-		$settings = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'connection';
+
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 			<?php settings_errors(); ?>
 
-			<div class="bricks-mcp-info">
-				<h3><?php esc_html_e( 'MCP Server Endpoints', 'bricks-mcp' ); ?></h3>
-				<p>
-					<strong><?php esc_html_e( 'MCP Endpoint:', 'bricks-mcp' ); ?></strong>
-					<code><?php echo esc_html( rest_url( 'bricks-mcp/v1/mcp' ) ); ?></code>
-				</p>
-				<p class="description">
-					<?php esc_html_e( 'This single endpoint handles all MCP protocol communication via JSON-RPC 2.0.', 'bricks-mcp' ); ?>
-				</p>
-			</div>
+			<nav class="nav-tab-wrapper">
+				<a href="?page=bricks-mcp&tab=connection" class="nav-tab <?php echo 'connection' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Connection', 'bricks-mcp' ); ?>
+				</a>
+				<a href="?page=bricks-mcp&tab=settings" class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Settings', 'bricks-mcp' ); ?>
+				</a>
+				<a href="?page=bricks-mcp&tab=notes" class="nav-tab <?php echo 'notes' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'AI Notes', 'bricks-mcp' ); ?>
+				</a>
+				<a href="?page=bricks-mcp&tab=diagnostics" class="nav-tab <?php echo 'diagnostics' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Diagnostics', 'bricks-mcp' ); ?>
+				</a>
+			</nav>
 
+			<div class="bricks-mcp-tab-content" style="margin-top: 20px;">
 			<?php
-			// Diagnostic panel (replaces Test Connection per D-07).
-			$this->render_diagnostic_panel();
-
-			// Version card.
-			$this->render_version_card();
-
-			// MCP configuration tabs.
-			$this->render_mcp_config();
+			switch ( $active_tab ) {
+				case 'connection':
+					$this->render_tab_connection();
+					break;
+				case 'settings':
+					$this->render_tab_settings();
+					break;
+				case 'notes':
+					$this->render_tab_notes();
+					break;
+				case 'diagnostics':
+					$this->render_tab_diagnostics();
+					break;
+			}
 			?>
-
-			<form action="options.php" method="post">
-				<?php
-				settings_fields( self::OPTION_GROUP );
-				do_settings_sections( self::PAGE_SLUG );
-				submit_button();
-				?>
-			</form>
-
-			<?php
-			$notes = get_option( 'bricks_mcp_notes', [] );
-			$notes = is_array( $notes ) ? $notes : [];
-			$notes_nonce = wp_create_nonce( 'bricks_mcp_notes' );
-			?>
-			<h2><?php esc_html_e( 'AI Notes', 'bricks-mcp' ); ?></h2>
-			<p class="description"><?php esc_html_e( 'Persistent corrections and preferences stored by AI assistants. These are automatically included in the gotchas section of the builder guide.', 'bricks-mcp' ); ?></p>
-
-			<div id="bricks-mcp-notes-add" style="margin: 15px 0;">
-				<input type="text" id="bricks-mcp-note-text" class="regular-text" placeholder="<?php esc_attr_e( 'Add a new note...', 'bricks-mcp' ); ?>" style="width: 60%;">
-				<button type="button" class="button button-secondary" id="bricks-mcp-add-note-btn"><?php esc_html_e( 'Add Note', 'bricks-mcp' ); ?></button>
 			</div>
+		</div>
+		<?php
+	}
 
-			<table class="widefat striped" id="bricks-mcp-notes-table">
-				<thead><tr>
-					<th><?php esc_html_e( 'Note', 'bricks-mcp' ); ?></th>
-					<th style="width:160px"><?php esc_html_e( 'Created', 'bricks-mcp' ); ?></th>
-					<th style="width:80px"><?php esc_html_e( 'Actions', 'bricks-mcp' ); ?></th>
-				</tr></thead>
-				<tbody>
-				<?php if ( empty( $notes ) ) : ?>
-					<tr class="bricks-mcp-no-notes"><td colspan="3"><?php esc_html_e( 'No notes yet. AI assistants can add notes, or you can add one above.', 'bricks-mcp' ); ?></td></tr>
-				<?php else : ?>
-					<?php foreach ( $notes as $note ) : ?>
-					<tr data-note-id="<?php echo esc_attr( $note['id'] ?? '' ); ?>">
-						<td><?php echo esc_html( $note['text'] ?? '' ); ?></td>
-						<td><?php echo esc_html( $note['created_at'] ?? '' ); ?></td>
-						<td><button type="button" class="button button-small bricks-mcp-delete-note" data-id="<?php echo esc_attr( $note['id'] ?? '' ); ?>"><?php esc_html_e( 'Delete', 'bricks-mcp' ); ?></button></td>
-					</tr>
-					<?php endforeach; ?>
-				<?php endif; ?>
-				</tbody>
-			</table>
+	/**
+	 * Render Connection tab content.
+	 *
+	 * Shows MCP Server Endpoints info box and MCP configuration snippets.
+	 *
+	 * @return void
+	 */
+	private function render_tab_connection(): void {
+		?>
+		<div class="bricks-mcp-info">
+			<h3><?php esc_html_e( 'MCP Server Endpoints', 'bricks-mcp' ); ?></h3>
+			<p>
+				<strong><?php esc_html_e( 'MCP Endpoint:', 'bricks-mcp' ); ?></strong>
+				<code><?php echo esc_html( rest_url( 'bricks-mcp/v1/mcp' ) ); ?></code>
+			</p>
+			<p class="description">
+				<?php esc_html_e( 'This single endpoint handles all MCP protocol communication via JSON-RPC 2.0.', 'bricks-mcp' ); ?>
+			</p>
+		</div>
+		<?php
+		$this->render_mcp_config();
+	}
 
-			<script>
-			(function() {
-				var nonce = <?php echo wp_json_encode( $notes_nonce ); ?>;
+	/**
+	 * Render Settings tab content.
+	 *
+	 * Shows the settings form with enable, auth, URL, rate limit,
+	 * dangerous actions, and protected pages fields.
+	 *
+	 * @return void
+	 */
+	private function render_tab_settings(): void {
+		?>
+		<form action="options.php" method="post">
+			<?php
+			settings_fields( self::OPTION_GROUP );
+			do_settings_sections( self::PAGE_SLUG );
+			submit_button();
+			?>
+		</form>
+		<?php
+	}
 
-				document.querySelectorAll('.bricks-mcp-delete-note').forEach(function(btn) {
-					btn.addEventListener('click', function() {
-						var noteId = this.getAttribute('data-id');
-						var row = this.closest('tr');
-						if (!confirm('Delete this note?')) return;
-						btn.disabled = true;
-						btn.textContent = '...';
-						fetch(ajaxurl, {
-							method: 'POST',
-							headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-							body: 'action=bricks_mcp_delete_note&note_id=' + encodeURIComponent(noteId) + '&_wpnonce=' + encodeURIComponent(nonce)
-						}).then(function(r) { return r.json(); }).then(function(data) {
-							if (data.success) row.remove();
-							else { btn.disabled = false; btn.textContent = 'Delete'; alert(data.data || 'Error'); }
-						});
-					});
-				});
+	/**
+	 * Render AI Notes tab content.
+	 *
+	 * Shows the notes table with add/delete functionality.
+	 *
+	 * @return void
+	 */
+	private function render_tab_notes(): void {
+		$notes       = get_option( 'bricks_mcp_notes', [] );
+		$notes       = is_array( $notes ) ? $notes : [];
+		$notes_nonce = wp_create_nonce( 'bricks_mcp_notes' );
+		?>
+		<h2><?php esc_html_e( 'AI Notes', 'bricks-mcp' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'Persistent corrections and preferences stored by AI assistants. These are automatically included in the gotchas section of the builder guide.', 'bricks-mcp' ); ?></p>
 
-				document.getElementById('bricks-mcp-add-note-btn').addEventListener('click', function() {
-					var input = document.getElementById('bricks-mcp-note-text');
-					var text = input.value.trim();
-					if (!text) return;
-					this.disabled = true;
-					var btn = this;
+		<div id="bricks-mcp-notes-add" style="margin: 15px 0;">
+			<input type="text" id="bricks-mcp-note-text" class="regular-text" placeholder="<?php esc_attr_e( 'Add a new note...', 'bricks-mcp' ); ?>" style="width: 60%;">
+			<button type="button" class="button button-secondary" id="bricks-mcp-add-note-btn"><?php esc_html_e( 'Add Note', 'bricks-mcp' ); ?></button>
+		</div>
+
+		<table class="widefat striped" id="bricks-mcp-notes-table">
+			<thead><tr>
+				<th><?php esc_html_e( 'Note', 'bricks-mcp' ); ?></th>
+				<th style="width:160px"><?php esc_html_e( 'Created', 'bricks-mcp' ); ?></th>
+				<th style="width:80px"><?php esc_html_e( 'Actions', 'bricks-mcp' ); ?></th>
+			</tr></thead>
+			<tbody>
+			<?php if ( empty( $notes ) ) : ?>
+				<tr class="bricks-mcp-no-notes"><td colspan="3"><?php esc_html_e( 'No notes yet. AI assistants can add notes, or you can add one above.', 'bricks-mcp' ); ?></td></tr>
+			<?php else : ?>
+				<?php foreach ( $notes as $note ) : ?>
+				<tr data-note-id="<?php echo esc_attr( $note['id'] ?? '' ); ?>">
+					<td><?php echo esc_html( $note['text'] ?? '' ); ?></td>
+					<td><?php echo esc_html( $note['created_at'] ?? '' ); ?></td>
+					<td><button type="button" class="button button-small bricks-mcp-delete-note" data-id="<?php echo esc_attr( $note['id'] ?? '' ); ?>"><?php esc_html_e( 'Delete', 'bricks-mcp' ); ?></button></td>
+				</tr>
+				<?php endforeach; ?>
+			<?php endif; ?>
+			</tbody>
+		</table>
+
+		<script>
+		(function() {
+			var nonce = <?php echo wp_json_encode( $notes_nonce ); ?>;
+
+			document.querySelectorAll('.bricks-mcp-delete-note').forEach(function(btn) {
+				btn.addEventListener('click', function() {
+					var noteId = this.getAttribute('data-id');
+					var row = this.closest('tr');
+					if (!confirm('Delete this note?')) return;
+					btn.disabled = true;
+					btn.textContent = '...';
 					fetch(ajaxurl, {
 						method: 'POST',
 						headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-						body: 'action=bricks_mcp_add_note&text=' + encodeURIComponent(text) + '&_wpnonce=' + encodeURIComponent(nonce)
+						body: 'action=bricks_mcp_delete_note&note_id=' + encodeURIComponent(noteId) + '&_wpnonce=' + encodeURIComponent(nonce)
 					}).then(function(r) { return r.json(); }).then(function(data) {
-						btn.disabled = false;
-						if (data.success) {
-							var note = data.data;
-							var tbody = document.querySelector('#bricks-mcp-notes-table tbody');
-							var noNotes = tbody.querySelector('.bricks-mcp-no-notes');
-							if (noNotes) noNotes.remove();
-							var tr = document.createElement('tr');
-							tr.setAttribute('data-note-id', note.id);
-							tr.innerHTML = '<td>' + note.text.replace(/</g, '&lt;') + '</td><td>' + note.created_at + '</td><td><button type="button" class="button button-small bricks-mcp-delete-note" data-id="' + note.id + '">Delete</button></td>';
-							tbody.appendChild(tr);
-							tr.querySelector('.bricks-mcp-delete-note').addEventListener('click', function() {
-								var noteId = this.getAttribute('data-id');
-								var row = this.closest('tr');
-								if (!confirm('Delete this note?')) return;
-								this.disabled = true;
-								this.textContent = '...';
-								fetch(ajaxurl, {
-									method: 'POST',
-									headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-									body: 'action=bricks_mcp_delete_note&note_id=' + encodeURIComponent(noteId) + '&_wpnonce=' + encodeURIComponent(nonce)
-								}).then(function(r) { return r.json(); }).then(function(d) {
-									if (d.success) row.remove();
-								});
-							});
-							input.value = '';
-						} else { alert(data.data || 'Error'); }
+						if (data.success) row.remove();
+						else { btn.disabled = false; btn.textContent = 'Delete'; alert(data.data || 'Error'); }
 					});
 				});
-			})();
-			</script>
-			<?php
-			?>
-		</div>
+			});
+
+			document.getElementById('bricks-mcp-add-note-btn').addEventListener('click', function() {
+				var input = document.getElementById('bricks-mcp-note-text');
+				var text = input.value.trim();
+				if (!text) return;
+				this.disabled = true;
+				var btn = this;
+				fetch(ajaxurl, {
+					method: 'POST',
+					headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+					body: 'action=bricks_mcp_add_note&text=' + encodeURIComponent(text) + '&_wpnonce=' + encodeURIComponent(nonce)
+				}).then(function(r) { return r.json(); }).then(function(data) {
+					btn.disabled = false;
+					if (data.success) {
+						var note = data.data;
+						var tbody = document.querySelector('#bricks-mcp-notes-table tbody');
+						var noNotes = tbody.querySelector('.bricks-mcp-no-notes');
+						if (noNotes) noNotes.remove();
+						var tr = document.createElement('tr');
+						tr.setAttribute('data-note-id', note.id);
+						tr.innerHTML = '<td>' + note.text.replace(/</g, '&lt;') + '</td><td>' + note.created_at + '</td><td><button type="button" class="button button-small bricks-mcp-delete-note" data-id="' + note.id + '">Delete</button></td>';
+						tbody.appendChild(tr);
+						tr.querySelector('.bricks-mcp-delete-note').addEventListener('click', function() {
+							var noteId = this.getAttribute('data-id');
+							var row = this.closest('tr');
+							if (!confirm('Delete this note?')) return;
+							this.disabled = true;
+							this.textContent = '...';
+							fetch(ajaxurl, {
+								method: 'POST',
+								headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+								body: 'action=bricks_mcp_delete_note&note_id=' + encodeURIComponent(noteId) + '&_wpnonce=' + encodeURIComponent(nonce)
+							}).then(function(r) { return r.json(); }).then(function(d) {
+								if (d.success) row.remove();
+							});
+						});
+						input.value = '';
+					} else { alert(data.data || 'Error'); }
+				});
+			});
+		})();
+		</script>
 		<?php
+	}
+
+	/**
+	 * Render Diagnostics tab content.
+	 *
+	 * Shows version card and diagnostic panel.
+	 *
+	 * @return void
+	 */
+	private function render_tab_diagnostics(): void {
+		$this->render_version_card();
+		$this->render_diagnostic_panel();
 	}
 
 	/**
