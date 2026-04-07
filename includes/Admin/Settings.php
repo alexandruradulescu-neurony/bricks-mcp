@@ -967,6 +967,13 @@ final class Settings {
 								<strong><?php esc_html_e( 'Important:', 'bricks-mcp' ); ?></strong>
 								<?php esc_html_e( 'This password is shown once. Copy your config now -- it cannot be retrieved later.', 'bricks-mcp' ); ?>
 							</div>
+							<h4><?php esc_html_e( 'One-liner:', 'bricks-mcp' ); ?></h4>
+							<div class="bricks-mcp-code-wrap bricks-mcp-code-wrap--breakall">
+								<pre><code class="bricks-mcp-gen-command"></code></pre>
+								<button type="button" class="button bricks-mcp-copy-btn" data-target-class="bricks-mcp-gen-command">
+									<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+								</button>
+							</div>
 							<h4><?php esc_html_e( 'JSON config (with real credentials):', 'bricks-mcp' ); ?></h4>
 							<div class="bricks-mcp-code-wrap">
 								<pre><code class="bricks-mcp-gen-config"></code></pre>
@@ -1095,6 +1102,13 @@ final class Settings {
 							<div class="bricks-mcp-important-notice">
 								<strong><?php esc_html_e( 'Important:', 'bricks-mcp' ); ?></strong>
 								<?php esc_html_e( 'This password is shown once. Copy your config now -- it cannot be retrieved later.', 'bricks-mcp' ); ?>
+							</div>
+							<h4><?php esc_html_e( 'One-liner:', 'bricks-mcp' ); ?></h4>
+							<div class="bricks-mcp-code-wrap bricks-mcp-code-wrap--breakall">
+								<pre><code class="bricks-mcp-gen-command"></code></pre>
+								<button type="button" class="button bricks-mcp-copy-btn" data-target-class="bricks-mcp-gen-command">
+									<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+								</button>
 							</div>
 							<h4><?php esc_html_e( 'JSON config (with real credentials):', 'bricks-mcp' ); ?></h4>
 							<div class="bricks-mcp-code-wrap">
@@ -1366,6 +1380,20 @@ final class Settings {
 			$auth_string
 		);
 
+		// Build Cursor CLI one-liner.
+		$cursor_command = sprintf(
+			'cursor mcp add bricks-mcp %s --header "Authorization: Basic %s"',
+			$mcp_url,
+			$auth_string
+		);
+
+		// Build Qwen CLI one-liner.
+		$qwen_command = sprintf(
+			'qwen mcp add bricks-mcp --url %s --header "Authorization: Basic %s"',
+			$mcp_url,
+			$auth_string
+		);
+
 		// Build Cursor JSON config with real credentials.
 		$cursor_config = wp_json_encode(
 			[
@@ -1451,9 +1479,11 @@ final class Settings {
 				'claude_config'         => $claude_config,
 				'gemini_command'        => $gemini_command,
 				'gemini_config'         => $gemini_config,
+				'cursor_command'        => $cursor_command,
 				'cursor_config'         => $cursor_config,
 				'vscode_config'         => $vscode_config,
 				'augment_config'        => $augment_config,
+				'qwen_command'          => $qwen_command,
 				'qwen_config'           => $qwen_config,
 				'claude_desktop_config' => $claude_desktop_config,
 				'mcp_url'               => $mcp_url,

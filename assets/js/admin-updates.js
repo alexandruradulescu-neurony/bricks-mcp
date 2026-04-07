@@ -326,10 +326,10 @@
 			'claude':         { command: 'claude_command',  config: 'claude_config' },
 			'claude-desktop': { config: 'claude_desktop_config' },
 			'gemini':         { command: 'gemini_command',  config: 'gemini_config' },
-			'cursor':         { config: 'cursor_config' },
+			'cursor':         { command: 'cursor_command',  config: 'cursor_config' },
 			'vscode':         { config: 'vscode_config' },
 			'augment':        { config: 'augment_config' },
-			'qwen':           { config: 'qwen_config' }
+			'qwen':           { command: 'qwen_command',    config: 'qwen_config' }
 		};
 
 		buttons.forEach(function(btn) {
