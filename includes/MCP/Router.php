@@ -203,13 +203,13 @@ final class Router {
 		// WordPress consolidated tool (replaces get_posts, get_post, get_users, get_plugins).
 		$this->register_tool(
 			'wordpress',
-			__( "Query WordPress data.\n\nActions: get_posts, get_post, get_users, get_plugins.", 'bricks-mcp' ),
+			__( "Query and manage WordPress data.\n\nActions: get_posts, get_post, get_users, get_plugins, activate_plugin, deactivate_plugin, create_user, update_user.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
 					'action'         => array(
 						'type'        => 'string',
-						'enum'        => array( 'get_posts', 'get_post', 'get_users', 'get_plugins' ),
+						'enum'        => array( 'get_posts', 'get_post', 'get_users', 'get_plugins', 'activate_plugin', 'deactivate_plugin', 'create_user', 'update_user' ),
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					),
 					'post_type'      => array(
@@ -250,10 +250,68 @@ final class Router {
 						'type'        => 'boolean',
 						'description' => __( 'Include sensitive fields (email, login). Warning: data may be logged by AI services. (get_users: default false)', 'bricks-mcp' ),
 					),
+					'plugin_file'    => array(
+						'type'        => 'string',
+						'description' => __( 'Plugin file path relative to plugins directory (activate_plugin, deactivate_plugin: required, e.g. "akismet/akismet.php")', 'bricks-mcp' ),
+					),
+					'username'       => array(
+						'type'        => 'string',
+						'description' => __( 'Username (create_user: required)', 'bricks-mcp' ),
+					),
+					'email'          => array(
+						'type'        => 'string',
+						'description' => __( 'User email (create_user: required, update_user: optional)', 'bricks-mcp' ),
+					),
+					'password'       => array(
+						'type'        => 'string',
+						'description' => __( 'User password (create_user: optional, auto-generated if omitted)', 'bricks-mcp' ),
+					),
+					'display_name'   => array(
+						'type'        => 'string',
+						'description' => __( 'Display name (create_user, update_user: optional)', 'bricks-mcp' ),
+					),
+					'user_role'      => array(
+						'type'        => 'string',
+						'description' => __( 'User role (create_user: default "subscriber", update_user: optional)', 'bricks-mcp' ),
+					),
+					'user_id'        => array(
+						'type'        => 'integer',
+						'description' => __( 'User ID (update_user: required)', 'bricks-mcp' ),
+					),
 				),
 				'required'   => array( 'action' ),
 			),
-			array( $this, 'tool_wordpress' ),
+			array( $this, 'tool_wordpress' )
+		);
+
+		// MetaBox integration tool (read-only).
+		$this->register_tool(
+			'metabox',
+			__( "Read Meta Box custom fields and field groups.\n\nActions: list_field_groups, get_fields, get_field_value, get_dynamic_tags.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'    => array(
+						'type'        => 'string',
+						'enum'        => array( 'list_field_groups', 'get_fields', 'get_field_value', 'get_dynamic_tags' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'post_type' => array(
+						'type'        => 'string',
+						'description' => __( 'Post type to get fields for (get_fields: required, get_dynamic_tags: optional filter)', 'bricks-mcp' ),
+					),
+					'post_id'   => array(
+						'type'        => 'integer',
+						'description' => __( 'Post ID to read field values from (get_field_value: required)', 'bricks-mcp' ),
+					),
+					'field_id'  => array(
+						'type'        => 'string',
+						'description' => __( 'MetaBox field ID (get_field_value: required)', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'tool_metabox' ),
 			array( 'readOnlyHint' => true )
 		);
 
@@ -408,6 +466,7 @@ final class Router {
 
 		$read_tools = array(
 			'get_site_info',
+			'metabox',
 		);
 
 		if ( in_array( $tool_name, $read_tools, true ) ) {
@@ -834,6 +893,369 @@ final class Router {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Tool: Activate a plugin.
+	 *
+	 * @param array<string, mixed> $args Tool arguments including 'plugin_file'.
+	 * @return array<string, mixed>|\WP_Error Result data or error.
+	 */
+	private function tool_activate_plugin( array $args ): array|\WP_Error {
+		$plugin_file = sanitize_text_field( $args['plugin_file'] ?? '' );
+		if ( empty( $plugin_file ) ) {
+			return new \WP_Error( 'missing_plugin_file', 'plugin_file is required. Use wordpress:get_plugins to find plugin file paths.' );
+		}
+
+		if ( ! function_exists( 'activate_plugin' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
+		if ( is_plugin_active( $plugin_file ) ) {
+			return array( 'plugin_file' => $plugin_file, 'status' => 'already_active', 'message' => 'Plugin is already active.' );
+		}
+
+		$result = activate_plugin( $plugin_file );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return array( 'plugin_file' => $plugin_file, 'status' => 'activated', 'message' => 'Plugin activated successfully.' );
+	}
+
+	/**
+	 * Tool: Deactivate a plugin.
+	 *
+	 * @param array<string, mixed> $args Tool arguments including 'plugin_file'.
+	 * @return array<string, mixed>|\WP_Error Result data or error.
+	 */
+	private function tool_deactivate_plugin( array $args ): array|\WP_Error {
+		$plugin_file = sanitize_text_field( $args['plugin_file'] ?? '' );
+		if ( empty( $plugin_file ) ) {
+			return new \WP_Error( 'missing_plugin_file', 'plugin_file is required.' );
+		}
+
+		if ( ! function_exists( 'deactivate_plugins' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
+		if ( ! is_plugin_active( $plugin_file ) ) {
+			return array( 'plugin_file' => $plugin_file, 'status' => 'already_inactive', 'message' => 'Plugin is already inactive.' );
+		}
+
+		deactivate_plugins( $plugin_file );
+
+		return array( 'plugin_file' => $plugin_file, 'status' => 'deactivated', 'message' => 'Plugin deactivated successfully.' );
+	}
+
+	/**
+	 * Tool: Create a WordPress user.
+	 *
+	 * @param array<string, mixed> $args Tool arguments including 'username', 'email', etc.
+	 * @return array<string, mixed>|\WP_Error Result data or error.
+	 */
+	private function tool_create_user( array $args ): array|\WP_Error {
+		$username = sanitize_user( $args['username'] ?? '' );
+		$email    = sanitize_email( $args['email'] ?? '' );
+
+		if ( empty( $username ) ) {
+			return new \WP_Error( 'missing_username', 'username is required for create_user.' );
+		}
+		if ( empty( $email ) || ! is_email( $email ) ) {
+			return new \WP_Error( 'invalid_email', 'A valid email is required for create_user.' );
+		}
+
+		$password = $args['password'] ?? wp_generate_password( 16, true );
+		$role     = sanitize_text_field( $args['user_role'] ?? 'subscriber' );
+
+		$user_id = wp_insert_user( array(
+			'user_login'   => $username,
+			'user_email'   => $email,
+			'user_pass'    => $password,
+			'display_name' => sanitize_text_field( $args['display_name'] ?? $username ),
+			'role'         => $role,
+		) );
+
+		if ( is_wp_error( $user_id ) ) {
+			return $user_id;
+		}
+
+		return array(
+			'user_id'      => $user_id,
+			'username'     => $username,
+			'email'        => $email,
+			'display_name' => $args['display_name'] ?? $username,
+			'role'         => $role,
+			'message'      => 'User created successfully.',
+		);
+	}
+
+	/**
+	 * Tool: Update a WordPress user.
+	 *
+	 * @param array<string, mixed> $args Tool arguments including 'user_id' and fields to update.
+	 * @return array<string, mixed>|\WP_Error Result data or error.
+	 */
+	private function tool_update_user( array $args ): array|\WP_Error {
+		$user_id = (int) ( $args['user_id'] ?? 0 );
+		if ( 0 === $user_id ) {
+			return new \WP_Error( 'missing_user_id', 'user_id is required for update_user. Use wordpress:get_users to find user IDs.' );
+		}
+
+		$user = get_user_by( 'ID', $user_id );
+		if ( ! $user ) {
+			return new \WP_Error( 'user_not_found', sprintf( 'User %d not found.', $user_id ) );
+		}
+
+		$update_data    = array( 'ID' => $user_id );
+		$updated_fields = array();
+
+		if ( ! empty( $args['email'] ) ) {
+			$email = sanitize_email( $args['email'] );
+			if ( is_email( $email ) ) {
+				$update_data['user_email'] = $email;
+				$updated_fields[]          = 'email';
+			}
+		}
+		if ( ! empty( $args['display_name'] ) ) {
+			$update_data['display_name'] = sanitize_text_field( $args['display_name'] );
+			$updated_fields[]            = 'display_name';
+		}
+		if ( ! empty( $args['user_role'] ) ) {
+			$update_data['role'] = sanitize_text_field( $args['user_role'] );
+			$updated_fields[]    = 'role';
+		}
+		if ( ! empty( $args['password'] ) ) {
+			$update_data['user_pass'] = $args['password'];
+			$updated_fields[]         = 'password';
+		}
+
+		if ( empty( $updated_fields ) ) {
+			return new \WP_Error( 'no_fields', 'No fields to update. Provide email, display_name, user_role, or password.' );
+		}
+
+		$result = wp_update_user( $update_data );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return array(
+			'user_id'        => $user_id,
+			'updated_fields' => $updated_fields,
+			'message'        => 'User updated successfully.',
+		);
+	}
+
+	/**
+	 * Tool: MetaBox dispatcher — routes to list_field_groups, get_fields, get_field_value, get_dynamic_tags.
+	 *
+	 * @param array<string, mixed> $args Tool arguments including 'action'.
+	 * @return array<string, mixed>|\WP_Error Result data or error.
+	 */
+	public function tool_metabox( array $args ): array|\WP_Error {
+		$action = sanitize_text_field( $args['action'] ?? '' );
+
+		// Check if MetaBox is available.
+		if ( ! function_exists( 'rwmb_meta' ) ) {
+			return new \WP_Error(
+				'bricks_mcp_metabox_not_active',
+				'Meta Box plugin is not installed or activated. Install it from https://metabox.io/'
+			);
+		}
+
+		return match ( $action ) {
+			'list_field_groups' => $this->metabox_list_field_groups(),
+			'get_fields'        => $this->metabox_get_fields( $args ),
+			'get_field_value'   => $this->metabox_get_field_value( $args ),
+			'get_dynamic_tags'  => $this->metabox_get_dynamic_tags( $args ),
+			default             => new \WP_Error(
+				'invalid_action',
+				sprintf(
+					/* translators: %s: Action name */
+					__( 'Invalid action "%s". Valid actions: list_field_groups, get_fields, get_field_value, get_dynamic_tags', 'bricks-mcp' ),
+					$action
+				)
+			),
+		};
+	}
+
+	/**
+	 * MetaBox: List all field groups with their fields.
+	 *
+	 * @return array<string, mixed> Field groups data.
+	 */
+	private function metabox_list_field_groups(): array {
+		if ( ! function_exists( 'rwmb_get_registry' ) ) {
+			return array( 'field_groups' => array(), 'message' => 'Meta Box registry not available.' );
+		}
+
+		$registry = rwmb_get_registry( 'meta_box' );
+		$all      = $registry->all();
+		$groups   = array();
+
+		foreach ( $all as $meta_box ) {
+			$fields = array();
+			foreach ( $meta_box->fields as $field ) {
+				$field_info = array(
+					'id'   => $field['id'] ?? '',
+					'name' => $field['name'] ?? '',
+					'type' => $field['type'] ?? '',
+				);
+				if ( ! empty( $field['options'] ) ) {
+					$field_info['options'] = $field['options'];
+				}
+				if ( ! empty( $field['clone'] ) ) {
+					$field_info['cloneable'] = true;
+				}
+				if ( ! empty( $field['multiple'] ) ) {
+					$field_info['multiple'] = true;
+				}
+				$fields[] = $field_info;
+			}
+
+			$groups[] = array(
+				'id'         => $meta_box->id,
+				'title'      => $meta_box->title,
+				'post_types' => $meta_box->post_types ?? array(),
+				'fields'     => $fields,
+			);
+		}
+
+		return array( 'field_groups' => $groups, 'total' => count( $groups ) );
+	}
+
+	/**
+	 * MetaBox: Get fields for a specific post type.
+	 *
+	 * @param array<string, mixed> $args Tool arguments including 'post_type'.
+	 * @return array<string, mixed>|\WP_Error Fields data or error.
+	 */
+	private function metabox_get_fields( array $args ): array|\WP_Error {
+		$post_type = sanitize_text_field( $args['post_type'] ?? '' );
+		if ( empty( $post_type ) ) {
+			return new \WP_Error( 'missing_post_type', 'post_type is required for get_fields.' );
+		}
+
+		if ( ! function_exists( 'rwmb_get_registry' ) ) {
+			return array( 'fields' => array() );
+		}
+
+		$registry = rwmb_get_registry( 'meta_box' );
+		$all      = $registry->all();
+		$fields   = array();
+
+		foreach ( $all as $meta_box ) {
+			$box_post_types = $meta_box->post_types ?? array();
+			if ( ! in_array( $post_type, $box_post_types, true ) ) {
+				continue;
+			}
+			foreach ( $meta_box->fields as $field ) {
+				$fields[] = array(
+					'id'          => $field['id'] ?? '',
+					'name'        => $field['name'] ?? '',
+					'type'        => $field['type'] ?? '',
+					'group'       => $meta_box->title,
+					'dynamic_tag' => '{mb_' . ( $field['id'] ?? '' ) . '}',
+				);
+			}
+		}
+
+		return array( 'post_type' => $post_type, 'fields' => $fields, 'total' => count( $fields ) );
+	}
+
+	/**
+	 * MetaBox: Get a field value for a specific post.
+	 *
+	 * @param array<string, mixed> $args Tool arguments including 'post_id' and 'field_id'.
+	 * @return array<string, mixed>|\WP_Error Field value data or error.
+	 */
+	private function metabox_get_field_value( array $args ): array|\WP_Error {
+		$post_id  = (int) ( $args['post_id'] ?? 0 );
+		$field_id = sanitize_text_field( $args['field_id'] ?? '' );
+
+		if ( 0 === $post_id ) {
+			return new \WP_Error( 'missing_post_id', 'post_id is required for get_field_value.' );
+		}
+		if ( empty( $field_id ) ) {
+			return new \WP_Error( 'missing_field_id', 'field_id is required for get_field_value.' );
+		}
+
+		$value = rwmb_meta( $field_id, array(), $post_id );
+
+		// Handle different value types.
+		if ( is_array( $value ) ) {
+			// Could be image/file array — simplify.
+			$simplified = array();
+			foreach ( $value as $item ) {
+				if ( is_array( $item ) && isset( $item['url'] ) ) {
+					$simplified[] = array(
+						'id'    => $item['ID'] ?? 0,
+						'url'   => $item['url'],
+						'title' => $item['title'] ?? '',
+					);
+				} else {
+					$simplified[] = $item;
+				}
+			}
+			$value = $simplified;
+		}
+
+		return array(
+			'post_id'  => $post_id,
+			'field_id' => $field_id,
+			'value'    => $value,
+		);
+	}
+
+	/**
+	 * MetaBox: Get available dynamic data tags for Bricks.
+	 *
+	 * @param array<string, mixed> $args Tool arguments with optional 'post_type' filter.
+	 * @return array<string, mixed> Dynamic tags data.
+	 */
+	private function metabox_get_dynamic_tags( array $args ): array {
+		$post_type = sanitize_text_field( $args['post_type'] ?? '' );
+
+		if ( ! function_exists( 'rwmb_get_registry' ) ) {
+			return array( 'tags' => array(), 'message' => 'Meta Box not active.' );
+		}
+
+		$registry = rwmb_get_registry( 'meta_box' );
+		$all      = $registry->all();
+		$tags     = array();
+
+		foreach ( $all as $meta_box ) {
+			if ( ! empty( $post_type ) ) {
+				$box_post_types = $meta_box->post_types ?? array();
+				if ( ! in_array( $post_type, $box_post_types, true ) ) {
+					continue;
+				}
+			}
+			foreach ( $meta_box->fields as $field ) {
+				$fid  = $field['id'] ?? '';
+				$type = $field['type'] ?? 'text';
+
+				$tag_info = array(
+					'field_id'    => $fid,
+					'field_name'  => $field['name'] ?? '',
+					'field_type'  => $type,
+					'dynamic_tag' => '{mb_' . $fid . '}',
+				);
+
+				// Add usage hints based on field type.
+				if ( in_array( $type, array( 'image', 'image_advanced', 'image_upload', 'single_image', 'file', 'file_advanced', 'file_upload' ), true ) ) {
+					$tag_info['usage'] = 'Use in image element: {"useDynamicData": "{mb_' . $fid . '}"}';
+				} elseif ( in_array( $type, array( 'url', 'post', 'taxonomy' ), true ) ) {
+					$tag_info['usage'] = 'Use in link: {"type": "dynamic", "dynamicData": "{mb_' . $fid . '}"}';
+				} else {
+					$tag_info['usage'] = 'Use in text elements: {mb_' . $fid . '}';
+				}
+
+				$tags[] = $tag_info;
+			}
+		}
+
+		return array( 'tags' => $tags, 'total' => count( $tags ), 'post_type_filter' => $post_type ?: 'all' );
 	}
 
 	/**
@@ -1961,10 +2383,14 @@ final class Router {
 		$action = $args['action'] ?? '';
 
 		$action_caps = array(
-			'get_posts'   => 'read',
-			'get_post'    => 'read',
-			'get_users'   => 'list_users',
-			'get_plugins' => 'activate_plugins',
+			'get_posts'         => 'read',
+			'get_post'          => 'read',
+			'get_users'         => 'list_users',
+			'get_plugins'       => 'activate_plugins',
+			'activate_plugin'   => 'activate_plugins',
+			'deactivate_plugin' => 'activate_plugins',
+			'create_user'       => 'create_users',
+			'update_user'       => 'edit_users',
 		);
 
 		// Reject unknown actions before capability check to prevent future actions
@@ -1974,7 +2400,7 @@ final class Router {
 				'invalid_action',
 				sprintf(
 					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: get_posts, get_post, get_users, get_plugins', 'bricks-mcp' ),
+					__( 'Invalid action "%s". Valid actions: get_posts, get_post, get_users, get_plugins, activate_plugin, deactivate_plugin, create_user, update_user', 'bricks-mcp' ),
 					sanitize_text_field( $action )
 				)
 			);
@@ -1992,15 +2418,19 @@ final class Router {
 		}
 
 		return match ( $action ) {
-			'get_posts'   => $this->tool_get_posts( $args ),
-			'get_post'    => $this->tool_get_post( $args ),
-			'get_users'   => $this->tool_get_users( $args ),
-			'get_plugins' => $this->tool_get_plugins( $args ),
-			default       => new \WP_Error(
+			'get_posts'         => $this->tool_get_posts( $args ),
+			'get_post'          => $this->tool_get_post( $args ),
+			'get_users'         => $this->tool_get_users( $args ),
+			'get_plugins'       => $this->tool_get_plugins( $args ),
+			'activate_plugin'   => $this->tool_activate_plugin( $args ),
+			'deactivate_plugin' => $this->tool_deactivate_plugin( $args ),
+			'create_user'       => $this->tool_create_user( $args ),
+			'update_user'       => $this->tool_update_user( $args ),
+			default             => new \WP_Error(
 				'invalid_action',
 				sprintf(
 					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: get_posts, get_post, get_users, get_plugins', 'bricks-mcp' ),
+					__( 'Invalid action "%s". Valid actions: get_posts, get_post, get_users, get_plugins, activate_plugin, deactivate_plugin, create_user, update_user', 'bricks-mcp' ),
 					sanitize_text_field( $action )
 				)
 			),
