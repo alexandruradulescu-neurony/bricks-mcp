@@ -859,7 +859,7 @@ final class Router {
 				'properties' => array(
 					'section' => array(
 						'type'        => 'string',
-						'enum'        => array( 'all', 'professional', 'settings', 'animations', 'interactions', 'dynamic_data', 'forms', 'components', 'popups', 'element_conditions', 'woocommerce', 'seo', 'custom_code', 'fonts', 'import_export', 'workflows', 'gotchas', 'connection_troubleshooting' ),
+						'enum'        => array( 'all', 'professional', 'settings', 'animations', 'interactions', 'dynamic_data', 'forms', 'components', 'popups', 'element_conditions', 'woocommerce', 'seo', 'custom_code', 'fonts', 'import_export', 'workflows', 'gotchas', 'workflow', 'recipes', 'connection_troubleshooting' ),
 						'description' => __( 'Which section to return. Defaults to "all" which returns a table of contents. Use a specific section key (e.g. "settings", "gotchas", "workflows") for full content.', 'bricks-mcp' ),
 					),
 				),
@@ -871,13 +871,13 @@ final class Router {
 		// Bricks consolidated tool (replaces enable_bricks, disable_bricks, get_bricks_settings, get_breakpoints, get_element_schemas).
 		$this->register_tool(
 			'bricks',
-			__( "Manage Bricks Builder settings and schema.\n\nActions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query.", 'bricks-mcp' ),
+			__( "Manage Bricks Builder settings, schema, and pattern library.\n\nActions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, analyze_patterns, save_pattern, use_pattern, get_notes, add_note, delete_note.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
 					'action'       => array(
 						'type'        => 'string',
-						'enum'        => array( 'enable', 'disable', 'get_settings', 'get_breakpoints', 'get_element_schemas', 'get_dynamic_tags', 'get_query_types', 'get_form_schema', 'get_interaction_schema', 'get_component_schema', 'get_popup_schema', 'get_filter_schema', 'get_condition_schema', 'get_global_queries', 'set_global_query', 'delete_global_query' ),
+						'enum'        => array( 'enable', 'disable', 'get_settings', 'get_breakpoints', 'get_element_schemas', 'get_dynamic_tags', 'get_query_types', 'get_form_schema', 'get_interaction_schema', 'get_component_schema', 'get_popup_schema', 'get_filter_schema', 'get_condition_schema', 'get_global_queries', 'set_global_query', 'delete_global_query', 'analyze_patterns', 'save_pattern', 'use_pattern', 'get_notes', 'add_note', 'delete_note' ),
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					),
 					'post_id'      => array(
@@ -919,6 +919,26 @@ final class Router {
 					'limit'        => array(
 						'type'        => 'integer',
 						'description' => __( 'Max schemas to return (get_element_schemas: optional, default all)', 'bricks-mcp' ),
+					),
+					'pattern_id'      => array(
+						'type'        => 'string',
+						'description' => __( 'Pattern ID (use_pattern: required). Get IDs from analyze_patterns or save_pattern.', 'bricks-mcp' ),
+					),
+					'root_element_id' => array(
+						'type'        => 'string',
+						'description' => __( 'Root element ID of the subtree to save as a pattern (save_pattern: required)', 'bricks-mcp' ),
+					),
+					'overrides'       => array(
+						'type'        => 'object',
+						'description' => __( 'Placeholder overrides for pattern instantiation (use_pattern: optional). Keys are placeholder names (e.g., "heading", "text"), values are replacement strings.', 'bricks-mcp' ),
+					),
+					'text'            => array(
+						'type'        => 'string',
+						'description' => __( 'Note text (add_note: required)', 'bricks-mcp' ),
+					),
+					'note_id'         => array(
+						'type'        => 'string',
+						'description' => __( 'Note ID to delete (delete_note: required)', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -2019,11 +2039,17 @@ final class Router {
 			'get_global_queries'      => $this->tool_get_global_queries( $args ),
 			'set_global_query'        => $this->tool_set_global_query( $args ),
 			'delete_global_query'     => $this->tool_delete_global_query( $args ),
+			'analyze_patterns'        => $this->bricks_service->analyze_patterns(),
+			'save_pattern'            => $this->bricks_service->save_pattern( (int) ( $args['post_id'] ?? 0 ), sanitize_text_field( $args['root_element_id'] ?? '' ), sanitize_text_field( $args['name'] ?? '' ) ),
+			'use_pattern'             => $this->bricks_service->use_pattern( sanitize_text_field( $args['pattern_id'] ?? '' ), (int) ( $args['post_id'] ?? 0 ), $args['overrides'] ?? [] ),
+			'get_notes'               => [ 'notes' => $this->bricks_service->get_notes() ],
+			'add_note'                => $this->bricks_service->add_note( sanitize_text_field( $args['text'] ?? '' ) ),
+			'delete_note'             => [ 'deleted' => $this->bricks_service->delete_note( sanitize_text_field( $args['note_id'] ?? '' ) ) ],
 			default                   => new \WP_Error(
 				'invalid_action',
 				sprintf(
 					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query', 'bricks-mcp' ),
+					__( 'Invalid action "%s". Valid actions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, analyze_patterns, save_pattern, use_pattern, get_notes, add_note, delete_note', 'bricks-mcp' ),
 					$action
 				)
 			),
@@ -2817,6 +2843,8 @@ final class Router {
 			'import_export'             => '## Import & Export',
 			'workflows'                 => '## Common Workflows',
 			'gotchas'                   => '## Key Gotchas',
+			'workflow'                  => '## Workflow',
+			'recipes'                   => '## Recipes',
 			'connection_troubleshooting' => '## Connection Troubleshooting',
 		);
 
@@ -2857,6 +2885,18 @@ final class Router {
 		$rest      = substr( $content, $pos );
 		$next_h2   = strpos( $rest, "\n## ", strlen( $heading ) );
 		$extracted = false !== $next_h2 ? substr( $rest, 0, $next_h2 ) : $rest;
+
+		// Append persistent correction notes to gotchas section.
+		if ( 'gotchas' === $section ) {
+			$notes = $this->bricks_service->get_notes();
+			if ( ! empty( $notes ) ) {
+				$notes_text = "\n\n### AI Notes (persistent corrections)\n\n";
+				foreach ( $notes as $note ) {
+					$notes_text .= '- ' . ( $note['text'] ?? '' ) . "\n";
+				}
+				$extracted .= $notes_text;
+			}
+		}
 
 		return array(
 			'section' => $section,

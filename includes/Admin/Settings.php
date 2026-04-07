@@ -253,6 +253,19 @@ final class Settings {
 				submit_button();
 				?>
 			</form>
+
+			<?php
+			$notes = get_option( 'bricks_mcp_notes', [] );
+			if ( is_array( $notes ) && ! empty( $notes ) ) {
+				echo '<h2>' . esc_html__( 'AI Notes', 'bricks-mcp' ) . '</h2>';
+				echo '<p class="description">' . esc_html__( 'Persistent corrections and preferences stored by AI assistants. These are automatically included in the gotchas section of the builder guide.', 'bricks-mcp' ) . '</p>';
+				echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Note', 'bricks-mcp' ) . '</th><th>' . esc_html__( 'Created', 'bricks-mcp' ) . '</th></tr></thead><tbody>';
+				foreach ( $notes as $note ) {
+					echo '<tr><td>' . esc_html( $note['text'] ?? '' ) . '</td><td>' . esc_html( $note['created_at'] ?? '' ) . '</td></tr>';
+				}
+				echo '</tbody></table>';
+			}
+			?>
 		</div>
 		<?php
 	}

@@ -118,6 +118,11 @@ final class GlobalClassHandler {
 			$result['has_more'] = ( $offset + count( $classes ) ) < $total;
 		}
 
+		// Include class co-occurrence data on full (unfiltered) list only.
+		if ( '' === $search && '' === $category ) {
+			$result['class_cooccurrence'] = $this->bricks_service->get_class_cooccurrence();
+		}
+
 		return $result;
 	}
 

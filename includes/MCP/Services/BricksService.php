@@ -94,6 +94,20 @@ class BricksService {
 	private SettingsService $settings_service;
 
 	/**
+	 * Pattern library sub-service.
+	 *
+	 * @var PatternService
+	 */
+	private PatternService $pattern_service;
+
+	/**
+	 * Correction notes sub-service.
+	 *
+	 * @var NotesService
+	 */
+	private NotesService $notes_service;
+
+	/**
 	 * Constructor.
 	 *
 	 * Creates the shared core and all domain sub-services.
@@ -111,6 +125,8 @@ class BricksService {
 		$this->theme_style_service     = new ThemeStyleService( $this->core );
 		$this->page_operations_service = new PageOperationsService( $this->core );
 		$this->settings_service        = new SettingsService( $this->core );
+		$this->pattern_service         = new PatternService( $this->core );
+		$this->notes_service           = new NotesService();
 	}
 
 	/**
@@ -1911,5 +1927,80 @@ class BricksService {
 
 	public function update_page_scripts( int $post_id, array $scripts ): array|\WP_Error {
 		return $this->settings_service->update_page_scripts( $post_id, $scripts );
+	}
+
+	// =========================================================================
+	// Pattern Library
+	// =========================================================================
+
+	/**
+	 * Analyze all Bricks pages and extract reusable section patterns.
+	 *
+	 * @return array{patterns: array, class_cooccurrence: array, pages_scanned: int}
+	 */
+	public function analyze_patterns(): array {
+		return $this->pattern_service->analyze_patterns();
+	}
+
+	/**
+	 * Save an element subtree as a named pattern.
+	 *
+	 * @param int    $post_id         Post ID containing the element.
+	 * @param string $root_element_id Root element ID of the subtree to save.
+	 * @param string $name            Pattern name.
+	 * @return array<string, mixed>|\WP_Error Saved pattern data or error.
+	 */
+	public function save_pattern( int $post_id, string $root_element_id, string $name ): array|\WP_Error {
+		return $this->pattern_service->save_pattern( $post_id, $root_element_id, $name );
+	}
+
+	/**
+	 * Instantiate a pattern on a target page.
+	 *
+	 * @param string               $pattern_id Pattern ID.
+	 * @param int                  $post_id    Target post ID.
+	 * @param array<string, mixed> $overrides  Placeholder overrides.
+	 * @return array<string, mixed>|\WP_Error Result or error.
+	 */
+	public function use_pattern( string $pattern_id, int $post_id, array $overrides = [] ): array|\WP_Error {
+		return $this->pattern_service->use_pattern( $pattern_id, $post_id, $overrides );
+	}
+
+	/**
+	 * Get class co-occurrence data from all Bricks pages.
+	 *
+	 * @return array<string, array<int, string>> Map of class name to co-occurring class names.
+	 */
+	public function get_class_cooccurrence(): array {
+		return $this->pattern_service->get_class_cooccurrence();
+	}
+
+	/**
+	 * Get all stored correction notes.
+	 *
+	 * @return array<int, array{id: string, text: string, created_at: string}> List of notes.
+	 */
+	public function get_notes(): array {
+		return $this->notes_service->get_notes();
+	}
+
+	/**
+	 * Add a new correction note.
+	 *
+	 * @param string $text Note text content.
+	 * @return array{id: string, text: string, created_at: string} Created note.
+	 */
+	public function add_note( string $text ): array {
+		return $this->notes_service->add_note( $text );
+	}
+
+	/**
+	 * Delete a correction note by ID.
+	 *
+	 * @param string $note_id Note ID to delete.
+	 * @return bool True if note was found and deleted, false if not found.
+	 */
+	public function delete_note( string $note_id ): bool {
+		return $this->notes_service->delete_note( $note_id );
 	}
 }

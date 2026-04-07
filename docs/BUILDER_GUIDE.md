@@ -2228,6 +2228,114 @@ The `%root%` is automatically replaced with `#brxe-{elementId}` during normaliza
 17. **Builder paste/import behavior settings** — `builderHtmlCssConverter` controls HTML/CSS paste conversion (`confirm`|`enabled`|`disabled`), `builderGlobalClassesImport` controls global class auto-import on paste (`confirm`|`enabled`|`disabled`). Both default to `confirm`. Read via `bricks:get_settings` with `category: builder`.
 18. **The site always has a design system** — Fancy color palette (30 colors) + 109 CSS variables + child theme CSS. Sections already get `padding: var(--padding-section)`, containers get `gap: var(--content-gap)`, headings get `font-size: var(--h1)` through `var(--h6)`. Do NOT set these properties inline — you will override responsive fluid values with static ones.
 
+## Workflow
+
+### How to Build Any Page
+
+Follow this sequence for every page you build:
+
+1. **Understand the site** — Call `get_site_info` to learn the design system, color palette, child theme CSS, existing pages, and class groups.
+
+2. **Study existing patterns** — Call `page:get(view='describe')` on 2-3 existing pages to understand the site's visual language. Note which section types are used, what classes they reference, dark vs light backgrounds, grid layouts.
+
+3. **Check the pattern library** — Call `bricks:analyze_patterns` to discover reusable section patterns. If a pattern matches what you need, use `bricks:use_pattern` instead of building from scratch.
+
+4. **Get global classes** — Call `global_class:list` to see all available classes. Map class names to component types: heroes, grids, cards, typography, navigation.
+
+5. **Build with classes** — Use `_cssGlobalClasses` on EVERY element. Never inline what a class already handles. The child theme CSS handles section padding, container gaps, heading sizes — do NOT duplicate these.
+
+6. **Verify your work** — After building, call `page:get(view='describe')` on the page you just built. Check that sections have the right background, layout, and content structure.
+
+### When to Create vs Reuse
+
+- **Reuse**: If `analyze_patterns` shows a matching pattern, use `bricks:use_pattern` with text overrides
+- **Adapt**: If a similar page exists, use `page:get(view='describe')` to study it, then build the same structure with different content
+- **Create**: Only build from scratch when no existing pattern matches. Even then, use existing global classes for all styling.
+
+### Element Hierarchy
+
+```
+section > container > block/div > content elements
+```
+
+- **section**: Top-level wrapper. Gets padding from child theme CSS.
+- **container**: Content width constraint. Gets gap from child theme CSS.
+- **block**: Grouping element. Use for intro blocks, card bodies, grid wrappers.
+- **div**: Inline grouping. Use for icon wrappers, small groups.
+- **content**: heading, text-basic, text, button, icon, image, form, etc.
+
+Never nest containers inside containers. Use block and div for sub-grouping.
+
+### Labels and Semantic HTML
+
+Every structural element gets a `label`:
+- `label: "Hero Section"`, `label: "Feature Grid"`, `label: "Card Body"`
+
+Use semantic `tag` where appropriate:
+- `tag: "ul"` on grid containers that hold list items
+- `tag: "li"` on card blocks inside a ul
+- `tag: "figure"` on image wrappers
+- `tag: "address"` on contact info blocks
+- `tag: "nav"` on navigation wrappers
+
+## Recipes
+
+### Build a Landing Page
+
+```
+1. get_site_info → note color palette, child theme CSS, class groups
+2. bricks:analyze_patterns → find hero, feature, CTA patterns
+3. page:create(title, status='publish')
+4. bricks:use_pattern(pattern_id='pat_hero_*', post_id, overrides={heading, tagline, lede})
+5. bricks:use_pattern(pattern_id='pat_feature_*', post_id, overrides={...})
+6. bricks:use_pattern(pattern_id='pat_cta_*', post_id, overrides={heading, text, button})
+7. page:get(view='describe', post_id) → verify structure
+```
+
+### Add a Section Matching Existing Style
+
+```
+1. page:get(view='describe', post_id=TARGET_PAGE) → see current sections
+2. page:get(view='describe', post_id=REFERENCE_PAGE) → study the section to match
+3. page:get(view='detail', post_id=REFERENCE_PAGE, root_element_id=SECTION_ID) → get exact structure
+4. element:bulk_add(post_id=TARGET_PAGE, elements=[...adapted tree...])
+5. page:get(view='describe', post_id=TARGET_PAGE) → verify
+```
+
+### Create an FAQ Section
+
+```
+1. global_class:list → find intro and section classes
+2. bricks:get_element_schemas(element='accordion') → check correct format
+3. element:bulk_add(post_id, elements=[
+     section with intro (tagline + h2 + lede) + accordion element
+   ])
+```
+
+### Set Up a Contact Page
+
+```
+1. bricks:analyze_patterns → look for contact pattern
+2. If found: bricks:use_pattern(pattern_id='pat_contact_*', ...)
+3. If not: build manually:
+   - Section > container (2-col grid) > form wrapper + contact info
+   - Use brxw-contact-section-03 classes if available
+   - Add map element below
+```
+
+### Bootstrap a New Site's Design System
+
+```
+1. get_site_info → check if global classes exist
+2. If no classes: global_class:batch_create with layout classes
+   - Grid classes: 2-col, 3-col, 4-col using var(--grid-*)
+   - Card class: padding, border, radius using var(--space-*), var(--radius-*)
+   - Section classes: dark bg, light bg
+   - Typography: tagline, lede, heading modifiers
+3. Build first page to establish patterns
+4. bricks:save_pattern for each reusable section
+```
+
 ## Connection Troubleshooting
 
 If you're having trouble connecting to the MCP server, work through these checks in order:
