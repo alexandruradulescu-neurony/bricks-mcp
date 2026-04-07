@@ -317,6 +317,12 @@
 		var commandEl = document.getElementById('bricks-mcp-generated-command');
 		var claudeConfigEl = document.getElementById('bricks-mcp-generated-claude-config');
 		var geminiConfigEl = document.getElementById('bricks-mcp-generated-gemini-config');
+		var geminiCommandEl = document.getElementById('bricks-mcp-generated-gemini-command');
+		var cursorConfigEl = document.getElementById('bricks-mcp-generated-cursor-config');
+		var vscodeConfigEl = document.getElementById('bricks-mcp-generated-vscode-config');
+		var augmentConfigEl = document.getElementById('bricks-mcp-generated-augment-config');
+		var qwenConfigEl = document.getElementById('bricks-mcp-generated-qwen-config');
+		var claudeDesktopConfigEl = document.getElementById('bricks-mcp-generated-claude-desktop-config');
 
 		if (!btn) {
 			return;
@@ -354,6 +360,24 @@
 					}
 					if (geminiConfigEl) {
 						geminiConfigEl.textContent = data.data.gemini_config;
+					}
+					if (geminiCommandEl) {
+						geminiCommandEl.textContent = data.data.gemini_command;
+					}
+					if (cursorConfigEl) {
+						cursorConfigEl.textContent = data.data.cursor_config;
+					}
+					if (vscodeConfigEl) {
+						vscodeConfigEl.textContent = data.data.vscode_config;
+					}
+					if (augmentConfigEl) {
+						augmentConfigEl.textContent = data.data.augment_config;
+					}
+					if (qwenConfigEl) {
+						qwenConfigEl.textContent = data.data.qwen_config;
+					}
+					if (claudeDesktopConfigEl) {
+						claudeDesktopConfigEl.textContent = data.data.claude_desktop_config;
 					}
 
 					// Show the result container.

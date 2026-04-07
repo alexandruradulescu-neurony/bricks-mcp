@@ -617,6 +617,82 @@ final class Settings {
 			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
 		);
 
+		// Cursor config — uses .cursor/mcp.json.
+		$cursor_config = json_encode(
+			[
+				'mcpServers' => [
+					'bricks-mcp' => [
+						'url'     => $mcp_url,
+						'headers' => [
+							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
+						],
+					],
+				],
+			],
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+		);
+
+		// VS Code / Open Code config — uses .vscode/mcp.json.
+		$vscode_config = json_encode(
+			[
+				'servers' => [
+					'bricks-mcp' => [
+						'type'    => 'http',
+						'url'     => $mcp_url,
+						'headers' => [
+							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
+						],
+					],
+				],
+			],
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+		);
+
+		// Augment config.
+		$augment_config = json_encode(
+			[
+				'mcpServers' => [
+					'bricks-mcp' => [
+						'url'     => $mcp_url,
+						'headers' => [
+							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
+						],
+					],
+				],
+			],
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+		);
+
+		// Qwen Code config — uses settings.json.
+		$qwen_config = json_encode(
+			[
+				'mcpServers' => [
+					'bricks-mcp' => [
+						'url'     => $mcp_url,
+						'headers' => [
+							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
+						],
+					],
+				],
+			],
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+		);
+
+		// Claude Desktop config.
+		$claude_desktop_config = json_encode(
+			[
+				'mcpServers' => [
+					'bricks-mcp' => [
+						'url'     => $mcp_url,
+						'headers' => [
+							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
+						],
+					],
+				],
+			],
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+		);
+
 		?>
 		<div class="bricks-mcp-config-section">
 			<h2><?php esc_html_e( 'MCP Configuration', 'bricks-mcp' ); ?></h2>
@@ -650,10 +726,18 @@ final class Settings {
 
 					<hr>
 
-					<h4><?php esc_html_e( 'Claude Code (JSON config):', 'bricks-mcp' ); ?></h4>
+					<h4><?php esc_html_e( 'Claude Code / Claude Desktop (JSON config):', 'bricks-mcp' ); ?></h4>
 					<div class="bricks-mcp-code-wrap">
 						<pre><code id="bricks-mcp-generated-claude-config"></code></pre>
 						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-claude-config">
+							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+						</button>
+					</div>
+
+					<h4><?php esc_html_e( 'Gemini CLI (one-liner):', 'bricks-mcp' ); ?></h4>
+					<div class="bricks-mcp-code-wrap bricks-mcp-code-wrap--breakall">
+						<pre><code id="bricks-mcp-generated-gemini-command"></code></pre>
+						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-gemini-command">
 							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
 						</button>
 					</div>
@@ -662,6 +746,38 @@ final class Settings {
 					<div class="bricks-mcp-code-wrap">
 						<pre><code id="bricks-mcp-generated-gemini-config"></code></pre>
 						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-gemini-config">
+							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+						</button>
+					</div>
+
+					<h4><?php esc_html_e( 'Cursor (JSON config):', 'bricks-mcp' ); ?></h4>
+					<div class="bricks-mcp-code-wrap">
+						<pre><code id="bricks-mcp-generated-cursor-config"></code></pre>
+						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-cursor-config">
+							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+						</button>
+					</div>
+
+					<h4><?php esc_html_e( 'VS Code / Open Code (JSON config):', 'bricks-mcp' ); ?></h4>
+					<div class="bricks-mcp-code-wrap">
+						<pre><code id="bricks-mcp-generated-vscode-config"></code></pre>
+						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-vscode-config">
+							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+						</button>
+					</div>
+
+					<h4><?php esc_html_e( 'Augment (JSON config):', 'bricks-mcp' ); ?></h4>
+					<div class="bricks-mcp-code-wrap">
+						<pre><code id="bricks-mcp-generated-augment-config"></code></pre>
+						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-augment-config">
+							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+						</button>
+					</div>
+
+					<h4><?php esc_html_e( 'Qwen Code (JSON config):', 'bricks-mcp' ); ?></h4>
+					<div class="bricks-mcp-code-wrap">
+						<pre><code id="bricks-mcp-generated-qwen-config"></code></pre>
+						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-generated-qwen-config">
 							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
 						</button>
 					</div>
@@ -675,8 +791,23 @@ final class Settings {
 					<button type="button" role="tab" id="bricks-mcp-tab-claude" data-tab="claude" aria-selected="true" aria-controls="bricks-mcp-panel-claude" tabindex="0" class="active">
 						<?php esc_html_e( 'Claude Code', 'bricks-mcp' ); ?>
 					</button>
+					<button type="button" role="tab" id="bricks-mcp-tab-claude-desktop" data-tab="claude-desktop" aria-selected="false" aria-controls="bricks-mcp-panel-claude-desktop" tabindex="-1">
+						<?php esc_html_e( 'Claude Desktop', 'bricks-mcp' ); ?>
+					</button>
 					<button type="button" role="tab" id="bricks-mcp-tab-gemini" data-tab="gemini" aria-selected="false" aria-controls="bricks-mcp-panel-gemini" tabindex="-1">
 						<?php esc_html_e( 'Gemini', 'bricks-mcp' ); ?>
+					</button>
+					<button type="button" role="tab" id="bricks-mcp-tab-cursor" data-tab="cursor" aria-selected="false" aria-controls="bricks-mcp-panel-cursor" tabindex="-1">
+						<?php esc_html_e( 'Cursor', 'bricks-mcp' ); ?>
+					</button>
+					<button type="button" role="tab" id="bricks-mcp-tab-vscode" data-tab="vscode" aria-selected="false" aria-controls="bricks-mcp-panel-vscode" tabindex="-1">
+						<?php esc_html_e( 'VS Code', 'bricks-mcp' ); ?>
+					</button>
+					<button type="button" role="tab" id="bricks-mcp-tab-augment" data-tab="augment" aria-selected="false" aria-controls="bricks-mcp-panel-augment" tabindex="-1">
+						<?php esc_html_e( 'Augment', 'bricks-mcp' ); ?>
+					</button>
+					<button type="button" role="tab" id="bricks-mcp-tab-qwen" data-tab="qwen" aria-selected="false" aria-controls="bricks-mcp-panel-qwen" tabindex="-1">
+						<?php esc_html_e( 'Qwen', 'bricks-mcp' ); ?>
 					</button>
 				</div>
 
@@ -705,6 +836,30 @@ final class Settings {
 					</p>
 				</div>
 
+				<!-- Claude Desktop Panel -->
+				<div role="tabpanel" id="bricks-mcp-panel-claude-desktop" aria-labelledby="bricks-mcp-tab-claude-desktop" data-panel="claude-desktop" style="display:none;">
+					<div class="bricks-mcp-code-wrap">
+						<pre><code id="bricks-mcp-claude-desktop-config"><?php echo esc_html( $claude_desktop_config ); ?></code></pre>
+						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-claude-desktop-config">
+							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+						</button>
+					</div>
+					<p class="description bricks-mcp-tab-description">
+						<?php esc_html_e( 'Go to Settings > Developer > Edit Config, or add this to ~/Library/Application Support/Claude/claude_desktop_config.json (macOS).', 'bricks-mcp' ); ?>
+					</p>
+					<p class="description">
+						<?php
+						echo wp_kses(
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							[
+								'code'   => [],
+								'strong' => [],
+							]
+						);
+						?>
+					</p>
+				</div>
+
 				<!-- Gemini Panel -->
 				<div role="tabpanel" id="bricks-mcp-panel-gemini" aria-labelledby="bricks-mcp-tab-gemini" data-panel="gemini" style="display:none;">
 					<div class="bricks-mcp-code-wrap">
@@ -714,7 +869,104 @@ final class Settings {
 						</button>
 					</div>
 					<p class="description bricks-mcp-tab-description">
-						<?php esc_html_e( 'Add this to your ~/.gemini/settings.json file.', 'bricks-mcp' ); ?>
+						<?php esc_html_e( 'Add this to your ~/.gemini/settings.json file, or use:', 'bricks-mcp' ); ?>
+						<code>gemini mcp add bricks-mcp --httpUrl <?php echo esc_html( $mcp_url ); ?> --header "Authorization: Basic ..."</code>
+					</p>
+					<p class="description">
+						<?php
+						echo wp_kses(
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							[
+								'code'   => [],
+								'strong' => [],
+							]
+						);
+						?>
+					</p>
+				</div>
+
+				<!-- Cursor Panel -->
+				<div role="tabpanel" id="bricks-mcp-panel-cursor" aria-labelledby="bricks-mcp-tab-cursor" data-panel="cursor" style="display:none;">
+					<div class="bricks-mcp-code-wrap">
+						<pre><code id="bricks-mcp-cursor-config"><?php echo esc_html( $cursor_config ); ?></code></pre>
+						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-cursor-config">
+							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+						</button>
+					</div>
+					<p class="description bricks-mcp-tab-description">
+						<?php esc_html_e( 'Add this to ~/.cursor/mcp.json (global) or .cursor/mcp.json (project-level).', 'bricks-mcp' ); ?>
+					</p>
+					<p class="description">
+						<?php
+						echo wp_kses(
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							[
+								'code'   => [],
+								'strong' => [],
+							]
+						);
+						?>
+					</p>
+				</div>
+
+				<!-- VS Code / Open Code Panel -->
+				<div role="tabpanel" id="bricks-mcp-panel-vscode" aria-labelledby="bricks-mcp-tab-vscode" data-panel="vscode" style="display:none;">
+					<div class="bricks-mcp-code-wrap">
+						<pre><code id="bricks-mcp-vscode-config"><?php echo esc_html( $vscode_config ); ?></code></pre>
+						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-vscode-config">
+							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+						</button>
+					</div>
+					<p class="description bricks-mcp-tab-description">
+						<?php esc_html_e( 'Add this to .vscode/mcp.json in your project root.', 'bricks-mcp' ); ?>
+					</p>
+					<p class="description">
+						<?php
+						echo wp_kses(
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							[
+								'code'   => [],
+								'strong' => [],
+							]
+						);
+						?>
+					</p>
+				</div>
+
+				<!-- Augment Panel -->
+				<div role="tabpanel" id="bricks-mcp-panel-augment" aria-labelledby="bricks-mcp-tab-augment" data-panel="augment" style="display:none;">
+					<div class="bricks-mcp-code-wrap">
+						<pre><code id="bricks-mcp-augment-config"><?php echo esc_html( $augment_config ); ?></code></pre>
+						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-augment-config">
+							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+						</button>
+					</div>
+					<p class="description bricks-mcp-tab-description">
+						<?php esc_html_e( 'Open Augment Settings Panel > MCP Servers, and paste this JSON configuration.', 'bricks-mcp' ); ?>
+					</p>
+					<p class="description">
+						<?php
+						echo wp_kses(
+							__( 'Replace <code>YOUR_BASE64_AUTH_STRING</code> with the Base64-encoded value of <code>username:app_password</code>. Or use the <strong>Generate Setup Command</strong> button above for a ready-to-paste config.', 'bricks-mcp' ),
+							[
+								'code'   => [],
+								'strong' => [],
+							]
+						);
+						?>
+					</p>
+				</div>
+
+				<!-- Qwen Code Panel -->
+				<div role="tabpanel" id="bricks-mcp-panel-qwen" aria-labelledby="bricks-mcp-tab-qwen" data-panel="qwen" style="display:none;">
+					<div class="bricks-mcp-code-wrap">
+						<pre><code id="bricks-mcp-qwen-config"><?php echo esc_html( $qwen_config ); ?></code></pre>
+						<button type="button" class="button bricks-mcp-copy-btn" data-target="bricks-mcp-qwen-config">
+							<?php esc_html_e( 'Copy to Clipboard', 'bricks-mcp' ); ?>
+						</button>
+					</div>
+					<p class="description bricks-mcp-tab-description">
+						<?php esc_html_e( 'Add this to your settings.json, or use: qwen mcp add (if supported by your version).', 'bricks-mcp' ); ?>
 					</p>
 					<p class="description">
 						<?php
@@ -981,15 +1233,104 @@ final class Settings {
 			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
 		);
 
+		// Build Gemini CLI one-liner.
+		$gemini_command = sprintf(
+			'gemini mcp add bricks-mcp --httpUrl %s --header "Authorization: Basic %s"',
+			$mcp_url,
+			$auth_string
+		);
+
+		// Build Cursor JSON config with real credentials.
+		$cursor_config = wp_json_encode(
+			[
+				'mcpServers' => [
+					'bricks-mcp' => [
+						'url'     => $mcp_url,
+						'headers' => [
+							'Authorization' => 'Basic ' . $auth_string,
+						],
+					],
+				],
+			],
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+		);
+
+		// Build VS Code / Open Code JSON config with real credentials.
+		$vscode_config = wp_json_encode(
+			[
+				'servers' => [
+					'bricks-mcp' => [
+						'type'    => 'http',
+						'url'     => $mcp_url,
+						'headers' => [
+							'Authorization' => 'Basic ' . $auth_string,
+						],
+					],
+				],
+			],
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+		);
+
+		// Build Augment JSON config with real credentials.
+		$augment_config = wp_json_encode(
+			[
+				'mcpServers' => [
+					'bricks-mcp' => [
+						'url'     => $mcp_url,
+						'headers' => [
+							'Authorization' => 'Basic ' . $auth_string,
+						],
+					],
+				],
+			],
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+		);
+
+		// Build Qwen Code JSON config with real credentials.
+		$qwen_config = wp_json_encode(
+			[
+				'mcpServers' => [
+					'bricks-mcp' => [
+						'url'     => $mcp_url,
+						'headers' => [
+							'Authorization' => 'Basic ' . $auth_string,
+						],
+					],
+				],
+			],
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+		);
+
+		// Build Claude Desktop JSON config with real credentials.
+		$claude_desktop_config = wp_json_encode(
+			[
+				'mcpServers' => [
+					'bricks-mcp' => [
+						'url'     => $mcp_url,
+						'headers' => [
+							'Authorization' => 'Basic ' . $auth_string,
+						],
+					],
+				],
+			],
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+		);
+
 		wp_send_json_success(
 			[
-				'password'       => $password,
-				'username'       => $username,
-				'auth_string'    => $auth_string,
-				'claude_command' => $claude_command,
-				'claude_config'  => $claude_config,
-				'gemini_config'  => $gemini_config,
-				'mcp_url'        => $mcp_url,
+				'password'              => $password,
+				'username'              => $username,
+				'auth_string'           => $auth_string,
+				'claude_command'        => $claude_command,
+				'claude_config'         => $claude_config,
+				'gemini_command'        => $gemini_command,
+				'gemini_config'         => $gemini_config,
+				'cursor_config'         => $cursor_config,
+				'vscode_config'         => $vscode_config,
+				'augment_config'        => $augment_config,
+				'qwen_config'           => $qwen_config,
+				'claude_desktop_config' => $claude_desktop_config,
+				'mcp_url'               => $mcp_url,
 			]
 		);
 	}
