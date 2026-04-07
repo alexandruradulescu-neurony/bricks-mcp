@@ -333,7 +333,8 @@ final class StreamableHttpHandler {
 			. "- Semantic HTML: Use tag: 'ul', 'li', 'figure', 'address' on block/div elements\n"
 			. "- Element hierarchy: section > container > block/div > content. Use block and div for grouping, not nested containers.\n"
 			. "- Inline styles: ONLY for instance-specific overrides (_padding.top: '0', _order: '-1', unique background color)\n"
-			. "- Style properties: Use _widthMax NOT _maxWidth, _typography['text-align'] NOT _textAlign\n\n"
+			. "- Style properties: Use _widthMax NOT _maxWidth, _typography['text-align'] NOT _textAlign\n"
+			. "- Unfamiliar elements: Before using ANY element type you haven't used before (accordion, tabs, slider, etc.), ALWAYS call bricks:get_element_schemas(element='element_name') first. The working_example shows the exact settings format Bricks expects. Do NOT guess repeater keys or item structure.\n\n"
 			. "The page:create, element:add, and template:create tool descriptions contain additional guidance. READ THEM.";
 
 		return $this->jsonrpc_success(
