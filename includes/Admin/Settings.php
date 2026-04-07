@@ -54,6 +54,8 @@ final class Settings {
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_scripts' ] );
 		add_action( 'wp_ajax_bricks_mcp_run_diagnostics', [ $this, 'ajax_run_diagnostics' ] );
 		add_action( 'wp_ajax_bricks_mcp_generate_app_password', [ $this, 'ajax_generate_app_password' ] );
+		add_action( 'wp_ajax_bricks_mcp_delete_note', [ $this, 'ajax_delete_note' ] );
+		add_action( 'wp_ajax_bricks_mcp_add_note', [ $this, 'ajax_add_note' ] );
 	}
 
 	/**
@@ -256,15 +258,102 @@ final class Settings {
 
 			<?php
 			$notes = get_option( 'bricks_mcp_notes', [] );
-			if ( is_array( $notes ) && ! empty( $notes ) ) {
-				echo '<h2>' . esc_html__( 'AI Notes', 'bricks-mcp' ) . '</h2>';
-				echo '<p class="description">' . esc_html__( 'Persistent corrections and preferences stored by AI assistants. These are automatically included in the gotchas section of the builder guide.', 'bricks-mcp' ) . '</p>';
-				echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Note', 'bricks-mcp' ) . '</th><th>' . esc_html__( 'Created', 'bricks-mcp' ) . '</th></tr></thead><tbody>';
-				foreach ( $notes as $note ) {
-					echo '<tr><td>' . esc_html( $note['text'] ?? '' ) . '</td><td>' . esc_html( $note['created_at'] ?? '' ) . '</td></tr>';
-				}
-				echo '</tbody></table>';
-			}
+			$notes = is_array( $notes ) ? $notes : [];
+			$notes_nonce = wp_create_nonce( 'bricks_mcp_notes' );
+			?>
+			<h2><?php esc_html_e( 'AI Notes', 'bricks-mcp' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Persistent corrections and preferences stored by AI assistants. These are automatically included in the gotchas section of the builder guide.', 'bricks-mcp' ); ?></p>
+
+			<div id="bricks-mcp-notes-add" style="margin: 15px 0;">
+				<input type="text" id="bricks-mcp-note-text" class="regular-text" placeholder="<?php esc_attr_e( 'Add a new note...', 'bricks-mcp' ); ?>" style="width: 60%;">
+				<button type="button" class="button button-secondary" id="bricks-mcp-add-note-btn"><?php esc_html_e( 'Add Note', 'bricks-mcp' ); ?></button>
+			</div>
+
+			<table class="widefat striped" id="bricks-mcp-notes-table">
+				<thead><tr>
+					<th><?php esc_html_e( 'Note', 'bricks-mcp' ); ?></th>
+					<th style="width:160px"><?php esc_html_e( 'Created', 'bricks-mcp' ); ?></th>
+					<th style="width:80px"><?php esc_html_e( 'Actions', 'bricks-mcp' ); ?></th>
+				</tr></thead>
+				<tbody>
+				<?php if ( empty( $notes ) ) : ?>
+					<tr class="bricks-mcp-no-notes"><td colspan="3"><?php esc_html_e( 'No notes yet. AI assistants can add notes, or you can add one above.', 'bricks-mcp' ); ?></td></tr>
+				<?php else : ?>
+					<?php foreach ( $notes as $note ) : ?>
+					<tr data-note-id="<?php echo esc_attr( $note['id'] ?? '' ); ?>">
+						<td><?php echo esc_html( $note['text'] ?? '' ); ?></td>
+						<td><?php echo esc_html( $note['created_at'] ?? '' ); ?></td>
+						<td><button type="button" class="button button-small bricks-mcp-delete-note" data-id="<?php echo esc_attr( $note['id'] ?? '' ); ?>"><?php esc_html_e( 'Delete', 'bricks-mcp' ); ?></button></td>
+					</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
+				</tbody>
+			</table>
+
+			<script>
+			(function() {
+				var nonce = <?php echo wp_json_encode( $notes_nonce ); ?>;
+
+				document.querySelectorAll('.bricks-mcp-delete-note').forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						var noteId = this.getAttribute('data-id');
+						var row = this.closest('tr');
+						if (!confirm('Delete this note?')) return;
+						btn.disabled = true;
+						btn.textContent = '...';
+						fetch(ajaxurl, {
+							method: 'POST',
+							headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+							body: 'action=bricks_mcp_delete_note&note_id=' + encodeURIComponent(noteId) + '&_wpnonce=' + encodeURIComponent(nonce)
+						}).then(function(r) { return r.json(); }).then(function(data) {
+							if (data.success) row.remove();
+							else { btn.disabled = false; btn.textContent = 'Delete'; alert(data.data || 'Error'); }
+						});
+					});
+				});
+
+				document.getElementById('bricks-mcp-add-note-btn').addEventListener('click', function() {
+					var input = document.getElementById('bricks-mcp-note-text');
+					var text = input.value.trim();
+					if (!text) return;
+					this.disabled = true;
+					var btn = this;
+					fetch(ajaxurl, {
+						method: 'POST',
+						headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+						body: 'action=bricks_mcp_add_note&text=' + encodeURIComponent(text) + '&_wpnonce=' + encodeURIComponent(nonce)
+					}).then(function(r) { return r.json(); }).then(function(data) {
+						btn.disabled = false;
+						if (data.success) {
+							var note = data.data;
+							var tbody = document.querySelector('#bricks-mcp-notes-table tbody');
+							var noNotes = tbody.querySelector('.bricks-mcp-no-notes');
+							if (noNotes) noNotes.remove();
+							var tr = document.createElement('tr');
+							tr.setAttribute('data-note-id', note.id);
+							tr.innerHTML = '<td>' + note.text.replace(/</g, '&lt;') + '</td><td>' + note.created_at + '</td><td><button type="button" class="button button-small bricks-mcp-delete-note" data-id="' + note.id + '">Delete</button></td>';
+							tbody.appendChild(tr);
+							tr.querySelector('.bricks-mcp-delete-note').addEventListener('click', function() {
+								var noteId = this.getAttribute('data-id');
+								var row = this.closest('tr');
+								if (!confirm('Delete this note?')) return;
+								this.disabled = true;
+								this.textContent = '...';
+								fetch(ajaxurl, {
+									method: 'POST',
+									headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+									body: 'action=bricks_mcp_delete_note&note_id=' + encodeURIComponent(noteId) + '&_wpnonce=' + encodeURIComponent(nonce)
+								}).then(function(r) { return r.json(); }).then(function(d) {
+									if (d.success) row.remove();
+								});
+							});
+							input.value = '';
+						} else { alert(data.data || 'Error'); }
+					});
+				});
+			})();
+			</script>
+			<?php
 			?>
 		</div>
 		<?php
@@ -903,6 +992,68 @@ final class Settings {
 				'mcp_url'        => $mcp_url,
 			]
 		);
+	}
+
+	/**
+	 * AJAX handler: Delete an AI note.
+	 *
+	 * @return void
+	 */
+	public function ajax_delete_note(): void {
+		check_ajax_referer( 'bricks_mcp_notes', '_wpnonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Unauthorized.', 'bricks-mcp' ), 403 );
+		}
+
+		$note_id = isset( $_POST['note_id'] ) ? sanitize_text_field( wp_unslash( $_POST['note_id'] ) ) : '';
+		if ( empty( $note_id ) ) {
+			wp_send_json_error( __( 'Missing note ID.', 'bricks-mcp' ) );
+		}
+
+		$notes    = get_option( 'bricks_mcp_notes', [] );
+		$filtered = array_values( array_filter( $notes, static fn( $n ) => ( $n['id'] ?? '' ) !== $note_id ) );
+
+		if ( count( $filtered ) === count( $notes ) ) {
+			wp_send_json_error( __( 'Note not found.', 'bricks-mcp' ) );
+		}
+
+		update_option( 'bricks_mcp_notes', $filtered, false );
+		wp_send_json_success( true );
+	}
+
+	/**
+	 * AJAX handler: Add an AI note.
+	 *
+	 * @return void
+	 */
+	public function ajax_add_note(): void {
+		check_ajax_referer( 'bricks_mcp_notes', '_wpnonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Unauthorized.', 'bricks-mcp' ), 403 );
+		}
+
+		$text = isset( $_POST['text'] ) ? sanitize_text_field( wp_unslash( $_POST['text'] ) ) : '';
+		if ( empty( $text ) ) {
+			wp_send_json_error( __( 'Note text is required.', 'bricks-mcp' ) );
+		}
+
+		$notes = get_option( 'bricks_mcp_notes', [] );
+		if ( ! is_array( $notes ) ) {
+			$notes = [];
+		}
+
+		$id   = 'note_' . substr( md5( (string) time() . wp_generate_password( 4, false ) ), 0, 8 );
+		$note = [
+			'id'         => $id,
+			'text'       => $text,
+			'created_at' => current_time( 'mysql' ),
+		];
+
+		$notes[] = $note;
+		update_option( 'bricks_mcp_notes', $notes, false );
+		wp_send_json_success( $note );
 	}
 
 }
