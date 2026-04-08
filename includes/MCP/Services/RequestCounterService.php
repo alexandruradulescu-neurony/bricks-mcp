@@ -44,7 +44,7 @@ final class RequestCounterService {
 	 * @return void
 	 */
 	public function increment(): void {
-		$key   = self::TRANSIENT_PREFIX . gmdate( 'Y-m-d' );
+		$key   = self::TRANSIENT_PREFIX . wp_date( 'Y-m-d' );
 		$count = (int) get_transient( $key );
 		set_transient( $key, $count + 1, self::TTL );
 	}
@@ -55,7 +55,7 @@ final class RequestCounterService {
 	 * @return int Number of requests today.
 	 */
 	public function get_today_count(): int {
-		$key = self::TRANSIENT_PREFIX . gmdate( 'Y-m-d' );
+		$key = self::TRANSIENT_PREFIX . wp_date( 'Y-m-d' );
 		return (int) get_transient( $key );
 	}
 }
