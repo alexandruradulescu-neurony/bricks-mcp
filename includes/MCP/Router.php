@@ -17,6 +17,7 @@ use BricksMCP\MCP\Services\MenuService;
 use BricksMCP\MCP\Services\PendingActionService;
 use BricksMCP\MCP\Services\SchemaGenerator;
 use BricksMCP\MCP\Services\ValidationService;
+use BricksMCP\MCP\Services\PrerequisiteGateService;
 use BricksMCP\Plugin;
 
 // Prevent direct access.
@@ -462,6 +463,13 @@ final class Router {
 				return Response::tool_error( $result );
 			}
 
+			// Set prerequisite flags for gate tracking.
+			if ( 'global_class' === $name && ( $arguments['action'] ?? '' ) === 'list' ) {
+				PrerequisiteGateService::set_flag( 'classes' );
+			} elseif ( 'global_variable' === $name && ( $arguments['action'] ?? '' ) === 'list' ) {
+				PrerequisiteGateService::set_flag( 'variables' );
+			}
+
 			return Response::success(
 				array(
 					'content' => array(
@@ -598,6 +606,10 @@ final class Router {
 	 */
 	public function tool_get_site_info( array $args ): array {
 		$action = $args['action'] ?? 'info';
+
+		if ( 'info' === $action ) {
+			PrerequisiteGateService::set_flag( 'site_info' );
+		}
 
 		if ( 'diagnose' === $action ) {
 			$runner = new \BricksMCP\Admin\DiagnosticRunner();
