@@ -754,7 +754,12 @@ class SettingsService {
 			$settings['customCss'] = wp_strip_all_tags( $css );
 		}
 
-		update_post_meta( $post_id, $meta_key, $settings );
+		$this->core->unhook_bricks_meta_filters();
+		try {
+			update_post_meta( $post_id, $meta_key, $settings );
+		} finally {
+			$this->core->rehook_bricks_meta_filters();
+		}
 
 		return array(
 			'post_id'          => $post_id,
@@ -820,7 +825,12 @@ class SettingsService {
 		}
 
 		if ( ! empty( $updated ) ) {
-			update_post_meta( $post_id, $meta_key, $settings );
+			$this->core->unhook_bricks_meta_filters();
+			try {
+				update_post_meta( $post_id, $meta_key, $settings );
+			} finally {
+				$this->core->rehook_bricks_meta_filters();
+			}
 		}
 
 		return array(

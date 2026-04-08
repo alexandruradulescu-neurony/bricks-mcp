@@ -229,7 +229,7 @@ class PageOperationsService {
 
 				foreach ( $meta_values as $meta_value ) {
 					$unserialized = maybe_unserialize( $meta_value );
-					update_post_meta( $new_post_id, $meta_key, $unserialized );
+					add_post_meta( $new_post_id, $meta_key, $unserialized );
 				}
 			}
 		}
@@ -253,7 +253,7 @@ class PageOperationsService {
 		}
 
 		$elements      = $this->core->get_elements( $post_id );
-		$snapshot_id   = 'snap_' . time() . '_' . wp_generate_password( 4, false );
+		$snapshot_id   = 'snap_' . bin2hex( random_bytes( 6 ) );
 		$element_count = count( $elements );
 
 		// Store snapshot data.
@@ -456,6 +456,11 @@ class PageOperationsService {
 			'depth' => $depth,
 		];
 
+		// Prevent stack overflow on circular references.
+		if ( $depth > 50 ) {
+			return $node;
+		}
+
 		if ( ! empty( $element['children'] ) ) {
 			$node['children'] = [];
 			foreach ( $element['children'] as $child_id ) {
@@ -550,6 +555,11 @@ class PageOperationsService {
 
 		if ( ! empty( $settings['_cssGlobalClasses'] ) ) {
 			$node['classes'] = $settings['_cssGlobalClasses'];
+		}
+
+		// Prevent stack overflow on circular references.
+		if ( $depth > 50 ) {
+			return $node;
 		}
 
 		if ( ! empty( $element['children'] ) ) {
@@ -766,12 +776,16 @@ class PageOperationsService {
 	 * @return array<int, string> List of descendant element IDs.
 	 */
 	private function collect_descendants( string $element_id, array $by_id ): array {
-		$result   = [];
-		$children = $by_id[ $element_id ]['children'] ?? [];
+		$result = [];
+		$queue  = $by_id[ $element_id ]['children'] ?? [];
 
-		foreach ( $children as $child_id ) {
+		while ( ! empty( $queue ) ) {
+			$child_id = array_shift( $queue );
 			$result[] = $child_id;
-			$result   = array_merge( $result, $this->collect_descendants( $child_id, $by_id ) );
+			$grandchildren = $by_id[ $child_id ]['children'] ?? [];
+			foreach ( $grandchildren as $gc ) {
+				$queue[] = $gc;
+			}
 		}
 
 		return $result;

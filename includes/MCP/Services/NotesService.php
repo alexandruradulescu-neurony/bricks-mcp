@@ -50,7 +50,7 @@ class NotesService {
 	 */
 	public function add_note( string $text ): array {
 		$notes = $this->get_notes();
-		$id    = 'note_' . substr( md5( (string) time() . wp_generate_password( 4, false ) ), 0, 8 );
+		$id    = 'note_' . bin2hex( random_bytes( 4 ) );
 		$note  = [
 			'id'         => $id,
 			'text'       => sanitize_text_field( $text ),

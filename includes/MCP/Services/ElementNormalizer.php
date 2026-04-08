@@ -471,8 +471,9 @@ class ElementNormalizer {
 	private function sanitize_css_string( string $css ): string {
 		$s = wp_strip_all_tags( $css );
 		$s = BricksCore::strip_dangerous_css( $s );
-		// Additional block-level filters: @import is dangerous in code blocks but not in property values.
-		$s = (string) preg_replace( '/@import\b/i', '', $s );
+		// Strip dangerous at-rules including the full rule up to the semicolon.
+		$s = (string) preg_replace( '/@import\s+[^;]+;?/i', '', $s );
+		$s = (string) preg_replace( '/@charset\s+[^;]+;?/i', '', $s );
 		return $s;
 	}
 

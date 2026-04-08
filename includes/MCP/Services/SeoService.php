@@ -178,8 +178,8 @@ class SeoService {
 		// SEO audit: simple quality checks.
 		$title       = $data['fields']['title'] ?? '';
 		$description = $data['fields']['description'] ?? '';
-		$title_len   = strlen( $title );
-		$desc_len    = strlen( $description );
+		$title_len   = mb_strlen( $title, 'UTF-8' );
+		$desc_len    = mb_strlen( $description, 'UTF-8' );
 
 		$data['audit'] = array(
 			'title_length'       => $title_len,

@@ -359,7 +359,11 @@ class BricksCore {
 	 * @return string Sanitized CSS string.
 	 */
 	public static function strip_dangerous_css( string $css ): string {
-		$s = (string) preg_replace( '/\bjavascript\s*:/i', '', $css );
+		// Strip CSS comments and hex escape sequences to prevent obfuscation bypass.
+		$s = (string) preg_replace( '/\/\*.*?\*\//s', '', $css );
+		$s = (string) preg_replace( '/\\\\[0-9a-fA-F]{1,6}\s?/', '', $s );
+
+		$s = (string) preg_replace( '/\bjavascript\s*:/i', '', $s );
 		$s = (string) preg_replace( '/\bexpression\s*\(/i', '', $s );
 		$s = (string) preg_replace( '/url\s*\(\s*["\']?\s*data\s*:/i', 'url(about:', $s );
 		$s = (string) preg_replace( '/-moz-binding\s*:/i', '', $s );
