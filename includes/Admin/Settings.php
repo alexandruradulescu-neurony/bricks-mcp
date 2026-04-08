@@ -261,6 +261,14 @@ final class Settings {
 			}
 			?>
 			</div>
+
+			<div class="bwm-footer">
+				<span><?php echo esc_html( 'Bricks WP MCP v' . BRICKS_MCP_VERSION ); ?></span>
+				<span class="bwm-footer__sep">&middot;</span>
+				<a href="https://github.com/alexandruradulescu-neurony/bricks-mcp" target="_blank" rel="noopener"><?php esc_html_e( 'GitHub', 'bricks-mcp' ); ?></a>
+				<span class="bwm-footer__sep">&middot;</span>
+				<a href="https://github.com/alexandruradulescu-neurony/bricks-mcp/issues" target="_blank" rel="noopener"><?php esc_html_e( 'Report an Issue', 'bricks-mcp' ); ?></a>
+			</div>
 		</div>
 		<?php
 	}
@@ -486,13 +494,15 @@ final class Settings {
 	 */
 	private function render_tab_settings(): void {
 		?>
-		<form action="options.php" method="post">
-			<?php
-			settings_fields( self::OPTION_GROUP );
-			do_settings_sections( self::PAGE_SLUG );
-			submit_button();
-			?>
-		</form>
+		<div class="bricks-mcp-config-section">
+			<form action="options.php" method="post">
+				<?php
+				settings_fields( self::OPTION_GROUP );
+				do_settings_sections( self::PAGE_SLUG );
+				submit_button();
+				?>
+			</form>
+		</div>
 		<?php
 	}
 
@@ -508,35 +518,36 @@ final class Settings {
 		$notes       = is_array( $notes ) ? $notes : [];
 		$notes_nonce = wp_create_nonce( 'bricks_mcp_notes' );
 		?>
-		<h2><?php esc_html_e( 'AI Notes', 'bricks-mcp' ); ?></h2>
-		<p class="description"><?php esc_html_e( 'Persistent corrections and preferences stored by AI assistants. These are automatically included in the gotchas section of the builder guide.', 'bricks-mcp' ); ?></p>
+		<div class="bricks-mcp-config-section">
+			<h3><?php esc_html_e( 'AI Notes', 'bricks-mcp' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'Persistent corrections and preferences stored by AI assistants. These are automatically included in the builder guide.', 'bricks-mcp' ); ?></p>
 
-		<div id="bricks-mcp-notes-add" style="margin: 15px 0;">
-			<input type="text" id="bricks-mcp-note-text" class="regular-text" placeholder="<?php esc_attr_e( 'Add a new note...', 'bricks-mcp' ); ?>" style="width: 60%;">
-			<button type="button" class="button button-secondary" id="bricks-mcp-add-note-btn"><?php esc_html_e( 'Add Note', 'bricks-mcp' ); ?></button>
+			<div class="bwm-notes-add">
+				<input type="text" id="bricks-mcp-note-text" class="regular-text" placeholder="<?php esc_attr_e( 'Add a new note...', 'bricks-mcp' ); ?>">
+				<button type="button" class="button button-secondary" id="bricks-mcp-add-note-btn"><?php esc_html_e( 'Add Note', 'bricks-mcp' ); ?></button>
+			</div>
+
+			<table class="widefat striped" id="bricks-mcp-notes-table">
+				<thead><tr>
+					<th><?php esc_html_e( 'Note', 'bricks-mcp' ); ?></th>
+					<th style="width:160px"><?php esc_html_e( 'Created', 'bricks-mcp' ); ?></th>
+					<th style="width:80px"><?php esc_html_e( 'Actions', 'bricks-mcp' ); ?></th>
+				</tr></thead>
+				<tbody>
+				<?php if ( empty( $notes ) ) : ?>
+					<tr class="bricks-mcp-no-notes"><td colspan="3"><?php esc_html_e( 'No notes yet. AI assistants can add notes, or you can add one above.', 'bricks-mcp' ); ?></td></tr>
+				<?php else : ?>
+					<?php foreach ( $notes as $note ) : ?>
+					<tr data-note-id="<?php echo esc_attr( $note['id'] ?? '' ); ?>">
+						<td><?php echo esc_html( $note['text'] ?? '' ); ?></td>
+						<td><?php echo esc_html( $note['created_at'] ?? '' ); ?></td>
+						<td><button type="button" class="button button-small bricks-mcp-delete-note" data-id="<?php echo esc_attr( $note['id'] ?? '' ); ?>"><?php esc_html_e( 'Delete', 'bricks-mcp' ); ?></button></td>
+					</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
+				</tbody>
+			</table>
 		</div>
-
-		<table class="widefat striped" id="bricks-mcp-notes-table">
-			<thead><tr>
-				<th><?php esc_html_e( 'Note', 'bricks-mcp' ); ?></th>
-				<th style="width:160px"><?php esc_html_e( 'Created', 'bricks-mcp' ); ?></th>
-				<th style="width:80px"><?php esc_html_e( 'Actions', 'bricks-mcp' ); ?></th>
-			</tr></thead>
-			<tbody>
-			<?php if ( empty( $notes ) ) : ?>
-				<tr class="bricks-mcp-no-notes"><td colspan="3"><?php esc_html_e( 'No notes yet. AI assistants can add notes, or you can add one above.', 'bricks-mcp' ); ?></td></tr>
-			<?php else : ?>
-				<?php foreach ( $notes as $note ) : ?>
-				<tr data-note-id="<?php echo esc_attr( $note['id'] ?? '' ); ?>">
-					<td><?php echo esc_html( $note['text'] ?? '' ); ?></td>
-					<td><?php echo esc_html( $note['created_at'] ?? '' ); ?></td>
-					<td><button type="button" class="button button-small bricks-mcp-delete-note" data-id="<?php echo esc_attr( $note['id'] ?? '' ); ?>"><?php esc_html_e( 'Delete', 'bricks-mcp' ); ?></button></td>
-				</tr>
-				<?php endforeach; ?>
-			<?php endif; ?>
-			</tbody>
-		</table>
-
 		<?php
 	}
 
