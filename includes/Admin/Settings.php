@@ -91,66 +91,68 @@ final class Settings {
 			]
 		);
 
-		// General settings section.
+		// Server section — core on/off and auth.
 		add_settings_section(
-			'bricks_mcp_general',
-			__( 'Server Configuration', 'bricks-mcp' ),
-			[ $this, 'render_general_section' ],
-			self::PAGE_SLUG
+			'bricks_mcp_server',
+			__( 'Server', 'bricks-mcp' ),
+			[ $this, 'render_server_section' ],
+			self::PAGE_SLUG . '_server'
 		);
 
-		// Enable/disable field.
 		add_settings_field(
 			'enabled',
 			__( 'Enable MCP Server', 'bricks-mcp' ),
 			[ $this, 'render_enabled_field' ],
-			self::PAGE_SLUG,
-			'bricks_mcp_general'
+			self::PAGE_SLUG . '_server',
+			'bricks_mcp_server'
 		);
 
-		// Require authentication field.
 		add_settings_field(
 			'require_auth',
 			__( 'Require Authentication', 'bricks-mcp' ),
 			[ $this, 'render_require_auth_field' ],
-			self::PAGE_SLUG,
-			'bricks_mcp_general'
+			self::PAGE_SLUG . '_server',
+			'bricks_mcp_server'
 		);
 
-		// Custom base URL field.
+		// Advanced section — rate limits, URLs, safety.
+		add_settings_section(
+			'bricks_mcp_advanced',
+			__( 'Advanced', 'bricks-mcp' ),
+			[ $this, 'render_advanced_section' ],
+			self::PAGE_SLUG . '_advanced'
+		);
+
 		add_settings_field(
 			'custom_base_url',
 			__( 'Custom Base URL', 'bricks-mcp' ),
 			[ $this, 'render_custom_base_url_field' ],
-			self::PAGE_SLUG,
-			'bricks_mcp_general'
+			self::PAGE_SLUG . '_advanced',
+			'bricks_mcp_advanced'
 		);
 
-		// Rate limit field.
 		add_settings_field(
 			'rate_limit_rpm',
 			__( 'Rate Limit (requests/minute)', 'bricks-mcp' ),
 			[ $this, 'render_rate_limit_rpm_field' ],
-			self::PAGE_SLUG,
-			'bricks_mcp_general'
+			self::PAGE_SLUG . '_advanced',
+			'bricks_mcp_advanced'
 		);
 
-		// Dangerous actions field.
 		add_settings_field(
 			'dangerous_actions',
 			__( 'Dangerous Actions', 'bricks-mcp' ),
 			[ $this, 'render_dangerous_actions_field' ],
-			self::PAGE_SLUG,
-			'bricks_mcp_general'
+			self::PAGE_SLUG . '_advanced',
+			'bricks_mcp_advanced'
 		);
 
-		// Protected pages field.
 		add_settings_field(
 			'protected_pages',
 			__( 'Protected Pages', 'bricks-mcp' ),
 			[ $this, 'render_protected_pages_field' ],
-			self::PAGE_SLUG,
-			'bricks_mcp_general'
+			self::PAGE_SLUG . '_advanced',
+			'bricks_mcp_advanced'
 		);
 	}
 
@@ -494,15 +496,19 @@ final class Settings {
 	 */
 	private function render_tab_settings(): void {
 		?>
-		<div class="bricks-mcp-config-section">
-			<form action="options.php" method="post">
-				<?php
-				settings_fields( self::OPTION_GROUP );
-				do_settings_sections( self::PAGE_SLUG );
-				submit_button();
-				?>
-			</form>
-		</div>
+		<form action="options.php" method="post">
+			<?php settings_fields( self::OPTION_GROUP ); ?>
+
+			<div class="bricks-mcp-config-section">
+				<?php do_settings_sections( self::PAGE_SLUG . '_server' ); ?>
+			</div>
+
+			<div class="bricks-mcp-config-section">
+				<?php do_settings_sections( self::PAGE_SLUG . '_advanced' ); ?>
+			</div>
+
+			<?php submit_button(); ?>
+		</form>
 		<?php
 	}
 
@@ -563,12 +569,21 @@ final class Settings {
 	}
 
 	/**
-	 * Render general section description.
+	 * Render server section description.
 	 *
 	 * @return void
 	 */
-	public function render_general_section(): void {
+	public function render_server_section(): void {
 		echo '<p>' . esc_html__( 'Control how AI tools connect to your site.', 'bricks-mcp' ) . '</p>';
+	}
+
+	/**
+	 * Render advanced section description.
+	 *
+	 * @return void
+	 */
+	public function render_advanced_section(): void {
+		echo '<p>' . esc_html__( 'Rate limits, custom URLs, and safety controls.', 'bricks-mcp' ) . '</p>';
 	}
 
 	/**
