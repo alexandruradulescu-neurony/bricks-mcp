@@ -134,7 +134,7 @@ class GlobalClassService {
 			'id'     => $new_id,
 			'name'   => $name,
 			'color'  => isset( $args['color'] ) ? sanitize_text_field( $args['color'] ) : '#686868',
-			'styles' => $this->core->sanitize_styles_array( $args['styles'] ?? [] ),
+			'settings' => $this->core->sanitize_styles_array( $args['styles'] ?? [] ),
 		];
 
 		if ( ! empty( $args['category'] ) ) {
@@ -211,10 +211,11 @@ class GlobalClassService {
 			if ( isset( $args['styles'] ) ) {
 				$sanitized_styles = $this->core->sanitize_styles_array( $args['styles'] );
 				if ( ! empty( $args['replace_styles'] ) ) {
-					$class['styles'] = $sanitized_styles;
+					$class['settings'] = $sanitized_styles;
 				} else {
-					$class['styles'] = array_merge( $class['styles'] ?? [], $sanitized_styles );
+					$class['settings'] = array_merge( $class['settings'] ?? $class['styles'] ?? [], $sanitized_styles );
 				}
+				unset( $class['styles'] );
 			}
 
 			update_option( 'bricks_global_classes', $classes );
@@ -435,7 +436,7 @@ class GlobalClassService {
 				'id'     => $new_id,
 				'name'   => $name,
 				'color'  => isset( $def['color'] ) ? sanitize_text_field( $def['color'] ) : '#686868',
-				'styles' => $this->core->sanitize_styles_array( $def['styles'] ?? [] ),
+				'settings' => $this->core->sanitize_styles_array( $def['styles'] ?? [] ),
 			];
 
 			if ( ! empty( $def['category'] ) ) {
@@ -884,14 +885,12 @@ class GlobalClassService {
 				continue;
 			}
 
-			if ( isset( $class['settings'] ) && ! isset( $class['styles'] ) ) {
-				$class['styles'] = $class['settings'];
-				unset( $class['settings'] );
-			}
+			// Normalize: accept both 'settings' (Bricks native) and 'styles' (API param).
+			$raw_styles = $class['settings'] ?? $class['styles'] ?? [];
 
 			$class['name'] = sanitize_text_field( $class['name'] );
-			if ( isset( $class['styles'] ) && is_array( $class['styles'] ) ) {
-				$class['styles'] = $this->core->sanitize_styles_array( $class['styles'] );
+			if ( is_array( $raw_styles ) && ! empty( $raw_styles ) ) {
+				$raw_styles = $this->core->sanitize_styles_array( $raw_styles );
 			}
 
 			if ( in_array( $class['name'], $existing_names, true ) ) {
@@ -908,8 +907,8 @@ class GlobalClassService {
 				'id'   => $new_id,
 				'name' => $class['name'],
 			];
-			if ( ! empty( $class['styles'] ) && is_array( $class['styles'] ) ) {
-				$clean['styles'] = $class['styles']; // Already sanitized above.
+			if ( is_array( $raw_styles ) && ! empty( $raw_styles ) ) {
+				$clean['settings'] = $raw_styles; // Already sanitized above.
 			}
 			if ( ! empty( $class['category'] ) ) {
 				$clean['category'] = sanitize_text_field( $class['category'] );
@@ -975,8 +974,9 @@ class GlobalClassService {
 			}
 
 			$class['name'] = sanitize_text_field( $class['name'] );
-			if ( isset( $class['styles'] ) && is_array( $class['styles'] ) ) {
-				$class['styles'] = $this->core->sanitize_styles_array( $class['styles'] );
+			$raw_styles = $class['settings'] ?? $class['styles'] ?? [];
+			if ( is_array( $raw_styles ) && ! empty( $raw_styles ) ) {
+				$raw_styles = $this->core->sanitize_styles_array( $raw_styles );
 			}
 
 			if ( in_array( $class['name'], $existing_names, true ) ) {
@@ -993,8 +993,8 @@ class GlobalClassService {
 				'id'   => $new_id,
 				'name' => $class['name'],
 			];
-			if ( ! empty( $class['styles'] ) && is_array( $class['styles'] ) ) {
-				$clean['styles'] = $class['styles']; // Already sanitized above.
+			if ( is_array( $raw_styles ) && ! empty( $raw_styles ) ) {
+				$clean['settings'] = $raw_styles; // Already sanitized above.
 			}
 			if ( ! empty( $class['category'] ) ) {
 				$clean['category'] = sanitize_text_field( $class['category'] );
