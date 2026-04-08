@@ -351,6 +351,56 @@
 	}
 
 	// -------------------------------------------------------------------------
+	// Revoke Application Password (event delegation)
+	// -------------------------------------------------------------------------
+
+	document.addEventListener('click', function(e) {
+		var btn = e.target.closest('.bwm-revoke-password');
+		if (!btn) {
+			return;
+		}
+
+		if (!confirm('Revoke this Application Password? The AI tool using it will lose access.')) {
+			return;
+		}
+
+		var uuid = btn.getAttribute('data-uuid');
+		var row = btn.closest('tr');
+		var originalText = btn.textContent;
+
+		btn.disabled = true;
+		btn.textContent = '...';
+
+		var formData = new FormData();
+		formData.append('action', 'bricks_mcp_revoke_app_password');
+		formData.append('nonce', bricksMcpUpdates.nonce);
+		formData.append('uuid', uuid);
+
+		fetch(bricksMcpUpdates.ajaxUrl, {
+			method: 'POST',
+			body: formData
+		})
+		.then(function(response) {
+			return response.json();
+		})
+		.then(function(data) {
+			if (data.success) {
+				row.remove();
+			} else {
+				var message = (data.data && data.data.message) ? data.data.message : 'Failed to revoke.';
+				alert(escapeHtml(message));
+				btn.textContent = originalText;
+				btn.disabled = false;
+			}
+		})
+		.catch(function() {
+			alert('Network error. Please try again.');
+			btn.textContent = originalText;
+			btn.disabled = false;
+		});
+	});
+
+	// -------------------------------------------------------------------------
 	// Utility functions
 	// -------------------------------------------------------------------------
 

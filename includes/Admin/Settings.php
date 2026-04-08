@@ -56,6 +56,7 @@ final class Settings {
 		add_action( 'wp_ajax_bricks_mcp_generate_app_password', [ $this, 'ajax_generate_app_password' ] );
 		add_action( 'wp_ajax_bricks_mcp_delete_note', [ $this, 'ajax_delete_note' ] );
 		add_action( 'wp_ajax_bricks_mcp_add_note', [ $this, 'ajax_add_note' ] );
+		add_action( 'wp_ajax_bricks_mcp_revoke_app_password', [ $this, 'ajax_revoke_app_password' ] );
 	}
 
 	/**
@@ -277,6 +278,14 @@ final class Settings {
 			&& version_compare( $current_version, $update_data['version'], '<' );
 
 		$version_class = $has_update ? 'bwm-header__version bwm-header__version--update' : 'bwm-header__version';
+
+		// Connection status check (cached for 1 minute).
+		$is_connected = $this->get_connection_status();
+
+		// Request counter.
+		$counter        = new \BricksMCP\MCP\Services\RequestCounterService();
+		$requests_today = $counter->get_today_count();
+
 		?>
 		<div class="bwm-header">
 			<div class="bwm-header__icon">
@@ -291,13 +300,24 @@ final class Settings {
 							&rarr; v<?php echo esc_html( $update_data['version'] ); ?>
 						<?php endif; ?>
 					</span>
+					<?php if ( $is_connected ) : ?>
+						<span class="bwm-header__status bwm-header__status--connected"><?php esc_html_e( 'Connected', 'bricks-mcp' ); ?></span>
+					<?php else : ?>
+						<span class="bwm-header__status bwm-header__status--disconnected"><?php esc_html_e( 'Disconnected', 'bricks-mcp' ); ?></span>
+					<?php endif; ?>
 				</h1>
 				<p class="bwm-header__meta">
 					<?php if ( $has_update ) : ?>
 						<?php esc_html_e( 'Update available', 'bricks-mcp' ); ?> &mdash;
 						<a href="<?php echo esc_url( admin_url( 'update-core.php' ) ); ?>"><?php esc_html_e( 'Install now', 'bricks-mcp' ); ?></a>
 					<?php else : ?>
-						<?php esc_html_e( 'AI-powered assistant for Bricks Builder', 'bricks-mcp' ); ?>
+						<?php
+						printf(
+							/* translators: %s: number of requests */
+							esc_html__( '%s requests today', 'bricks-mcp' ),
+							'<strong>' . esc_html( number_format_i18n( $requests_today ) ) . '</strong>'
+						);
+						?>
 					<?php endif; ?>
 					&nbsp;&middot;&nbsp;
 					<a href="#" id="bricks-mcp-check-update-btn"><?php esc_html_e( 'Check for updates', 'bricks-mcp' ); ?></a>
@@ -309,6 +329,40 @@ final class Settings {
 	}
 
 	/**
+	 * Check if the MCP server is enabled and the endpoint is reachable.
+	 *
+	 * Caches the result for 1 minute to avoid hitting the endpoint on every page load.
+	 *
+	 * @return bool True if connected, false otherwise.
+	 */
+	private function get_connection_status(): bool {
+		$settings = get_option( self::OPTION_NAME, $this->get_defaults() );
+		if ( empty( $settings['enabled'] ) ) {
+			return false;
+		}
+
+		$cached = get_transient( 'bricks_mcp_connection_status' );
+		if ( false !== $cached ) {
+			return '1' === $cached;
+		}
+
+		$response = wp_remote_get(
+			rest_url( 'bricks-wp-mcp/v1/mcp' ),
+			[
+				'timeout'   => 3,
+				'sslverify' => false,
+			]
+		);
+
+		$code        = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
+		$is_reachable = in_array( $code, [ 200, 401, 403, 405 ], true );
+
+		set_transient( 'bricks_mcp_connection_status', $is_reachable ? '1' : '0', MINUTE_IN_SECONDS );
+
+		return $is_reachable;
+	}
+
+	/**
 	 * Render Connection tab content.
 	 *
 	 * Shows MCP endpoint info box and configuration snippets for AI tools.
@@ -316,6 +370,7 @@ final class Settings {
 	 * @return void
 	 */
 	private function render_tab_connection(): void {
+		$this->render_getting_started();
 		?>
 		<div class="bricks-mcp-info">
 			<h3><?php esc_html_e( 'Your MCP Endpoint', 'bricks-mcp' ); ?></h3>
@@ -329,6 +384,96 @@ final class Settings {
 		</div>
 		<?php
 		$this->render_mcp_config();
+		$this->render_active_connections();
+	}
+
+	/**
+	 * Render the getting started checklist.
+	 *
+	 * Auto-detects completion state. Shows success banner when all steps are done.
+	 *
+	 * @return void
+	 */
+	private function render_getting_started(): void {
+		$settings       = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$is_enabled     = ! empty( $settings['enabled'] );
+		$app_passwords  = $this->get_bricks_mcp_app_passwords();
+		$has_credentials = ! empty( $app_passwords );
+		$all_done       = $is_enabled && $has_credentials;
+
+		if ( $all_done ) {
+			?>
+			<div class="bwm-checklist bwm-checklist--done">
+				<span class="dashicons dashicons-yes-alt"></span>
+				<?php esc_html_e( 'All set! Your MCP server is enabled and credentials are configured.', 'bricks-mcp' ); ?>
+			</div>
+			<?php
+			return;
+		}
+
+		?>
+		<div class="bwm-checklist">
+			<h3><?php esc_html_e( 'Getting Started', 'bricks-mcp' ); ?></h3>
+			<ol class="bwm-checklist__steps">
+				<li class="<?php echo $is_enabled ? 'bwm-checklist__step--done' : ''; ?>">
+					<span class="dashicons <?php echo $is_enabled ? 'dashicons-yes-alt' : 'dashicons-marker'; ?>"></span>
+					<div>
+						<strong><?php esc_html_e( 'Enable MCP Server', 'bricks-mcp' ); ?></strong>
+						<p><?php
+						if ( $is_enabled ) {
+							esc_html_e( 'Server is enabled.', 'bricks-mcp' );
+						} else {
+							printf(
+								/* translators: %s: link to settings tab */
+								esc_html__( 'Go to %s and enable the server.', 'bricks-mcp' ),
+								'<a href="?page=bricks-mcp&tab=settings">' . esc_html__( 'Settings', 'bricks-mcp' ) . '</a>'
+							);
+						}
+						?></p>
+					</div>
+				</li>
+				<li class="<?php echo $has_credentials ? 'bwm-checklist__step--done' : ''; ?>">
+					<span class="dashicons <?php echo $has_credentials ? 'dashicons-yes-alt' : 'dashicons-marker'; ?>"></span>
+					<div>
+						<strong><?php esc_html_e( 'Generate credentials', 'bricks-mcp' ); ?></strong>
+						<p><?php
+						if ( $has_credentials ) {
+							esc_html_e( 'Credentials created.', 'bricks-mcp' );
+						} else {
+							esc_html_e( 'Use a "Generate Config" button below to create an Application Password.', 'bricks-mcp' );
+						}
+						?></p>
+					</div>
+				</li>
+				<li>
+					<span class="dashicons dashicons-marker"></span>
+					<div>
+						<strong><?php esc_html_e( 'Configure your AI tool', 'bricks-mcp' ); ?></strong>
+						<p><?php esc_html_e( 'Copy the generated config into your AI client (Claude, Gemini, Cursor, etc).', 'bricks-mcp' ); ?></p>
+					</div>
+				</li>
+			</ol>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Get Application Passwords created by this plugin.
+	 *
+	 * Filters the current user's app passwords to those with the "Bricks MCP" name prefix.
+	 *
+	 * @return array<int, array<string, mixed>> Filtered app passwords.
+	 */
+	private function get_bricks_mcp_app_passwords(): array {
+		$user_id    = get_current_user_id();
+		$all_passwords = \WP_Application_Passwords::get_user_application_passwords( $user_id );
+		if ( empty( $all_passwords ) ) {
+			return [];
+		}
+		return array_filter(
+			$all_passwords,
+			fn( $pw ) => str_starts_with( $pw['name'] ?? '', 'Bricks MCP' )
+		);
 	}
 
 	/**
@@ -689,6 +834,49 @@ final class Settings {
 				</button>
 				<span id="bricks-mcp-check-update-spinner" class="spinner"></span>
 			</p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render Active Connections section showing Bricks MCP Application Passwords.
+	 *
+	 * @return void
+	 */
+	private function render_active_connections(): void {
+		$passwords = $this->get_bricks_mcp_app_passwords();
+
+		?>
+		<div class="bricks-mcp-config-section bwm-connections">
+			<h3><?php esc_html_e( 'Active Connections', 'bricks-mcp' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'Application Passwords created by this plugin for AI tool connections.', 'bricks-mcp' ); ?></p>
+
+			<?php if ( empty( $passwords ) ) : ?>
+				<p class="bwm-connections__empty"><?php esc_html_e( 'No connections yet. Use a "Generate Config" button above to create one.', 'bricks-mcp' ); ?></p>
+			<?php else : ?>
+				<table class="widefat striped bwm-connections__table">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Name', 'bricks-mcp' ); ?></th>
+							<th><?php esc_html_e( 'Created', 'bricks-mcp' ); ?></th>
+							<th><?php esc_html_e( 'Last Used', 'bricks-mcp' ); ?></th>
+							<th><?php esc_html_e( 'Last IP', 'bricks-mcp' ); ?></th>
+							<th style="width:80px"><?php esc_html_e( 'Actions', 'bricks-mcp' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php foreach ( $passwords as $pw ) : ?>
+						<tr data-uuid="<?php echo esc_attr( $pw['uuid'] ?? '' ); ?>">
+							<td><?php echo esc_html( $pw['name'] ?? '' ); ?></td>
+							<td><?php echo esc_html( ! empty( $pw['created'] ) ? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $pw['created'] ) : '—' ); ?></td>
+							<td><?php echo esc_html( ! empty( $pw['last_used'] ) ? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $pw['last_used'] ) : __( 'Never', 'bricks-mcp' ) ); ?></td>
+							<td><?php echo esc_html( ! empty( $pw['last_ip'] ) ? $pw['last_ip'] : '—' ); ?></td>
+							<td><button type="button" class="button button-small bwm-revoke-password" data-uuid="<?php echo esc_attr( $pw['uuid'] ?? '' ); ?>"><?php esc_html_e( 'Revoke', 'bricks-mcp' ); ?></button></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
@@ -1401,6 +1589,31 @@ final class Settings {
 		$notes[] = $note;
 		update_option( 'bricks_mcp_notes', $notes, false );
 		wp_send_json_success( $note );
+	}
+
+	/**
+	 * AJAX handler: Revoke an Application Password.
+	 *
+	 * @return void
+	 */
+	public function ajax_revoke_app_password(): void {
+		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+		}
+
+		$uuid = isset( $_POST['uuid'] ) ? sanitize_text_field( wp_unslash( $_POST['uuid'] ) ) : '';
+		if ( empty( $uuid ) ) {
+			wp_send_json_error( [ 'message' => __( 'Missing password UUID.', 'bricks-mcp' ) ] );
+		}
+
+		$deleted = \WP_Application_Passwords::delete_application_password( get_current_user_id(), $uuid );
+		if ( is_wp_error( $deleted ) ) {
+			wp_send_json_error( [ 'message' => $deleted->get_error_message() ] );
+		}
+
+		wp_send_json_success( [ 'message' => __( 'Application Password revoked.', 'bricks-mcp' ) ] );
 	}
 
 }

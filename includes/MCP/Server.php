@@ -301,6 +301,9 @@ final class Server {
 			return $rate_check;
 		}
 
+		// Increment daily request counter.
+		( new Services\RequestCounterService() )->increment();
+
 		return true;
 	}
 
