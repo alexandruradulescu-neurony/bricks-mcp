@@ -579,8 +579,12 @@ class SettingsService {
 			foreach ( $popup_settings as $key => $value ) {
 				if ( null === $value ) {
 					unset( $settings[ $key ] );
-				} else {
+				} elseif ( is_string( $value ) ) {
+					$settings[ $key ] = sanitize_text_field( $value );
+				} elseif ( is_bool( $value ) || is_int( $value ) ) {
 					$settings[ $key ] = $value;
+				} elseif ( is_array( $value ) ) {
+					$settings[ $key ] = $value; // Arrays (e.g., template_interactions) validated by allowlist above.
 				}
 			}
 

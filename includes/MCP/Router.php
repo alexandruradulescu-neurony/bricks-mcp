@@ -1027,6 +1027,13 @@ final class Router {
 			return new \WP_Error( 'missing_plugin_file', 'plugin_file is required. Use wordpress:get_plugins to find plugin file paths.' );
 		}
 
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf( 'Activating plugin "%s" will execute its activation hooks, which may alter your site. Set confirm: true to proceed.', $plugin_file )
+			);
+		}
+
 		if ( ! function_exists( 'activate_plugin' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
@@ -1053,6 +1060,13 @@ final class Router {
 		$plugin_file = sanitize_text_field( $args['plugin_file'] ?? '' );
 		if ( empty( $plugin_file ) ) {
 			return new \WP_Error( 'missing_plugin_file', 'plugin_file is required.' );
+		}
+
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf( 'Deactivating plugin "%s" may break site functionality. Set confirm: true to proceed.', $plugin_file )
+			);
 		}
 
 		if ( ! function_exists( 'deactivate_plugins' ) ) {

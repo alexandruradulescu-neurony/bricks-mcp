@@ -903,9 +903,20 @@ class GlobalClassService {
 				$new_id = $id_generator->generate();
 			} while ( in_array( $new_id, $existing_ids, true ) );
 
-			$class['id']    = $new_id;
+			// Build clean class with only known/safe keys — prevent arbitrary data persistence.
+			$clean = [
+				'id'   => $new_id,
+				'name' => $class['name'],
+			];
+			if ( ! empty( $class['styles'] ) && is_array( $class['styles'] ) ) {
+				$clean['styles'] = $class['styles']; // Already sanitized above.
+			}
+			if ( ! empty( $class['category'] ) ) {
+				$clean['category'] = sanitize_text_field( $class['category'] );
+			}
+
 			$existing_ids[] = $new_id;
-			$existing[]     = $class;
+			$existing[]     = $clean;
 			$added[]        = $class['name'];
 		}
 
@@ -977,9 +988,20 @@ class GlobalClassService {
 				$new_id = $id_generator->generate();
 			} while ( in_array( $new_id, $existing_ids, true ) );
 
-			$class['id']    = $new_id;
+			// Build clean class with only known/safe keys.
+			$clean = [
+				'id'   => $new_id,
+				'name' => $class['name'],
+			];
+			if ( ! empty( $class['styles'] ) && is_array( $class['styles'] ) ) {
+				$clean['styles'] = $class['styles']; // Already sanitized above.
+			}
+			if ( ! empty( $class['category'] ) ) {
+				$clean['category'] = sanitize_text_field( $class['category'] );
+			}
+
 			$existing_ids[] = $new_id;
-			$existing[]     = $class;
+			$existing[]     = $clean;
 			$added[]        = $class['name'];
 		}
 

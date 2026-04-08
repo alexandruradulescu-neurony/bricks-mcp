@@ -120,10 +120,10 @@ class ThemeStyleService {
 			$new_id = $id_generator->generate();
 		} while ( in_array( $new_id, $existing_ids, true ) );
 
-		// Build style entry.
+		// Build style entry — sanitize settings to prevent CSS injection.
 		$style = [
 			'label'    => $sanitized_label,
-			'settings' => $settings,
+			'settings' => ! empty( $settings ) ? $this->core->sanitize_styles_array( $settings ) : [],
 		];
 
 		// Add conditions if provided.
@@ -176,9 +176,10 @@ class ThemeStyleService {
 			$styles[ $style_id ]['label'] = sanitize_text_field( $label );
 		}
 
-		// Update settings if provided.
+		// Update settings if provided — sanitize to prevent CSS injection.
 		if ( null !== $settings ) {
-			foreach ( $settings as $group_key => $group_settings ) {
+			$sanitized_settings = $this->core->sanitize_styles_array( $settings );
+			foreach ( $sanitized_settings as $group_key => $group_settings ) {
 				// Skip conditions key — handled separately below.
 				if ( 'conditions' === $group_key ) {
 					continue;
