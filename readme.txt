@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 1.4.0
+Stable tag: 1.6.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -64,7 +64,7 @@ All requests are authenticated using WordPress Application Passwords, the built-
 4. Add the MCP server URL to your AI client configuration.
 5. Start building pages with natural language.
 
-Full setup documentation is available in the [GitHub repository](https://tractarigub.ro).
+Full setup documentation is available in the [GitHub repository](https://github.com/alexandruradulescu-neurony/bricks-mcp).
 
 == External Services ==
 
@@ -88,7 +88,7 @@ No other external services are contacted by this plugin.
 3. Navigate to **Settings > Bricks MCP** to configure the plugin.
 4. Enable the MCP server and optionally require authentication (strongly recommended for production sites).
 5. Go to **Users > Your Profile** and scroll to **Application Passwords**. Create a new Application Password and copy it — you will need it for your AI client.
-6. Add your site's MCP endpoint URL and credentials to your AI client (see the [GitHub repository](https://tractarigub.ro) for client-specific setup guides).
+6. Add your site's MCP endpoint URL and credentials to your AI client (see the [GitHub repository](https://github.com/alexandruradulescu-neurony/bricks-mcp) for client-specific setup guides).
 7. (Optional) Enter an Unsplash API key in the settings to enable image search.
 
 == Frequently Asked Questions ==

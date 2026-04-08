@@ -1,7 +1,7 @@
 /**
  * Bricks MCP Admin Updates & Onboarding JS.
  *
- * Handles: tab switching, copy to clipboard, Check Now AJAX, Test Connection AJAX.
+ * Handles: tab switching, copy to clipboard, Check Now AJAX, Generate Config AJAX.
  * Data passed via bricksMcpUpdates global from wp_localize_script.
  *
  * @package BricksMCP
@@ -237,80 +237,6 @@
 	}
 
 	// -------------------------------------------------------------------------
-	// Test Connection button
-	// -------------------------------------------------------------------------
-
-	function initTestConnection() {
-		var btn = document.getElementById('bricks-mcp-test-connection-btn');
-		var spinner = document.getElementById('bricks-mcp-test-spinner');
-		var resultDiv = document.getElementById('bricks-mcp-test-result');
-
-		if (!btn) {
-			return;
-		}
-
-		btn.addEventListener('click', function() {
-			var usernameInput = document.getElementById('bricks-mcp-test-username');
-			var passwordInput = document.getElementById('bricks-mcp-test-app-password');
-
-			var username = usernameInput ? usernameInput.value.trim() : '';
-			var appPassword = passwordInput ? passwordInput.value.trim() : '';
-
-			if (!appPassword) {
-				if (resultDiv) {
-					resultDiv.innerHTML = '<span style="color:#d63638;">Please enter an Application Password.</span>';
-				}
-				return;
-			}
-
-			btn.disabled = true;
-			if (spinner) {
-				spinner.classList.add('is-active');
-			}
-			if (resultDiv) {
-				resultDiv.innerHTML = '';
-			}
-
-			var formData = new FormData();
-			formData.append('action', 'bricks_mcp_test_connection');
-			formData.append('nonce', bricksMcpUpdates.nonce);
-			formData.append('username', username);
-			formData.append('app_password', appPassword);
-
-			fetch(bricksMcpUpdates.ajaxUrl, {
-				method: 'POST',
-				body: formData
-			})
-			.then(function(response) {
-				return response.json();
-			})
-			.then(function(data) {
-				if (resultDiv) {
-					if (data.success) {
-						resultDiv.innerHTML = '<span style="color:#00a32a;font-weight:600;">' +
-							escapeHtml(data.data.message) + '</span>';
-					} else {
-						var message = (data.data && data.data.message) ? data.data.message : 'Connection test failed.';
-						resultDiv.innerHTML = '<span style="color:#d63638;">' +
-							escapeHtml(message) + '</span>';
-					}
-				}
-			})
-			.catch(function() {
-				if (resultDiv) {
-					resultDiv.innerHTML = '<span style="color:#d63638;">Network error. Please try again.</span>';
-				}
-			})
-			.finally(function() {
-				btn.disabled = false;
-				if (spinner) {
-					spinner.classList.remove('is-active');
-				}
-			});
-		});
-	}
-
-	// -------------------------------------------------------------------------
 	// Generate Setup Command button
 	// -------------------------------------------------------------------------
 
@@ -338,6 +264,7 @@
 				var tabPanel = btn.closest('[role="tabpanel"]');
 				var spinner = tabPanel.querySelector('.bricks-mcp-tab-generate .spinner');
 				var resultDiv = tabPanel.querySelector('.bricks-mcp-generated-for-client');
+				var originalText = btn.textContent;
 
 				btn.disabled = true;
 				if (spinner) {
@@ -407,6 +334,7 @@
 					} else {
 						var message = (data.data && data.data.message) ? data.data.message : 'Failed to generate Application Password.';
 						alert(escapeHtml(message));
+						btn.textContent = originalText;
 						btn.disabled = false;
 					}
 				})
@@ -415,6 +343,7 @@
 						spinner.classList.remove('is-active');
 					}
 					alert('Network error. Please try again.');
+					btn.textContent = originalText;
 					btn.disabled = false;
 				});
 			});
@@ -483,7 +412,6 @@
 
 	function init() {
 		initCheckNow();
-		initTestConnection();
 		initGenerateCommand();
 	}
 

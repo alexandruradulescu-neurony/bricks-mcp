@@ -38,6 +38,14 @@ class SiteHealth {
 	 * @return array<string, mixed> Modified tests with Bricks MCP checks added.
 	 */
 	public function register_tests( array $tests ): array {
+		$tests['direct']['bricks_mcp_https'] = [
+			'label' => __( 'Bricks MCP: HTTPS enabled', 'bricks-mcp' ),
+			'test'  => [ $this, 'test_https' ],
+		];
+		$tests['direct']['bricks_mcp_permalinks'] = [
+			'label' => __( 'Bricks MCP: Permalink structure', 'bricks-mcp' ),
+			'test'  => [ $this, 'test_permalinks' ],
+		];
 		$tests['direct']['bricks_mcp_rest_api'] = [
 			'label' => __( 'Bricks MCP: REST API reachable', 'bricks-mcp' ),
 			'test'  => [ $this, 'test_rest_api' ],
@@ -46,9 +54,29 @@ class SiteHealth {
 			'label' => __( 'Bricks MCP: Application Passwords', 'bricks-mcp' ),
 			'test'  => [ $this, 'test_app_passwords' ],
 		];
+		$tests['direct']['bricks_mcp_app_passwords_user'] = [
+			'label' => __( 'Bricks MCP: User can use Application Passwords', 'bricks-mcp' ),
+			'test'  => [ $this, 'test_app_passwords_user' ],
+		];
 		$tests['direct']['bricks_mcp_bricks_active'] = [
 			'label' => __( 'Bricks MCP: Bricks Builder active', 'bricks-mcp' ),
 			'test'  => [ $this, 'test_bricks_active' ],
+		];
+		$tests['direct']['bricks_mcp_security_plugin'] = [
+			'label' => __( 'Bricks MCP: Security plugin compatibility', 'bricks-mcp' ),
+			'test'  => [ $this, 'test_security_plugin' ],
+		];
+		$tests['direct']['bricks_mcp_hosting'] = [
+			'label' => __( 'Bricks MCP: Hosting provider compatibility', 'bricks-mcp' ),
+			'test'  => [ $this, 'test_hosting' ],
+		];
+		$tests['direct']['bricks_mcp_endpoint'] = [
+			'label' => __( 'Bricks MCP: MCP endpoint available', 'bricks-mcp' ),
+			'test'  => [ $this, 'test_mcp_endpoint' ],
+		];
+		$tests['direct']['bricks_mcp_php_timeout'] = [
+			'label' => __( 'Bricks MCP: PHP timeout', 'bricks-mcp' ),
+			'test'  => [ $this, 'test_php_timeout' ],
 		];
 		return $tests;
 	}
@@ -82,6 +110,83 @@ class SiteHealth {
 	 */
 	public function test_bricks_active(): array {
 		$check  = new Checks\BricksActiveCheck();
+		$result = $check->run();
+		return $this->format_site_health_result( $result, 'performance' );
+	}
+
+	/**
+	 * Run the HTTPS check.
+	 *
+	 * @return array<string, mixed> Site Health result array.
+	 */
+	public function test_https(): array {
+		$check  = new Checks\HttpsCheck();
+		$result = $check->run();
+		return $this->format_site_health_result( $result, 'security' );
+	}
+
+	/**
+	 * Run the permalink structure check.
+	 *
+	 * @return array<string, mixed> Site Health result array.
+	 */
+	public function test_permalinks(): array {
+		$check  = new Checks\PermalinkStructureCheck();
+		$result = $check->run();
+		return $this->format_site_health_result( $result, 'performance' );
+	}
+
+	/**
+	 * Run the Application Passwords user check.
+	 *
+	 * @return array<string, mixed> Site Health result array.
+	 */
+	public function test_app_passwords_user(): array {
+		$check  = new Checks\AppPasswordsUserCheck();
+		$result = $check->run();
+		return $this->format_site_health_result( $result, 'security' );
+	}
+
+	/**
+	 * Run the security plugin compatibility check.
+	 *
+	 * @return array<string, mixed> Site Health result array.
+	 */
+	public function test_security_plugin(): array {
+		$check  = new Checks\SecurityPluginCheck();
+		$result = $check->run();
+		return $this->format_site_health_result( $result, 'security' );
+	}
+
+	/**
+	 * Run the hosting provider compatibility check.
+	 *
+	 * @return array<string, mixed> Site Health result array.
+	 */
+	public function test_hosting(): array {
+		$check  = new Checks\HostingProviderCheck();
+		$result = $check->run();
+		return $this->format_site_health_result( $result, 'performance' );
+	}
+
+	/**
+	 * Run the MCP endpoint availability check.
+	 *
+	 * @return array<string, mixed> Site Health result array.
+	 */
+	public function test_mcp_endpoint(): array {
+		$check  = new Checks\McpEndpointCheck();
+		$result = $check->run();
+		return $this->format_site_health_result( $result, 'performance' );
+	}
+
+	/**
+	 * Run the PHP timeout check.
+	 *
+	 * @return array<string, mixed> Site Health result array.
+	 */
+	public function test_php_timeout(): array {
+		$check  = new Checks\PhpTimeoutCheck();
 		$result = $check->run();
 		return $this->format_site_health_result( $result, 'performance' );
 	}

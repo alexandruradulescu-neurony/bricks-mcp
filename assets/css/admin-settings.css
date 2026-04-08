@@ -120,6 +120,12 @@
 	margin-bottom: -2px;
 }
 
+.bricks-mcp-tabs [role="tab"]:focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: -2px;
+	border-radius: 2px;
+}
+
 .bricks-mcp-tabs [role="tab"].active {
 	font-weight: 600;
 	color: inherit;
@@ -195,4 +201,99 @@
 
 .bricks-mcp-tab-description {
 	margin-top: 10px;
+}
+
+/* ==========================================================================
+   Responsive — mobile / small screens
+   ========================================================================== */
+
+@media (max-width: 600px) {
+	.bricks-mcp-tabs [role="tablist"] {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+	}
+
+	.bricks-mcp-tabs [role="tab"] {
+		padding: 6px 10px;
+		font-size: 13px;
+	}
+
+	.bricks-mcp-test-connection input[type="text"][readonly],
+	.bricks-mcp-test-connection input[type="password"] {
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.bricks-mcp-code-wrap pre {
+		padding: 10px;
+		font-size: 12px;
+	}
+
+	.bricks-mcp-info,
+	.bricks-mcp-version-card,
+	.bricks-mcp-config-section {
+		padding: 12px 14px;
+	}
+}
+
+/* ==========================================================================
+   Dark mode
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+	.bricks-mcp-info,
+	.bricks-mcp-version-card,
+	.bricks-mcp-config-section {
+		background: #1d2327;
+		color: #c3c4c7;
+	}
+
+	.bricks-mcp-info h3,
+	.bricks-mcp-version-card h3,
+	.bricks-mcp-config-section h3,
+	.bricks-mcp-config-section h4 {
+		color: #e0e0e0;
+	}
+
+	.bricks-mcp-quick-setup {
+		background: #2c3338;
+		border-color: #3c434a;
+	}
+
+	.bricks-mcp-danger-notice {
+		background: #3d2020;
+	}
+
+	.bricks-mcp-important-notice {
+		background: #3d3420;
+	}
+
+	.bricks-mcp-tabs [role="tablist"] {
+		border-bottom-color: #3c434a;
+	}
+
+	.bricks-mcp-tabs [role="tab"] {
+		color: #a7aaad;
+	}
+
+	.bricks-mcp-tabs [role="tab"].active {
+		color: #e0e0e0;
+	}
+
+	.bricks-mcp-test-connection {
+		border-top-color: #3c434a;
+	}
+
+	.bricks-mcp-test-connection input[type="text"][readonly] {
+		background: #2c3338;
+		color: #c3c4c7;
+		border-color: #3c434a;
+	}
+
+	.bricks-mcp-test-connection input[type="password"] {
+		background: #2c3338;
+		color: #c3c4c7;
+		border-color: #3c434a;
+	}
 }

@@ -348,69 +348,6 @@ final class Settings {
 			</tbody>
 		</table>
 
-		<script>
-		(function() {
-			var nonce = <?php echo wp_json_encode( $notes_nonce ); ?>;
-
-			document.querySelectorAll('.bricks-mcp-delete-note').forEach(function(btn) {
-				btn.addEventListener('click', function() {
-					var noteId = this.getAttribute('data-id');
-					var row = this.closest('tr');
-					if (!confirm('Delete this note?')) return;
-					btn.disabled = true;
-					btn.textContent = '...';
-					fetch(ajaxurl, {
-						method: 'POST',
-						headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-						body: 'action=bricks_mcp_delete_note&note_id=' + encodeURIComponent(noteId) + '&_wpnonce=' + encodeURIComponent(nonce)
-					}).then(function(r) { return r.json(); }).then(function(data) {
-						if (data.success) row.remove();
-						else { btn.disabled = false; btn.textContent = 'Delete'; alert(data.data || 'Error'); }
-					});
-				});
-			});
-
-			document.getElementById('bricks-mcp-add-note-btn').addEventListener('click', function() {
-				var input = document.getElementById('bricks-mcp-note-text');
-				var text = input.value.trim();
-				if (!text) return;
-				this.disabled = true;
-				var btn = this;
-				fetch(ajaxurl, {
-					method: 'POST',
-					headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-					body: 'action=bricks_mcp_add_note&text=' + encodeURIComponent(text) + '&_wpnonce=' + encodeURIComponent(nonce)
-				}).then(function(r) { return r.json(); }).then(function(data) {
-					btn.disabled = false;
-					if (data.success) {
-						var note = data.data;
-						var tbody = document.querySelector('#bricks-mcp-notes-table tbody');
-						var noNotes = tbody.querySelector('.bricks-mcp-no-notes');
-						if (noNotes) noNotes.remove();
-						var tr = document.createElement('tr');
-						tr.setAttribute('data-note-id', note.id);
-						tr.innerHTML = '<td>' + note.text.replace(/</g, '&lt;') + '</td><td>' + note.created_at + '</td><td><button type="button" class="button button-small bricks-mcp-delete-note" data-id="' + note.id + '">Delete</button></td>';
-						tbody.appendChild(tr);
-						tr.querySelector('.bricks-mcp-delete-note').addEventListener('click', function() {
-							var noteId = this.getAttribute('data-id');
-							var row = this.closest('tr');
-							if (!confirm('Delete this note?')) return;
-							this.disabled = true;
-							this.textContent = '...';
-							fetch(ajaxurl, {
-								method: 'POST',
-								headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-								body: 'action=bricks_mcp_delete_note&note_id=' + encodeURIComponent(noteId) + '&_wpnonce=' + encodeURIComponent(nonce)
-							}).then(function(r) { return r.json(); }).then(function(d) {
-								if (d.success) row.remove();
-							});
-						});
-						input.value = '';
-					} else { alert(data.data || 'Error'); }
-				});
-			});
-		})();
-		</script>
 		<?php
 	}
 
@@ -589,11 +526,91 @@ final class Settings {
 				'updateCoreUrl'   => admin_url( 'update-core.php' ),
 			]
 		);
+
+		// AI Notes script.
+		wp_enqueue_script(
+			'bricks-mcp-admin-notes',
+			BRICKS_MCP_PLUGIN_URL . 'assets/js/admin-notes.js',
+			[],
+			BRICKS_MCP_VERSION,
+			true
+		);
+
+		wp_localize_script(
+			'bricks-mcp-admin-notes',
+			'bricksMcpNotes',
+			[
+				'nonce' => wp_create_nonce( 'bricks_mcp_notes_nonce' ),
+			]
+		);
+
+		// Diagnostics script.
+		wp_enqueue_script(
+			'bricks-mcp-admin-diagnostics',
+			BRICKS_MCP_PLUGIN_URL . 'assets/js/admin-diagnostics.js',
+			[ 'bricks-mcp-admin-updates' ],
+			BRICKS_MCP_VERSION,
+			true
+		);
+
+		wp_localize_script(
+			'bricks-mcp-admin-diagnostics',
+			'bricksMcpDiagnostics',
+			[
+				'errorText'        => __( 'An error occurred.', 'bricks-mcp' ),
+				'howToFixText'     => __( 'How to fix:', 'bricks-mcp' ),
+				'requestFailedText' => __( 'Request failed. Please try again.', 'bricks-mcp' ),
+				'copiedText'       => __( 'Copied!', 'bricks-mcp' ),
+				'copyResultsText'  => __( 'Copy Results', 'bricks-mcp' ),
+			]
+		);
 	}
 
 	/**
 	 * Render the version info card.
 	 *
+	 * Build JSON config snippets for all supported MCP clients.
+	 *
+	 * Each client differs only in wrapper key, URL key, and optional type field.
+	 * This centralizes config generation so changes to the endpoint structure
+	 * only need to be made in one place.
+	 *
+	 * @param string $mcp_url The MCP endpoint URL.
+	 * @return array<string, string> Client key => JSON config string.
+	 */
+	private function build_client_configs( string $mcp_url ): array {
+		$auth_header = [ 'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING' ];
+		$json_flags  = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES;
+
+		$definitions = [
+			'claude'         => [ 'wrapper' => 'mcpServers', 'url_key' => 'url',     'type' => 'http' ],
+			'claude-desktop' => [ 'wrapper' => 'mcpServers', 'url_key' => 'url' ],
+			'gemini'         => [ 'wrapper' => 'mcpServers', 'url_key' => 'httpUrl' ],
+			'cursor'         => [ 'wrapper' => 'mcpServers', 'url_key' => 'url' ],
+			'vscode'         => [ 'wrapper' => 'servers',    'url_key' => 'url',     'type' => 'http' ],
+			'augment'        => [ 'wrapper' => 'mcpServers', 'url_key' => 'url' ],
+			'qwen'           => [ 'wrapper' => 'mcpServers', 'url_key' => 'url' ],
+		];
+
+		$configs = [];
+		foreach ( $definitions as $key => $def ) {
+			$server = [
+				$def['url_key'] => $mcp_url,
+				'headers'       => $auth_header,
+			];
+			if ( isset( $def['type'] ) ) {
+				$server = array_merge( [ 'type' => $def['type'] ], $server );
+			}
+			$configs[ $key ] = json_encode(
+				[ $def['wrapper'] => [ 'bricks-mcp' => $server ] ],
+				$json_flags
+			);
+		}
+
+		return $configs;
+	}
+
+	/**
 	 * Shows current version, update availability, and a "Check Now" button.
 	 *
 	 * @return void
@@ -653,112 +670,16 @@ final class Settings {
 			$mcp_url = rest_url( 'bricks-wp-mcp/v1/mcp' );
 		}
 
-		// Build Claude Code config snippet.
-		$claude_config = json_encode(
-			[
-				'mcpServers' => [
-					'bricks-mcp' => [
-						'type'    => 'http',
-						'url'     => $mcp_url,
-						'headers' => [
-							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
-						],
-					],
-				],
-			],
-			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
-		);
+		// Build client config snippets from definitions.
+		$configs = $this->build_client_configs( $mcp_url );
 
-		// Build Gemini config snippet.
-		$gemini_config = json_encode(
-			[
-				'mcpServers' => [
-					'bricks-mcp' => [
-						'httpUrl' => $mcp_url,
-						'headers' => [
-							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
-						],
-					],
-				],
-			],
-			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
-		);
-
-		// Cursor config — uses .cursor/mcp.json.
-		$cursor_config = json_encode(
-			[
-				'mcpServers' => [
-					'bricks-mcp' => [
-						'url'     => $mcp_url,
-						'headers' => [
-							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
-						],
-					],
-				],
-			],
-			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
-		);
-
-		// VS Code / Open Code config — uses .vscode/mcp.json.
-		$vscode_config = json_encode(
-			[
-				'servers' => [
-					'bricks-mcp' => [
-						'type'    => 'http',
-						'url'     => $mcp_url,
-						'headers' => [
-							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
-						],
-					],
-				],
-			],
-			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
-		);
-
-		// Augment config.
-		$augment_config = json_encode(
-			[
-				'mcpServers' => [
-					'bricks-mcp' => [
-						'url'     => $mcp_url,
-						'headers' => [
-							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
-						],
-					],
-				],
-			],
-			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
-		);
-
-		// Qwen Code config — uses settings.json.
-		$qwen_config = json_encode(
-			[
-				'mcpServers' => [
-					'bricks-mcp' => [
-						'url'     => $mcp_url,
-						'headers' => [
-							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
-						],
-					],
-				],
-			],
-			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
-		);
-
-		// Claude Desktop config.
-		$claude_desktop_config = json_encode(
-			[
-				'mcpServers' => [
-					'bricks-mcp' => [
-						'url'     => $mcp_url,
-						'headers' => [
-							'Authorization' => 'Basic YOUR_BASE64_AUTH_STRING',
-						],
-					],
-				],
-			],
-			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
-		);
+		$claude_config         = $configs['claude'];
+		$claude_desktop_config = $configs['claude-desktop'];
+		$gemini_config         = $configs['gemini'];
+		$cursor_config         = $configs['cursor'];
+		$vscode_config         = $configs['vscode'];
+		$augment_config        = $configs['augment'];
+		$qwen_config           = $configs['qwen'];
 
 		?>
 		<div class="bricks-mcp-config-section">
@@ -1189,102 +1110,6 @@ final class Settings {
 			<div id="bricks-mcp-diagnostics-results"></div>
 		</div>
 
-		<script>
-		(function() {
-			var iconMap = {
-				pass:    'dashicons-yes-alt',
-				warn:    'dashicons-warning',
-				fail:    'dashicons-dismiss',
-				skipped: 'dashicons-minus'
-			};
-
-			var diagnosticsData = null;
-
-			function escHtml(s) {
-				var d = document.createElement('div');
-				d.appendChild(document.createTextNode(s));
-				return d.innerHTML;
-			}
-
-			document.getElementById('bricks-mcp-run-diagnostics').addEventListener('click', function() {
-				var btn      = this;
-				var spinner  = document.getElementById('bricks-mcp-diagnostics-spinner');
-				var results  = document.getElementById('bricks-mcp-diagnostics-results');
-				var copyBtn  = document.getElementById('bricks-mcp-copy-results');
-
-				btn.disabled = true;
-				spinner.classList.add('is-active');
-				results.innerHTML = '';
-				copyBtn.style.display = 'none';
-
-				var data = new FormData();
-				data.append('action', 'bricks_mcp_run_diagnostics');
-				data.append('nonce', bricksMcpUpdates.nonce);
-
-				fetch(bricksMcpUpdates.ajaxUrl, { method: 'POST', body: data })
-					.then(function(r) { return r.json(); })
-					.then(function(response) {
-						btn.disabled = false;
-						spinner.classList.remove('is-active');
-
-						if (!response.success) {
-							results.innerHTML = '<p style="color:#d63638;">' + (response.data && response.data.message ? escHtml(response.data.message) : '<?php echo esc_js( __( 'An error occurred.', 'bricks-mcp' ) ); ?>') + '</p>';
-							return;
-						}
-
-						diagnosticsData = response.data;
-						var html = '<p class="bricks-mcp-diagnostics-summary"><strong>' + escHtml(response.data.summary) + '</strong></p>';
-
-						response.data.checks.forEach(function(check) {
-							var icon = iconMap[check.status] || 'dashicons-minus';
-							var fixHtml = '';
-							if (check.fix_steps && check.fix_steps.length > 0) {
-								fixHtml = '<div class="bricks-mcp-check-fixes"><strong><?php echo esc_js( __( 'How to fix:', 'bricks-mcp' ) ); ?></strong><ul>';
-								check.fix_steps.forEach(function(step) {
-									fixHtml += '<li>' + escHtml(step) + '</li>';
-								});
-								fixHtml += '</ul></div>';
-							}
-							html += '<div class="bricks-mcp-check bricks-mcp-check--' + check.status + '">';
-							html += '<span class="dashicons ' + icon + '"></span>';
-							html += '<div class="bricks-mcp-check-content">';
-							html += '<strong>' + escHtml(check.label) + '</strong>';
-							html += '<p>' + escHtml(check.message) + '</p>';
-							html += fixHtml;
-							html += '</div></div>';
-						});
-
-						results.innerHTML = html;
-						copyBtn.style.display = 'inline-block';
-					})
-					.catch(function(err) {
-						btn.disabled = false;
-						spinner.classList.remove('is-active');
-						results.innerHTML = '<p style="color:#d63638;"><?php echo esc_js( __( 'Request failed. Please try again.', 'bricks-mcp' ) ); ?></p>';
-					});
-			});
-
-			document.getElementById('bricks-mcp-copy-results').addEventListener('click', function() {
-				if (!diagnosticsData) return;
-				var copyBtn = this;
-				var text = '';
-				diagnosticsData.checks.forEach(function(check) {
-					text += '[' + check.status.toUpperCase() + '] ' + check.label + ': ' + check.message + '\n';
-					if (check.fix_steps && check.fix_steps.length > 0) {
-						check.fix_steps.forEach(function(step) {
-							text += '  Fix: ' + step + '\n';
-						});
-					}
-				});
-				navigator.clipboard.writeText(text).then(function() {
-					copyBtn.textContent = '<?php echo esc_js( __( 'Copied!', 'bricks-mcp' ) ); ?>';
-					setTimeout(function() {
-						copyBtn.textContent = '<?php echo esc_js( __( 'Copy Results', 'bricks-mcp' ) ); ?>';
-					}, 2000);
-				});
-			});
-		}());
-		</script>
 		<?php
 	}
 
