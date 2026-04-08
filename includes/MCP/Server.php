@@ -144,7 +144,6 @@ final class Server {
 				'error'                   => 'oauth_not_supported',
 				'error_description'       => $auth_hint,
 				'bricks_mcp_auth_method'  => 'application_password',
-				'bricks_mcp_settings_url' => $settings_url,
 			] );
 			exit;
 		}
@@ -160,7 +159,6 @@ final class Server {
 			'resource_documentation'   => 'https://aiforbricks.com/docs/authentication',
 			'bricks_mcp_auth_method'   => 'application_password',
 			'bricks_mcp_auth_hint'     => $auth_hint,
-			'bricks_mcp_settings_url'  => $settings_url,
 		] );
 		exit;
 	}
@@ -253,6 +251,10 @@ final class Server {
 	public function check_permissions( \WP_REST_Request $request ): bool|\WP_Error { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		$settings = get_option( 'bricks_mcp_settings', [] );
 
+		if ( ! is_array( $settings ) ) {
+			$settings = [];
+		}
+
 		// Check if plugin is enabled.
 		if ( empty( $settings['enabled'] ) ) {
 			return new \WP_Error(
@@ -287,6 +289,14 @@ final class Server {
 					'bricks_mcp_unauthorized',
 					__( 'Authentication is required for write operations.', 'bricks-mcp' ),
 					[ 'status' => 401 ]
+				);
+			}
+
+			if ( is_user_logged_in() && ! current_user_can( 'manage_options' ) ) {
+				return new \WP_Error(
+					'bricks_mcp_forbidden',
+					__( 'You do not have permission to access the MCP server.', 'bricks-mcp' ),
+					array( 'status' => 403 )
 				);
 			}
 		}

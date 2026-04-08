@@ -308,6 +308,18 @@ final class ComponentHandler {
 		}
 
 		$label = $components[ $index ]['label'] ?? '';
+
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					__( 'You are about to permanently delete component "%s" (ID: %s). Existing instances will render empty. Set confirm: true to proceed.', 'bricks-mcp' ),
+					$label,
+					$component_id
+				)
+			);
+		}
+
 		array_splice( $components, $index, 1 );
 		update_option( self::COMPONENTS_OPTION, $components );
 
@@ -340,6 +352,12 @@ final class ComponentHandler {
 		$post_id      = (int) $args['post_id'];
 		$parent_id    = isset( $args['parent_id'] ) ? sanitize_text_field( $args['parent_id'] ) : '0';
 		$position     = isset( $args['position'] ) ? (int) $args['position'] : null;
+
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
+		}
 
 		// Verify component exists.
 		$components = get_option( self::COMPONENTS_OPTION, array() );
@@ -450,6 +468,13 @@ final class ComponentHandler {
 
 		$post_id     = (int) $args['post_id'];
 		$instance_id = sanitize_text_field( $args['instance_id'] );
+
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
+		}
+
 		$elements    = $this->bricks_service->get_elements( $post_id );
 
 		$found = false;
@@ -537,6 +562,12 @@ final class ComponentHandler {
 		$instance_id   = sanitize_text_field( $args['instance_id'] );
 		$slot_id       = sanitize_text_field( $args['slot_id'] );
 		$slot_elements = $args['slot_elements'];
+
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
+		}
 
 		$elements = $this->bricks_service->get_elements( $post_id );
 

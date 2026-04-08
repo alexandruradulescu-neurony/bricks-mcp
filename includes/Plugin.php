@@ -102,8 +102,8 @@ final class Plugin {
 		// Initialize MCP server.
 		$this->init_mcp_server();
 
-		// Initialize admin functionality only in admin context.
-		if ( is_admin() ) {
+		// Initialize admin functionality only in admin context (or cron for update checks).
+		if ( is_admin() || wp_doing_cron() ) {
 			$this->init_admin();
 		}
 

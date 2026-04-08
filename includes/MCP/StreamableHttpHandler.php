@@ -295,8 +295,18 @@ final class StreamableHttpHandler {
 	 * @return array<int, array<string, mixed>> Array of response objects.
 	 */
 	private function dispatch_batch( array $messages ): array {
-		$results = array_map( [ $this, 'dispatch_single' ], $messages );
-		return array_values( array_filter( $results, fn( $r ) => null !== $r ) );
+		$results = [];
+		foreach ( $messages as $msg ) {
+			if ( ! is_array( $msg ) ) {
+				$results[] = $this->jsonrpc_error( null, self::INVALID_REQUEST, 'Each item in a JSON-RPC batch must be an object' );
+				continue;
+			}
+			$result = $this->dispatch_single( $msg );
+			if ( null !== $result ) {
+				$results[] = $result;
+			}
+		}
+		return $results;
 	}
 
 	/**
