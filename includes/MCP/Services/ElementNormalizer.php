@@ -298,6 +298,13 @@ class ElementNormalizer {
 		// Hoist _gradient out of _background — _gradient is a top-level style key in Bricks.
 		$corrected = $this->hoist_misplaced_gradient( $corrected );
 
+		// Auto-inject _display: flex on div elements when _direction is set.
+		// Block/container default to display:flex in Bricks, but div does not.
+		// Without this, _direction: row on a div silently does nothing.
+		if ( 'div' === $element_name && isset( $corrected['_direction'] ) && ! isset( $corrected['_display'] ) ) {
+			$corrected['_display'] = 'flex';
+		}
+
 		return $corrected;
 	}
 
