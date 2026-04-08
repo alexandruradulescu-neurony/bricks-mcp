@@ -205,8 +205,8 @@ final class ElementHandler {
 	 */
 	private function tool_move_element( array $args ): array|\WP_Error {
 		$post_id          = (int) ( $args['post_id'] ?? 0 );
-		$element_id       = $args['element_id'] ?? '';
-		$target_parent_id = $args['target_parent_id'] ?? '';
+		$element_id       = sanitize_text_field( $args['element_id'] ?? '' );
+		$target_parent_id = sanitize_text_field( $args['target_parent_id'] ?? '' );
 		$position         = isset( $args['position'] ) ? (int) $args['position'] : null;
 
 		if ( 0 === $post_id ) {

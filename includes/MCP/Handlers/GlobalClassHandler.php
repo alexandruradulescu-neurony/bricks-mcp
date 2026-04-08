@@ -513,9 +513,9 @@ final class GlobalClassHandler {
 	 * Tool: Export global classes as JSON.
 	 *
 	 * @param array<string, mixed> $args Tool arguments with optional 'category'.
-	 * @return array<string, mixed> Export data with classes, categories, and count.
+	 * @return array<string, mixed>|\WP_Error Export data with classes, categories, and count.
 	 */
-	private function tool_export_global_classes( array $args ): array {
+	private function tool_export_global_classes( array $args ): array|\WP_Error {
 		$category = isset( $args['category'] ) ? sanitize_text_field( $args['category'] ) : '';
 
 		return $this->bricks_service->export_global_classes( $category );

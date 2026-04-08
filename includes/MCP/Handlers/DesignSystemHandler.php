@@ -971,9 +971,9 @@ final class DesignSystemHandler {
 	 * Handler: Search global variables by name/value/category.
 	 *
 	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, mixed> Search results.
+	 * @return array<string, mixed>|\WP_Error Search results.
 	 */
-	private function tool_search_global_variables( array $args ): array {
+	private function tool_search_global_variables( array $args ): array|\WP_Error {
 		$name        = $args['query'] ?? '';
 		$value       = $args['value_query'] ?? '';
 		$category_id = $args['category_id'] ?? '';

@@ -697,11 +697,15 @@ final class Router {
 			'no_found_rows'  => true,
 		] );
 
-		$pages_summary = [];
+		// Cache elements per page to avoid double meta fetch (also used by design patterns below).
+		$pages_elements = [];
 		foreach ( $pages_query->posts as $pid ) {
-			$raw      = get_post_meta( (int) $pid, '_bricks_page_content_2', true );
-			$elements = is_array( $raw ) ? $raw : [];
+			$raw                          = get_post_meta( (int) $pid, '_bricks_page_content_2', true );
+			$pages_elements[ (int) $pid ] = is_array( $raw ) ? $raw : [];
+		}
 
+		$pages_summary = [];
+		foreach ( $pages_elements as $pid => $elements ) {
 			$section_count = 0;
 			$section_types = [];
 			foreach ( $elements as $el ) {
@@ -714,9 +718,9 @@ final class Router {
 				}
 			}
 
-			$post_obj        = get_post( (int) $pid );
+			$post_obj        = get_post( $pid );
 			$pages_summary[] = [
-				'id'       => (int) $pid,
+				'id'       => $pid,
 				'title'    => $post_obj ? $post_obj->post_title : '',
 				'slug'     => $post_obj ? $post_obj->post_name : '',
 				'sections' => $section_count,
@@ -778,10 +782,16 @@ final class Router {
 		}
 
 		// Design patterns: detect recurring section patterns across pages.
+		// Build class ID → name map for O(1) lookups.
+		$class_id_map = [];
+		foreach ( $all_classes as $gc ) {
+			if ( ! empty( $gc['id'] ) && ! empty( $gc['name'] ) ) {
+				$class_id_map[ $gc['id'] ] = $gc['name'];
+			}
+		}
+
 		$pattern_fingerprints = [];
-		foreach ( $pages_query->posts as $pid ) {
-			$raw      = get_post_meta( (int) $pid, '_bricks_page_content_2', true );
-			$elements = is_array( $raw ) ? $raw : [];
+		foreach ( $pages_elements as $pid => $elements ) {
 			foreach ( $elements as $el ) {
 				if ( ( $el['name'] ?? '' ) === 'section' && (string) ( $el['parent'] ?? '0' ) === '0' ) {
 					// Create fingerprint from section's own classes.
@@ -793,11 +803,8 @@ final class Router {
 					// Use sorted class names as fingerprint.
 					$class_names_for_fp = [];
 					foreach ( $section_classes as $cid ) {
-						foreach ( $all_classes as $gc ) {
-							if ( ( $gc['id'] ?? '' ) === $cid ) {
-								$class_names_for_fp[] = $gc['name'];
-								break;
-							}
+						if ( isset( $class_id_map[ $cid ] ) ) {
+							$class_names_for_fp[] = $class_id_map[ $cid ];
 						}
 					}
 					sort( $class_names_for_fp );
@@ -1081,6 +1088,15 @@ final class Router {
 		$password = $args['password'] ?? wp_generate_password( 16, true );
 		$role     = sanitize_text_field( $args['user_role'] ?? 'subscriber' );
 
+		// Validate role against registered WordPress roles and block administrator creation.
+		$valid_roles = array_keys( wp_roles()->get_names() );
+		if ( ! in_array( $role, $valid_roles, true ) ) {
+			return new \WP_Error( 'invalid_role', sprintf( 'Invalid role "%s". Valid roles: %s', $role, implode( ', ', $valid_roles ) ) );
+		}
+		if ( 'administrator' === $role ) {
+			return new \WP_Error( 'role_blocked', 'Creating administrator accounts via MCP is not allowed for security reasons.' );
+		}
+
 		$user_id = wp_insert_user( array(
 			'user_login'   => $username,
 			'user_email'   => $email,
@@ -1135,7 +1151,15 @@ final class Router {
 			$updated_fields[]            = 'display_name';
 		}
 		if ( ! empty( $args['user_role'] ) ) {
-			$update_data['role'] = sanitize_text_field( $args['user_role'] );
+			$role        = sanitize_text_field( $args['user_role'] );
+			$valid_roles = array_keys( wp_roles()->get_names() );
+			if ( ! in_array( $role, $valid_roles, true ) ) {
+				return new \WP_Error( 'invalid_role', sprintf( 'Invalid role "%s". Valid roles: %s', $role, implode( ', ', $valid_roles ) ) );
+			}
+			if ( 'administrator' === $role ) {
+				return new \WP_Error( 'role_blocked', 'Promoting users to administrator via MCP is not allowed for security reasons.' );
+			}
+			$update_data['role'] = $role;
 			$updated_fields[]    = 'role';
 		}
 		if ( ! empty( $args['password'] ) ) {
@@ -2773,6 +2797,18 @@ final class Router {
 				sprintf(
 					/* translators: %s: Query ID */
 					__( 'Global query "%s" not found. Use bricks:get_global_queries to list available queries.', 'bricks-mcp' ),
+					$query_id
+				)
+			);
+		}
+
+		if ( empty( $args['confirm'] ) ) {
+			return new \WP_Error(
+				'bricks_mcp_confirm_required',
+				sprintf(
+					/* translators: 1: Query name, 2: Query ID */
+					__( 'This will delete global query "%1$s" (ID: %2$s). Any elements referencing this query ID will stop working. Set confirm: true to proceed.', 'bricks-mcp' ),
+					$found_query['name'] ?? $query_id,
 					$query_id
 				)
 			);
