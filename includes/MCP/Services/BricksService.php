@@ -2003,4 +2003,71 @@ class BricksService {
 	public function delete_note( string $note_id ): bool {
 		return $this->notes_service->delete_note( $note_id );
 	}
+
+	/**
+	 * Map a high-level design description into concrete Bricks elements.
+	 *
+	 * Gathers all site data (global classes, colour palettes, patterns and
+	 * page summaries) then delegates to DesignMapperService to resolve each
+	 * section into a set of actionable instructions.
+	 *
+	 * @param array $sections List of section descriptors to map.
+	 * @return array|\WP_Error Mapped design data, or WP_Error on failure.
+	 */
+	public function map_design( array $sections ): array|\WP_Error {
+		if ( empty( $sections ) ) {
+			return new \WP_Error(
+				'missing_sections',
+				'At least one section descriptor is required.',
+				[ 'status' => 400 ]
+			);
+		}
+
+		// Gather all site data needed by the mapper.
+		$classes  = $this->global_class_service->get_global_classes();
+		$palettes = $this->color_palette_service->get_color_palettes();
+		$patterns = get_option( 'bricks_mcp_patterns', [] );
+
+		// Build page summaries from published Bricks pages.
+		$pages_query = new \WP_Query( [
+			'post_type'      => array_values( get_post_types( [ 'public' => true ] ) ),
+			'post_status'    => 'publish',
+			'posts_per_page' => 50,
+			'meta_query'     => [
+				[
+					'key'     => '_bricks_page_content_2',
+					'compare' => 'EXISTS',
+				],
+			],
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		] );
+
+		$page_summaries = [];
+		foreach ( $pages_query->posts as $pid ) {
+			$raw      = get_post_meta( (int) $pid, '_bricks_page_content_2', true );
+			$elements = is_array( $raw ) ? $raw : [];
+
+			$section_labels = [];
+			foreach ( $elements as $el ) {
+				if ( ( $el['name'] ?? '' ) === 'section' && (string) ( $el['parent'] ?? '0' ) === '0' ) {
+					$label = $el['settings']['label'] ?? $el['label'] ?? '';
+					if ( $label ) {
+						$section_labels[] = $label;
+					}
+				}
+			}
+
+			$post_obj         = get_post( (int) $pid );
+			$page_summaries[] = [
+				'id'      => (int) $pid,
+				'title'   => $post_obj ? $post_obj->post_title : '',
+				'summary' => $section_labels ? implode( ', ', $section_labels ) : 'No labeled sections',
+			];
+		}
+
+		$mapper = new DesignMapperService( $classes, $palettes, $patterns, $page_summaries );
+
+		return $mapper->map( $sections );
+	}
 }
