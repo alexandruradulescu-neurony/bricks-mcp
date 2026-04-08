@@ -114,3 +114,15 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 1. The Bricks MCP settings page under Settings > Bricks MCP.
 2. Example Claude Desktop configuration connecting to the MCP server endpoint.
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
+
+== Changelog ==
+
+= 1.9.0 =
+* Added design interpretation workflow for building pages from visual references.
+* Added map_design tool for matching design descriptions to site assets.
+* Added token-based confirmation system for destructive operations.
+* Enhanced admin settings with connection status badge, getting started checklist, and request counter.
+* Comprehensive security hardening: CSS sanitization, role validation, input sanitization, depth limits.
+
+= 1.0.0 =
+* Initial release.

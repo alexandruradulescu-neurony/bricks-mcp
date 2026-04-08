@@ -522,7 +522,6 @@ final class Settings {
 	private function render_tab_notes(): void {
 		$notes       = get_option( 'bricks_mcp_notes', [] );
 		$notes       = is_array( $notes ) ? $notes : [];
-		$notes_nonce = wp_create_nonce( 'bricks_mcp_notes' );
 		?>
 		<div class="bricks-mcp-config-section">
 			<h3><?php esc_html_e( 'AI Notes', 'bricks-mcp' ); ?></h3>
@@ -754,7 +753,7 @@ final class Settings {
 			'bricks-mcp-admin-notes',
 			'bricksMcpNotes',
 			[
-				'nonce' => wp_create_nonce( 'bricks_mcp_notes_nonce' ),
+				'nonce' => wp_create_nonce( 'bricks_mcp_notes' ),
 			]
 		);
 
@@ -1564,12 +1563,12 @@ final class Settings {
 		check_ajax_referer( 'bricks_mcp_notes', '_wpnonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( __( 'Unauthorized.', 'bricks-mcp' ), 403 );
+			wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ), 403 );
 		}
 
 		$note_id = isset( $_POST['note_id'] ) ? sanitize_text_field( wp_unslash( $_POST['note_id'] ) ) : '';
 		if ( empty( $note_id ) ) {
-			wp_send_json_error( __( 'Missing note ID.', 'bricks-mcp' ) );
+			wp_send_json_error( array( 'message' => __( 'Missing note ID.', 'bricks-mcp' ) ) );
 		}
 
 		$notes    = get_option( 'bricks_mcp_notes', [] );
@@ -1592,12 +1591,12 @@ final class Settings {
 		check_ajax_referer( 'bricks_mcp_notes', '_wpnonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( __( 'Unauthorized.', 'bricks-mcp' ), 403 );
+			wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ), 403 );
 		}
 
 		$text = isset( $_POST['text'] ) ? sanitize_text_field( wp_unslash( $_POST['text'] ) ) : '';
 		if ( empty( $text ) ) {
-			wp_send_json_error( __( 'Note text is required.', 'bricks-mcp' ) );
+			wp_send_json_error( array( 'message' => __( 'Note text is required.', 'bricks-mcp' ) ) );
 		}
 
 		$notes = get_option( 'bricks_mcp_notes', [] );

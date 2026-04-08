@@ -101,12 +101,36 @@
 					});
 				}
 			});
-			navigator.clipboard.writeText(text).then(function() {
-				btn.textContent = bricksMcpDiagnostics.copiedText;
-				setTimeout(function() {
-					btn.textContent = bricksMcpDiagnostics.copyResultsText;
-				}, 2000);
-			});
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(text).then(function() {
+					btn.textContent = bricksMcpDiagnostics.copiedText;
+					setTimeout(function() {
+						btn.textContent = bricksMcpDiagnostics.copyResultsText;
+					}, 2000);
+				}).catch(function() {
+					fallbackCopy(text, btn);
+				});
+			} else {
+				fallbackCopy(text, btn);
+			}
 		});
+	}
+	function fallbackCopy(text, btn) {
+		var ta = document.createElement('textarea');
+		ta.value = text;
+		ta.style.position = 'fixed';
+		ta.style.opacity = '0';
+		document.body.appendChild(ta);
+		ta.select();
+		try {
+			document.execCommand('copy');
+			btn.textContent = bricksMcpDiagnostics.copiedText;
+		} catch (e) {
+			btn.textContent = 'Copy failed';
+		}
+		document.body.removeChild(ta);
+		setTimeout(function() {
+			btn.textContent = bricksMcpDiagnostics.copyResultsText;
+		}, 2000);
 	}
 }());

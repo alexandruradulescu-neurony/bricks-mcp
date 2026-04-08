@@ -23,6 +23,7 @@
 		btn.addEventListener('click', function() {
 			var noteId = this.getAttribute('data-id');
 			var row = this.closest('tr');
+			var originalText = btn.textContent;
 			if (!confirm('Delete this note?')) return;
 			btn.disabled = true;
 			btn.textContent = '...';
@@ -32,7 +33,10 @@
 				body: 'action=bricks_mcp_delete_note&note_id=' + encodeURIComponent(noteId) + '&_wpnonce=' + encodeURIComponent(nonce)
 			}).then(function(r) { return r.json(); }).then(function(data) {
 				if (data.success) row.remove();
-				else { btn.disabled = false; btn.textContent = 'Delete'; alert(data.data || 'Error'); }
+				else { btn.disabled = false; btn.textContent = originalText; alert(data.data && data.data.message ? data.data.message : 'Error'); }
+			}).catch(function() {
+				btn.disabled = false;
+				btn.textContent = originalText;
 			});
 		});
 	}

@@ -188,8 +188,10 @@ final class UpdateChecker {
 						$checksum_response = wp_remote_get(
 							$checksum_url,
 							[
-								'timeout'    => 10,
-								'User-Agent' => 'Bricks-MCP-UpdateChecker/1.0',
+								'timeout' => 10,
+								'headers' => [
+									'User-Agent' => 'Bricks-MCP-UpdateChecker/1.0',
+								],
 							]
 						);
 						if ( ! is_wp_error( $checksum_response ) && 200 === wp_remote_retrieve_response_code( $checksum_response ) ) {
@@ -236,11 +238,19 @@ final class UpdateChecker {
 
 		// Only verify our own plugin — leave other plugins untouched.
 		$plugin = $hook_extra['plugin'] ?? '';
-		if ( 'bricks-mcp/bricks-mcp.php' !== $plugin ) {
+		if ( BRICKS_MCP_PLUGIN_BASENAME !== $plugin ) {
 			return $reply;
 		}
 
-		// If no expected hash is cached, degrade gracefully — allow the update but log a warning.
+		// Retrieve SHA-256 from transient if not set on this instance (common across separate requests).
+		if ( empty( $this->expected_sha256 ) ) {
+			$cached = get_transient( self::TRANSIENT_KEY );
+			if ( is_array( $cached ) && ! empty( $cached['sha256'] ) ) {
+				$this->expected_sha256 = $cached['sha256'];
+			}
+		}
+
+		// If no expected hash is available, degrade gracefully — allow the update but log a warning.
 		if ( empty( $this->expected_sha256 ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional security warning.
 			error_log( 'BricksMCP: Update SHA-256 checksum not available. Allowing update without integrity verification.' );
