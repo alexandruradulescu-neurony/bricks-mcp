@@ -835,6 +835,13 @@ final class Router {
 			$info['design_patterns'] = $design_patterns;
 		}
 
+		// Include AI notes so they are visible on the first mandatory call.
+		$ai_notes = $this->bricks_service->get_notes();
+		if ( ! empty( $ai_notes ) ) {
+			$info['ai_notes']      = array_map( fn( array $n ) => $n['text'] ?? '', $ai_notes );
+			$info['ai_notes_note'] = 'These are persistent instructions from the site owner. You MUST follow them.';
+		}
+
 		return $info;
 	}
 

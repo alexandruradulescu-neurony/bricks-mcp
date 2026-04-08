@@ -555,6 +555,19 @@ final class StreamableHttpHandler {
 			$site_context .= ' Section patterns found: ' . implode( ', ', array_slice( $patterns, 0, 8 ) ) . '.';
 		}
 
+		// Load AI notes to embed directly in instructions.
+		$notes      = get_option( 'bricks_mcp_notes', [] );
+		$notes_text = '';
+		if ( is_array( $notes ) && ! empty( $notes ) ) {
+			$notes_text = "\n\n🚨 AI NOTES (persistent corrections from the site owner — MUST follow):\n";
+			foreach ( $notes as $note ) {
+				$text = $note['text'] ?? '';
+				if ( '' !== $text ) {
+					$notes_text .= "- {$text}\n";
+				}
+			}
+		}
+
 		$instructions = "Bricks MCP connects AI assistants to a WordPress site running Bricks Builder.\n\n"
 			. "SITE CONTEXT: {$site_context}\n\n"
 			. "⚠️ MANDATORY FIRST STEP: Before ANY page/template/element creation or modification, you MUST:\n"
@@ -573,8 +586,10 @@ final class StreamableHttpHandler {
 			. "- Inline styles: ONLY for instance-specific overrides (_padding.top: '0', _order: '-1', unique background color)\n"
 			. "- Style properties: Use _widthMax NOT _maxWidth, _typography['text-align'] NOT _textAlign\n"
 			. "- Unfamiliar elements: Before using ANY element type you haven't used before (accordion, tabs, slider, etc.), ALWAYS call bricks:get_element_schemas(element='element_name') first. Do NOT guess repeater keys or item structure.\n"
-			. "- Destructive actions: delete operations require confirm: true. Protected pages block all write operations.\n\n"
-			. "The page:create, element:add, and template:create tool descriptions contain additional guidance. READ THEM.";
+			. "- Nestable elements: ALWAYS use tabs-nested, accordion-nested, nav-nested instead of basic tabs, accordion, nav. Basic versions only support plain text.\n"
+			. "- Destructive actions: delete operations require confirm: true. Protected pages block all write operations."
+			. $notes_text
+			. "\n\nThe page:create, element:add, and template:create tool descriptions contain additional guidance. READ THEM.";
 
 		return $instructions;
 	}
