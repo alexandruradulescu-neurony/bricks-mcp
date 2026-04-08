@@ -277,7 +277,7 @@ final class Settings {
 			<h3><?php esc_html_e( 'MCP Server Endpoints', 'bricks-mcp' ); ?></h3>
 			<p>
 				<strong><?php esc_html_e( 'MCP Endpoint:', 'bricks-mcp' ); ?></strong>
-				<code><?php echo esc_html( rest_url( 'bricks-mcp/v1/mcp' ) ); ?></code>
+				<code><?php echo esc_html( rest_url( 'bricks-wp-mcp/v1/mcp' ) ); ?></code>
 			</p>
 			<p class="description">
 				<?php esc_html_e( 'This single endpoint handles all MCP protocol communication via JSON-RPC 2.0.', 'bricks-mcp' ); ?>
@@ -582,8 +582,8 @@ final class Settings {
 				'nonce'           => wp_create_nonce( 'bricks_mcp_settings_nonce' ),
 				'currentVersion'  => BRICKS_MCP_VERSION,
 				'siteUrl'         => get_site_url(),
-				'restBase'        => rest_url( 'bricks-mcp/v1/' ),
-				'mcpUrl'          => rest_url( 'bricks-mcp/v1/mcp' ),
+				'restBase'        => rest_url( 'bricks-wp-mcp/v1/' ),
+				'mcpUrl'          => rest_url( 'bricks-wp-mcp/v1/mcp' ),
 				'currentUsername' => $current_user->user_login,
 				'profileUrl'      => admin_url( 'profile.php' ),
 				'updateCoreUrl'   => admin_url( 'update-core.php' ),
@@ -648,9 +648,9 @@ final class Settings {
 		$settings    = get_option( self::OPTION_NAME, $this->get_defaults() );
 		$custom_base = $settings['custom_base_url'] ?? '';
 		if ( ! empty( $custom_base ) ) {
-			$mcp_url = trailingslashit( $custom_base ) . 'wp-json/bricks-mcp/v1/mcp';
+			$mcp_url = trailingslashit( $custom_base ) . 'wp-json/bricks-wp-mcp/v1/mcp';
 		} else {
-			$mcp_url = rest_url( 'bricks-mcp/v1/mcp' );
+			$mcp_url = rest_url( 'bricks-wp-mcp/v1/mcp' );
 		}
 
 		// Build Claude Code config snippet.
@@ -1327,9 +1327,9 @@ final class Settings {
 		$settings    = get_option( self::OPTION_NAME, $this->get_defaults() );
 		$custom_base = $settings['custom_base_url'] ?? '';
 		if ( ! empty( $custom_base ) ) {
-			$mcp_url = trailingslashit( $custom_base ) . 'wp-json/bricks-mcp/v1/mcp';
+			$mcp_url = trailingslashit( $custom_base ) . 'wp-json/bricks-wp-mcp/v1/mcp';
 		} else {
-			$mcp_url = rest_url( 'bricks-mcp/v1/mcp' );
+			$mcp_url = rest_url( 'bricks-wp-mcp/v1/mcp' );
 		}
 
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode

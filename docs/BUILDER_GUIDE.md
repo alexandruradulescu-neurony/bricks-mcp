@@ -2370,7 +2370,7 @@ The REST API requires pretty permalinks. Go to Settings > Permalinks and select 
 - **Kinsta**: REST API works by default. If blocked, check Kinsta security settings.
 - **Flywheel**: May strip Authorization headers. Same .htaccess fix as WP Engine.
 - **Pantheon**: May disable Application Passwords by default. Add `add_filter( 'wp_is_application_passwords_available', '__return_true' );` to wp-config.php.
-- **Cloudflare**: WAF rules may block /wp-json/ traffic. Add a WAF exception for the bricks-mcp/v1/ path.
+- **Cloudflare**: WAF rules may block /wp-json/ traffic. Add a WAF exception for the bricks-wp-mcp/v1/ path.
 - **Server-level rate limiting**: If diagnostics pass but external AI tools get 429 errors, check Cloudflare/CDN rate limits on /wp-json/.
 
 ### 6. Run Full Diagnostics

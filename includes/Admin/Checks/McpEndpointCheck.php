@@ -68,7 +68,7 @@ class McpEndpointCheck implements DiagnosticCheck {
 	 * @return array<string, mixed>
 	 */
 	public function run(): array {
-		$endpoint_url = rest_url( 'bricks-mcp/v1/mcp' );
+		$endpoint_url = rest_url( 'bricks-wp-mcp/v1/mcp' );
 
 		$response = wp_remote_get(
 			$endpoint_url,
@@ -103,7 +103,7 @@ class McpEndpointCheck implements DiagnosticCheck {
 				'id'        => $this->id(),
 				'label'     => $this->label(),
 				'status'    => 'fail',
-				'message'   => __( 'MCP endpoint not found. The bricks-mcp/v1 namespace may not be registered.', 'bricks-mcp' ),
+				'message'   => __( 'MCP endpoint not found. The bricks-wp-mcp/v1 namespace may not be registered.', 'bricks-mcp' ),
 				'fix_steps' => array(
 					__( 'Ensure the Bricks MCP plugin is activated and the "Enable MCP Server" setting is on.', 'bricks-mcp' ),
 				),

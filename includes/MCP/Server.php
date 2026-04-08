@@ -28,7 +28,7 @@ final class Server {
 	 *
 	 * @var string
 	 */
-	public const API_NAMESPACE = 'bricks-mcp/v1';
+	public const API_NAMESPACE = 'bricks-wp-mcp/v1';
 
 	/**
 	 * Router instance.
