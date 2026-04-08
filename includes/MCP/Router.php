@@ -40,6 +40,20 @@ final class Router {
 	private array $tools = array();
 
 	/**
+	 * Operations that require all prerequisites to be met.
+	 *
+	 * Format: tool_name => list of actions that are gated.
+	 *
+	 * @var array<string, string[]>
+	 */
+	private const GATED_OPERATIONS = [
+		'page'      => [ 'update_content', 'append_content', 'create', 'import_clipboard' ],
+		'element'   => [ 'add', 'bulk_add', 'update', 'bulk_update' ],
+		'template'  => [ 'create' ],
+		'component' => [ 'create', 'update', 'instantiate', 'fill_slot' ],
+	];
+
+	/**
 	 * Bricks service instance.
 	 *
 	 * @var BricksService
@@ -452,6 +466,26 @@ final class Router {
 			);
 		}
 
+		// Prerequisite gate: block content writes unless mandatory calls have been made.
+		if ( $this->is_gated_operation( $name, $arguments ) ) {
+			$gate_result = PrerequisiteGateService::check();
+			if ( true !== $gate_result ) {
+				$missing_tools = $gate_result['missing_tools'];
+				return Response::error(
+					'bricks_mcp_prerequisites_not_met',
+					sprintf(
+						'You must call these tools before modifying content: %s. Call them now, then retry.',
+						implode( ', ', $missing_tools )
+					),
+					422,
+					[
+						'missing'   => $gate_result['missing'],
+						'satisfied' => $gate_result['satisfied'],
+					]
+				);
+			}
+		}
+
 		try {
 			$result = call_user_func( $tool['handler'], $arguments );
 
@@ -487,6 +521,30 @@ final class Router {
 				500
 			);
 		}
+	}
+
+	/**
+	 * Check if a tool call is a gated content write operation.
+	 *
+	 * @param string               $name      Tool name.
+	 * @param array<string, mixed> $arguments Tool arguments.
+	 * @return bool
+	 */
+	private function is_gated_operation( string $name, array $arguments ): bool {
+		if ( ! isset( self::GATED_OPERATIONS[ $name ] ) ) {
+			return false;
+		}
+
+		$gated_actions = self::GATED_OPERATIONS[ $name ];
+
+		$action = $arguments['action'] ?? '';
+
+		// Special case: page:create and template:create are only gated when elements are provided.
+		if ( in_array( $name, [ 'page', 'template' ], true ) && 'create' === $action ) {
+			return ! empty( $arguments['elements'] );
+		}
+
+		return in_array( $action, $gated_actions, true );
 	}
 
 	/**
