@@ -2336,6 +2336,55 @@ Use semantic `tag` where appropriate:
 4. bricks:save_pattern for each reusable section
 ```
 
+## Design Interpretation
+
+How to build Bricks pages from a visual reference — a screenshot, mockup, sketch, or any image.
+
+### Step 1: Analyze the Image
+
+Before touching any tools, mentally decompose the design:
+
+- **How many sections?** Count distinct horizontal bands — each becomes a Bricks `section` element.
+- **What layout per section?** Identify: `split` (two columns, content + media), `grid` (3-4 equal columns, cards), `stacked` (centered, vertical flow), `full-width` (single column, no grouping).
+- **What's the background treatment?** Note: `dark` (dark solid or near-black), `light` (white or light gray), `image` (photo background with overlay), `gradient`.
+- **What content types per section?** List elements: headings, body text, buttons, images, icons, cards, lists, forms, video.
+- **What's the visual feel?** Tight or spacious spacing, bold or light typography, rounded or sharp corners.
+
+### Step 2: Describe What You See
+
+Write a brief structured description for each section. For example:
+
+> Section 1: Dark hero with large heading on left, tow truck photo on right, call-to-action button below heading.
+> Section 2: Light background, 3 feature cards with icons, each has heading and short text.
+> Section 3: Dark contact section with form on right and address/phone on left.
+
+### Step 3: Map to Site Assets (optional)
+
+Call `bricks:map_design` with your section descriptions to get site-matched recommendations in one call:
+
+```
+bricks:map_design(sections=[
+  { description: "dark hero with heading left, photo right, CTA button", layout: "split", background: "dark", content_types: ["heading", "text", "button", "image"] },
+  { description: "3 feature cards with icons", layout: "grid", columns: 3, background: "light", content_types: ["icon", "heading", "text"] }
+])
+```
+
+This returns per section: matching patterns (ready to `use_pattern`), relevant global classes grouped by purpose, closest palette colors, a suggested element hierarchy, and similar existing sections you can study.
+
+This saves separate calls to `global_class:list`, `color_palette:list`, and `bricks:analyze_patterns`.
+
+### Step 4: Build or Reuse
+
+For each section:
+
+1. **Pattern match found?** Call `bricks:use_pattern(pattern_id, post_id, overrides)` with your content. Done.
+2. **Similar existing section found?** Call `page:get(view='detail', post_id, root_element_id)` to study the exact structure, then adapt it.
+3. **No match?** Build from scratch using the suggested element skeleton and global classes. Use `_cssGlobalClasses` on every element. Only inline styles for instance-specific overrides.
+
+### Step 5: Verify
+
+After building, call `page:get(view='describe')` on your page. Check that each section has the right background treatment, layout, and content structure compared to the original design.
+
 ## Connection Troubleshooting
 
 If you're having trouble connecting to the MCP server, work through these checks in order:

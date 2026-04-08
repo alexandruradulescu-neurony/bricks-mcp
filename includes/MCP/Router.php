@@ -3422,6 +3422,7 @@ final class Router {
 			'gotchas'                   => '## Key Gotchas',
 			'workflow'                  => '## Workflow',
 			'recipes'                   => '## Recipes',
+			'design_interpretation'     => '## Design Interpretation',
 			'connection_troubleshooting' => '## Connection Troubleshooting',
 		);
 
