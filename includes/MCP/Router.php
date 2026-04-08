@@ -665,10 +665,6 @@ final class Router {
 	public function tool_get_site_info( array $args ): array {
 		$action = $args['action'] ?? 'info';
 
-		if ( 'info' === $action ) {
-			PrerequisiteGateService::set_flag( 'site_info' );
-		}
-
 		if ( 'diagnose' === $action ) {
 			$runner = new \BricksMCP\Admin\DiagnosticRunner();
 			$runner->register_defaults();
@@ -934,6 +930,8 @@ final class Router {
 			'Before using ANY unfamiliar element type, ALWAYS call bricks:get_element_schemas(element=name) first.',
 			'Do NOT duplicate child theme CSS inline — sections get padding, containers get gap, headings get sizes automatically.',
 		];
+
+		PrerequisiteGateService::set_flag( 'site_info' );
 
 		return $info;
 	}
