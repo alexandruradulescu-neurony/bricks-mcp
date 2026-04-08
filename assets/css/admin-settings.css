@@ -1,52 +1,212 @@
 /**
- * Bricks MCP admin settings page styles.
+ * Bricks WP MCP admin settings styles.
+ *
+ * Design system: Indigo brand (#4f46e5), rounded cards, subtle shadows.
  *
  * @package BricksMCP
  */
 
 /* ==========================================================================
-   Card / Section shared base
+   CSS Custom Properties
+   ========================================================================== */
+
+:root {
+	--bwm-brand: #4f46e5;
+	--bwm-brand-light: #e0e7ff;
+	--bwm-brand-dark: #3730a3;
+	--bwm-success: #059669;
+	--bwm-success-light: #d1fae5;
+	--bwm-warning: #d97706;
+	--bwm-warning-light: #fef3c7;
+	--bwm-danger: #dc2626;
+	--bwm-danger-light: #fee2e2;
+	--bwm-gray-50: #f9fafb;
+	--bwm-gray-100: #f3f4f6;
+	--bwm-gray-200: #e5e7eb;
+	--bwm-gray-300: #d1d5db;
+	--bwm-gray-500: #6b7280;
+	--bwm-gray-700: #374151;
+	--bwm-gray-900: #111827;
+	--bwm-white: #fff;
+	--bwm-radius: 8px;
+	--bwm-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+	--bwm-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* ==========================================================================
+   Page Header
+   ========================================================================== */
+
+.bwm-header {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	margin: 16px 0 24px;
+	padding: 20px 24px;
+	background: var(--bwm-white);
+	border: 1px solid var(--bwm-gray-200);
+	border-radius: var(--bwm-radius);
+	box-shadow: var(--bwm-shadow);
+}
+
+.bwm-header__icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	background: var(--bwm-brand-light);
+	border-radius: 10px;
+	flex-shrink: 0;
+}
+
+.bwm-header__icon svg {
+	width: 24px;
+	height: 24px;
+	fill: var(--bwm-brand);
+}
+
+.bwm-header__body {
+	flex: 1;
+	min-width: 0;
+}
+
+.bwm-header__title {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0;
+	font-size: 20px;
+	font-weight: 600;
+	color: var(--bwm-gray-900);
+	line-height: 1.3;
+}
+
+.bwm-header__version {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 10px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--bwm-brand);
+	background: var(--bwm-brand-light);
+	border-radius: 20px;
+	white-space: nowrap;
+}
+
+.bwm-header__version--update {
+	color: var(--bwm-warning);
+	background: var(--bwm-warning-light);
+}
+
+.bwm-header__meta {
+	margin: 4px 0 0;
+	font-size: 13px;
+	color: var(--bwm-gray-500);
+}
+
+.bwm-header__meta a {
+	color: var(--bwm-brand);
+	text-decoration: none;
+}
+
+.bwm-header__meta a:hover {
+	text-decoration: underline;
+}
+
+.bwm-header__actions {
+	flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Navigation Tabs
+   ========================================================================== */
+
+.bwm-nav {
+	display: flex;
+	gap: 0;
+	border-bottom: 2px solid var(--bwm-gray-200);
+	margin-bottom: 24px;
+}
+
+.bwm-nav .nav-tab {
+	position: relative;
+	padding: 10px 18px;
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--bwm-gray-500);
+	text-decoration: none;
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -2px;
+	transition: color 0.15s, border-color 0.15s;
+	float: none;
+}
+
+.bwm-nav .nav-tab:hover {
+	color: var(--bwm-gray-700);
+}
+
+.bwm-nav .nav-tab-active {
+	color: var(--bwm-brand);
+	border-bottom-color: var(--bwm-brand);
+	font-weight: 600;
+}
+
+.bwm-nav .nav-tab:focus-visible {
+	outline: 2px solid var(--bwm-brand);
+	outline-offset: -2px;
+	border-radius: 4px 4px 0 0;
+}
+
+/* ==========================================================================
+   Cards — shared base
    ========================================================================== */
 
 .bricks-mcp-info,
 .bricks-mcp-version-card,
-.bricks-mcp-config-section {
-	background: #fff;
-	padding: 15px 20px;
-	margin: 20px 0;
-	border-left: 4px solid #2271b1;
+.bricks-mcp-config-section,
+.bricks-mcp-diagnostics {
+	background: var(--bwm-white);
+	padding: 20px 24px;
+	margin: 0 0 20px;
+	border: 1px solid var(--bwm-gray-200);
+	border-radius: var(--bwm-radius);
+	box-shadow: var(--bwm-shadow);
 }
 
 .bricks-mcp-info {
-	padding: 15px;
+	padding: 16px 20px;
 }
 
 /* ==========================================================================
-   Version card
+   Version card (used in header now, kept for compat)
    ========================================================================== */
 
 .bricks-mcp-version-card--has-update {
-	border-left-color: #dba617;
+	border-color: var(--bwm-warning);
 }
 
 .bricks-mcp-update-available {
-	color: #dba617;
+	color: var(--bwm-warning);
 	font-weight: 600;
 }
 
 .bricks-mcp-up-to-date {
-	color: #00a32a;
+	color: var(--bwm-success);
 }
 
 /* ==========================================================================
-   Dangerous actions warning
+   Danger notice
    ========================================================================== */
 
 .bricks-mcp-danger-notice {
 	margin-top: 10px;
-	padding: 10px 12px;
-	border-left: 4px solid #d63638;
-	background: #fcf0f0;
+	padding: 12px 16px;
+	border: 1px solid var(--bwm-danger);
+	border-radius: 6px;
+	background: var(--bwm-danger-light);
 }
 
 .bricks-mcp-danger-notice p {
@@ -54,26 +214,27 @@
 }
 
 /* ==========================================================================
-   Quick setup box
+   Quick setup / notices
    ========================================================================== */
 
 .bricks-mcp-quick-setup {
-	margin: 15px 0 20px;
-	padding: 15px;
-	background: #f6f7f7;
-	border: 1px solid #ddd;
-	border-radius: 4px;
+	margin: 16px 0 20px;
+	padding: 16px;
+	background: var(--bwm-gray-50);
+	border: 1px solid var(--bwm-gray-200);
+	border-radius: 6px;
 }
 
 .bricks-mcp-important-notice {
-	padding: 10px 12px;
-	border-left: 4px solid #dba617;
-	background: #fcf0e8;
-	margin-bottom: 15px;
+	padding: 12px 16px;
+	border: 1px solid var(--bwm-warning);
+	border-radius: 6px;
+	background: var(--bwm-warning-light);
+	margin-bottom: 16px;
 }
 
 /* ==========================================================================
-   Code blocks with copy button
+   Code blocks
    ========================================================================== */
 
 .bricks-mcp-code-wrap {
@@ -81,12 +242,14 @@
 }
 
 .bricks-mcp-code-wrap pre {
-	background: #1e1e1e;
-	color: #d4d4d4;
-	padding: 15px;
-	border-radius: 4px;
+	background: var(--bwm-gray-900);
+	color: #e5e7eb;
+	padding: 16px;
+	border-radius: 6px;
 	overflow: auto;
 	margin: 0;
+	font-size: 13px;
+	line-height: 1.5;
 }
 
 .bricks-mcp-code-wrap--breakall pre {
@@ -101,50 +264,55 @@
 }
 
 /* ==========================================================================
-   Tabs
+   Client config tabs (within connection tab)
    ========================================================================== */
 
 .bricks-mcp-tabs [role="tablist"] {
-	border-bottom: 2px solid #ddd;
-	margin-bottom: 15px;
+	border-bottom: 2px solid var(--bwm-gray-200);
+	margin-bottom: 16px;
 }
 
 .bricks-mcp-tabs [role="tab"] {
 	background: none;
 	border: none;
-	padding: 8px 16px;
+	padding: 8px 14px;
 	cursor: pointer;
-	font-size: 14px;
-	color: #666;
+	font-size: 13px;
+	color: var(--bwm-gray-500);
 	border-bottom: 2px solid transparent;
 	margin-bottom: -2px;
+	transition: color 0.15s, border-color 0.15s;
+}
+
+.bricks-mcp-tabs [role="tab"]:hover {
+	color: var(--bwm-gray-700);
 }
 
 .bricks-mcp-tabs [role="tab"]:focus-visible {
-	outline: 2px solid #2271b1;
+	outline: 2px solid var(--bwm-brand);
 	outline-offset: -2px;
 	border-radius: 2px;
 }
 
 .bricks-mcp-tabs [role="tab"].active {
 	font-weight: 600;
-	color: inherit;
-	border-bottom-color: #2271b1;
+	color: var(--bwm-brand);
+	border-bottom-color: var(--bwm-brand);
 }
 
 /* ==========================================================================
-   Test connection
+   Test connection inputs
    ========================================================================== */
 
 .bricks-mcp-test-connection {
 	margin-top: 20px;
-	padding-top: 15px;
-	border-top: 1px solid #ddd;
+	padding-top: 16px;
+	border-top: 1px solid var(--bwm-gray-200);
 }
 
 .bricks-mcp-test-connection input[type="text"][readonly] {
 	width: 300px;
-	background: #f0f0f0;
+	background: var(--bwm-gray-50);
 }
 
 .bricks-mcp-test-connection input[type="password"] {
@@ -152,7 +320,82 @@
 }
 
 /* ==========================================================================
-   Utility — reused across sections
+   Diagnostics panel
+   ========================================================================== */
+
+.bricks-mcp-diagnostics h3 {
+	margin-top: 0;
+}
+
+.bricks-mcp-diagnostics-actions {
+	margin: 12px 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.bricks-mcp-check {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px 0;
+	border-bottom: 1px solid var(--bwm-gray-100);
+}
+
+.bricks-mcp-check:last-child {
+	border-bottom: none;
+}
+
+.bricks-mcp-check .dashicons {
+	margin-top: 2px;
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+}
+
+.bricks-mcp-check--pass .dashicons {
+	color: var(--bwm-success);
+}
+
+.bricks-mcp-check--warn .dashicons {
+	color: var(--bwm-warning);
+}
+
+.bricks-mcp-check--fail .dashicons {
+	color: var(--bwm-danger);
+}
+
+.bricks-mcp-check--skipped .dashicons {
+	color: var(--bwm-gray-500);
+}
+
+.bricks-mcp-check-content p {
+	margin: 2px 0 0;
+}
+
+.bricks-mcp-check-fixes {
+	margin-top: 6px;
+	padding: 8px 12px;
+	background: var(--bwm-gray-50);
+	border-radius: 4px;
+}
+
+.bricks-mcp-check-fixes ul {
+	margin: 5px 0 0 15px;
+}
+
+.bricks-mcp-diagnostics-summary {
+	font-size: 14px;
+	margin: 10px 0;
+}
+
+#bricks-mcp-diagnostics-spinner {
+	float: none;
+	margin: 0;
+}
+
+/* ==========================================================================
+   Utility — shared
    ========================================================================== */
 
 .bricks-mcp-config-section .spinner,
@@ -168,7 +411,7 @@
 }
 
 .bricks-mcp-config-section h4 {
-	margin: 15px 0 8px;
+	margin: 16px 0 8px;
 }
 
 .bricks-mcp-config-section h4:first-child {
@@ -176,11 +419,11 @@
 }
 
 .bricks-mcp-config-section hr {
-	margin: 15px 0;
+	margin: 16px 0;
 }
 
 .bricks-mcp-generated-result {
-	margin-top: 15px;
+	margin-top: 16px;
 }
 
 .bricks-mcp-generate-error {
@@ -192,7 +435,7 @@
 }
 
 .bricks-mcp-tabs-wrap {
-	margin-top: 15px;
+	margin-top: 16px;
 }
 
 .bricks-mcp-generate-btn-wrap {
@@ -204,10 +447,28 @@
 }
 
 /* ==========================================================================
-   Responsive — mobile / small screens
+   Responsive
    ========================================================================== */
 
 @media (max-width: 600px) {
+	.bwm-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+		padding: 16px;
+	}
+
+	.bwm-nav {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.bwm-nav .nav-tab {
+		padding: 8px 12px;
+		font-size: 13px;
+		white-space: nowrap;
+	}
+
 	.bricks-mcp-tabs [role="tablist"] {
 		display: flex;
 		flex-wrap: wrap;
@@ -216,7 +477,7 @@
 
 	.bricks-mcp-tabs [role="tab"] {
 		padding: 6px 10px;
-		font-size: 13px;
+		font-size: 12px;
 	}
 
 	.bricks-mcp-test-connection input[type="text"][readonly],
@@ -231,9 +492,9 @@
 	}
 
 	.bricks-mcp-info,
-	.bricks-mcp-version-card,
-	.bricks-mcp-config-section {
-		padding: 12px 14px;
+	.bricks-mcp-config-section,
+	.bricks-mcp-diagnostics {
+		padding: 14px 16px;
 	}
 }
 
@@ -242,58 +503,60 @@
    ========================================================================== */
 
 @media (prefers-color-scheme: dark) {
-	.bricks-mcp-info,
-	.bricks-mcp-version-card,
-	.bricks-mcp-config-section {
-		background: #1d2327;
-		color: #c3c4c7;
+	:root {
+		--bwm-brand-light: #312e81;
+		--bwm-success-light: #064e3b;
+		--bwm-warning-light: #78350f;
+		--bwm-danger-light: #7f1d1d;
+		--bwm-gray-50: #1f2937;
+		--bwm-gray-100: #283040;
+		--bwm-gray-200: #374151;
+		--bwm-gray-300: #4b5563;
+		--bwm-gray-500: #9ca3af;
+		--bwm-gray-700: #d1d5db;
+		--bwm-gray-900: #111827;
+		--bwm-white: #1a2030;
 	}
 
+	.bwm-header__title,
 	.bricks-mcp-info h3,
-	.bricks-mcp-version-card h3,
 	.bricks-mcp-config-section h3,
-	.bricks-mcp-config-section h4 {
-		color: #e0e0e0;
+	.bricks-mcp-config-section h4,
+	.bricks-mcp-diagnostics h3 {
+		color: #e5e7eb;
 	}
 
-	.bricks-mcp-quick-setup {
-		background: #2c3338;
-		border-color: #3c434a;
+	.bwm-header__meta {
+		color: var(--bwm-gray-500);
 	}
 
-	.bricks-mcp-danger-notice {
-		background: #3d2020;
+	.bricks-mcp-info,
+	.bricks-mcp-config-section,
+	.bricks-mcp-diagnostics {
+		color: #d1d5db;
 	}
 
-	.bricks-mcp-important-notice {
-		background: #3d3420;
-	}
-
-	.bricks-mcp-tabs [role="tablist"] {
-		border-bottom-color: #3c434a;
+	.bricks-mcp-test-connection input[type="text"][readonly],
+	.bricks-mcp-test-connection input[type="password"] {
+		background: var(--bwm-gray-50);
+		color: #d1d5db;
+		border-color: var(--bwm-gray-300);
 	}
 
 	.bricks-mcp-tabs [role="tab"] {
-		color: #a7aaad;
+		color: var(--bwm-gray-500);
 	}
 
 	.bricks-mcp-tabs [role="tab"].active {
-		color: #e0e0e0;
+		color: #a5b4fc;
 	}
 
-	.bricks-mcp-test-connection {
-		border-top-color: #3c434a;
+	.bwm-nav .nav-tab {
+		color: var(--bwm-gray-500);
 	}
 
-	.bricks-mcp-test-connection input[type="text"][readonly] {
-		background: #2c3338;
-		color: #c3c4c7;
-		border-color: #3c434a;
-	}
-
-	.bricks-mcp-test-connection input[type="password"] {
-		background: #2c3338;
-		color: #c3c4c7;
-		border-color: #3c434a;
+	.bwm-nav .nav-tab-active {
+		color: #a5b4fc;
+		border-bottom-color: #a5b4fc;
 	}
 }

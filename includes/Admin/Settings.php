@@ -66,8 +66,8 @@ final class Settings {
 	public function add_settings_page(): void {
 		add_submenu_page(
 			'bricks',
-			__( 'MCP Settings', 'bricks-mcp' ),
-			__( 'MCP', 'bricks-mcp' ),
+			__( 'Bricks WP MCP', 'bricks-mcp' ),
+			__( 'Bricks WP MCP', 'bricks-mcp' ),
 			'manage_options',
 			self::PAGE_SLUG,
 			[ $this, 'render_settings_page' ]
@@ -93,7 +93,7 @@ final class Settings {
 		// General settings section.
 		add_settings_section(
 			'bricks_mcp_general',
-			__( 'General Settings', 'bricks-mcp' ),
+			__( 'Server Configuration', 'bricks-mcp' ),
 			[ $this, 'render_general_section' ],
 			self::PAGE_SLUG
 		);
@@ -224,12 +224,12 @@ final class Settings {
 
 		?>
 		<div class="wrap">
-			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 			<?php settings_errors(); ?>
+			<?php $this->render_page_header(); ?>
 
-			<nav class="nav-tab-wrapper">
+			<nav class="bwm-nav">
 				<a href="?page=bricks-mcp&tab=connection" class="nav-tab <?php echo 'connection' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Connection', 'bricks-mcp' ); ?>
+					<?php esc_html_e( 'Connect Your AI', 'bricks-mcp' ); ?>
 				</a>
 				<a href="?page=bricks-mcp&tab=settings" class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Settings', 'bricks-mcp' ); ?>
@@ -238,11 +238,11 @@ final class Settings {
 					<?php esc_html_e( 'AI Notes', 'bricks-mcp' ); ?>
 				</a>
 				<a href="?page=bricks-mcp&tab=diagnostics" class="nav-tab <?php echo 'diagnostics' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Diagnostics', 'bricks-mcp' ); ?>
+					<?php esc_html_e( 'System Health', 'bricks-mcp' ); ?>
 				</a>
 			</nav>
 
-			<div class="bricks-mcp-tab-content" style="margin-top: 20px;">
+			<div class="bricks-mcp-tab-content">
 			<?php
 			switch ( $active_tab ) {
 				case 'connection':
@@ -265,22 +265,66 @@ final class Settings {
 	}
 
 	/**
+	 * Render the branded page header with icon, title, and version badge.
+	 *
+	 * @return void
+	 */
+	private function render_page_header(): void {
+		$current_version = BRICKS_MCP_VERSION;
+		$update_checker  = \BricksMCP\Plugin::get_instance()->get_update_checker();
+		$update_data     = null !== $update_checker ? $update_checker->get_cached_update_data() : [];
+		$has_update      = ! empty( $update_data['version'] )
+			&& version_compare( $current_version, $update_data['version'], '<' );
+
+		$version_class = $has_update ? 'bwm-header__version bwm-header__version--update' : 'bwm-header__version';
+		?>
+		<div class="bwm-header">
+			<div class="bwm-header__icon">
+				<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6Zm2 0v4h12V6H6Zm-2 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4Zm2 0v4h12v-4H6Zm2-6a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm4 0a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm-4 8a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm4 0a1 1 0 1 1 2 0 1 1 0 0 1-2 0Z"/></svg>
+			</div>
+			<div class="bwm-header__body">
+				<h1 class="bwm-header__title">
+					<?php esc_html_e( 'Bricks WP MCP', 'bricks-mcp' ); ?>
+					<span class="<?php echo esc_attr( $version_class ); ?>" id="bricks-mcp-version-text">
+						v<?php echo esc_html( $current_version ); ?>
+						<?php if ( $has_update ) : ?>
+							&rarr; v<?php echo esc_html( $update_data['version'] ); ?>
+						<?php endif; ?>
+					</span>
+				</h1>
+				<p class="bwm-header__meta">
+					<?php if ( $has_update ) : ?>
+						<?php esc_html_e( 'Update available', 'bricks-mcp' ); ?> &mdash;
+						<a href="<?php echo esc_url( admin_url( 'update-core.php' ) ); ?>"><?php esc_html_e( 'Install now', 'bricks-mcp' ); ?></a>
+					<?php else : ?>
+						<?php esc_html_e( 'AI-powered assistant for Bricks Builder', 'bricks-mcp' ); ?>
+					<?php endif; ?>
+					&nbsp;&middot;&nbsp;
+					<a href="#" id="bricks-mcp-check-update-btn"><?php esc_html_e( 'Check for updates', 'bricks-mcp' ); ?></a>
+					<span id="bricks-mcp-check-update-spinner" class="spinner"></span>
+				</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Render Connection tab content.
 	 *
-	 * Shows MCP Server Endpoints info box and MCP configuration snippets.
+	 * Shows MCP endpoint info box and configuration snippets for AI tools.
 	 *
 	 * @return void
 	 */
 	private function render_tab_connection(): void {
 		?>
 		<div class="bricks-mcp-info">
-			<h3><?php esc_html_e( 'MCP Server Endpoints', 'bricks-mcp' ); ?></h3>
+			<h3><?php esc_html_e( 'Your MCP Endpoint', 'bricks-mcp' ); ?></h3>
 			<p>
 				<strong><?php esc_html_e( 'MCP Endpoint:', 'bricks-mcp' ); ?></strong>
 				<code><?php echo esc_html( rest_url( 'bricks-wp-mcp/v1/mcp' ) ); ?></code>
 			</p>
 			<p class="description">
-				<?php esc_html_e( 'This single endpoint handles all MCP protocol communication via JSON-RPC 2.0.', 'bricks-mcp' ); ?>
+				<?php esc_html_e( 'Share this URL with your AI tool to connect.', 'bricks-mcp' ); ?>
 			</p>
 		</div>
 		<?php
@@ -359,7 +403,6 @@ final class Settings {
 	 * @return void
 	 */
 	private function render_tab_diagnostics(): void {
-		$this->render_version_card();
 		$this->render_diagnostic_panel();
 	}
 
@@ -369,7 +412,7 @@ final class Settings {
 	 * @return void
 	 */
 	public function render_general_section(): void {
-		echo '<p>' . esc_html__( 'Configure general MCP server settings.', 'bricks-mcp' ) . '</p>';
+		echo '<p>' . esc_html__( 'Control how AI tools connect to your site.', 'bricks-mcp' ) . '</p>';
 	}
 
 	/**
@@ -683,7 +726,7 @@ final class Settings {
 
 		?>
 		<div class="bricks-mcp-config-section">
-			<h2><?php esc_html_e( 'MCP Configuration', 'bricks-mcp' ); ?></h2>
+			<h2><?php esc_html_e( 'Quick Setup', 'bricks-mcp' ); ?></h2>
 			<p class="description"><?php esc_html_e( 'Add the following configuration to your AI tool to connect to this MCP server.', 'bricks-mcp' ); ?></p>
 
 			<div class="bricks-mcp-tabs bricks-mcp-tabs-wrap">
@@ -1077,27 +1120,9 @@ final class Settings {
 	 */
 	private function render_diagnostic_panel(): void {
 		?>
-		<style>
-			.bricks-mcp-diagnostics { margin: 20px 0; background: #fff; border: 1px solid #c3c4c7; padding: 15px 20px; }
-			.bricks-mcp-diagnostics h3 { margin-top: 0; }
-			.bricks-mcp-diagnostics-actions { margin: 10px 0; display: flex; align-items: center; gap: 8px; }
-			.bricks-mcp-check { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f1; }
-			.bricks-mcp-check:last-child { border-bottom: none; }
-			.bricks-mcp-check .dashicons { margin-top: 2px; font-size: 20px; width: 20px; height: 20px; }
-			.bricks-mcp-check--pass .dashicons { color: #00a32a; }
-			.bricks-mcp-check--warn .dashicons { color: #dba617; }
-			.bricks-mcp-check--fail .dashicons { color: #d63638; }
-			.bricks-mcp-check--skipped .dashicons { color: #787c82; }
-			.bricks-mcp-check-content p { margin: 2px 0 0; }
-			.bricks-mcp-check-fixes { margin-top: 5px; padding: 8px 12px; background: #f6f7f7; border-radius: 3px; }
-			.bricks-mcp-check-fixes ul { margin: 5px 0 0 15px; }
-			.bricks-mcp-diagnostics-summary { font-size: 14px; margin: 10px 0; }
-			#bricks-mcp-diagnostics-spinner { float: none; margin: 0; }
-		</style>
-
 		<div class="bricks-mcp-diagnostics" id="bricks-mcp-diagnostics">
-			<h3><?php esc_html_e( 'System Status', 'bricks-mcp' ); ?></h3>
-			<p class="description"><?php esc_html_e( 'Run diagnostics to check if your site is properly configured for MCP connections.', 'bricks-mcp' ); ?></p>
+			<h3><?php esc_html_e( 'System Health', 'bricks-mcp' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'Check if your site is ready for AI connections.', 'bricks-mcp' ); ?></p>
 			<div class="bricks-mcp-diagnostics-actions">
 				<button type="button" class="button button-primary" id="bricks-mcp-run-diagnostics">
 					<?php esc_html_e( 'Run Diagnostics', 'bricks-mcp' ); ?>
