@@ -1406,13 +1406,13 @@ final class Router {
 		// Bricks consolidated tool (replaces enable_bricks, disable_bricks, get_bricks_settings, get_breakpoints, get_element_schemas).
 		$this->register_tool(
 			'bricks',
-			__( "Manage Bricks Builder settings, schema, and pattern library.\n\nActions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, analyze_patterns, save_pattern, use_pattern, get_notes, add_note, delete_note.", 'bricks-mcp' ),
+			__( "Manage Bricks Builder settings, schema, and pattern library.\n\nActions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, analyze_patterns, save_pattern, use_pattern, map_design, get_notes, add_note, delete_note.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
 					'action'       => array(
 						'type'        => 'string',
-						'enum'        => array( 'enable', 'disable', 'get_settings', 'get_breakpoints', 'get_element_schemas', 'get_dynamic_tags', 'get_query_types', 'get_form_schema', 'get_interaction_schema', 'get_component_schema', 'get_popup_schema', 'get_filter_schema', 'get_condition_schema', 'get_global_queries', 'set_global_query', 'delete_global_query', 'analyze_patterns', 'save_pattern', 'use_pattern', 'get_notes', 'add_note', 'delete_note' ),
+						'enum'        => array( 'enable', 'disable', 'get_settings', 'get_breakpoints', 'get_element_schemas', 'get_dynamic_tags', 'get_query_types', 'get_form_schema', 'get_interaction_schema', 'get_component_schema', 'get_popup_schema', 'get_filter_schema', 'get_condition_schema', 'get_global_queries', 'set_global_query', 'delete_global_query', 'analyze_patterns', 'save_pattern', 'use_pattern', 'map_design', 'get_notes', 'add_note', 'delete_note' ),
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					),
 					'post_id'      => array(
@@ -1474,6 +1474,39 @@ final class Router {
 					'note_id'         => array(
 						'type'        => 'string',
 						'description' => __( 'Note ID to delete (delete_note: required)', 'bricks-mcp' ),
+					),
+					'sections'        => array(
+						'type'        => 'array',
+						'description' => __( 'Array of section descriptions for design mapping (map_design: required). Each section: {description (required), layout (optional: split|grid|stacked|full-width), background (optional: dark|light|image|gradient), columns (optional: integer), content_types (optional: array of element types like heading, text, button, image, icon, card, list, form, video)}', 'bricks-mcp' ),
+						'items'       => array(
+							'type'       => 'object',
+							'properties' => array(
+								'description'   => array(
+									'type'        => 'string',
+									'description' => __( 'Free-text description of the section', 'bricks-mcp' ),
+								),
+								'layout'        => array(
+									'type'        => 'string',
+									'enum'        => array( 'split', 'grid', 'stacked', 'full-width' ),
+									'description' => __( 'Layout type', 'bricks-mcp' ),
+								),
+								'background'    => array(
+									'type'        => 'string',
+									'enum'        => array( 'dark', 'light', 'image', 'gradient' ),
+									'description' => __( 'Background treatment', 'bricks-mcp' ),
+								),
+								'columns'       => array(
+									'type'        => 'integer',
+									'description' => __( 'Number of columns', 'bricks-mcp' ),
+								),
+								'content_types' => array(
+									'type'        => 'array',
+									'items'       => array( 'type' => 'string' ),
+									'description' => __( 'Element types present (heading, text, button, image, icon, card, list, form, video)', 'bricks-mcp' ),
+								),
+							),
+							'required'   => array( 'description' ),
+						),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -2585,6 +2618,7 @@ final class Router {
 			'analyze_patterns'        => $this->bricks_service->analyze_patterns(),
 			'save_pattern'            => $this->bricks_service->save_pattern( (int) ( $args['post_id'] ?? 0 ), sanitize_text_field( $args['root_element_id'] ?? '' ), sanitize_text_field( $args['name'] ?? '' ) ),
 			'use_pattern'             => $this->bricks_service->use_pattern( sanitize_text_field( $args['pattern_id'] ?? '' ), (int) ( $args['post_id'] ?? 0 ), $args['overrides'] ?? [] ),
+			'map_design'              => $this->bricks_service->map_design( $args['sections'] ?? [] ),
 			'get_notes'               => [ 'notes' => $this->bricks_service->get_notes() ],
 			'add_note'                => $this->bricks_service->add_note( sanitize_text_field( $args['text'] ?? '' ) ),
 			'delete_note'             => [ 'deleted' => $this->bricks_service->delete_note( sanitize_text_field( $args['note_id'] ?? '' ) ) ],
@@ -2592,7 +2626,7 @@ final class Router {
 				'invalid_action',
 				sprintf(
 					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, analyze_patterns, save_pattern, use_pattern, get_notes, add_note, delete_note', 'bricks-mcp' ),
+					__( 'Invalid action "%s". Valid actions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, analyze_patterns, save_pattern, use_pattern, map_design, get_notes, add_note, delete_note', 'bricks-mcp' ),
 					$action
 				)
 			),
