@@ -1394,7 +1394,7 @@ final class Router {
 				'properties' => array(
 					'section' => array(
 						'type'        => 'string',
-						'enum'        => array( 'all', 'professional', 'settings', 'animations', 'interactions', 'dynamic_data', 'forms', 'components', 'popups', 'element_conditions', 'woocommerce', 'seo', 'custom_code', 'fonts', 'import_export', 'workflows', 'gotchas', 'workflow', 'recipes', 'connection_troubleshooting' ),
+						'enum'        => array( 'all', 'professional', 'settings', 'animations', 'interactions', 'dynamic_data', 'forms', 'components', 'popups', 'element_conditions', 'woocommerce', 'seo', 'custom_code', 'fonts', 'import_export', 'workflows', 'gotchas', 'workflow', 'recipes', 'design_interpretation', 'connection_troubleshooting' ),
 						'description' => __( 'Which section to return. Defaults to "all" which returns a table of contents. Use a specific section key (e.g. "settings", "gotchas", "workflows") for full content.', 'bricks-mcp' ),
 					),
 				),
