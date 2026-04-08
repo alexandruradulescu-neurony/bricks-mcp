@@ -42,32 +42,28 @@ final class DesignMapperService {
 	];
 
 	/**
-	 * Background attribute keywords for dark themes.
+	 * Background attribute keywords keyed by background type.
 	 *
-	 * @var array<int, string>
+	 * @var array<string, array<int, string>>
 	 */
-	private const DARK_KEYWORDS = [ 'dark', 'inverse', 'night', 'black' ];
+	private const BACKGROUND_KEYWORDS = [
+		'dark'     => [ 'dark', 'inverse', 'night', 'black' ],
+		'light'    => [ 'light', 'white', 'bright' ],
+		'image'    => [ 'image', 'bg-image', 'cover', 'overlay' ],
+		'gradient' => [ 'gradient', 'fade' ],
+	];
 
 	/**
-	 * Background attribute keywords for light themes.
+	 * Layout attribute keywords keyed by layout type.
 	 *
-	 * @var array<int, string>
+	 * @var array<string, array<int, string>>
 	 */
-	private const LIGHT_KEYWORDS = [ 'light', 'white', 'bright' ];
-
-	/**
-	 * Layout attribute keywords for split layouts.
-	 *
-	 * @var array<int, string>
-	 */
-	private const SPLIT_KEYWORDS = [ 'split', 'half', 'two-col' ];
-
-	/**
-	 * Layout attribute keywords for grid layouts.
-	 *
-	 * @var array<int, string>
-	 */
-	private const GRID_KEYWORDS = [ 'grid', 'col', 'column' ];
+	private const LAYOUT_KEYWORDS = [
+		'split'      => [ 'split', 'half', 'two-col' ],
+		'grid'       => [ 'grid', 'col', 'column' ],
+		'stacked'    => [ 'stacked', 'stack', 'vertical', 'centered' ],
+		'full-width' => [ 'full-width', 'fullwidth', 'full', 'wide' ],
+	];
 
 	/**
 	 * Purpose groups for class categorization.
@@ -171,15 +167,17 @@ final class DesignMapperService {
 			$matched_classes = $this->match_classes( $tokens, $background, $layout );
 			$matched_pats    = $this->match_patterns( $tokens, $layout, $content_types );
 			$matched_colors  = $this->match_colors( $tokens, $background );
-			$similar_pages   = $this->find_similar_pages( $tokens, $description );
+			$similar_pages   = $this->find_similar_pages( $tokens );
 			$skeleton        = $this->build_skeleton( $layout, $content_types, $columns );
 
 			$notes = '';
 			if ( ! empty( $similar_pages ) ) {
 				$first = $similar_pages[0];
 				$notes = sprintf(
-					'Similar section found on page "%s" (ID %s) — review for reusable patterns.',
+					'Similar to "%s" on page "%s" (post %s). Study it with page:get(view=\'detail\', post_id=%s).',
+					$first['section_label'] ?? '',
 					$first['page_title'] ?? '',
+					$first['post_id'] ?? '',
 					$first['post_id'] ?? ''
 				);
 			}
@@ -266,8 +264,7 @@ final class DesignMapperService {
 
 			// Background attribute match.
 			if ( ! $is_match && '' !== $background ) {
-				$bg_lower  = strtolower( $background );
-				$bg_keys   = 'dark' === $bg_lower ? self::DARK_KEYWORDS : ( 'light' === $bg_lower ? self::LIGHT_KEYWORDS : [] );
+				$bg_keys = self::BACKGROUND_KEYWORDS[ strtolower( $background ) ] ?? [];
 
 				foreach ( $bg_keys as $bk ) {
 					if ( false !== strpos( $class_lower, $bk ) ) {
@@ -279,14 +276,7 @@ final class DesignMapperService {
 
 			// Layout attribute match.
 			if ( ! $is_match && '' !== $layout ) {
-				$layout_lower = strtolower( $layout );
-				$layout_keys  = [];
-
-				if ( 'split' === $layout_lower ) {
-					$layout_keys = self::SPLIT_KEYWORDS;
-				} elseif ( 'grid' === $layout_lower ) {
-					$layout_keys = self::GRID_KEYWORDS;
-				}
+				$layout_keys = self::LAYOUT_KEYWORDS[ strtolower( $layout ) ] ?? [];
 
 				foreach ( $layout_keys as $lk ) {
 					if ( false !== strpos( $class_lower, $lk ) ) {
@@ -383,13 +373,7 @@ final class DesignMapperService {
 				$layout_lower = strtolower( $layout );
 				$layout_check = [];
 
-				if ( 'split' === $layout_lower ) {
-					$layout_check = self::SPLIT_KEYWORDS;
-				} elseif ( 'grid' === $layout_lower ) {
-					$layout_check = self::GRID_KEYWORDS;
-				} else {
-					$layout_check = [ $layout_lower ];
-				}
+				$layout_check = self::LAYOUT_KEYWORDS[ $layout_lower ] ?? [ $layout_lower ];
 
 				foreach ( $layout_check as $lk ) {
 					if ( false !== strpos( $pattern_text, $lk ) ) {
@@ -636,11 +620,10 @@ final class DesignMapperService {
 	 * Splits page summaries into individual section labels and compares
 	 * keyword overlap in both directions.
 	 *
-	 * @param array<int, string> $tokens      Tokenized description keywords.
-	 * @param string             $description Raw section description.
+	 * @param array<int, string> $tokens Tokenized description keywords.
 	 * @return array<int, array<string, mixed>> Top 3 similar page sections.
 	 */
-	private function find_similar_pages( array $tokens, string $description ): array {
+	private function find_similar_pages( array $tokens ): array {
 		if ( empty( $this->page_summaries ) || empty( $tokens ) ) {
 			return [];
 		}
