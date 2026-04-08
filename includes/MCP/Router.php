@@ -912,6 +912,29 @@ final class Router {
 			$info['ai_notes_note'] = 'These are persistent instructions from the site owner. You MUST follow them.';
 		}
 
+		// Key gotchas embedded so the AI gets critical rules on the first mandatory call.
+		$info['gotchas'] = [
+			'_textAlign does nothing — put text-align inside _typography instead.',
+			'%root% shorthand works in _cssCustom — auto-replaces with the element selector.',
+			'Use _widthMax for max-width, not _maxWidth. For multi-column layouts, use global grid classes with var(--grid-*) variables.',
+			'Templates must have publish status to be active.',
+			'Icon libraries: Ionicons, Themify, FontAwesome — call bricks:get_element_schemas(element=name) to check available options.',
+			'Text supports inline HTML: "<strong>Bold</strong> and normal".',
+			'update_element calls are independent — fire them in parallel for speed.',
+			'Gradients use _gradient key (separate from _background). Each color entry: {color: {raw: value}, stop: "percentage"}.',
+			'Dynamic tags ({post_title}, {post_url}) only work inside query loops or single post templates.',
+			'Image dynamic data: {useDynamicData: "{tag}"}. Link dynamic data: {type: "dynamic", dynamicData: "{tag}"}.',
+			'_animation is deprecated since Bricks 1.6 — use _interactions array instead.',
+			'Component instance name = component ID (6-char string), not a human-readable type.',
+			'Component properties without connections do nothing — set the connections map.',
+			'Slot content lives in the page element array (parent = instance_id), not the component definition.',
+			'Popup triggers use _interactions on elements. Popup settings (close, backdrop) use template_settings — separate systems.',
+			'Always use nestable element variants: tabs-nested, accordion-nested, nav-nested. Basic versions only support plain text.',
+			'div needs explicit _display: flex for flex layouts — block and container default to flex, div does not.',
+			'Before using ANY unfamiliar element type, ALWAYS call bricks:get_element_schemas(element=name) first.',
+			'Do NOT duplicate child theme CSS inline — sections get padding, containers get gap, headings get sizes automatically.',
+		];
+
 		return $info;
 	}
 
