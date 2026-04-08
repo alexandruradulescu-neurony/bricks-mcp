@@ -2236,23 +2236,24 @@ The `%root%` is automatically replaced with `#brxe-{elementId}` during normaliza
 
 Follow this sequence for every page you build:
 
-1. **Understand the site** — Call `get_site_info` to learn the design system, color palette, child theme CSS, existing pages, and class groups.
+1. **Understand the site** — Call `get_site_info` to learn the design system, color palette, child theme CSS, gotchas, existing pages, and class groups.
 
-2. **Study existing patterns** — Call `page:get(view='describe')` on 2-3 existing pages to understand the site's visual language. Note which section types are used, what classes they reference, dark vs light backgrounds, grid layouts.
+2. **Get global classes** — Call `global_class:list` to see all available classes with their IDs and settings. Map class names to component types: heroes, grids, cards, typography, navigation.
 
-3. **Check the pattern library** — Call `bricks:analyze_patterns` to discover reusable section patterns. If a pattern matches what you need, use `bricks:use_pattern` instead of building from scratch.
+3. **Get CSS variables** — Call `global_variable:list` to see all available variables. Use `var(--name)` to reference them. Never hardcode values when a variable exists.
 
-4. **Get global classes** — Call `global_class:list` to see all available classes. Map class names to component types: heroes, grids, cards, typography, navigation.
+4. **Check the pattern library** — Call `bricks:analyze_patterns` to discover reusable section patterns. If a pattern matches what you need, use `bricks:use_pattern` instead of building from scratch.
 
 5. **Build with classes** — Use `_cssGlobalClasses` on EVERY element. Never inline what a class already handles. The child theme CSS handles section padding, container gaps, heading sizes — do NOT duplicate these.
 
 6. **Verify your work** — After building, call `page:get(view='describe')` on the page you just built. Check that sections have the right background, layout, and content structure.
 
+> **Note:** Steps 1-3 are server-enforced. Write operations will be rejected if you skip them.
+
 ### When to Create vs Reuse
 
 - **Reuse**: If `analyze_patterns` shows a matching pattern, use `bricks:use_pattern` with text overrides
-- **Adapt**: If a similar page exists, use `page:get(view='describe')` to study it, then build the same structure with different content
-- **Create**: Only build from scratch when no existing pattern matches. Even then, use existing global classes for all styling.
+- **Create**: When no existing pattern matches, build from scratch using existing global classes for all styling. If no classes exist, create them with `global_class:batch_create`.
 
 ### Element Hierarchy
 
@@ -2294,15 +2295,6 @@ Use semantic `tag` where appropriate:
 7. page:get(view='describe', post_id) → verify structure
 ```
 
-### Add a Section Matching Existing Style
-
-```
-1. page:get(view='describe', post_id=TARGET_PAGE) → see current sections
-2. page:get(view='describe', post_id=REFERENCE_PAGE) → study the section to match
-3. page:get(view='detail', post_id=REFERENCE_PAGE, root_element_id=SECTION_ID) → get exact structure
-4. element:bulk_add(post_id=TARGET_PAGE, elements=[...adapted tree...])
-5. page:get(view='describe', post_id=TARGET_PAGE) → verify
-```
 
 ### Create an FAQ Section
 
