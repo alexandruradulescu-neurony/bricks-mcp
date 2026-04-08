@@ -2227,6 +2227,7 @@ The `%root%` is automatically replaced with `#brxe-{elementId}` during normaliza
 16. **`toggle-mode` needs dark mode colors** — The toggle element only works if dark mode variants are configured in the Bricks color manager. Without them, the button renders but does nothing.
 17. **Builder paste/import behavior settings** — `builderHtmlCssConverter` controls HTML/CSS paste conversion (`confirm`|`enabled`|`disabled`), `builderGlobalClassesImport` controls global class auto-import on paste (`confirm`|`enabled`|`disabled`). Both default to `confirm`. Read via `bricks:get_settings` with `category: builder`.
 18. **The site always has a design system** — Fancy color palette (30 colors) + 109 CSS variables + child theme CSS. Sections already get `padding: var(--padding-section)`, containers get `gap: var(--content-gap)`, headings get `font-size: var(--h1)` through `var(--h6)`. Do NOT set these properties inline — you will override responsive fluid values with static ones.
+19. **Always use nestable element variants** — For tabs, accordion, and nav, ALWAYS use the nestable version (`tabs-nested`, `accordion-nested`, `nav-nested`). Basic versions (`tabs`, `accordion`) use flat repeaters that only support plain text. Nestable versions accept child elements for rich content (headings, images, icons, custom layouts). The schema response will warn you if a nestable variant exists — never ignore that warning.
 
 ## Workflow
 

@@ -108,12 +108,46 @@ final class SchemaHandler {
 			if ( is_wp_error( $schema ) ) {
 				return $schema;
 			}
-			return array(
+
+			$result = array(
 				'total_elements' => 1,
 				'bricks_version' => $this->schema_generator->get_bricks_version(),
 				'cached'         => false,
 				'schema'         => $schema,
 			);
+
+			// Surface related elements sharing the same name prefix (e.g., tabs → tabs-nested).
+			$catalog  = $this->schema_generator->get_element_catalog();
+			$base     = preg_replace( '/-(nested|nestable)$/', '', $element_name );
+			$related  = [];
+			foreach ( $catalog as $item ) {
+				$item_name = $item['name'] ?? '';
+				if ( $item_name !== $element_name && ( str_starts_with( $item_name, $base . '-' ) || str_starts_with( $element_name, $item_name . '-' ) ) ) {
+					$related[] = $item;
+				}
+			}
+			if ( ! empty( $related ) ) {
+				$result['related_elements'] = $related;
+			}
+
+			// Warn if a nestable variant exists and the requested element is non-nestable.
+			$is_nestable = $schema['nesting']['nestable'] ?? false;
+			if ( ! $is_nestable ) {
+				$nestable_name = $element_name . '-nested';
+				foreach ( $catalog as $item ) {
+					if ( ( $item['name'] ?? '' ) === $nestable_name ) {
+						$result['warning'] = sprintf(
+							'"%s" is a basic element with a flat repeater (plain text only). For rich content with child elements (headings, images, custom layouts), use "%s" instead. Call get_element_schemas(element=\'%s\') for the correct structure.',
+							$element_name,
+							$nestable_name,
+							$nestable_name
+						);
+						break;
+					}
+				}
+			}
+
+			return $result;
 		}
 
 		// Full catalog with schemas.
