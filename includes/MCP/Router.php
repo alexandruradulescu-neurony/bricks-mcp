@@ -14,6 +14,7 @@ use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\ElementIdGenerator;
 use BricksMCP\MCP\Services\MediaService;
 use BricksMCP\MCP\Services\MenuService;
+use BricksMCP\MCP\Services\PendingActionService;
 use BricksMCP\MCP\Services\SchemaGenerator;
 use BricksMCP\MCP\Services\ValidationService;
 use BricksMCP\Plugin;
@@ -136,6 +137,13 @@ final class Router {
 	private Handlers\DesignSystemHandler $design_system_handler;
 
 	/**
+	 * Pending action service for token-based destructive action confirmation.
+	 *
+	 * @var PendingActionService
+	 */
+	private PendingActionService $pending_action_service;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -154,6 +162,7 @@ final class Router {
 		$this->template_handler       = new Handlers\TemplateHandler( $this->bricks_service );
 		$this->global_class_handler   = new Handlers\GlobalClassHandler( $this->bricks_service );
 		$this->design_system_handler  = new Handlers\DesignSystemHandler( $this->bricks_service );
+		$this->pending_action_service = new PendingActionService();
 
 		$this->register_default_tools();
 
@@ -198,6 +207,25 @@ final class Router {
 			),
 			array( $this, 'tool_get_site_info' ),
 			array( 'readOnlyHint' => true )
+		);
+
+		// Confirm destructive action tool (token-based confirmation).
+		$this->register_tool(
+			'confirm_destructive_action',
+			__( "Confirm a destructive action using a one-time token. When a destructive operation (delete, bulk replace, cascade remove, etc.) is requested, the server returns a confirmation token instead of executing immediately. Present the action description to the user and call this tool with the token only after they approve.\n\nThe token expires after 2 minutes and can only be used once.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'token' => array(
+						'type'        => 'string',
+						'description' => __( 'The confirmation token returned by the destructive operation.', 'bricks-mcp' ),
+						'pattern'     => '^[0-9a-f]{16}$',
+					),
+				),
+				'required'   => array( 'token' ),
+			),
+			array( $this, 'tool_confirm_destructive_action' ),
+			array( 'destructiveHint' => true )
 		);
 
 		// WordPress consolidated tool (replaces get_posts, get_post, get_users, get_plugins).
@@ -399,6 +427,10 @@ final class Router {
 
 		$tool = $this->tools[ $name ];
 
+		// Strip 'confirm' from incoming arguments to prevent AI bypass.
+		// Only the confirm_destructive_action tool can inject it internally.
+		unset( $arguments['confirm'] );
+
 		$capability = $this->get_tool_capability( $name );
 		if ( null !== $capability && ! current_user_can( $capability ) ) {
 			return Response::error(
@@ -423,6 +455,10 @@ final class Router {
 			$result = call_user_func( $tool['handler'], $arguments );
 
 			if ( is_wp_error( $result ) ) {
+				// Intercept confirmation-required errors to generate a token.
+				if ( 'bricks_mcp_confirm_required' === $result->get_error_code() ) {
+					return $this->create_confirmation_response( $name, $arguments, $result->get_error_message() );
+				}
 				return Response::tool_error( $result );
 			}
 
@@ -443,6 +479,45 @@ final class Router {
 				500
 			);
 		}
+	}
+
+	/**
+	 * Create a confirmation token response for a destructive action.
+	 *
+	 * Intercepts bricks_mcp_confirm_required errors, generates a one-time-use
+	 * token, and returns an error response instructing the AI to call
+	 * confirm_destructive_action with the token.
+	 *
+	 * @param string               $tool_name   The tool that requires confirmation.
+	 * @param array<string, mixed> $arguments   The original arguments (with 'confirm' already stripped).
+	 * @param string               $description The handler's description of what will happen.
+	 * @return \WP_REST_Response The error response containing the token.
+	 */
+	private function create_confirmation_response( string $tool_name, array $arguments, string $description ): \WP_REST_Response {
+		$token = $this->pending_action_service->create( $tool_name, $arguments, $description );
+
+		// Strip the old "Set confirm: true to proceed" instruction.
+		$clean_description = preg_replace(
+			'/\s*Set confirm: true to proceed[^.]*\.?/',
+			'',
+			$description
+		);
+		$clean_description = rtrim( $clean_description, '. ' );
+
+		$message = sprintf(
+			/* translators: 1: Action description, 2: Confirmation token */
+			__( "%1\$s\n\nTo proceed, call confirm_destructive_action with token: %2\$s\nThis token expires in 2 minutes and can only be used once.", 'bricks-mcp' ),
+			$clean_description,
+			$token
+		);
+
+		$error = new \WP_Error(
+			'bricks_mcp_confirm_required',
+			$message,
+			array( 'token' => $token )
+		);
+
+		return Response::tool_error( $error );
 	}
 
 	/**
@@ -475,6 +550,44 @@ final class Router {
 
 		// All other tools (bricks, page, element, template, etc.) require manage_options.
 		return 'manage_options';
+	}
+
+	/**
+	 * Tool: Confirm a destructive action using a one-time token.
+	 *
+	 * Validates the token, retrieves the stored action, and re-dispatches
+	 * the original tool handler with confirm: true injected internally.
+	 *
+	 * @param array<string, mixed> $args Tool arguments (requires: token).
+	 * @return array<string, mixed>|\WP_Error Result of the confirmed action.
+	 */
+	public function tool_confirm_destructive_action( array $args ): array|\WP_Error {
+		$token = sanitize_text_field( $args['token'] ?? '' );
+
+		$pending = $this->pending_action_service->validate_and_consume( $token );
+		if ( false === $pending ) {
+			return new \WP_Error(
+				'invalid_token',
+				__( 'Invalid or expired confirmation token. Request the destructive action again to get a new token.', 'bricks-mcp' )
+			);
+		}
+
+		$tool_name = $pending['tool_name'];
+		$tool_args = $pending['args'];
+
+		if ( ! isset( $this->tools[ $tool_name ] ) ) {
+			return new \WP_Error(
+				'tool_not_found',
+				/* translators: %s: Tool name */
+				sprintf( __( 'The original tool "%s" is no longer available.', 'bricks-mcp' ), $tool_name )
+			);
+		}
+
+		// Re-inject confirm and call the handler directly.
+		// This bypasses execute_tool() which would strip confirm again.
+		$tool_args['confirm'] = true;
+
+		return call_user_func( $this->tools[ $tool_name ]['handler'], $tool_args );
 	}
 
 	/**
@@ -1517,7 +1630,7 @@ final class Router {
 					),
 					'confirm'             => array(
 						'type'        => 'boolean',
-						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 					'force'               => array(
 						'type'        => 'boolean',
@@ -1620,7 +1733,7 @@ final class Router {
 					),
 					'confirm'          => array(
 						'type'        => 'boolean',
-						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -1706,7 +1819,7 @@ final class Router {
 					),
 					'confirm'     => array(
 						'type'        => 'boolean',
-						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 					'force'       => array(
 						'type'        => 'boolean',
@@ -1774,7 +1887,7 @@ final class Router {
 					),
 					'confirm' => array(
 						'type'        => 'boolean',
-						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -1861,7 +1974,7 @@ final class Router {
 					),
 					'confirm'        => array(
 						'type'        => 'boolean',
-						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -1912,7 +2025,7 @@ final class Router {
 					),
 					'confirm'         => array(
 						'type'        => 'boolean',
-						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -1958,7 +2071,7 @@ final class Router {
 					),
 					'confirm'         => array(
 						'type'        => 'boolean',
-						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -2004,7 +2117,7 @@ final class Router {
 					),
 					'confirm'    => array(
 						'type'        => 'boolean',
-						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -2067,7 +2180,7 @@ final class Router {
 					),
 					'confirm'       => array(
 						'type'        => 'boolean',
-						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -2168,7 +2281,7 @@ final class Router {
 					),
 					'confirm'  => array(
 						'type'        => 'boolean',
-						'description' => __( 'Set to true to confirm destructive operations (required for delete actions).', 'bricks-mcp' ),
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
