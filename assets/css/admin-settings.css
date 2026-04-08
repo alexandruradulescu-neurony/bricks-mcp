@@ -721,4 +721,38 @@
 		color: #a5b4fc;
 		border-bottom-color: #a5b4fc;
 	}
+
+	/* Tables (Active Connections, AI Notes) */
+	.bricks-mcp-config-section .widefat {
+		background: var(--bwm-gray-50);
+		border-color: var(--bwm-gray-300);
+		color: #d1d5db;
+	}
+
+	.bricks-mcp-config-section .widefat thead th,
+	.bricks-mcp-config-section .widefat thead td {
+		background: var(--bwm-gray-200);
+		color: #e5e7eb;
+		border-bottom-color: var(--bwm-gray-300);
+	}
+
+	.bricks-mcp-config-section .widefat tbody tr {
+		background: var(--bwm-gray-50);
+	}
+
+	.bricks-mcp-config-section .widefat.striped tbody tr:nth-child(odd) {
+		background: var(--bwm-gray-100);
+	}
+
+	.bricks-mcp-config-section .widefat tbody td {
+		color: #d1d5db;
+		border-bottom-color: var(--bwm-gray-200);
+	}
+
+	.bricks-mcp-config-section .widefat tfoot th,
+	.bricks-mcp-config-section .widefat tfoot td {
+		background: var(--bwm-gray-200);
+		color: #e5e7eb;
+		border-top-color: var(--bwm-gray-300);
+	}
 }
