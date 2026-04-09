@@ -156,7 +156,7 @@ class SchemaGenerator {
 	 */
 	public static function get_css_property_map_full(): array {
 		if ( null === self::$css_property_map_data ) {
-			$path = dirname( __DIR__, 2 ) . '/data/css-property-map.json';
+			$path = dirname( __DIR__, 3 ) . '/data/css-property-map.json';
 			if ( file_exists( $path ) ) {
 				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 				$data = is_string( $json ) ? json_decode( $json, true ) : [];
