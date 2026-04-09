@@ -293,7 +293,7 @@ final class ElementSettingsGenerator {
 					foreach ( $children as &$child_el ) {
 						if ( in_array( $child_el['name'] ?? '', $dark_text_types, true ) && is_array( $child_el['settings'] ?? null ) ) {
 							if ( ! isset( $child_el['settings']['_typography']['color'] ) ) {
-								$child_el['settings']['_typography']['color'] = [ 'raw' => 'var(--white)' ];
+								$child_el['settings']['_typography']['color'] = [ 'raw' => SiteVariableResolver::white_color() ];
 							}
 						}
 					}
@@ -487,27 +487,8 @@ final class ElementSettingsGenerator {
 	private function get_spacing_value( string $purpose, array $design_context ): string {
 		$spacing = $design_context['spacing'] ?? 'normal';
 
-		// Map spacing intent to site CSS variables.
-		// Uses the site's actual token names: grid-gap, content-gap, padding-section, etc.
-		$map = [
-			'compact'  => [
-				'gap'             => 'var(--grid-gap-s)',
-				'padding'         => 'var(--space-m)',
-				'section-padding' => 'var(--space-l)',
-			],
-			'normal'   => [
-				'gap'             => 'var(--grid-gap)',
-				'padding'         => 'var(--content-gap)',
-				'section-padding' => 'var(--padding-section)',
-			],
-			'spacious' => [
-				'gap'             => 'var(--container-gap)',
-				'padding'         => 'var(--space-xl)',
-				'section-padding' => 'var(--space-section)',
-			],
-		];
-
-		return $map[ $spacing ][ $purpose ] ?? $map['normal'][ $purpose ] ?? 'var(--grid-gap)';
+		// Resolve spacing dynamically from the site's actual CSS variables.
+		return SiteVariableResolver::spacing( $purpose, $spacing );
 	}
 
 	/**
@@ -521,18 +502,18 @@ final class ElementSettingsGenerator {
 	private function apply_background( array $settings, string $background, array $design_context ): array {
 		switch ( $background ) {
 			case 'dark':
-				$settings['_background'] = [ 'color' => [ 'raw' => 'var(--base-ultra-dark)' ] ];
-				$settings['_color']      = [ 'raw' => 'var(--white)' ];
+				$settings['_background'] = [ 'color' => [ 'raw' => SiteVariableResolver::dark_background() ] ];
+				$settings['_color']      = [ 'raw' => SiteVariableResolver::white_color() ];
 				break;
 			case 'light':
-				$settings['_background'] = [ 'color' => [ 'raw' => 'var(--base-ultra-light)' ] ];
+				$settings['_background'] = [ 'color' => [ 'raw' => SiteVariableResolver::light_background() ] ];
 				break;
 			case 'gradient':
 				// Use _gradient key (separate from _background in Bricks).
 				$settings['_gradient'] = [
 					'colors' => [
-						[ 'color' => [ 'raw' => 'var(--primary)' ] ],
-						[ 'color' => [ 'raw' => 'var(--primary-dark)' ], 'stop' => '100' ],
+						[ 'color' => [ 'raw' => SiteVariableResolver::primary_color() ] ],
+						[ 'color' => [ 'raw' => SiteVariableResolver::primary_dark_color() ], 'stop' => '100' ],
 					],
 				];
 				break;
