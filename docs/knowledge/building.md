@@ -20,6 +20,21 @@ section
   container (Row 2: image left, tag pills right)
 ```
 
+## Centering and Alignment
+
+Use flex alignment, NOT `text-align: center`:
+- Center children horizontally: `_alignItems: center` on the parent container/block
+- Center children vertically: `_justifyContent: center` on the parent
+- `_typography.text-align: center` only affects text INSIDE an element, not element positioning
+
+For a centered column layout:
+```
+container with _alignItems: center
+  heading (centered because parent aligns center)
+  text-basic (centered)
+  block with _direction: row, _gap (buttons side by side)
+```
+
 ## DO NOT Duplicate Child Theme CSS
 
 The child theme globally handles:

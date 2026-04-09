@@ -7,19 +7,7 @@
       "context": "before_heading",
       "description": "Small colored text above a heading"
     },
-    {
-      "class_pattern": "grid-2",
-      "element_type": "block",
-      "context": "grid_columns_2",
-      "description": "2-column grid layout"
-    },
-    {
-      "class_pattern": "grid-3",
-      "element_type": "block",
-      "context": "grid_columns_3",
-      "description": "3-column grid layout"
-    },
-    {
+{
       "class_pattern": "tag-grid",
       "element_type": "block",
       "context": "parent_of_pills",
