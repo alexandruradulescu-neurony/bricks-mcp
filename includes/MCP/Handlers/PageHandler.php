@@ -1061,6 +1061,10 @@ final class PageHandler {
 						'type'        => 'boolean',
 						'description' => __( 'When true, permanently delete instead of moving to trash (delete action only).', 'bricks-mcp' ),
 					),
+					'bypass_design_gate'  => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set true to bypass the design build gate. By default, append_content/update_content/create with section elements or >8 elements will be rejected and redirected to build_from_schema.', 'bricks-mcp' ),
+					),
 				),
 				'required'   => array( 'action' ),
 			),

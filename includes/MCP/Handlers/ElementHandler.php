@@ -721,6 +721,10 @@ final class ElementHandler {
 						'type'        => 'boolean',
 						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
+					'bypass_design_gate' => array(
+						'type'        => 'boolean',
+						'description' => __( 'Set true to bypass the design build gate. By default, bulk_add with >8 elements will be rejected and redirected to build_from_schema.', 'bricks-mcp' ),
+					),
 				),
 				'required'   => array( 'action' ),
 			),

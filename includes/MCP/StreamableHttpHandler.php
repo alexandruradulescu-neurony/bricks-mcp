@@ -582,8 +582,10 @@ final class StreamableHttpHandler {
 			. "   Signals: \"design a\", \"create a page for\", \"build me a\", \"make a services section\", \"redesign the\"\n"
 			. "   Prerequisites: get_site_info + global_class:list + global_variable:list\n"
 			. "   Steps: describe the layout structurally (rows, columns, what goes where) → translate to design schema JSON → call build_from_schema(dry_run:true) → review → call without dry_run\n\n"
-			. "Prerequisites are server-enforced — write operations will be REJECTED if you skip them.\n"
-			. "Destructive actions (delete, replace) require token-based confirmation."
+			. "ENFORCEMENT:\n"
+			. "- Prerequisites are server-enforced per workflow — write operations REJECTED if skipped.\n"
+			. "- Design build gate: append_content, bulk_add, and create with section elements or >8 elements will be REJECTED — use build_from_schema instead.\n"
+			. "- Destructive actions (delete, replace) require token-based confirmation."
 			. $notes_text;
 
 		return $instructions;

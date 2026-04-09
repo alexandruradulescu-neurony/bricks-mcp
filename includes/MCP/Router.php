@@ -578,6 +578,12 @@ final class Router {
 			}
 		}
 
+		// Design build gate: reject complex element trees that should use build_from_schema.
+		$design_gate = $this->check_design_build_gate( $name, $arguments );
+		if ( null !== $design_gate ) {
+			return $design_gate;
+		}
+
 		try {
 			$result = call_user_func( $tool['handler'], $arguments );
 
@@ -644,6 +650,99 @@ final class Router {
 		}
 
 		return $ops[ $action ] ?? null;
+	}
+
+	/**
+	 * Design build gate: reject complex element trees that should use build_from_schema.
+	 *
+	 * Checks page:append_content, page:update_content, page:create (with elements),
+	 * page:import_clipboard, and element:bulk_add. Rejects when:
+	 * - Any root element is a section (full sections must use build_from_schema)
+	 * - Total element count exceeds 8 (complex structures must use build_from_schema)
+	 *
+	 * Can be bypassed with bypass_design_gate: true in arguments.
+	 *
+	 * @param string               $name      Tool name.
+	 * @param array<string, mixed> $arguments Tool arguments.
+	 * @return \WP_REST_Response|null Error response if gate triggered, null if allowed.
+	 */
+	private function check_design_build_gate( string $name, array $arguments ): ?\WP_REST_Response {
+		// Only check specific tool + action combos.
+		$gated_combos = [
+			'page'    => [ 'append_content', 'update_content', 'create', 'import_clipboard' ],
+			'element' => [ 'bulk_add' ],
+		];
+
+		if ( ! isset( $gated_combos[ $name ] ) ) {
+			return null;
+		}
+
+		$action = $arguments['action'] ?? '';
+		if ( ! in_array( $action, $gated_combos[ $name ], true ) ) {
+			return null;
+		}
+
+		// Allow bypass for intentional instructed builds.
+		if ( ! empty( $arguments['bypass_design_gate'] ) ) {
+			return null;
+		}
+
+		// Extract elements array.
+		$elements = $arguments['elements'] ?? [];
+		if ( 'import_clipboard' === $action ) {
+			$elements = $arguments['clipboard_data']['content'] ?? [];
+		}
+
+		if ( ! is_array( $elements ) || empty( $elements ) ) {
+			return null;
+		}
+
+		// Check 1: Any root element is a section.
+		foreach ( $elements as $el ) {
+			$el_name = $el['name'] ?? '';
+			if ( 'section' === $el_name ) {
+				return Response::error(
+					'bricks_mcp_use_build_from_schema',
+					__( 'Section elements must be built using build_from_schema. Convert your section into a design schema and call build_from_schema instead. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
+					422
+				);
+			}
+		}
+
+		// Check 2: Total element count exceeds threshold.
+		$count = $this->count_elements_recursive( $elements );
+		if ( $count > 8 ) {
+			return Response::error(
+				'bricks_mcp_use_build_from_schema',
+				sprintf(
+					__( 'Complex content (%d elements) must be built using build_from_schema. Convert your elements into a design schema and call build_from_schema instead. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
+					$count
+				),
+				422
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Recursively count elements in a nested tree.
+	 *
+	 * @param array<int, array<string, mixed>> $elements Element array.
+	 * @return int Total element count.
+	 */
+	private function count_elements_recursive( array $elements ): int {
+		$count = 0;
+		foreach ( $elements as $el ) {
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
+			$count++;
+			if ( ! empty( $el['children'] ) && is_array( $el['children'] ) ) {
+				$count += $this->count_elements_recursive( $el['children'] );
+			}
+		}
+		return $count;
 	}
 
 	/**
