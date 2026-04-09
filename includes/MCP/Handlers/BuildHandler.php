@@ -102,7 +102,7 @@ final class BuildHandler {
 		}
 
 		// Step 2: Check protected page.
-		$page_id = (int) $schema['target']['page_id'];
+		$page_id = (int) ( $schema['target']['page_id'] ?? $schema['target']['template_id'] ?? 0 );
 		$protect = $this->bricks_service->check_protected_page( $page_id );
 		if ( is_wp_error( $protect ) ) {
 			return $protect;
@@ -180,7 +180,11 @@ final class BuildHandler {
 			];
 		}
 
-		// Step 10: Write to Bricks (with error recovery).
+		// Step 10: Auto-snapshot before writing for safety.
+		$snapshot = $this->bricks_service->snapshot_page( $page_id, 'Pre build_from_schema' );
+		$snapshot_id = is_array( $snapshot ) ? ( $snapshot['snapshot_id'] ?? null ) : null;
+
+		// Step 11: Write to Bricks (with error recovery).
 		$target = $schema['target'];
 
 		try {
@@ -226,6 +230,7 @@ final class BuildHandler {
 			'classes_created'  => $class_result['classes_created'],
 			'classes_reused'   => $class_result['classes_reused'],
 			'tree_summary'     => $tree_summary,
+			'snapshot_id'      => $snapshot_id,
 		];
 	}
 
@@ -300,6 +305,7 @@ final class BuildHandler {
 							. "  \"layout\"?: \"grid\",         // Set on block/div to enable CSS grid\n"
 							. "  \"columns\"?: int,           // Grid column count (used with layout:grid)\n"
 							. "  \"responsive\"?: { \"tablet\"?: int, \"mobile\"?: int },  // Column overrides per breakpoint\n"
+							. "  \"responsive_overrides\"?: { \"breakpoint\": { \"_key\": value } },  // Per-breakpoint style overrides using composite keys\n"
 							. "  \"src\"?: string,            // Image source: attachment ID (\"105\"), URL, or \"unsplash:query\"\n"
 							. "  \"icon\"?: string|object,    // Icon shorthand (\"truck\" → ti-truck) or full {library, icon} object\n"
 							. "  \"ref\"?: string,            // Reference to a pattern defined in \"patterns\"\n"
@@ -313,7 +319,10 @@ final class BuildHandler {
 							. "- Section > container > block/div > content elements. Use multiple containers for multiple rows.\n"
 							. "- Use style_overrides for _hidden (tab-menu, tab-title, tab-content, tab-pane CSS classes).\n"
 							. "- Use layout:grid + columns for grid layouts. The MCP generates _display:grid + _gridTemplateColumns.\n"
-							. "- class_intent matches by semantic name, not CSS similarity. \"hero-title\" won't match \"section-title\".", 'bricks-mcp' ),
+							. "- class_intent matches by semantic name, not CSS similarity. \"hero-title\" won't match \"section-title\".\n"
+							. "- target accepts page_id or template_id (for headers, footers, content templates).\n\n"
+							. "EXAMPLE SCHEMA:\n"
+							. "{\"target\":{\"page_id\":94,\"action\":\"append\"},\"design_context\":{\"summary\":\"CTA section\",\"spacing\":\"normal\"},\"sections\":[{\"intent\":\"Call to action\",\"background\":\"dark\",\"structure\":{\"type\":\"section\",\"label\":\"CTA\",\"children\":[{\"type\":\"container\",\"children\":[{\"type\":\"text-basic\",\"content\":\"Tagline\"},{\"type\":\"heading\",\"tag\":\"h2\",\"content\":\"Ready to start?\"},{\"type\":\"button\",\"content\":\"Contact Us\"}]}]}}]}", 'bricks-mcp' ),
 					),
 					'dry_run' => array(
 						'type'        => 'boolean',

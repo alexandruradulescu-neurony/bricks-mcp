@@ -391,7 +391,18 @@ final class ElementSettingsGenerator {
 			}
 		}
 
-		// 11. Apply background from section-level hint.
+		// 11. Apply responsive overrides (breakpoint-specific settings).
+		if ( ! empty( $node['responsive_overrides'] ) && is_array( $node['responsive_overrides'] ) ) {
+			foreach ( $node['responsive_overrides'] as $breakpoint => $overrides ) {
+				if ( is_array( $overrides ) ) {
+					foreach ( $overrides as $key => $value ) {
+						$settings[ "{$key}:{$breakpoint}" ] = $value;
+					}
+				}
+			}
+		}
+
+		// 12. Apply background from section-level hint.
 		if ( 'section' === $type && ! empty( $node['background'] ) ) {
 			$settings = $this->apply_background( $settings, $node['background'], $design_context );
 		}

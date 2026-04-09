@@ -115,7 +115,7 @@ final class BricksToolHandler {
 	private function tool_get_knowledge( array $args ): array|\WP_Error {
 		$domain = sanitize_text_field( $args['domain'] ?? '' );
 
-		$valid_domains = [ 'forms', 'dynamic-data', 'components', 'popups', 'woocommerce', 'animations', 'seo' ];
+		$valid_domains = [ 'building', 'forms', 'dynamic-data', 'components', 'popups', 'woocommerce', 'animations', 'seo' ];
 
 		if ( empty( $domain ) ) {
 			return [
@@ -546,7 +546,7 @@ final class BricksToolHandler {
 					),
 					'domain'       => array(
 						'type'        => 'string',
-						'enum'        => array( 'forms', 'dynamic-data', 'components', 'popups', 'woocommerce', 'animations', 'seo' ),
+						'enum'        => array( 'building', 'forms', 'dynamic-data', 'components', 'popups', 'woocommerce', 'animations', 'seo' ),
 						'description' => __( 'Knowledge domain (get_knowledge: optional, omit to list available domains)', 'bricks-mcp' ),
 					),
 				),

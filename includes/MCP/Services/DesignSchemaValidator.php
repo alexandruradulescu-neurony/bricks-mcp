@@ -82,12 +82,20 @@ final class DesignSchemaValidator {
 			$errors[] = 'target is required and must be an object.';
 		} else {
 			$target = $schema['target'];
-			if ( empty( $target['page_id'] ) || ! is_numeric( $target['page_id'] ) ) {
-				$errors[] = 'target.page_id is required and must be a positive integer.';
+			$page_id = $target['page_id'] ?? null;
+			$template_id = $target['template_id'] ?? null;
+
+			if ( null === $page_id && null === $template_id ) {
+				$errors[] = 'target.page_id or target.template_id is required.';
 			} else {
-				$post = get_post( (int) $target['page_id'] );
-				if ( ! $post ) {
-					$errors[] = sprintf( 'target.page_id %d does not exist.', (int) $target['page_id'] );
+				$post_id = $page_id ?? $template_id;
+				if ( ! is_numeric( $post_id ) ) {
+					$errors[] = 'target.page_id/template_id must be a positive integer.';
+				} else {
+					$post = get_post( (int) $post_id );
+					if ( ! $post ) {
+						$errors[] = sprintf( 'target post %d does not exist.', (int) $post_id );
+					}
 				}
 			}
 
