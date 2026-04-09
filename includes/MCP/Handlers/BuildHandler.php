@@ -140,6 +140,21 @@ final class BuildHandler {
 		// Step 7: Expand patterns and repeats.
 		$expanded = $this->expander->expand( $schema );
 
+		// Step 7b: Re-validate expanded sections (catches hierarchy violations from expansion).
+		foreach ( $expanded['sections'] as $idx => $section ) {
+			if ( ! empty( $section['structure'] ) ) {
+				$expansion_errors = [];
+				$this->validator->validate_expanded_node( $section['structure'], "sections[{$idx}].structure", $expansion_errors );
+				if ( ! empty( $expansion_errors ) ) {
+					return new \WP_Error(
+						'invalid_expanded_schema',
+						sprintf( 'Expanded schema has %d error(s): %s', count( $expansion_errors ), implode( '; ', $expansion_errors ) ),
+						[ 'errors' => $expansion_errors ]
+					);
+				}
+			}
+		}
+
 		// Step 8: Generate Bricks element trees from expanded sections.
 		$design_context = $expanded['design_context'] ?? [];
 		$all_elements   = [];

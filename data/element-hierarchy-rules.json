@@ -80,6 +80,31 @@
       "accepts_children": true,
       "typical_children": ["div"],
       "notes": "Each slide is a div child"
+    },
+    "form": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": true,
+      "typical_children": ["form-field"]
+    },
+    "alert": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "counter": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "list": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "pricing-tables": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "animated-typing": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
     }
   }
 }

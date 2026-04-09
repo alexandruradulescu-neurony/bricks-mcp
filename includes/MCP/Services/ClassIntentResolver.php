@@ -57,6 +57,7 @@ final class ClassIntentResolver {
 	 * @return array{map: array<string, string>, classes_reused: string[], classes_created: string[], classes_with_styles: string[]}
 	 */
 	public function resolve( array $intents, bool $dry_run = false, array $style_map = [] ): array {
+		$intents = array_values( array_unique( $intents ) );
 		$classes = $this->get_classes();
 
 		// Build lookup indexes.
@@ -261,7 +262,7 @@ final class ClassIntentResolver {
 
 			// Find a class matching this pattern.
 			foreach ( $class_by_name as $name => $class ) {
-				if ( str_contains( $name, $pattern ) || $name === $pattern ) {
+				if ( $name === $pattern || str_starts_with( $name, $pattern . '-' ) || str_starts_with( $name, $pattern . '_' ) ) {
 					return $class['id'] ?? null;
 				}
 			}

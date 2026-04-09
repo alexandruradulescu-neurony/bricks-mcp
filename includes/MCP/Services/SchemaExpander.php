@@ -33,7 +33,7 @@ final class SchemaExpander {
 
 		foreach ( $schema['sections'] as &$section ) {
 			if ( ! empty( $section['structure'] ) ) {
-				$section['structure'] = $this->expand_node( $section['structure'], $patterns );
+				$section['structure'] = $this->expand_node( $section['structure'], $patterns, [] );
 			}
 		}
 		unset( $section );
@@ -56,11 +56,18 @@ final class SchemaExpander {
 	 * @param array<string, mixed> $patterns Pattern definitions.
 	 * @return array<string, mixed> Expanded node.
 	 */
-	private function expand_node( array $node, array $patterns ): array {
+	private function expand_node( array $node, array $patterns, array $visited = [] ): array {
 		// Handle ref + repeat + data (pattern instantiation with repetition).
 		if ( ! empty( $node['ref'] ) ) {
 			$ref_name = $node['ref'];
-			$pattern  = $patterns[ $ref_name ] ?? null;
+
+			// Circular ref detection.
+			if ( in_array( $ref_name, $visited, true ) ) {
+				return [ 'type' => 'text-basic', 'content' => "[ERROR: Circular pattern ref: {$ref_name}]" ];
+			}
+			$visited[] = $ref_name;
+
+			$pattern = $patterns[ $ref_name ] ?? null;
 
 			if ( null === $pattern ) {
 				// Unresolvable ref — return as-is (validator should have caught this).
@@ -77,7 +84,7 @@ final class SchemaExpander {
 				for ( $i = 0; $i < $repeat; $i++ ) {
 					$instance_data = $data[ $i ] ?? [];
 					$instance      = $this->substitute_data( $pattern, $instance_data );
-					$instance      = $this->expand_node( $instance, $patterns );
+					$instance      = $this->expand_node( $instance, $patterns, $visited );
 					$expanded[]    = $instance;
 				}
 				// Mark as multi-expansion for parent to handle.
@@ -86,7 +93,7 @@ final class SchemaExpander {
 
 			// Single pattern instantiation (possibly with first data item).
 			$instance = ! empty( $data ) ? $this->substitute_data( $pattern, $data[0] ?? [] ) : $pattern;
-			return $this->expand_node( $instance, $patterns );
+			return $this->expand_node( $instance, $patterns, $visited );
 		}
 
 		// Expand children recursively.
@@ -96,7 +103,7 @@ final class SchemaExpander {
 				if ( ! is_array( $child ) ) {
 					continue;
 				}
-				$expanded = $this->expand_node( $child, $patterns );
+				$expanded = $this->expand_node( $child, $patterns, $visited );
 
 				// Handle multi-expansion (ref with repeat > 1).
 				if ( isset( $expanded['_expanded_multi'] ) ) {
@@ -169,6 +176,8 @@ final class SchemaExpander {
 			if ( array_key_exists( $key, $data ) ) {
 				return $data[ $key ];
 			}
+			// Data key not found — return empty string instead of literal "data.key".
+			return '';
 		}
 
 		// Interpolation: replace {data.key} within longer strings.
@@ -176,7 +185,7 @@ final class SchemaExpander {
 			'/\{data\.(\w+)\}/',
 			static function ( array $matches ) use ( $data ): string {
 				$key = $matches[1];
-				return array_key_exists( $key, $data ) ? (string) $data[ $key ] : $matches[0];
+				return array_key_exists( $key, $data ) ? (string) $data[ $key ] : '';
 			},
 			$value
 		);

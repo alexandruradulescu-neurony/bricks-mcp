@@ -158,7 +158,7 @@ final class ElementSettingsGenerator {
 	 * @return array<string, mixed> Nested element tree (simplified format for ElementNormalizer).
 	 */
 	public function generate( array $structure, array $class_map, array $design_context, array $classes_with_styles = [] ): array {
-		return $this->process_node( $structure, $class_map, $design_context, 'root', [], 0, null, $classes_with_styles );
+		return $this->process_node( $structure, $class_map, $design_context, 'root', [], 0, null, $classes_with_styles, false );
 	}
 
 	/**
@@ -182,7 +182,8 @@ final class ElementSettingsGenerator {
 		array $sibling_types = [],
 		int $position = 0,
 		?string $parent_class = null,
-		array $classes_with_styles = []
+		array $classes_with_styles = [],
+		bool $is_dark_context = false
 	): array {
 		$type     = $node['type'] ?? 'div';
 		$settings = $this->build_settings( $node, $type, $class_map, $design_context, $classes_with_styles );
@@ -239,6 +240,15 @@ final class ElementSettingsGenerator {
 			}
 		}
 
+		// Determine if children inherit a dark context.
+		$child_is_dark = $is_dark_context;
+		if ( is_array( $settings ) ) {
+			$bg_raw = $settings['_background']['color']['raw'] ?? '';
+			if ( str_contains( $bg_raw, 'dark' ) || str_contains( $bg_raw, 'ultra-dark' ) ) {
+				$child_is_dark = true;
+			}
+		}
+
 		// Process children recursively with context.
 		if ( ! empty( $node['children'] ) && is_array( $node['children'] ) ) {
 			$children = [];
@@ -253,7 +263,8 @@ final class ElementSettingsGenerator {
 						$child_sibling_types,
 						$child_pos,
 						$this_class_name,
-						$classes_with_styles
+						$classes_with_styles,
+						$child_is_dark
 					);
 					$child_pos++;
 				}
@@ -275,6 +286,20 @@ final class ElementSettingsGenerator {
 					}
 					unset( $child_el );
 				}
+
+				// Auto-set white text on direct text children in dark context.
+				if ( $child_is_dark ) {
+					$dark_text_types = [ 'heading', 'text-basic', 'text', 'text-link' ];
+					foreach ( $children as &$child_el ) {
+						if ( in_array( $child_el['name'] ?? '', $dark_text_types, true ) && is_array( $child_el['settings'] ?? null ) ) {
+							if ( ! isset( $child_el['settings']['_typography']['color'] ) ) {
+								$child_el['settings']['_typography']['color'] = [ 'raw' => 'var(--white)' ];
+							}
+						}
+					}
+					unset( $child_el );
+				}
+
 				$element['children'] = $children;
 			}
 		}

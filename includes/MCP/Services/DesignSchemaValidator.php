@@ -243,6 +243,51 @@ final class DesignSchemaValidator {
 	}
 
 	/**
+	 * Validate an expanded structure node (post-expansion).
+	 *
+	 * Similar to validate_structure_node() but does NOT check for refs
+	 * (they are already resolved) and DOES check hierarchy and accepts_children.
+	 *
+	 * @param array<string, mixed> $node        The expanded structure node.
+	 * @param string               $path        JSON path for error reporting.
+	 * @param array<int, string>   &$errors     Error collector.
+	 * @param string               $parent_type Parent element type ('root' for top-level).
+	 */
+	public function validate_expanded_node( array $node, string $path, array &$errors, string $parent_type = 'root' ): void {
+		if ( empty( $node['type'] ) ) {
+			$errors[] = "{$path}: missing type after expansion.";
+			return;
+		}
+
+		$type = $node['type'];
+
+		if ( ! $this->is_valid_element_type( $type ) ) {
+			$errors[] = "{$path}: \"{$type}\" is not a known Bricks element.";
+		}
+
+		// Hierarchy check (skip for pattern context).
+		$rules = self::get_hierarchy_rules();
+		if ( '_pattern' !== $parent_type && isset( $rules[ $type ] ) ) {
+			$valid_parents = $rules[ $type ]['valid_parents'] ?? [];
+			if ( ! empty( $valid_parents ) && ! in_array( $parent_type, $valid_parents, true ) ) {
+				$errors[] = "{$path}: \"{$type}\" not valid inside \"{$parent_type}\".";
+			}
+			$accepts = $rules[ $type ]['accepts_children'] ?? true;
+			if ( ! $accepts && ! empty( $node['children'] ) ) {
+				$errors[] = "{$path}: \"{$type}\" does not accept children.";
+			}
+		}
+
+		if ( ! empty( $node['children'] ) && is_array( $node['children'] ) ) {
+			foreach ( $node['children'] as $child_idx => $child ) {
+				if ( is_array( $child ) ) {
+					$this->validate_expanded_node( $child, "{$path}.children[{$child_idx}]", $errors, $type );
+				}
+			}
+		}
+	}
+
+	/**
 	 * Extract all unique element types referenced in the schema.
 	 *
 	 * @param array<string, mixed> $schema The validated design schema.
