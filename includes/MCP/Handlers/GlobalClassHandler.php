@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -32,12 +33,21 @@ final class GlobalClassHandler {
 	private BricksService $bricks_service;
 
 	/**
+	 * Bricks check callback.
+	 *
+	 * @var callable
+	 */
+	private $require_bricks;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param BricksService $bricks_service Bricks service instance.
+	 * @param callable      $require_bricks Callback that returns \WP_Error|null.
 	 */
-	public function __construct( BricksService $bricks_service ) {
+	public function __construct( BricksService $bricks_service, callable $require_bricks ) {
 		$this->bricks_service = $bricks_service;
+		$this->require_bricks = $require_bricks;
 	}
 
 	/**
@@ -47,6 +57,11 @@ final class GlobalClassHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		// Param aliasing: category_name -> name for create_category handler.
@@ -533,5 +548,99 @@ final class GlobalClassHandler {
 		}
 
 		return $this->bricks_service->import_global_classes_from_json( $classes_data );
+	}
+
+	/**
+	 * Register the global_class tool with the given registry.
+	 *
+	 * @param ToolRegistry $registry Tool registry instance.
+	 * @return void
+	 */
+	public function register( ToolRegistry $registry ): void {
+		$registry->register(
+			'global_class',
+			__( "Manage Bricks global CSS classes.\n\nActions: list, create, update, delete, apply (to elements), remove (from elements), batch_create, batch_delete, import_css, list_categories, create_category, delete_category, export, import_json.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'         => array(
+						'type'        => 'string',
+						'enum'        => array( 'list', 'create', 'update', 'delete', 'apply', 'remove', 'batch_create', 'batch_delete', 'import_css', 'list_categories', 'create_category', 'delete_category', 'export', 'import_json' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'class_name'     => array(
+						'type'        => 'string',
+						'description' => __( 'CSS class name (update, delete, apply, remove: required; list filter: optional)', 'bricks-mcp' ),
+					),
+					'name'           => array(
+						'type'        => 'string',
+						'description' => __( 'New class name (create: required; update: optional for rename)', 'bricks-mcp' ),
+					),
+					'styles'         => array(
+						'type'        => 'object',
+						'description' => __( 'Bricks composite key styles: _padding, _background, _margin:hover, etc. (create, update: optional)', 'bricks-mcp' ),
+					),
+					'color'          => array(
+						'type'        => 'string',
+						'description' => __( 'Visual indicator color in Bricks editor, hex format like #3498db (create, update: optional)', 'bricks-mcp' ),
+					),
+					'category'       => array(
+						'type'        => 'string',
+						'description' => __( 'Category ID (create, update: assign; list: filter by category)', 'bricks-mcp' ),
+					),
+					'replace_styles' => array(
+						'type'        => 'boolean',
+						'description' => __( 'If true, replace entire styles object instead of merging (update: default false)', 'bricks-mcp' ),
+					),
+					'post_id'        => array(
+						'type'        => 'integer',
+						'description' => __( 'Post/page ID containing the elements (apply, remove: required)', 'bricks-mcp' ),
+					),
+					'element_ids'    => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'string' ),
+						'description' => __( 'Array of element IDs (apply, remove: required)', 'bricks-mcp' ),
+					),
+					'classes'        => array(
+						'type'        => 'array',
+						'description' => __( 'Array of class objects for batch_create, or array of class name strings for batch_delete', 'bricks-mcp' ),
+					),
+					'css'            => array(
+						'type'        => 'string',
+						'description' => __( 'Raw CSS string to parse and import as global classes (import_css: required)', 'bricks-mcp' ),
+					),
+					'category_name'  => array(
+						'type'        => 'string',
+						'description' => __( 'Category name (create_category: required)', 'bricks-mcp' ),
+					),
+					'category_id'    => array(
+						'type'        => 'string',
+						'description' => __( 'Category ID to delete (delete_category: required)', 'bricks-mcp' ),
+					),
+					'search'         => array(
+						'type'        => 'string',
+						'description' => __( 'Filter classes by partial name match (list: optional)', 'bricks-mcp' ),
+					),
+					'offset'         => array(
+						'type'        => 'integer',
+						'description' => __( 'Skip first N classes (list: optional, default 0)', 'bricks-mcp' ),
+					),
+					'limit'          => array(
+						'type'        => 'integer',
+						'description' => __( 'Max classes to return (list: optional, default all)', 'bricks-mcp' ),
+					),
+					'classes_data'   => array(
+						'type'        => 'object',
+						'description' => __( 'Global classes JSON data to import (import_json: required). Array of class objects with "name" key, or {classes: [...], categories: [...]}.', 'bricks-mcp' ),
+					),
+					'confirm'        => array(
+						'type'        => 'boolean',
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' )
+		);
 	}
 }

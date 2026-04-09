@@ -12,6 +12,7 @@ namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\SchemaGenerator;
+use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -41,14 +42,23 @@ final class WooCommerceHandler {
 	private SchemaGenerator $schema_generator;
 
 	/**
+	 * Bricks check callback.
+	 *
+	 * @var callable
+	 */
+	private $require_bricks;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param BricksService   $bricks_service   Bricks service instance.
 	 * @param SchemaGenerator $schema_generator  Schema generator instance.
+	 * @param callable        $require_bricks    Callback that returns \WP_Error|null.
 	 */
-	public function __construct( BricksService $bricks_service, SchemaGenerator $schema_generator ) {
+	public function __construct( BricksService $bricks_service, SchemaGenerator $schema_generator, callable $require_bricks ) {
 		$this->bricks_service   = $bricks_service;
 		$this->schema_generator = $schema_generator;
+		$this->require_bricks   = $require_bricks;
 	}
 
 	/**
@@ -58,6 +68,11 @@ final class WooCommerceHandler {
 	 * @return array<string, mixed>|\WP_Error Response data or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		if ( ! class_exists( 'WooCommerce' ) ) {
 			return new \WP_Error(
 				'woocommerce_not_active',
@@ -1265,6 +1280,57 @@ final class WooCommerceHandler {
 			'total_skipped' => count( $skipped ),
 			'total_failed'  => count( $failed ),
 			'next_steps'    => 'Use template:get to view and customize individual templates. Use page:update_content or element:add/update to modify elements. Use get_builder_guide(section="woocommerce") for patterns.',
+		);
+	}
+
+	/**
+	 * Register the woocommerce tool with the given registry.
+	 *
+	 * @param ToolRegistry $registry Tool registry instance.
+	 * @return void
+	 */
+	public function register( ToolRegistry $registry ): void {
+		$registry->register(
+			'woocommerce',
+			__( "WooCommerce builder tools. Requires WooCommerce active.\n\nActions: status, get_elements, get_dynamic_tags, scaffold_template, scaffold_store (create all WC templates).", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'        => array(
+						'type'        => 'string',
+						'enum'        => array( 'status', 'get_elements', 'get_dynamic_tags', 'scaffold_template', 'scaffold_store' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'category'      => array(
+						'type'        => 'string',
+						'description' => __( 'Filter category (get_elements: product, cart, checkout, account, archive, utility; get_dynamic_tags: product_price, product_display, product_info, cart, order, post_compatible)', 'bricks-mcp' ),
+					),
+					'template_type' => array(
+						'type'        => 'string',
+						'enum'        => array( 'wc_product', 'wc_archive', 'wc_cart', 'wc_cart_empty', 'wc_checkout', 'wc_account_form', 'wc_account_page', 'wc_thankyou' ),
+						'description' => __( 'WooCommerce template type (scaffold_template: required)', 'bricks-mcp' ),
+					),
+					'title'         => array(
+						'type'        => 'string',
+						'description' => __( 'Custom template title (scaffold_template: optional, defaults to human-readable name)', 'bricks-mcp' ),
+					),
+					'status'        => array(
+						'type'        => 'string',
+						'enum'        => array( 'publish', 'draft' ),
+						'description' => __( 'Template post status (scaffold_template: optional, default publish)', 'bricks-mcp' ),
+					),
+					'types'         => array(
+						'type'        => 'array',
+						'description' => __( 'Specific template types to scaffold (scaffold_store: optional, defaults to all 8 types)', 'bricks-mcp' ),
+					),
+					'skip_existing' => array(
+						'type'        => 'boolean',
+						'description' => __( 'Skip types that already have a template (scaffold_store: optional, default true)', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' )
 		);
 	}
 }

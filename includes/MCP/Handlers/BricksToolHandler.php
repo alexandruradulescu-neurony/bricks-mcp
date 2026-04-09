@@ -15,6 +15,7 @@ namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\ElementIdGenerator;
+use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -37,14 +38,23 @@ final class BricksToolHandler {
 	private SchemaHandler $schema_handler;
 
 	/**
+	 * Bricks check callback.
+	 *
+	 * @var callable
+	 */
+	private $require_bricks;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param BricksService $bricks_service Bricks service instance.
 	 * @param SchemaHandler $schema_handler Schema handler instance.
+	 * @param callable      $require_bricks Callback that returns \WP_Error|null.
 	 */
-	public function __construct( BricksService $bricks_service, SchemaHandler $schema_handler ) {
+	public function __construct( BricksService $bricks_service, SchemaHandler $schema_handler, callable $require_bricks ) {
 		$this->bricks_service = $bricks_service;
 		$this->schema_handler = $schema_handler;
+		$this->require_bricks = $require_bricks;
 	}
 
 	/**
@@ -54,6 +64,11 @@ final class BricksToolHandler {
 	 * @return array<string, mixed>|\WP_Error Result data or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
@@ -407,6 +422,79 @@ final class BricksToolHandler {
 			'query_id' => $query_id,
 			'name'     => $found_query['name'] ?? '',
 			'warning'  => 'Any elements referencing this global query ID will fall back to empty query settings. Check for elements with query.id set to this ID.',
+		);
+	}
+
+	/**
+	 * Register the bricks tool with the given registry.
+	 *
+	 * @param ToolRegistry $registry Tool registry instance.
+	 * @return void
+	 */
+	public function register( ToolRegistry $registry ): void {
+		$registry->register(
+			'bricks',
+			__( "Manage Bricks Builder settings, schema, and AI notes.\n\nActions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, get_notes, add_note, delete_note.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'       => array(
+						'type'        => 'string',
+						'enum'        => array( 'enable', 'disable', 'get_settings', 'get_breakpoints', 'get_element_schemas', 'get_dynamic_tags', 'get_query_types', 'get_form_schema', 'get_interaction_schema', 'get_component_schema', 'get_popup_schema', 'get_filter_schema', 'get_condition_schema', 'get_global_queries', 'set_global_query', 'delete_global_query', 'get_notes', 'add_note', 'delete_note' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'post_id'      => array(
+						'type'        => 'integer',
+						'description' => __( 'Post/page ID (enable, disable: required)', 'bricks-mcp' ),
+					),
+					'category'     => array(
+						'type'        => 'string',
+						'description' => __( 'Filter settings by category (get_settings: optional, e.g. "general", "performance", "builder", "templates", "integrations", "woocommerce"), filter element schemas by category (get_element_schemas: optional, e.g. "layout", "basic", "general", "media", "wordpress"), or group global query by category (set_global_query: optional)', 'bricks-mcp' ),
+					),
+					'element'      => array(
+						'type'        => 'string',
+						'description' => __( "Specific element type name (get_element_schemas: optional, e.g. 'heading')", 'bricks-mcp' ),
+					),
+					'catalog_only' => array(
+						'type'        => 'boolean',
+						'description' => __( 'Return only element names, labels, and categories without full schemas (get_element_schemas: optional)', 'bricks-mcp' ),
+					),
+					'group'        => array(
+						'type'        => 'string',
+						'description' => __( 'Filter dynamic tags by group name (get_dynamic_tags: optional, e.g. "Post", "Terms", "User")', 'bricks-mcp' ),
+					),
+					'query_id'     => array(
+						'type'        => 'string',
+						'description' => __( 'Global query ID (set_global_query: optional for update; delete_global_query: required)', 'bricks-mcp' ),
+					),
+					'name'         => array(
+						'type'        => 'string',
+						'description' => __( 'Global query name (set_global_query: required)', 'bricks-mcp' ),
+					),
+					'settings'     => array(
+						'type'        => 'object',
+						'description' => __( 'Query settings object — same structure as element query settings (set_global_query: required)', 'bricks-mcp' ),
+					),
+					'offset'       => array(
+						'type'        => 'integer',
+						'description' => __( 'Skip first N schemas (get_element_schemas: optional, default 0)', 'bricks-mcp' ),
+					),
+					'limit'        => array(
+						'type'        => 'integer',
+						'description' => __( 'Max schemas to return (get_element_schemas: optional, default all)', 'bricks-mcp' ),
+					),
+					'text'         => array(
+						'type'        => 'string',
+						'description' => __( 'Note text (add_note: required)', 'bricks-mcp' ),
+					),
+					'note_id'      => array(
+						'type'        => 'string',
+						'description' => __( 'Note ID to delete (delete_note: required)', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' )
 		);
 	}
 }

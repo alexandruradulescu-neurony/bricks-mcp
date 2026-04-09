@@ -15,6 +15,7 @@ namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\ElementIdGenerator;
+use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -41,12 +42,21 @@ final class ComponentHandler {
 	private BricksService $bricks_service;
 
 	/**
+	 * Bricks check callback.
+	 *
+	 * @var callable
+	 */
+	private $require_bricks;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param BricksService $bricks_service Bricks service instance.
+	 * @param callable      $require_bricks Callback that returns \WP_Error|null.
 	 */
-	public function __construct( BricksService $bricks_service ) {
+	public function __construct( BricksService $bricks_service, callable $require_bricks ) {
 		$this->bricks_service = $bricks_service;
+		$this->require_bricks = $require_bricks;
 	}
 
 	/**
@@ -56,6 +66,11 @@ final class ComponentHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
@@ -691,6 +706,79 @@ final class ComponentHandler {
 			'slot_id'        => $slot_id,
 			'elements_added' => count( $slot_elements ),
 			'element_ids'    => $new_element_ids,
+		);
+	}
+
+	/**
+	 * Register the component tool with the given registry.
+	 *
+	 * @param ToolRegistry $registry Tool registry instance.
+	 * @return void
+	 */
+	public function register( ToolRegistry $registry ): void {
+		$registry->register(
+			'component',
+			__( "Manage Bricks Components — reusable element trees with properties and slots.\n\nActions: list, get, create, update, delete, instantiate (place on page), update_properties, fill_slot.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'        => array(
+						'type'        => 'string',
+						'enum'        => array( 'list', 'get', 'create', 'update', 'delete', 'instantiate', 'update_properties', 'fill_slot' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'component_id'  => array(
+						'type'        => 'string',
+						'description' => __( 'Component ID — 6-char alphanumeric (get, update, delete, instantiate: required)', 'bricks-mcp' ),
+					),
+					'label'         => array(
+						'type'        => 'string',
+						'description' => __( 'Component display name (create: required; update: optional)', 'bricks-mcp' ),
+					),
+					'category'      => array(
+						'type'        => 'string',
+						'description' => __( 'Category name for grouping (create/update: optional; list: filter)', 'bricks-mcp' ),
+					),
+					'description'   => array(
+						'type'        => 'string',
+						'description' => __( 'Component description (create/update: optional)', 'bricks-mcp' ),
+					),
+					'elements'      => array(
+						'type'        => 'array',
+						'description' => __( 'Flat element array — same structure as page content (create: required; update: optional). Root element ID will be auto-set to match component ID.', 'bricks-mcp' ),
+					),
+					'properties'    => array(
+						'type'        => 'array',
+						'description' => __( 'Property definitions array (create/update: optional) or property values object (instantiate/update_properties: set instance values). Each definition: {id, name, type, default, description, connections}', 'bricks-mcp' ),
+					),
+					'post_id'       => array(
+						'type'        => 'integer',
+						'description' => __( 'Post/page ID (instantiate, update_properties, fill_slot: required)', 'bricks-mcp' ),
+					),
+					'parent_id'     => array(
+						'type'        => 'string',
+						'description' => __( "Parent element ID for instance placement (instantiate: optional, default '0' for root)", 'bricks-mcp' ),
+					),
+					'position'      => array(
+						'type'        => 'integer',
+						'description' => __( "Position in parent's children array (instantiate: 0-indexed, omit to append)", 'bricks-mcp' ),
+					),
+					'instance_id'   => array(
+						'type'        => 'string',
+						'description' => __( 'Instance element ID — 6-char alphanumeric (update_properties, fill_slot: required)', 'bricks-mcp' ),
+					),
+					'slot_id'       => array(
+						'type'        => 'string',
+						'description' => __( 'Slot element ID from the component definition (fill_slot: required)', 'bricks-mcp' ),
+					),
+					'slot_elements' => array(
+						'type'        => 'array',
+						'description' => __( 'Flat element array to fill into the slot (fill_slot: required)', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' )
 		);
 	}
 }

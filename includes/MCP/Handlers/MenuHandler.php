@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\MenuService;
+use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -298,5 +299,50 @@ final class MenuHandler {
 		}
 
 		return $this->menu_service->list_locations();
+	}
+
+	/**
+	 * Register the menu tool with the given registry.
+	 *
+	 * @param ToolRegistry $registry Tool registry instance.
+	 * @return void
+	 */
+	public function register( ToolRegistry $registry ): void {
+		$registry->register(
+			'menu',
+			__( "Manage WordPress navigation menus.\n\nActions: list, get, create, update, delete, set_items, assign (to location), unassign, list_locations.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'   => array(
+						'type'        => 'string',
+						'enum'        => array( 'list', 'get', 'create', 'update', 'delete', 'set_items', 'assign', 'unassign', 'list_locations' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'menu_id'  => array(
+						'type'        => 'integer',
+						'description' => __( 'Menu ID (get, update, delete, set_items, assign: required)', 'bricks-mcp' ),
+					),
+					'name'     => array(
+						'type'        => 'string',
+						'description' => __( 'Menu name (create: required; update: required)', 'bricks-mcp' ),
+					),
+					'items'    => array(
+						'type'        => 'array',
+						'description' => __( 'Array of menu item objects as nested tree (set_items: required)', 'bricks-mcp' ),
+					),
+					'location' => array(
+						'type'        => 'string',
+						'description' => __( 'Theme menu location slug (assign: required; unassign: required)', 'bricks-mcp' ),
+					),
+					'confirm'  => array(
+						'type'        => 'boolean',
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' )
+		);
 	}
 }

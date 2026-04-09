@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -125,5 +126,43 @@ final class FontHandler {
 		}
 
 		return $this->bricks_service->update_font_settings( $fields );
+	}
+
+	/**
+	 * Register the font tool with the given registry.
+	 *
+	 * @param ToolRegistry $registry Tool registry instance.
+	 * @return void
+	 */
+	public function register( ToolRegistry $registry ): void {
+		$registry->register(
+			'font',
+			__( "Manage Bricks font settings (Google Fonts, Adobe Fonts, webfont loading).\n\nActions: get_status, get_adobe_fonts, update_settings.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'               => array(
+						'type'        => 'string',
+						'enum'        => array( 'get_status', 'get_adobe_fonts', 'update_settings' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'disable_google_fonts' => array(
+						'type'        => 'boolean',
+						'description' => __( 'Disable Google Fonts loading (update_settings: optional)', 'bricks-mcp' ),
+					),
+					'webfont_loading'      => array(
+						'type'        => 'string',
+						'enum'        => array( 'swap', 'block', 'fallback', 'optional', 'auto', '' ),
+						'description' => __( 'Font display strategy (update_settings: optional)', 'bricks-mcp' ),
+					),
+					'custom_fonts_preload' => array(
+						'type'        => 'boolean',
+						'description' => __( 'Preload custom fonts for performance (update_settings: optional)', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' )
+		);
 	}
 }

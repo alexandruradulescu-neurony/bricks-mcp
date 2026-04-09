@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\MediaService;
+use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -333,5 +334,75 @@ final class MediaHandler {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Register the media tool with the given registry.
+	 *
+	 * @param ToolRegistry $registry Tool registry instance.
+	 * @return void
+	 */
+	public function register( ToolRegistry $registry ): void {
+		$registry->register(
+			'media',
+			__( "Manage images and media library.\n\nActions: search_unsplash, sideload (URL to library), list, set_featured, remove_featured, get_image_settings.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'        => array(
+						'type'        => 'string',
+						'enum'        => array( 'search_unsplash', 'sideload', 'list', 'set_featured', 'remove_featured', 'get_image_settings' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'query'         => array(
+						'type'        => 'string',
+						'description' => __( 'Search query for Unsplash photos (search_unsplash: required)', 'bricks-mcp' ),
+					),
+					'url'           => array(
+						'type'        => 'string',
+						'description' => __( 'Image URL to download (sideload: required)', 'bricks-mcp' ),
+					),
+					'filename'      => array(
+						'type'        => 'string',
+						'description' => __( 'Filename for sideloaded image (sideload: optional)', 'bricks-mcp' ),
+					),
+					'alt_text'      => array(
+						'type'        => 'string',
+						'description' => __( 'Alt text for sideloaded image (sideload: optional)', 'bricks-mcp' ),
+					),
+					'post_id'       => array(
+						'type'        => 'integer',
+						'description' => __( 'Post/page ID (set_featured, remove_featured: required)', 'bricks-mcp' ),
+					),
+					'attachment_id' => array(
+						'type'        => 'integer',
+						'description' => __( 'Attachment ID from media library (set_featured: required; get_image_settings: optional)', 'bricks-mcp' ),
+					),
+					'image_size'    => array(
+						'type'        => 'string',
+						'description' => __( 'WordPress image size (get_image_settings: optional, e.g. full, large, medium)', 'bricks-mcp' ),
+					),
+					'per_page'      => array(
+						'type'        => 'integer',
+						'description' => __( 'Results per page (search_unsplash, list: optional)', 'bricks-mcp' ),
+					),
+					'page'          => array(
+						'type'        => 'integer',
+						'description' => __( 'Page number for pagination (list: optional)', 'bricks-mcp' ),
+					),
+					'mime_type'     => array(
+						'type'        => 'string',
+						'description' => __( "MIME type filter (list: optional, e.g. 'image', 'image/jpeg')", 'bricks-mcp' ),
+					),
+					'target'        => array(
+						'type'        => 'string',
+						'enum'        => array( 'image', 'background', 'gallery' ),
+						'description' => __( 'Image usage target (get_image_settings: required)', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' )
+		);
 	}
 }

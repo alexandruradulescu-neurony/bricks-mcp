@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -32,12 +33,21 @@ final class DesignSystemHandler {
 	private BricksService $bricks_service;
 
 	/**
+	 * Bricks check callback.
+	 *
+	 * @var callable
+	 */
+	private $require_bricks;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param BricksService $bricks_service Bricks service instance.
+	 * @param callable      $require_bricks Callback that returns \WP_Error|null.
 	 */
-	public function __construct( BricksService $bricks_service ) {
+	public function __construct( BricksService $bricks_service, callable $require_bricks ) {
 		$this->bricks_service = $bricks_service;
+		$this->require_bricks = $require_bricks;
 	}
 
 	/**
@@ -47,6 +57,11 @@ final class DesignSystemHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_theme_style( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		// Map 'name' param to 'label' for theme style handlers that expect 'label'.
@@ -78,6 +93,11 @@ final class DesignSystemHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_typography_scale( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		// Map 'scale_id' param to 'category_id' for handlers that expect 'category_id'.
@@ -108,6 +128,11 @@ final class DesignSystemHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_color_palette( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		// Map consolidated 'color' object to flat params for underlying handlers.
@@ -145,6 +170,11 @@ final class DesignSystemHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_global_variable( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		// Map 'category_name' to 'name' for category handlers.
@@ -979,5 +1009,219 @@ final class DesignSystemHandler {
 		$category_id = $args['category_id'] ?? '';
 
 		return $this->bricks_service->search_global_variables( $name, $value, $category_id );
+	}
+
+	/**
+	 * Register theme_style, typography_scale, color_palette, and global_variable tools.
+	 *
+	 * @param ToolRegistry $registry Tool registry instance.
+	 * @return void
+	 */
+	public function register( ToolRegistry $registry ): void {
+		// Theme style tool.
+		$registry->register(
+			'theme_style',
+			__( "Manage Bricks theme styles (site-wide typography, colors, spacing).\n\nActions: list, get, create, update, delete.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'          => array(
+						'type'        => 'string',
+						'enum'        => array( 'list', 'get', 'create', 'update', 'delete' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'style_id'        => array(
+						'type'        => 'string',
+						'description' => __( 'Theme style ID (get, update, delete: required)', 'bricks-mcp' ),
+					),
+					'name'            => array(
+						'type'        => 'string',
+						'description' => __( 'Style label/name (create: required; update: optional)', 'bricks-mcp' ),
+					),
+					'styles'          => array(
+						'type'        => 'object',
+						'description' => __( 'Settings organized by group: typography, links, colors, general, contextualSpacing, css, heading, button, section, container, block, div, text, form, image, navMenu, accordion, alert, carousel, divider, iconBox, imageGallery, list, iconList, postContent, postTitle, tabs, video, wordpress, woocommerceButton. (create, update: optional)', 'bricks-mcp' ),
+					),
+					'conditions'      => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'object' ),
+						'description' => __( 'Array of condition objects with "main" key (create, update: optional)', 'bricks-mcp' ),
+					),
+					'active'          => array(
+						'type'        => 'boolean',
+						'description' => __( 'Whether the style should be active (update: optional)', 'bricks-mcp' ),
+					),
+					'replace_section' => array(
+						'type'        => 'boolean',
+						'description' => __( 'If true, fully replace each provided settings group instead of merging (update: default false)', 'bricks-mcp' ),
+					),
+					'hard_delete'     => array(
+						'type'        => 'boolean',
+						'description' => __( 'If true, permanently delete the style; if false (default), only remove conditions to deactivate (delete: optional)', 'bricks-mcp' ),
+					),
+					'confirm'         => array(
+						'type'        => 'boolean',
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle_theme_style' )
+		);
+
+		// Typography scale tool.
+		$registry->register(
+			'typography_scale',
+			__( "Manage Bricks typography scales with CSS variable generation.\n\nActions: list, create, update, delete.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'          => array(
+						'type'        => 'string',
+						'enum'        => array( 'list', 'create', 'update', 'delete' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'scale_id'        => array(
+						'type'        => 'string',
+						'description' => __( 'Scale category ID (update, delete: required)', 'bricks-mcp' ),
+					),
+					'name'            => array(
+						'type'        => 'string',
+						'description' => __( 'Scale name (create: required; update: optional)', 'bricks-mcp' ),
+					),
+					'settings'        => array(
+						'type'        => 'object',
+						'description' => __( 'Typography scale settings including prefix, steps, and utility_classes (create: required; update: optional)', 'bricks-mcp' ),
+					),
+					'prefix'          => array(
+						'type'        => 'string',
+						'description' => __( 'CSS variable prefix starting with -- (e.g., "--text-"). Used in create if not inside settings.', 'bricks-mcp' ),
+					),
+					'steps'           => array(
+						'type'        => 'array',
+						'description' => __( 'Array of scale steps, each with name and value (create: required if not inside settings)', 'bricks-mcp' ),
+					),
+					'utility_classes' => array(
+						'type'        => 'array',
+						'description' => __( 'Utility class definitions (create, update: optional)', 'bricks-mcp' ),
+					),
+					'confirm'         => array(
+						'type'        => 'boolean',
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle_typography_scale' )
+		);
+
+		// Color palette tool.
+		$registry->register(
+			'color_palette',
+			__( "Manage Bricks color palettes and individual colors.\n\nActions: list, create, update, delete, add_color, update_color, delete_color.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'     => array(
+						'type'        => 'string',
+						'enum'        => array( 'list', 'create', 'update', 'delete', 'add_color', 'update_color', 'delete_color' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'palette_id' => array(
+						'type'        => 'string',
+						'description' => __( 'Palette ID (update, delete, add_color, update_color, delete_color: required)', 'bricks-mcp' ),
+					),
+					'name'       => array(
+						'type'        => 'string',
+						'description' => __( 'Palette name (create: required; update: optional)', 'bricks-mcp' ),
+					),
+					'colors'     => array(
+						'type'        => 'array',
+						'description' => __( 'Initial colors for palette (create: optional)', 'bricks-mcp' ),
+					),
+					'color_id'   => array(
+						'type'        => 'string',
+						'description' => __( 'Color ID (update_color, delete_color: required)', 'bricks-mcp' ),
+					),
+					'color'      => array(
+						'type'        => 'object',
+						'description' => __( 'Color object with light (hex value), name, raw (CSS variable) fields (add_color: required; update_color: required). "hex" accepted as alias for "light"', 'bricks-mcp' ),
+					),
+					'position'   => array(
+						'type'        => 'integer',
+						'description' => __( 'Position in palette (add_color: optional)', 'bricks-mcp' ),
+					),
+					'confirm'    => array(
+						'type'        => 'boolean',
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle_color_palette' )
+		);
+
+		// Global variable tool.
+		$registry->register(
+			'global_variable',
+			__( "Manage Bricks global CSS variables organized by category.\n\nActions: list, create_category, update_category, delete_category, create, update, delete, batch_create, batch_delete, search.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'        => array(
+						'type'        => 'string',
+						'enum'        => array( 'list', 'create_category', 'update_category', 'delete_category', 'create', 'update', 'delete', 'batch_create', 'batch_delete', 'search' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'category_id'   => array(
+						'type'        => 'string',
+						'description' => __( 'Category ID (update_category, delete_category: required; create: optional; search: optional filter)', 'bricks-mcp' ),
+					),
+					'category_name' => array(
+						'type'        => 'string',
+						'description' => __( 'Category name (create_category: required; update_category: required)', 'bricks-mcp' ),
+					),
+					'variable_id'   => array(
+						'type'        => 'string',
+						'description' => __( 'Variable ID (update, delete: required)', 'bricks-mcp' ),
+					),
+					'name'          => array(
+						'type'        => 'string',
+						'description' => __( 'Variable name (create: required; update: optional)', 'bricks-mcp' ),
+					),
+					'value'         => array(
+						'type'        => 'string',
+						'description' => __( 'CSS value (create: required; update: optional)', 'bricks-mcp' ),
+					),
+					'category'      => array(
+						'type'        => 'string',
+						'description' => __( 'Category ID for variable assignment (create: optional)', 'bricks-mcp' ),
+					),
+					'variables'     => array(
+						'type'        => 'array',
+						'description' => __( 'Array of {name, value} variable objects (batch_create: required)', 'bricks-mcp' ),
+					),
+					'variable_ids'  => array(
+						'type'        => 'array',
+						'description' => __( 'Array of variable ID strings (batch_delete: required; max 50)', 'bricks-mcp' ),
+						'items'       => array( 'type' => 'string' ),
+					),
+					'query'         => array(
+						'type'        => 'string',
+						'description' => __( 'Name substring to search for (search: optional, case-insensitive)', 'bricks-mcp' ),
+					),
+					'value_query'   => array(
+						'type'        => 'string',
+						'description' => __( 'Value substring to search for (search: optional, case-insensitive)', 'bricks-mcp' ),
+					),
+					'confirm'       => array(
+						'type'        => 'boolean',
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle_global_variable' )
+		);
 	}
 }

@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -200,5 +201,50 @@ final class CodeHandler {
 		}
 
 		return $this->bricks_service->update_page_scripts( (int) $post_id, $scripts );
+	}
+
+	/**
+	 * Register the code tool with the given registry.
+	 *
+	 * @param ToolRegistry $registry Tool registry instance.
+	 * @return void
+	 */
+	public function register( ToolRegistry $registry ): void {
+		$registry->register(
+			'code',
+			__( "Manage page-level custom CSS and JavaScript.\n\nActions: get_page_css, set_page_css, get_page_scripts, set_page_scripts (dangerous_actions required).", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'      => array(
+						'type'        => 'string',
+						'enum'        => array( 'get_page_css', 'set_page_css', 'get_page_scripts', 'set_page_scripts' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'post_id'     => array(
+						'type'        => 'integer',
+						'description' => __( 'Post/page ID (all actions: required)', 'bricks-mcp' ),
+					),
+					'css'         => array(
+						'type'        => 'string',
+						'description' => __( 'Custom CSS code (set_page_css: required). Empty string removes CSS.', 'bricks-mcp' ),
+					),
+					'header'      => array(
+						'type'        => 'string',
+						'description' => __( 'Script for document head (set_page_scripts: optional)', 'bricks-mcp' ),
+					),
+					'body_header' => array(
+						'type'        => 'string',
+						'description' => __( 'Script after opening body tag (set_page_scripts: optional)', 'bricks-mcp' ),
+					),
+					'body_footer' => array(
+						'type'        => 'string',
+						'description' => __( 'Script before closing body tag (set_page_scripts: optional)', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' )
+		);
 	}
 }

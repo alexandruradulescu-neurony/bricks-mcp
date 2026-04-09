@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -32,12 +33,21 @@ final class TemplateHandler {
 	private BricksService $bricks_service;
 
 	/**
+	 * Bricks check callback.
+	 *
+	 * @var callable
+	 */
+	private $require_bricks;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param BricksService $bricks_service Bricks service instance.
+	 * @param callable      $require_bricks Callback that returns \WP_Error|null.
 	 */
-	public function __construct( BricksService $bricks_service ) {
+	public function __construct( BricksService $bricks_service, callable $require_bricks ) {
 		$this->bricks_service = $bricks_service;
+		$this->require_bricks = $require_bricks;
 	}
 
 	/**
@@ -47,6 +57,11 @@ final class TemplateHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
@@ -79,6 +94,11 @@ final class TemplateHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_condition( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
@@ -103,6 +123,11 @@ final class TemplateHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle_taxonomy( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
@@ -768,6 +793,168 @@ final class TemplateHandler {
 		return array(
 			'term_id' => $term_id,
 			'message' => __( 'Bundle deleted and removed from all templates that had it assigned.', 'bricks-mcp' ),
+		);
+	}
+
+	/**
+	 * Register template, template_condition, and template_taxonomy tools with the given registry.
+	 *
+	 * @param ToolRegistry $registry Tool registry instance.
+	 * @return void
+	 */
+	public function register( ToolRegistry $registry ): void {
+		// Template tool.
+		$registry->register(
+			'template',
+			__( "Manage Bricks templates (headers, footers, sections, popups, etc.).\n\nActions: list, get, create, update, delete, duplicate, get_popup_settings, set_popup_settings, export, import, import_url.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'      => array(
+						'type'        => 'string',
+						'enum'        => array( 'list', 'get', 'create', 'update', 'delete', 'duplicate', 'get_popup_settings', 'set_popup_settings', 'export', 'import', 'import_url' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'template_id' => array(
+						'type'        => 'integer',
+						'description' => __( 'Template post ID (get, update, delete, duplicate, export: required)', 'bricks-mcp' ),
+					),
+					'title'       => array(
+						'type'        => 'string',
+						'description' => __( 'Template title (create: required; update, duplicate: optional)', 'bricks-mcp' ),
+					),
+					'type'        => array(
+						'type'        => 'string',
+						'enum'        => array( 'header', 'footer', 'archive', 'search', 'error', 'content', 'section', 'popup', 'password_protection' ),
+						'description' => __( 'Template type (create: required; list, update: optional)', 'bricks-mcp' ),
+					),
+					'status'      => array(
+						'type'        => 'string',
+						'enum'        => array( 'publish', 'draft', 'pending', 'private', 'trash', 'any' ),
+						'description' => __( 'Post status (list: filter; create/update: new status)', 'bricks-mcp' ),
+					),
+					'elements'    => array(
+						'type'        => 'array',
+						'description' => __( 'Element content array (create: optional)', 'bricks-mcp' ),
+					),
+					'tags'        => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'string' ),
+						'description' => __( 'Array of template_tag taxonomy slugs (list: filter; create, update: assign)', 'bricks-mcp' ),
+					),
+					'bundles'     => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'string' ),
+						'description' => __( 'Array of template_bundle taxonomy slugs (list: filter; create, update: assign)', 'bricks-mcp' ),
+					),
+					'tag'         => array(
+						'type'        => 'string',
+						'description' => __( 'Filter by template_tag taxonomy slug (list: optional)', 'bricks-mcp' ),
+					),
+					'bundle'      => array(
+						'type'        => 'string',
+						'description' => __( 'Filter by template_bundle taxonomy slug (list: optional)', 'bricks-mcp' ),
+					),
+					'post_type'   => array(
+						'type'        => 'string',
+						'description' => __( 'Post type for the template (create: optional)', 'bricks-mcp' ),
+					),
+					'conditions'  => array(
+						'type'        => 'array',
+						'description' => __( 'Array of Bricks condition objects (create: optional)', 'bricks-mcp' ),
+					),
+					'settings'    => array(
+						'type'        => 'object',
+						'description' => __( 'Popup settings key-value pairs (set_popup_settings: required). Null value deletes key. Use bricks:get_popup_schema for valid keys.', 'bricks-mcp' ),
+					),
+					'include_classes' => array(
+						'type'        => 'boolean',
+						'description' => __( 'Include used global classes in export (export: optional, default false)', 'bricks-mcp' ),
+					),
+					'template_data' => array(
+						'type'        => 'object',
+						'description' => __( 'Template JSON data to import (import: required). Must contain title (string) and content (array of Bricks elements). Optional: templateType, pageSettings, templateSettings, globalClasses.', 'bricks-mcp' ),
+					),
+					'url'         => array(
+						'type'        => 'string',
+						'description' => __( 'Remote URL to fetch template JSON from (import_url: required)', 'bricks-mcp' ),
+					),
+					'confirm'     => array(
+						'type'        => 'boolean',
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
+					),
+					'force'       => array(
+						'type'        => 'boolean',
+						'description' => __( 'When true, permanently delete instead of moving to trash (delete action only).', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' )
+		);
+
+		// Template condition tool.
+		$registry->register(
+			'template_condition',
+			__( "Manage template display conditions — control which templates apply where.\n\nActions: get_types, set, resolve.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'      => array(
+						'type'        => 'string',
+						'enum'        => array( 'get_types', 'set', 'resolve' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'template_id' => array(
+						'type'        => 'integer',
+						'description' => __( 'Template post ID (set: required)', 'bricks-mcp' ),
+					),
+					'conditions'  => array(
+						'type'        => 'array',
+						'description' => __( 'Array of condition objects with "main" key and type-specific fields. Pass empty array to remove all conditions. (set: required)', 'bricks-mcp' ),
+					),
+					'post_id'     => array(
+						'type'        => 'integer',
+						'description' => __( 'Post ID to resolve templates for (resolve: optional)', 'bricks-mcp' ),
+					),
+					'post_type'   => array(
+						'type'        => 'string',
+						'description' => __( 'Post type context for resolution (resolve: optional)', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle_condition' )
+		);
+
+		// Template taxonomy tool.
+		$registry->register(
+			'template_taxonomy',
+			__( "Manage template tags and bundles for organizing templates.\n\nActions: list_tags, list_bundles, create_tag, create_bundle, delete_tag, delete_bundle.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'  => array(
+						'type'        => 'string',
+						'enum'        => array( 'list_tags', 'list_bundles', 'create_tag', 'create_bundle', 'delete_tag', 'delete_bundle' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'name'    => array(
+						'type'        => 'string',
+						'description' => __( 'Tag or bundle name (create_tag, create_bundle: required)', 'bricks-mcp' ),
+					),
+					'term_id' => array(
+						'type'        => 'integer',
+						'description' => __( 'Term ID to delete (delete_tag, delete_bundle: required)', 'bricks-mcp' ),
+					),
+					'confirm' => array(
+						'type'        => 'boolean',
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle_taxonomy' )
 		);
 	}
 }

@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -32,12 +33,21 @@ final class ElementHandler {
 	private BricksService $bricks_service;
 
 	/**
+	 * Bricks check callback.
+	 *
+	 * @var callable
+	 */
+	private $require_bricks;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param BricksService $bricks_service Bricks service instance.
+	 * @param callable      $require_bricks Callback that returns \WP_Error|null.
 	 */
-	public function __construct( BricksService $bricks_service ) {
+	public function __construct( BricksService $bricks_service, callable $require_bricks ) {
 		$this->bricks_service = $bricks_service;
+		$this->require_bricks = $require_bricks;
 	}
 
 	/**
@@ -47,6 +57,11 @@ final class ElementHandler {
 	 * @return array<string, mixed>|\WP_Error Result or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
@@ -607,4 +622,109 @@ final class ElementHandler {
 		return $result;
 	}
 
+	/**
+	 * Register the element tool with the given registry.
+	 *
+	 * @param ToolRegistry $registry Tool registry instance.
+	 * @return void
+	 */
+	public function register( ToolRegistry $registry ): void {
+		$registry->register(
+			'element',
+			__( "Manage individual Bricks elements on a page.\n\nActions: add, update, remove (optional cascade), get_conditions, set_conditions, move, bulk_update, bulk_add (supports nested tree format), duplicate, find.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'           => array(
+						'type'        => 'string',
+						'enum'        => array( 'add', 'update', 'remove', 'get_conditions', 'set_conditions', 'move', 'bulk_update', 'bulk_add', 'duplicate', 'find' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'post_id'          => array(
+						'type'        => 'integer',
+						'description' => __( 'Post/page ID (all actions: required)', 'bricks-mcp' ),
+					),
+					'element'          => array(
+						'type'        => 'object',
+						'description' => __( 'Element object with name and optional settings (add: used as source for element data)', 'bricks-mcp' ),
+					),
+					'name'             => array(
+						'type'        => 'string',
+						'description' => __( "Bricks element type name (add: required, e.g. 'heading', 'container', 'section')", 'bricks-mcp' ),
+					),
+					'element_id'       => array(
+						'type'        => 'string',
+						'description' => __( 'Element ID (update, remove, move: required; 6-char alphanumeric)', 'bricks-mcp' ),
+					),
+					'settings'         => array(
+						'type'        => 'object',
+						'description' => __( 'Element settings (add: optional, update: required)', 'bricks-mcp' ),
+					),
+					'position'         => array(
+						'type'        => 'integer',
+						'description' => __( "Position in parent's children array (add, move: 0-indexed, omit to append)", 'bricks-mcp' ),
+					),
+					'parent_id'        => array(
+						'type'        => 'string',
+						'description' => __( "Parent element ID (add: optional, use '0' for root level)", 'bricks-mcp' ),
+					),
+					'conditions'       => array(
+						'type'        => 'array',
+						'description' => __( 'Condition sets array — array of arrays of condition objects with key/compare/value (set_conditions: required)', 'bricks-mcp' ),
+					),
+					'target_parent_id' => array(
+						'type'        => 'string',
+						'description' => __( "Target parent element ID for move (move: optional; use '0' for root level, omit to reorder within current parent)", 'bricks-mcp' ),
+					),
+					'cascade'          => array(
+						'type'        => 'boolean',
+						'description' => __( 'When true, remove element AND all descendants. When false (default), re-parent children to grandparent. (remove: optional)', 'bricks-mcp' ),
+					),
+					'updates'          => array(
+						'type'        => 'array',
+						'description' => __( 'Array of {element_id, settings} objects (bulk_update: required; max 50 items)', 'bricks-mcp' ),
+						'items'       => array(
+							'type'       => 'object',
+							'properties' => array(
+								'element_id' => array(
+									'type'        => 'string',
+									'description' => __( 'Element ID to update', 'bricks-mcp' ),
+								),
+								'settings'   => array(
+									'type'        => 'object',
+									'description' => __( 'Settings to merge', 'bricks-mcp' ),
+								),
+							),
+						),
+					),
+					'elements'         => array(
+						'type'        => 'array',
+						'description' => __( 'Array of element objects to add (bulk_add: required; max 50 top-level). Supports nested tree, parent-ref, and flat formats.', 'bricks-mcp' ),
+					),
+					'type'             => array(
+						'type'        => 'string',
+						'description' => __( 'Filter by element type name (find: optional, e.g. "heading", "button", "section")', 'bricks-mcp' ),
+					),
+					'class_id'         => array(
+						'type'        => 'string',
+						'description' => __( 'Filter by global class ID (find: optional)', 'bricks-mcp' ),
+					),
+					'has_setting'      => array(
+						'type'        => 'string',
+						'description' => __( 'Filter by setting key existence (find: optional, e.g. "_cssCustom", "_background")', 'bricks-mcp' ),
+					),
+					'text_contains'    => array(
+						'type'        => 'string',
+						'description' => __( 'Filter by text content containing string (find: optional, case-insensitive)', 'bricks-mcp' ),
+					),
+					'confirm'          => array(
+						'type'        => 'boolean',
+						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' )
+		);
+	}
 }
