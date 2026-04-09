@@ -23,6 +23,7 @@
     "accordion": "accordion-nested",
     "nav": "nav-nested"
   },
+  "skip_auto_flex": ["tabs-nested", "accordion-nested", "nav-nested", "slider-nested"],
   "icon_defaults": {
     "library": "themify",
     "prefix": "ti-",

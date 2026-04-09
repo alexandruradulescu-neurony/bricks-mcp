@@ -64,7 +64,7 @@ final class ElementSettingsGenerator {
 	 */
 	private static function get_defaults(): array {
 		if ( null === self::$element_defaults ) {
-			$path = dirname( __DIR__, 2 ) . '/data/element-defaults.json';
+			$path = dirname( __DIR__, 3 ) . '/data/element-defaults.json';
 			if ( file_exists( $path ) ) {
 				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 				self::$element_defaults = is_string( $json ) ? json_decode( $json, true ) : [];
@@ -109,6 +109,19 @@ final class ElementSettingsGenerator {
 	}
 
 	/**
+	 * Check if an element should skip automatic flex injection.
+	 *
+	 * Nestable elements (tabs-nested, accordion-nested, etc.) manage their own display.
+	 *
+	 * @param string $type Element type name.
+	 * @return bool
+	 */
+	private static function should_skip_auto_flex( string $type ): bool {
+		$defaults = self::get_defaults();
+		return in_array( $type, $defaults['skip_auto_flex'] ?? [], true );
+	}
+
+	/**
 	 * Pre-fetch schemas for a batch of element types.
 	 *
 	 * Called once before processing to avoid per-node lookups.
@@ -149,11 +162,17 @@ final class ElementSettingsGenerator {
 	 * @return array<string, mixed> Bricks element in simplified nested format.
 	 */
 	private function process_node( array $node, array $class_map, array $design_context ): array {
-		$type = $node['type'] ?? 'div';
+		$type     = $node['type'] ?? 'div';
+		$settings = $this->build_settings( $node, $type, $class_map, $design_context );
+
+		// Ensure settings is never an empty array (would serialize as JSON [] instead of {}).
+		if ( empty( $settings ) ) {
+			$settings = new \stdClass();
+		}
 
 		$element = [
 			'name'     => $type,
-			'settings' => $this->build_settings( $node, $type, $class_map, $design_context ),
+			'settings' => $settings,
 		];
 
 		// Process children recursively.
@@ -253,7 +272,15 @@ final class ElementSettingsGenerator {
 		}
 
 		// 8. Handle flex requirement: elements not flex-by-default need explicit _display: flex.
-		if ( ! self::is_flex_by_default( $type ) && ! empty( $node['children'] ) && ! isset( $settings['_display'] ) ) {
+		// Skip nestable elements (manage own display) and elements with _hidden (managed by parent).
+		$has_hidden = ! empty( $settings['_hidden'] ) || ! empty( $node['style_overrides']['_hidden'] ?? null );
+		if (
+			! self::is_flex_by_default( $type )
+			&& ! self::should_skip_auto_flex( $type )
+			&& ! $has_hidden
+			&& ! empty( $node['children'] )
+			&& ! isset( $settings['_display'] )
+		) {
 			$settings['_display']   = 'flex';
 			$settings['_direction'] = 'column';
 		}
@@ -307,26 +334,27 @@ final class ElementSettingsGenerator {
 	private function get_spacing_value( string $purpose, array $design_context ): string {
 		$spacing = $design_context['spacing'] ?? 'normal';
 
-		// Map spacing intent to common CSS variable naming patterns.
+		// Map spacing intent to site CSS variables.
+		// Uses the site's actual token names: grid-gap, content-gap, padding-section, etc.
 		$map = [
 			'compact'  => [
-				'gap'             => 'var(--space-s, 1rem)',
-				'padding'         => 'var(--space-m, 1.5rem)',
-				'section-padding' => 'var(--space-l, 2rem)',
+				'gap'             => 'var(--grid-gap-s)',
+				'padding'         => 'var(--space-m)',
+				'section-padding' => 'var(--space-l)',
 			],
 			'normal'   => [
-				'gap'             => 'var(--space-m, 1.5rem)',
-				'padding'         => 'var(--space-l, 2rem)',
-				'section-padding' => 'var(--space-xl, 3rem)',
+				'gap'             => 'var(--grid-gap)',
+				'padding'         => 'var(--content-gap)',
+				'section-padding' => 'var(--padding-section)',
 			],
 			'spacious' => [
-				'gap'             => 'var(--space-l, 2rem)',
-				'padding'         => 'var(--space-xl, 3rem)',
-				'section-padding' => 'var(--space-2xl, 5rem)',
+				'gap'             => 'var(--container-gap)',
+				'padding'         => 'var(--space-xl)',
+				'section-padding' => 'var(--space-section)',
 			],
 		];
 
-		return $map[ $spacing ][ $purpose ] ?? $map['normal'][ $purpose ] ?? '1.5rem';
+		return $map[ $spacing ][ $purpose ] ?? $map['normal'][ $purpose ] ?? 'var(--grid-gap)';
 	}
 
 	/**

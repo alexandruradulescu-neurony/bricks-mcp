@@ -114,10 +114,17 @@ final class SchemaExpander {
 	}
 
 	/**
+	 * Structural keys that must never be modified by data substitution.
+	 *
+	 * @var array<int, string>
+	 */
+	private const PROTECTED_KEYS = [ 'type', 'tag', 'ref', 'repeat', 'layout', 'class_intent' ];
+
+	/**
 	 * Substitute data values into a pattern tree.
 	 *
 	 * Replaces string values matching "data.key" pattern with actual data values.
-	 * Also replaces any string value that exactly matches a data key.
+	 * Protects structural keys (type, tag, ref, etc.) from substitution.
 	 *
 	 * @param array<string, mixed> $node Pattern node.
 	 * @param array<string, mixed> $data Data key-value pairs.
@@ -130,7 +137,10 @@ final class SchemaExpander {
 
 		$result = [];
 		foreach ( $node as $key => $value ) {
-			if ( is_string( $value ) ) {
+			// Never substitute structural keys.
+			if ( in_array( $key, self::PROTECTED_KEYS, true ) ) {
+				$result[ $key ] = $value;
+			} elseif ( is_string( $value ) ) {
 				$result[ $key ] = $this->replace_data_references( $value, $data );
 			} elseif ( is_array( $value ) ) {
 				$result[ $key ] = $this->substitute_data( $value, $data );
@@ -145,7 +155,8 @@ final class SchemaExpander {
 	/**
 	 * Replace data references in a string value.
 	 *
-	 * Matches patterns like "data.title", "data.icon", or just the raw key.
+	 * Only matches explicit "data.key" prefix or {data.key} interpolation.
+	 * Does NOT do bare key matching to avoid collisions with element type names.
 	 *
 	 * @param string               $value The string value.
 	 * @param array<string, mixed> $data  Data key-value pairs.
@@ -158,11 +169,6 @@ final class SchemaExpander {
 			if ( array_key_exists( $key, $data ) ) {
 				return $data[ $key ];
 			}
-		}
-
-		// Direct key match for simple cases.
-		if ( array_key_exists( $value, $data ) ) {
-			return $data[ $value ];
 		}
 
 		// Interpolation: replace {data.key} within longer strings.
