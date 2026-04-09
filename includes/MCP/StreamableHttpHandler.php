@@ -570,14 +570,20 @@ final class StreamableHttpHandler {
 
 		$instructions = "Bricks MCP connects AI assistants to a WordPress site running Bricks Builder.\n\n"
 			. "SITE CONTEXT: {$site_context}\n\n"
-			. "WORKFLOWS:\n"
-			. "- Direct operations (text changes, moves, property updates): use element, page, menu tools directly. Only get_site_info required.\n"
-			. "- Instructed builds (user specifies structure): use element:bulk_add or page:append_content. Requires get_site_info + global_class:list.\n"
-			. "- Design builds (user describes outcome): use build_from_schema with a design schema. Requires get_site_info + global_class:list + global_variable:list.\n\n"
-			. "Prerequisites are server-enforced per workflow — write operations will be REJECTED if you skip them.\n\n"
-			. "NOTES:\n"
-			. "- Destructive actions (delete, replace) require token-based confirmation.\n"
-			. "- Use bricks:get_element_schemas before working with unfamiliar element types."
+			. "INTENT ROUTER — classify every user request before acting:\n\n"
+			. "1. DIRECT OPERATION → use element/page/menu tools directly\n"
+			. "   Signals: \"change text to\", \"move X above Y\", \"delete the\", \"update the menu\", \"swap image\"\n"
+			. "   Prerequisites: get_site_info\n\n"
+			. "2. INSTRUCTED BUILD → use element:bulk_add or page:append_content\n"
+			. "   Signals: \"add a section with\", \"insert a heading and two columns\", \"put a form here\"\n"
+			. "   Prerequisites: get_site_info + global_class:list\n"
+			. "   Call bricks:get_element_schemas for any unfamiliar element types before building.\n\n"
+			. "3. DESIGN BUILD → use build_from_schema\n"
+			. "   Signals: \"design a\", \"create a page for\", \"build me a\", \"make a services section\", \"redesign the\"\n"
+			. "   Prerequisites: get_site_info + global_class:list + global_variable:list\n"
+			. "   Steps: describe the layout structurally (rows, columns, what goes where) → translate to design schema JSON → call build_from_schema(dry_run:true) → review → call without dry_run\n\n"
+			. "Prerequisites are server-enforced — write operations will be REJECTED if you skip them.\n"
+			. "Destructive actions (delete, replace) require token-based confirmation."
 			. $notes_text;
 
 		return $instructions;

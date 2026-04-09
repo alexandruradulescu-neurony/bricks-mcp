@@ -34,12 +34,38 @@ final class DesignSchemaValidator {
 	private ?array $element_names = null;
 
 	/**
+	 * Cached hierarchy rules from data/element-hierarchy-rules.json.
+	 *
+	 * @var array<string, array<string, mixed>>|null
+	 */
+	private static ?array $hierarchy_rules = null;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param SchemaGenerator $schema_generator Schema generator for element type validation.
 	 */
 	public function __construct( SchemaGenerator $schema_generator ) {
 		$this->schema_generator = $schema_generator;
+	}
+
+	/**
+	 * Load hierarchy rules from the data file (cached in static property).
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
+	private static function get_hierarchy_rules(): array {
+		if ( null === self::$hierarchy_rules ) {
+			$path = dirname( __DIR__, 3 ) . '/data/element-hierarchy-rules.json';
+			if ( file_exists( $path ) ) {
+				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+				$data = is_string( $json ) ? json_decode( $json, true ) : [];
+				self::$hierarchy_rules = $data['rules'] ?? [];
+			} else {
+				self::$hierarchy_rules = [];
+			}
+		}
+		return self::$hierarchy_rules;
 	}
 
 	/**
@@ -126,12 +152,13 @@ final class DesignSchemaValidator {
 	/**
 	 * Recursively validate a structure node.
 	 *
-	 * @param array<string, mixed>  $node     The structure node.
-	 * @param string                $path     JSON path for error reporting.
-	 * @param array<string, mixed>  $patterns Available pattern definitions.
-	 * @param array<int, string>    &$errors  Error collector.
+	 * @param array<string, mixed>  $node        The structure node.
+	 * @param string                $path        JSON path for error reporting.
+	 * @param array<string, mixed>  $patterns    Available pattern definitions.
+	 * @param array<int, string>    &$errors     Error collector.
+	 * @param string                $parent_type Parent element type ('root' for top-level).
 	 */
-	private function validate_structure_node( array $node, string $path, array $patterns, array &$errors ): void {
+	private function validate_structure_node( array $node, string $path, array $patterns, array &$errors, string $parent_type = 'root' ): void {
 		// If it's a ref, validate the reference exists.
 		if ( ! empty( $node['ref'] ) ) {
 			$ref_name = $node['ref'];
@@ -145,9 +172,27 @@ final class DesignSchemaValidator {
 		// Validate type.
 		if ( empty( $node['type'] ) ) {
 			$errors[] = "{$path}.type is required (Bricks element name).";
-		} else {
-			if ( ! $this->is_valid_element_type( $node['type'] ) ) {
-				$errors[] = "{$path}.type \"{$node['type']}\" is not a known Bricks element.";
+			return;
+		}
+
+		$type = $node['type'];
+
+		if ( ! $this->is_valid_element_type( $type ) ) {
+			$errors[] = "{$path}.type \"{$type}\" is not a known Bricks element.";
+		}
+
+		// Validate parent-child hierarchy (warnings, not errors).
+		$rules = self::get_hierarchy_rules();
+		if ( isset( $rules[ $type ] ) ) {
+			$valid_parents = $rules[ $type ]['valid_parents'] ?? [];
+			if ( ! empty( $valid_parents ) && ! in_array( $parent_type, $valid_parents, true ) ) {
+				$errors[] = "{$path}: \"{$type}\" is not typically placed inside \"{$parent_type}\". Expected parents: " . implode( ', ', $valid_parents ) . '.';
+			}
+
+			// Check if element accepts children but none provided, or doesn't accept but has children.
+			$accepts = $rules[ $type ]['accepts_children'] ?? true;
+			if ( ! $accepts && ! empty( $node['children'] ) ) {
+				$errors[] = "{$path}: \"{$type}\" does not accept children, but children were provided.";
 			}
 		}
 
@@ -155,7 +200,7 @@ final class DesignSchemaValidator {
 		if ( ! empty( $node['children'] ) && is_array( $node['children'] ) ) {
 			foreach ( $node['children'] as $child_idx => $child ) {
 				if ( is_array( $child ) ) {
-					$this->validate_structure_node( $child, "{$path}.children[{$child_idx}]", $patterns, $errors );
+					$this->validate_structure_node( $child, "{$path}.children[{$child_idx}]", $patterns, $errors, $type );
 				}
 			}
 		}

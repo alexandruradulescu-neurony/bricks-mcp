@@ -1980,7 +1980,38 @@ final class Router {
 				'properties' => array(
 					'schema'  => array(
 						'type'        => 'object',
-						'description' => __( 'Design schema object with target, design_context, sections, and optional patterns. See tool description for full format.', 'bricks-mcp' ),
+						'description' => __( "Design schema object with target, design_context, sections, and optional patterns. See tool description for full format.\n\n"
+							. "SCHEMA FORMAT:\n"
+							. "{\n"
+							. "  \"target\": { \"page_id\": int, \"action\": \"append\"|\"replace\", \"parent_id\"?: string, \"position\"?: int },\n"
+							. "  \"design_context\": { \"summary\": string, \"mood\"?: string, \"palette_hints\"?: string[], \"spacing\"?: \"compact\"|\"normal\"|\"spacious\" },\n"
+							. "  \"sections\": [{ \"intent\": string, \"background\"?: \"dark\"|\"light\"|\"gradient\", \"structure\": <node> }],\n"
+							. "  \"patterns\"?: { \"pattern_name\": <node> }\n"
+							. "}\n\n"
+							. "STRUCTURE NODE FORMAT:\n"
+							. "{\n"
+							. "  \"type\": string,           // Bricks element name (section, container, block, div, heading, text-basic, button, image, icon, tabs-nested, etc.)\n"
+							. "  \"content\"?: string,        // Text content — mapped to correct Bricks key (text for heading/text-basic/button, content for icon-box/alert)\n"
+							. "  \"tag\"?: string,            // HTML tag (h1-h6, p, ul, li, figure, address)\n"
+							. "  \"label\"?: string,          // Editor label for structural elements\n"
+							. "  \"class_intent\"?: string,   // Semantic class purpose — matched to existing global classes by name, or created if new\n"
+							. "  \"layout\"?: \"grid\",         // Set on block/div to enable CSS grid\n"
+							. "  \"columns\"?: int,           // Grid column count (used with layout:grid)\n"
+							. "  \"responsive\"?: { \"tablet\"?: int, \"mobile\"?: int },  // Column overrides per breakpoint\n"
+							. "  \"src\"?: string,            // Image source: attachment ID (\"105\"), URL, or \"unsplash:query\"\n"
+							. "  \"icon\"?: string|object,    // Icon shorthand (\"truck\" → ti-truck) or full {library, icon} object\n"
+							. "  \"ref\"?: string,            // Reference to a pattern defined in \"patterns\"\n"
+							. "  \"repeat\"?: int,            // Repeat the referenced pattern N times\n"
+							. "  \"data\"?: array,            // Array of data objects for each repeat instance\n"
+							. "  \"style_overrides\"?: {},    // Raw Bricks settings merged last (for _hidden, _background, etc.)\n"
+							. "  \"children\"?: [<node>]      // Nested child nodes\n"
+							. "}\n\n"
+							. "DATA SUBSTITUTION: In patterns, use \"data.key\" prefix for values (e.g. \"content\": \"data.title\"). Bare keys are NOT matched. Interpolation: \"Hello {data.name}\".\n\n"
+							. "KEY RULES:\n"
+							. "- Section > container > block/div > content elements. Use multiple containers for multiple rows.\n"
+							. "- Use style_overrides for _hidden (tab-menu, tab-title, tab-content, tab-pane CSS classes).\n"
+							. "- Use layout:grid + columns for grid layouts. The MCP generates _display:grid + _gridTemplateColumns.\n"
+							. "- class_intent matches by semantic name, not CSS similarity. \"hero-title\" won't match \"section-title\".", 'bricks-mcp' ),
 					),
 					'dry_run' => array(
 						'type'        => 'boolean',
