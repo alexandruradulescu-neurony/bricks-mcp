@@ -11,13 +11,17 @@ declare(strict_types=1);
 namespace BricksMCP\MCP;
 
 use BricksMCP\MCP\Services\BricksService;
-use BricksMCP\MCP\Services\ElementIdGenerator;
+use BricksMCP\MCP\Services\ClassIntentResolver;
+use BricksMCP\MCP\Services\DesignSchemaValidator;
+use BricksMCP\MCP\Services\ElementSettingsGenerator;
 use BricksMCP\MCP\Services\MediaService;
 use BricksMCP\MCP\Services\MenuService;
 use BricksMCP\MCP\Services\PendingActionService;
+use BricksMCP\MCP\Services\SchemaExpander;
 use BricksMCP\MCP\Services\SchemaGenerator;
 use BricksMCP\MCP\Services\ValidationService;
 use BricksMCP\MCP\Services\PrerequisiteGateService;
+use BricksMCP\MCP\ToolRegistry;
 use BricksMCP\Plugin;
 
 // Prevent direct access.
@@ -33,24 +37,44 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Router {
 
 	/**
-	 * Registered tools.
+	 * Tool registry instance.
 	 *
-	 * @var array<string, array{name: string, description: string, inputSchema: array, handler: callable}>
+	 * @var ToolRegistry
 	 */
-	private array $tools = array();
+	private ToolRegistry $registry;
 
 	/**
-	 * Operations that require all prerequisites to be met.
+	 * Operations that require prerequisites, with tier level per action.
 	 *
-	 * Format: tool_name => list of actions that are gated.
+	 * Tiers: 'direct' (site_info only), 'instructed' (+ classes), 'full' (+ variables).
 	 *
-	 * @var array<string, string[]>
+	 * @var array<string, array<string, string>>
 	 */
 	private const GATED_OPERATIONS = [
-		'page'      => [ 'update_content', 'append_content', 'create', 'import_clipboard' ],
-		'element'   => [ 'add', 'bulk_add', 'update', 'bulk_update' ],
-		'template'  => [ 'create' ],
-		'component' => [ 'create', 'update', 'instantiate', 'fill_slot' ],
+		'page'      => [
+			'update_content'   => 'instructed',
+			'append_content'   => 'instructed',
+			'create'           => 'instructed',
+			'import_clipboard' => 'instructed',
+		],
+		'element'   => [
+			'add'         => 'instructed',
+			'bulk_add'    => 'instructed',
+			'update'      => 'direct',
+			'bulk_update' => 'direct',
+		],
+		'template'  => [
+			'create' => 'instructed',
+		],
+		'component' => [
+			'create'      => 'instructed',
+			'update'      => 'instructed',
+			'instantiate' => 'instructed',
+			'fill_slot'   => 'instructed',
+		],
+		'build_from_schema' => [
+			'_always' => 'full',
+		],
 	];
 
 	/**
@@ -152,6 +176,55 @@ final class Router {
 	private Handlers\DesignSystemHandler $design_system_handler;
 
 	/**
+	 * WordPress handler instance.
+	 *
+	 * @var Handlers\WordPressHandler
+	 */
+	private Handlers\WordPressHandler $wordpress_handler;
+
+	/**
+	 * MetaBox handler instance.
+	 *
+	 * @var Handlers\MetaBoxHandler
+	 */
+	private Handlers\MetaBoxHandler $metabox_handler;
+
+	/**
+	 * Bricks tool handler instance.
+	 *
+	 * @var Handlers\BricksToolHandler
+	 */
+	private Handlers\BricksToolHandler $bricks_tool_handler;
+
+	/**
+	 * Media handler instance.
+	 *
+	 * @var Handlers\MediaHandler
+	 */
+	private Handlers\MediaHandler $media_handler;
+
+	/**
+	 * Font handler instance.
+	 *
+	 * @var Handlers\FontHandler
+	 */
+	private Handlers\FontHandler $font_handler;
+
+	/**
+	 * Code handler instance.
+	 *
+	 * @var Handlers\CodeHandler
+	 */
+	private Handlers\CodeHandler $code_handler;
+
+	/**
+	 * Build handler instance.
+	 *
+	 * @var Handlers\BuildHandler
+	 */
+	private Handlers\BuildHandler $build_handler;
+
+	/**
 	 * Pending action service for token-based destructive action confirmation.
 	 *
 	 * @var PendingActionService
@@ -162,21 +235,48 @@ final class Router {
 	 * Constructor.
 	 */
 	public function __construct() {
+		$this->registry           = new ToolRegistry();
 		$this->schema_generator   = new SchemaGenerator();
 		$this->validation_service = new ValidationService( $this->schema_generator );
 		$this->bricks_service     = new BricksService();
 		$this->bricks_service->set_validation_service( $this->validation_service );
 		$this->media_service = new MediaService();
 		$this->menu_service       = new MenuService();
+
+		$require_bricks = \Closure::fromCallable( array( $this, 'require_bricks' ) );
+
+		// Existing handlers.
 		$this->component_handler    = new Handlers\ComponentHandler( $this->bricks_service );
 		$this->woocommerce_handler  = new Handlers\WooCommerceHandler( $this->bricks_service, $this->schema_generator );
 		$this->schema_handler       = new Handlers\SchemaHandler( $this->schema_generator, $this->bricks_service );
-		$this->menu_handler           = new Handlers\MenuHandler( $this->menu_service, \Closure::fromCallable( array( $this, 'require_bricks' ) ) );
-		$this->page_handler           = new Handlers\PageHandler( $this->bricks_service, $this->validation_service );
-		$this->element_handler        = new Handlers\ElementHandler( $this->bricks_service );
-		$this->template_handler       = new Handlers\TemplateHandler( $this->bricks_service );
-		$this->global_class_handler   = new Handlers\GlobalClassHandler( $this->bricks_service );
-		$this->design_system_handler  = new Handlers\DesignSystemHandler( $this->bricks_service );
+		$this->menu_handler         = new Handlers\MenuHandler( $this->menu_service, $require_bricks );
+		$this->page_handler         = new Handlers\PageHandler( $this->bricks_service, $this->validation_service );
+		$this->element_handler      = new Handlers\ElementHandler( $this->bricks_service );
+		$this->template_handler     = new Handlers\TemplateHandler( $this->bricks_service );
+		$this->global_class_handler = new Handlers\GlobalClassHandler( $this->bricks_service );
+		$this->design_system_handler = new Handlers\DesignSystemHandler( $this->bricks_service );
+
+		// New extracted handlers.
+		$this->wordpress_handler    = new Handlers\WordPressHandler();
+		$this->metabox_handler      = new Handlers\MetaBoxHandler();
+		$this->bricks_tool_handler  = new Handlers\BricksToolHandler( $this->bricks_service, $this->schema_handler );
+		$this->media_handler        = new Handlers\MediaHandler( $this->media_service, $require_bricks );
+		$this->font_handler         = new Handlers\FontHandler( $this->bricks_service, $require_bricks );
+		$this->code_handler         = new Handlers\CodeHandler( $this->bricks_service, $require_bricks );
+
+		// Build pipeline handler.
+		$design_validator        = new DesignSchemaValidator( $this->schema_generator );
+		$class_resolver          = new ClassIntentResolver( $this->bricks_service->get_global_class_service() );
+		$schema_expander         = new SchemaExpander();
+		$element_settings_gen    = new ElementSettingsGenerator( $this->schema_generator, $this->media_service );
+		$this->build_handler     = new Handlers\BuildHandler(
+			$this->bricks_service,
+			$design_validator,
+			$class_resolver,
+			$schema_expander,
+			$element_settings_gen
+		);
+
 		$this->pending_action_service = new PendingActionService();
 
 		$this->register_default_tools();
@@ -324,7 +424,7 @@ final class Router {
 				),
 				'required'   => array( 'action' ),
 			),
-			array( $this, 'tool_wordpress' )
+			array( $this->wordpress_handler, 'handle' )
 		);
 
 		// MetaBox integration tool (read-only).
@@ -354,7 +454,7 @@ final class Router {
 				),
 				'required'   => array( 'action' ),
 			),
-			array( $this, 'tool_metabox' ),
+			array( $this->metabox_handler, 'handle' ),
 			array( 'readOnlyHint' => true )
 		);
 
@@ -388,13 +488,7 @@ final class Router {
 	 * @return void
 	 */
 	public function register_tool( string $name, string $description, array $input_schema, callable $handler, array $annotations = [] ): void {
-		$this->tools[ $name ] = array(
-			'name'        => $name,
-			'description' => $description,
-			'inputSchema' => $input_schema,
-			'handler'     => $handler,
-			'annotations' => $annotations,
-		);
+		$this->registry->register( $name, $description, $input_schema, $handler, $annotations );
 	}
 
 	/**
@@ -403,21 +497,7 @@ final class Router {
 	 * @return array<int, array{name: string, description: string, inputSchema: array}> Tools list.
 	 */
 	public function get_available_tools(): array {
-		$tools = array();
-
-		foreach ( $this->tools as $tool ) {
-			$entry = array(
-				'name'        => $tool['name'],
-				'description' => $tool['description'],
-				'inputSchema' => $tool['inputSchema'],
-			);
-			if ( ! empty( $tool['annotations'] ) ) {
-				$entry['annotations'] = $tool['annotations'];
-			}
-			$tools[] = $entry;
-		}
-
-		return $tools;
+		return $this->registry->get_all();
 	}
 
 	/**
@@ -431,7 +511,8 @@ final class Router {
 	 * @throws \Throwable When tool execution fails unexpectedly.
 	 */
 	public function execute_tool( string $name, array $arguments ): \WP_REST_Response {
-		if ( ! isset( $this->tools[ $name ] ) ) {
+		$tool = $this->registry->get( $name );
+		if ( null === $tool ) {
 			return Response::error(
 				'unknown_tool',
 				/* translators: %s: Tool name */
@@ -439,8 +520,6 @@ final class Router {
 				404
 			);
 		}
-
-		$tool = $this->tools[ $name ];
 
 		// Strip 'confirm' from incoming arguments to prevent AI bypass.
 		// Only the confirm_destructive_action tool can inject it internally.
@@ -467,8 +546,9 @@ final class Router {
 		}
 
 		// Prerequisite gate: block content writes unless mandatory calls have been made.
-		if ( $this->is_gated_operation( $name, $arguments ) ) {
-			$gate_result = PrerequisiteGateService::check();
+		$tier = $this->get_operation_tier( $name, $arguments );
+		if ( null !== $tier ) {
+			$gate_result = PrerequisiteGateService::check( $tier );
 			if ( true !== $gate_result ) {
 				$missing_tools = $gate_result['missing_tools'];
 				return Response::error(
@@ -528,23 +608,30 @@ final class Router {
 	 *
 	 * @param string               $name      Tool name.
 	 * @param array<string, mixed> $arguments Tool arguments.
-	 * @return bool
+	 * @return string|null Tier name ('direct', 'instructed', 'full') or null if not gated.
 	 */
-	private function is_gated_operation( string $name, array $arguments ): bool {
+	private function get_operation_tier( string $name, array $arguments ): ?string {
 		if ( ! isset( self::GATED_OPERATIONS[ $name ] ) ) {
-			return false;
+			return null;
 		}
 
-		$gated_actions = self::GATED_OPERATIONS[ $name ];
+		$ops = self::GATED_OPERATIONS[ $name ];
+
+		// Tools gated unconditionally (no action routing, e.g. build_from_schema).
+		if ( isset( $ops['_always'] ) ) {
+			return $ops['_always'];
+		}
 
 		$action = $arguments['action'] ?? '';
 
 		// Special case: page:create and template:create are only gated when elements are provided.
 		if ( in_array( $name, [ 'page', 'template' ], true ) && 'create' === $action ) {
-			return ! empty( $arguments['elements'] );
+			if ( empty( $arguments['elements'] ) ) {
+				return null;
+			}
 		}
 
-		return in_array( $action, $gated_actions, true );
+		return $ops[ $action ] ?? null;
 	}
 
 	/**
@@ -597,9 +684,9 @@ final class Router {
 	 * @return string|null The required capability, or null if no capability is required.
 	 */
 	private function get_tool_capability( string $tool_name ): ?string {
-		$public_tools = array(
-			'get_builder_guide',
-		);
+		// No public tools remaining after get_builder_guide removal.
+		// Kept as extension point for future public tools.
+		$public_tools = array();
 
 		if ( in_array( $tool_name, $public_tools, true ) ) {
 			return null;
@@ -707,23 +794,21 @@ final class Router {
 			}
 		}
 
-		// Append child theme CSS if present.
+		// Child theme CSS summary (not the full CSS — the build phase handles specifics).
 		$child_style = get_stylesheet_directory() . '/style.css';
 		if ( get_stylesheet_directory() !== get_template_directory() && file_exists( $child_style ) ) {
 			$size = filesize( $child_style );
-			if ( false === $size || $size <= 0 || $size > 102400 ) {
-				// Skip files that are empty, unreadable, or exceed 100 KB cap.
-				$css = '';
-			} else {
+			if ( false !== $size && $size > 0 ) {
 				$css = file_get_contents( $child_style ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-			}
-			if ( is_string( $css ) && '' !== trim( $css ) ) {
-				// Strip all CSS comments (theme header and any others that may contain sensitive info).
-				$css = (string) preg_replace( '/\/\*[\s\S]*?\*\/\s*/', '', $css );
-				$css = trim( $css );
-				if ( '' !== $css ) {
-					$info['child_theme_css'] = $css;
-					$info['child_theme_css_note'] = 'This CSS is loaded globally. Do NOT duplicate these styles on elements — headings already get var(--h1)…var(--h6) sizes, sections get var(--padding-section), containers get var(--content-gap), etc.';
+				if ( is_string( $css ) && '' !== trim( $css ) ) {
+					$css        = (string) preg_replace( '/\/\*[\s\S]*?\*\/\s*/', '', $css );
+					$rule_count = substr_count( $css, '{' );
+					$info['child_theme_css'] = [
+						'active'     => true,
+						'rule_count' => $rule_count,
+						'size_bytes' => $size,
+						'note'       => 'Child theme CSS is loaded globally. Headings, sections, and containers are already styled — do not duplicate inline.',
+					];
 				}
 			}
 		}
@@ -763,15 +848,10 @@ final class Router {
 			'no_found_rows'  => true,
 		] );
 
-		// Cache elements per page to avoid double meta fetch (also used by design patterns below).
-		$pages_elements = [];
-		foreach ( $pages_query->posts as $pid ) {
-			$raw                          = get_post_meta( (int) $pid, '_bricks_page_content_2', true );
-			$pages_elements[ (int) $pid ] = is_array( $raw ) ? $raw : [];
-		}
-
 		$pages_summary = [];
-		foreach ( $pages_elements as $pid => $elements ) {
+		foreach ( $pages_query->posts as $pid ) {
+			$elements = get_post_meta( (int) $pid, '_bricks_page_content_2', true );
+			$elements = is_array( $elements ) ? $elements : [];
 			$section_count = 0;
 			$section_types = [];
 			foreach ( $elements as $el ) {
@@ -796,110 +876,7 @@ final class Router {
 		}
 		$info['pages_summary'] = $pages_summary;
 
-		// Class groups: organize global classes by component type.
-		$all_classes = get_option( 'bricks_global_classes', [] );
-		if ( ! is_array( $all_classes ) ) {
-			$all_classes = [];
-		}
-		if ( ! empty( $all_classes ) ) {
-			$groups = [
-				'heroes'     => [],
-				'sections'   => [],
-				'containers' => [],
-				'grids'      => [],
-				'cards'      => [],
-				'typography' => [],
-				'navigation' => [],
-				'media'      => [],
-				'other'      => [],
-			];
 
-			foreach ( $all_classes as $class ) {
-				$name = $class['name'] ?? '';
-				if ( empty( $name ) ) {
-					continue;
-				}
-
-				$n = strtolower( $name );
-				if ( str_contains( $n, 'hero' ) ) {
-					$groups['heroes'][] = $name;
-				} elseif ( str_contains( $n, 'grid' ) || str_contains( $n, 'logos-' ) ) {
-					$groups['grids'][] = $name;
-				} elseif ( str_contains( $n, 'card' ) || str_contains( $n, 'profile' ) ) {
-					$groups['cards'][] = $name;
-				} elseif ( str_contains( $n, 'section' ) || str_contains( $n, 'cta' ) || str_contains( $n, 'contact' ) ) {
-					$groups['sections'][] = $name;
-				} elseif ( str_contains( $n, 'container' ) || str_contains( $n, 'wrapper' ) || str_contains( $n, 'content-wrapper' ) || str_contains( $n, 'intro' ) ) {
-					$groups['containers'][] = $name;
-				} elseif ( str_contains( $n, 'heading' ) || str_contains( $n, 'tagline' ) || str_contains( $n, 'lede' ) || str_contains( $n, 'text' ) ) {
-					$groups['typography'][] = $name;
-				} elseif ( str_contains( $n, 'header' ) || str_contains( $n, 'footer' ) || str_contains( $n, 'nav' ) || str_contains( $n, 'menu' ) || str_contains( $n, 'toggle' ) || str_contains( $n, 'subfooter' ) ) {
-					$groups['navigation'][] = $name;
-				} elseif ( str_contains( $n, 'media' ) || str_contains( $n, 'image' ) || str_contains( $n, 'logo' ) ) {
-					$groups['media'][] = $name;
-				} else {
-					$groups['other'][] = $name;
-				}
-			}
-
-			// Remove empty groups.
-			$info['class_groups']      = array_filter( $groups, fn( $g ) => ! empty( $g ) );
-			$info['class_groups_note'] = 'Global classes grouped by component type. Use global_class:list for full details with IDs and styles.';
-		}
-
-		// Design patterns: detect recurring section patterns across pages.
-		// Build class ID → name map for O(1) lookups.
-		$class_id_map = [];
-		foreach ( $all_classes as $gc ) {
-			if ( ! empty( $gc['id'] ) && ! empty( $gc['name'] ) ) {
-				$class_id_map[ $gc['id'] ] = $gc['name'];
-			}
-		}
-
-		$pattern_fingerprints = [];
-		foreach ( $pages_elements as $pid => $elements ) {
-			foreach ( $elements as $el ) {
-				if ( ( $el['name'] ?? '' ) === 'section' && (string) ( $el['parent'] ?? '0' ) === '0' ) {
-					// Create fingerprint from section's own classes.
-					$section_classes = $el['settings']['_cssGlobalClasses'] ?? [];
-					if ( empty( $section_classes ) ) {
-						continue;
-					}
-
-					// Use sorted class names as fingerprint.
-					$class_names_for_fp = [];
-					foreach ( $section_classes as $cid ) {
-						if ( isset( $class_id_map[ $cid ] ) ) {
-							$class_names_for_fp[] = $class_id_map[ $cid ];
-						}
-					}
-					sort( $class_names_for_fp );
-					$fp = implode( '+', $class_names_for_fp );
-
-					if ( ! isset( $pattern_fingerprints[ $fp ] ) ) {
-						$pattern_fingerprints[ $fp ] = [
-							'classes' => $class_names_for_fp,
-							'pages'   => [],
-							'label'   => $el['settings']['label'] ?? $el['label'] ?? '',
-						];
-					}
-					$pattern_fingerprints[ $fp ]['pages'][] = (int) $pid;
-				}
-			}
-		}
-
-		// Only report patterns used on 2+ pages.
-		$design_patterns = [];
-		foreach ( $pattern_fingerprints as $fp => $data ) {
-			$unique_pages = array_unique( $data['pages'] );
-			if ( count( $unique_pages ) >= 2 ) {
-				$name              = $data['label'] ?: implode( ' + ', $data['classes'] );
-				$design_patterns[] = sprintf( '%s (used on %d pages)', $name, count( $unique_pages ) );
-			}
-		}
-		if ( ! empty( $design_patterns ) ) {
-			$info['design_patterns'] = $design_patterns;
-		}
 
 		// Include AI notes so they are visible on the first mandatory call.
 		$ai_notes = $this->bricks_service->get_notes();
@@ -908,603 +885,10 @@ final class Router {
 			$info['ai_notes_note'] = 'These are persistent instructions from the site owner. You MUST follow them.';
 		}
 
-		// Key gotchas embedded so the AI gets critical rules on the first mandatory call.
-		$info['gotchas'] = [
-			'_textAlign does nothing — put text-align inside _typography instead.',
-			'%root% shorthand works in _cssCustom — auto-replaces with the element selector.',
-			'Use _widthMax for max-width, not _maxWidth. For multi-column layouts, use global grid classes with var(--grid-*) variables.',
-			'Templates must have publish status to be active.',
-			'Icon libraries: Ionicons, Themify, FontAwesome — call bricks:get_element_schemas(element=name) to check available options.',
-			'Text supports inline HTML: "<strong>Bold</strong> and normal".',
-			'update_element calls are independent — fire them in parallel for speed.',
-			'Gradients use _gradient key (separate from _background). Each color entry: {color: {raw: value}, stop: "percentage"}.',
-			'Dynamic tags ({post_title}, {post_url}) only work inside query loops or single post templates.',
-			'Image dynamic data: {useDynamicData: "{tag}"}. Link dynamic data: {type: "dynamic", dynamicData: "{tag}"}.',
-			'_animation is deprecated since Bricks 1.6 — use _interactions array instead.',
-			'Component instance name = component ID (6-char string), not a human-readable type.',
-			'Component properties without connections do nothing — set the connections map.',
-			'Slot content lives in the page element array (parent = instance_id), not the component definition.',
-			'Popup triggers use _interactions on elements. Popup settings (close, backdrop) use template_settings — separate systems.',
-			'Always use nestable element variants: tabs-nested, accordion-nested, nav-nested. Basic versions only support plain text.',
-			'div needs explicit _display: flex for flex layouts — block and container default to flex, div does not.',
-			'Before using ANY unfamiliar element type, ALWAYS call bricks:get_element_schemas(element=name) first.',
-			'Do NOT duplicate child theme CSS inline — sections get padding, containers get gap, headings get sizes automatically.',
-		];
 
 		PrerequisiteGateService::set_flag( 'site_info' );
 
 		return $info;
-	}
-
-	/**
-	 * Tool: Get posts.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<int, array<string, mixed>> Posts list.
-	 */
-	private function tool_get_posts( array $args ): array {
-		$order = isset( $args['order'] ) && 'ASC' === strtoupper( (string) $args['order'] ) ? 'ASC' : 'DESC';
-
-		$query_args = array(
-			'post_type'      => isset( $args['post_type'] ) ? sanitize_text_field( (string) $args['post_type'] ) : 'post',
-			'posts_per_page' => isset( $args['posts_per_page'] ) ? min( absint( $args['posts_per_page'] ), 100 ) : 10,
-			'orderby'        => isset( $args['orderby'] ) ? sanitize_text_field( (string) $args['orderby'] ) : 'date',
-			'order'          => $order,
-			'post_status'    => 'publish',
-			's'              => isset( $args['s'] ) ? sanitize_text_field( (string) $args['s'] ) : '',
-			'paged'          => isset( $args['paged'] ) ? absint( $args['paged'] ) : 1,
-			'category_name'  => isset( $args['category_name'] ) ? sanitize_text_field( (string) $args['category_name'] ) : '',
-			'tag'            => isset( $args['tag'] ) ? sanitize_text_field( (string) $args['tag'] ) : '',
-			'author'         => isset( $args['author'] ) ? absint( $args['author'] ) : 0,
-		);
-
-		$posts = get_posts( $query_args );
-
-		// Prime meta cache (includes thumbnail IDs) to avoid N+1 queries for get_the_post_thumbnail_url().
-		update_postmeta_cache( wp_list_pluck( $posts, 'ID' ) );
-
-		$result = array();
-
-		foreach ( $posts as $post ) {
-			$result[] = array(
-				'id'             => $post->ID,
-				'title'          => $post->post_title,
-				'slug'           => $post->post_name,
-				'status'         => $post->post_status,
-				'type'           => $post->post_type,
-				'date'           => $post->post_date,
-				'modified'       => $post->post_modified,
-				'excerpt'        => $post->post_excerpt,
-				'author'         => (int) $post->post_author,
-				'permalink'      => get_permalink( $post->ID ),
-				'featured_image' => get_the_post_thumbnail_url( $post->ID, 'full' ),
-			);
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Tool: Get single post.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, mixed>|\WP_Error Post data or error.
-	 */
-	private function tool_get_post( array $args ): array|\WP_Error {
-		if ( empty( $args['id'] ) ) {
-			return new \WP_Error( 'missing_id', __( 'Post ID is required. Use get_posts or list_pages to find valid post IDs.', 'bricks-mcp' ) );
-		}
-
-		$post = get_post( (int) $args['id'] );
-
-		if ( ! $post ) {
-			return new \WP_Error(
-				'post_not_found',
-				sprintf(
-					/* translators: %d: Post ID */
-					__( 'Post %d not found. Use get_posts or list_pages to find valid post IDs.', 'bricks-mcp' ),
-					(int) $args['id']
-				)
-			);
-		}
-
-		return array(
-			'id'             => $post->ID,
-			'title'          => $post->post_title,
-			'content'        => $post->post_content,
-			'excerpt'        => $post->post_excerpt,
-			'slug'           => $post->post_name,
-			'status'         => $post->post_status,
-			'type'           => $post->post_type,
-			'date'           => $post->post_date,
-			'modified'       => $post->post_modified,
-			'author'         => (int) $post->post_author,
-			'author_name'    => get_the_author_meta( 'display_name', $post->post_author ),
-			'permalink'      => get_permalink( $post->ID ),
-			'featured_image' => get_the_post_thumbnail_url( $post->ID, 'full' ),
-			'categories'     => wp_get_post_categories( $post->ID, array( 'fields' => 'names' ) ),
-			'tags'           => wp_get_post_tags( $post->ID, array( 'fields' => 'names' ) ),
-		);
-	}
-
-	/**
-	 * Tool: Get users.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<int, array<string, mixed>> Users list.
-	 */
-	private function tool_get_users( array $args ): array {
-		$allowed_orderby = array( 'display_name', 'registered', 'ID' );
-		$allowed_order   = array( 'ASC', 'DESC' );
-
-		$query_args = array(
-			'number'  => min( isset( $args['number'] ) ? absint( $args['number'] ) : 10, 100 ),
-			'role'    => isset( $args['role'] ) ? sanitize_text_field( (string) $args['role'] ) : '',
-			'orderby' => isset( $args['orderby'] ) && in_array( $args['orderby'], $allowed_orderby, true )
-				? $args['orderby']
-				: 'display_name',
-			'order'   => isset( $args['order'] ) && in_array( strtoupper( (string) $args['order'] ), $allowed_order, true )
-				? strtoupper( (string) $args['order'] )
-				: 'ASC',
-			'paged'   => isset( $args['paged'] ) ? absint( $args['paged'] ) : 1,
-		);
-
-		$users  = get_users( $query_args );
-		$result = array();
-
-		$include_pii = ! empty( $args['include_pii'] );
-
-		foreach ( $users as $user ) {
-			$user_data = array(
-				'id'           => $user->ID,
-				'display_name' => $user->display_name,
-				'registered'   => $user->user_registered,
-				'roles'        => $user->roles,
-			);
-
-			if ( $include_pii ) {
-				$user_data['login'] = $user->user_login;
-				$user_data['email'] = $user->user_email;
-			}
-
-			$result[] = $user_data;
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Tool: Get plugins.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, array<string, mixed>> Plugins list.
-	 */
-	private function tool_get_plugins( array $args ): array {
-		if ( ! function_exists( 'get_plugins' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/plugin.php';
-		}
-
-		$all_plugins    = get_plugins();
-		$active_plugins = get_option( 'active_plugins', array() );
-		$status         = $args['status'] ?? 'all';
-
-		$result = array();
-
-		foreach ( $all_plugins as $plugin_file => $plugin_data ) {
-			$is_active = in_array( $plugin_file, $active_plugins, true );
-
-			if ( 'active' === $status && ! $is_active ) {
-				continue;
-			}
-
-			if ( 'inactive' === $status && $is_active ) {
-				continue;
-			}
-
-			$result[ $plugin_file ] = array(
-				'name'        => $plugin_data['Name'],
-				'version'     => $plugin_data['Version'],
-				'description' => $plugin_data['Description'],
-				'author'      => $plugin_data['Author'],
-				'is_active'   => $is_active,
-			);
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Tool: Activate a plugin.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'plugin_file'.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	private function tool_activate_plugin( array $args ): array|\WP_Error {
-		$plugin_file = sanitize_text_field( $args['plugin_file'] ?? '' );
-		if ( empty( $plugin_file ) ) {
-			return new \WP_Error( 'missing_plugin_file', 'plugin_file is required. Use wordpress:get_plugins to find plugin file paths.' );
-		}
-
-		if ( empty( $args['confirm'] ) ) {
-			return new \WP_Error(
-				'bricks_mcp_confirm_required',
-				sprintf( 'Activating plugin "%s" will execute its activation hooks, which may alter your site. Set confirm: true to proceed.', $plugin_file )
-			);
-		}
-
-		if ( ! function_exists( 'activate_plugin' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/plugin.php';
-		}
-
-		if ( is_plugin_active( $plugin_file ) ) {
-			return array( 'plugin_file' => $plugin_file, 'status' => 'already_active', 'message' => 'Plugin is already active.' );
-		}
-
-		$result = activate_plugin( $plugin_file );
-		if ( is_wp_error( $result ) ) {
-			return $result;
-		}
-
-		return array( 'plugin_file' => $plugin_file, 'status' => 'activated', 'message' => 'Plugin activated successfully.' );
-	}
-
-	/**
-	 * Tool: Deactivate a plugin.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'plugin_file'.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	private function tool_deactivate_plugin( array $args ): array|\WP_Error {
-		$plugin_file = sanitize_text_field( $args['plugin_file'] ?? '' );
-		if ( empty( $plugin_file ) ) {
-			return new \WP_Error( 'missing_plugin_file', 'plugin_file is required.' );
-		}
-
-		if ( empty( $args['confirm'] ) ) {
-			return new \WP_Error(
-				'bricks_mcp_confirm_required',
-				sprintf( 'Deactivating plugin "%s" may break site functionality. Set confirm: true to proceed.', $plugin_file )
-			);
-		}
-
-		if ( ! function_exists( 'deactivate_plugins' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/plugin.php';
-		}
-
-		if ( ! is_plugin_active( $plugin_file ) ) {
-			return array( 'plugin_file' => $plugin_file, 'status' => 'already_inactive', 'message' => 'Plugin is already inactive.' );
-		}
-
-		deactivate_plugins( $plugin_file );
-
-		return array( 'plugin_file' => $plugin_file, 'status' => 'deactivated', 'message' => 'Plugin deactivated successfully.' );
-	}
-
-	/**
-	 * Tool: Create a WordPress user.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'username', 'email', etc.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	private function tool_create_user( array $args ): array|\WP_Error {
-		$username = sanitize_user( $args['username'] ?? '' );
-		$email    = sanitize_email( $args['email'] ?? '' );
-
-		if ( empty( $username ) ) {
-			return new \WP_Error( 'missing_username', 'username is required for create_user.' );
-		}
-		if ( empty( $email ) || ! is_email( $email ) ) {
-			return new \WP_Error( 'invalid_email', 'A valid email is required for create_user.' );
-		}
-
-		$password = $args['password'] ?? wp_generate_password( 16, true );
-		$role     = sanitize_text_field( $args['user_role'] ?? 'subscriber' );
-
-		// Validate role against registered WordPress roles and block administrator creation.
-		$valid_roles = array_keys( wp_roles()->get_names() );
-		if ( ! in_array( $role, $valid_roles, true ) ) {
-			return new \WP_Error( 'invalid_role', sprintf( 'Invalid role "%s". Valid roles: %s', $role, implode( ', ', $valid_roles ) ) );
-		}
-		if ( 'administrator' === $role ) {
-			return new \WP_Error( 'role_blocked', 'Creating administrator accounts via MCP is not allowed for security reasons.' );
-		}
-
-		$user_id = wp_insert_user( array(
-			'user_login'   => $username,
-			'user_email'   => $email,
-			'user_pass'    => $password,
-			'display_name' => sanitize_text_field( $args['display_name'] ?? $username ),
-			'role'         => $role,
-		) );
-
-		if ( is_wp_error( $user_id ) ) {
-			return $user_id;
-		}
-
-		return array(
-			'user_id'      => $user_id,
-			'username'     => $username,
-			'email'        => $email,
-			'display_name' => $args['display_name'] ?? $username,
-			'role'         => $role,
-			'message'      => 'User created successfully.',
-		);
-	}
-
-	/**
-	 * Tool: Update a WordPress user.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'user_id' and fields to update.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	private function tool_update_user( array $args ): array|\WP_Error {
-		$user_id = (int) ( $args['user_id'] ?? 0 );
-		if ( 0 === $user_id ) {
-			return new \WP_Error( 'missing_user_id', 'user_id is required for update_user. Use wordpress:get_users to find user IDs.' );
-		}
-
-		$user = get_user_by( 'ID', $user_id );
-		if ( ! $user ) {
-			return new \WP_Error( 'user_not_found', sprintf( 'User %d not found.', $user_id ) );
-		}
-
-		$update_data    = array( 'ID' => $user_id );
-		$updated_fields = array();
-
-		if ( ! empty( $args['email'] ) ) {
-			$email = sanitize_email( $args['email'] );
-			if ( is_email( $email ) ) {
-				$update_data['user_email'] = $email;
-				$updated_fields[]          = 'email';
-			}
-		}
-		if ( ! empty( $args['display_name'] ) ) {
-			$update_data['display_name'] = sanitize_text_field( $args['display_name'] );
-			$updated_fields[]            = 'display_name';
-		}
-		if ( ! empty( $args['user_role'] ) ) {
-			$role        = sanitize_text_field( $args['user_role'] );
-			$valid_roles = array_keys( wp_roles()->get_names() );
-			if ( ! in_array( $role, $valid_roles, true ) ) {
-				return new \WP_Error( 'invalid_role', sprintf( 'Invalid role "%s". Valid roles: %s', $role, implode( ', ', $valid_roles ) ) );
-			}
-			if ( 'administrator' === $role ) {
-				return new \WP_Error( 'role_blocked', 'Promoting users to administrator via MCP is not allowed for security reasons.' );
-			}
-			$update_data['role'] = $role;
-			$updated_fields[]    = 'role';
-		}
-		if ( ! empty( $args['password'] ) ) {
-			$update_data['user_pass'] = $args['password'];
-			$updated_fields[]         = 'password';
-		}
-
-		if ( empty( $updated_fields ) ) {
-			return new \WP_Error( 'no_fields', 'No fields to update. Provide email, display_name, user_role, or password.' );
-		}
-
-		$result = wp_update_user( $update_data );
-		if ( is_wp_error( $result ) ) {
-			return $result;
-		}
-
-		return array(
-			'user_id'        => $user_id,
-			'updated_fields' => $updated_fields,
-			'message'        => 'User updated successfully.',
-		);
-	}
-
-	/**
-	 * Tool: MetaBox dispatcher — routes to list_field_groups, get_fields, get_field_value, get_dynamic_tags.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'action'.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	public function tool_metabox( array $args ): array|\WP_Error {
-		$action = sanitize_text_field( $args['action'] ?? '' );
-
-		// Check if MetaBox is available.
-		if ( ! function_exists( 'rwmb_meta' ) ) {
-			return new \WP_Error(
-				'bricks_mcp_metabox_not_active',
-				'Meta Box plugin is not installed or activated. Install it from https://metabox.io/'
-			);
-		}
-
-		return match ( $action ) {
-			'list_field_groups' => $this->metabox_list_field_groups(),
-			'get_fields'        => $this->metabox_get_fields( $args ),
-			'get_field_value'   => $this->metabox_get_field_value( $args ),
-			'get_dynamic_tags'  => $this->metabox_get_dynamic_tags( $args ),
-			default             => new \WP_Error(
-				'invalid_action',
-				sprintf(
-					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: list_field_groups, get_fields, get_field_value, get_dynamic_tags', 'bricks-mcp' ),
-					$action
-				)
-			),
-		};
-	}
-
-	/**
-	 * MetaBox: List all field groups with their fields.
-	 *
-	 * @return array<string, mixed> Field groups data.
-	 */
-	private function metabox_list_field_groups(): array {
-		if ( ! function_exists( 'rwmb_get_registry' ) ) {
-			return array( 'field_groups' => array(), 'message' => 'Meta Box registry not available.' );
-		}
-
-		$registry = rwmb_get_registry( 'meta_box' );
-		$all      = $registry->all();
-		$groups   = array();
-
-		foreach ( $all as $meta_box ) {
-			$fields = array();
-			foreach ( $meta_box->fields as $field ) {
-				$field_info = array(
-					'id'   => $field['id'] ?? '',
-					'name' => $field['name'] ?? '',
-					'type' => $field['type'] ?? '',
-				);
-				if ( ! empty( $field['options'] ) ) {
-					$field_info['options'] = $field['options'];
-				}
-				if ( ! empty( $field['clone'] ) ) {
-					$field_info['cloneable'] = true;
-				}
-				if ( ! empty( $field['multiple'] ) ) {
-					$field_info['multiple'] = true;
-				}
-				$fields[] = $field_info;
-			}
-
-			$groups[] = array(
-				'id'         => $meta_box->id,
-				'title'      => $meta_box->title,
-				'post_types' => $meta_box->post_types ?? array(),
-				'fields'     => $fields,
-			);
-		}
-
-		return array( 'field_groups' => $groups, 'total' => count( $groups ) );
-	}
-
-	/**
-	 * MetaBox: Get fields for a specific post type.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'post_type'.
-	 * @return array<string, mixed>|\WP_Error Fields data or error.
-	 */
-	private function metabox_get_fields( array $args ): array|\WP_Error {
-		$post_type = sanitize_text_field( $args['post_type'] ?? '' );
-		if ( empty( $post_type ) ) {
-			return new \WP_Error( 'missing_post_type', 'post_type is required for get_fields.' );
-		}
-
-		if ( ! function_exists( 'rwmb_get_registry' ) ) {
-			return array( 'fields' => array() );
-		}
-
-		$registry = rwmb_get_registry( 'meta_box' );
-		$all      = $registry->all();
-		$fields   = array();
-
-		foreach ( $all as $meta_box ) {
-			$box_post_types = $meta_box->post_types ?? array();
-			if ( ! in_array( $post_type, $box_post_types, true ) ) {
-				continue;
-			}
-			foreach ( $meta_box->fields as $field ) {
-				$fields[] = array(
-					'id'          => $field['id'] ?? '',
-					'name'        => $field['name'] ?? '',
-					'type'        => $field['type'] ?? '',
-					'group'       => $meta_box->title,
-					'dynamic_tag' => '{mb_' . ( $field['id'] ?? '' ) . '}',
-				);
-			}
-		}
-
-		return array( 'post_type' => $post_type, 'fields' => $fields, 'total' => count( $fields ) );
-	}
-
-	/**
-	 * MetaBox: Get a field value for a specific post.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'post_id' and 'field_id'.
-	 * @return array<string, mixed>|\WP_Error Field value data or error.
-	 */
-	private function metabox_get_field_value( array $args ): array|\WP_Error {
-		$post_id  = (int) ( $args['post_id'] ?? 0 );
-		$field_id = sanitize_text_field( $args['field_id'] ?? '' );
-
-		if ( 0 === $post_id ) {
-			return new \WP_Error( 'missing_post_id', 'post_id is required for get_field_value.' );
-		}
-		if ( empty( $field_id ) ) {
-			return new \WP_Error( 'missing_field_id', 'field_id is required for get_field_value.' );
-		}
-
-		$value = rwmb_meta( $field_id, array(), $post_id );
-
-		// Handle different value types.
-		if ( is_array( $value ) ) {
-			// Could be image/file array — simplify.
-			$simplified = array();
-			foreach ( $value as $item ) {
-				if ( is_array( $item ) && isset( $item['url'] ) ) {
-					$simplified[] = array(
-						'id'    => $item['ID'] ?? 0,
-						'url'   => $item['url'],
-						'title' => $item['title'] ?? '',
-					);
-				} else {
-					$simplified[] = $item;
-				}
-			}
-			$value = $simplified;
-		}
-
-		return array(
-			'post_id'  => $post_id,
-			'field_id' => $field_id,
-			'value'    => $value,
-		);
-	}
-
-	/**
-	 * MetaBox: Get available dynamic data tags for Bricks.
-	 *
-	 * @param array<string, mixed> $args Tool arguments with optional 'post_type' filter.
-	 * @return array<string, mixed> Dynamic tags data.
-	 */
-	private function metabox_get_dynamic_tags( array $args ): array {
-		$post_type = sanitize_text_field( $args['post_type'] ?? '' );
-
-		if ( ! function_exists( 'rwmb_get_registry' ) ) {
-			return array( 'tags' => array(), 'message' => 'Meta Box not active.' );
-		}
-
-		$registry = rwmb_get_registry( 'meta_box' );
-		$all      = $registry->all();
-		$tags     = array();
-
-		foreach ( $all as $meta_box ) {
-			if ( ! empty( $post_type ) ) {
-				$box_post_types = $meta_box->post_types ?? array();
-				if ( ! in_array( $post_type, $box_post_types, true ) ) {
-					continue;
-				}
-			}
-			foreach ( $meta_box->fields as $field ) {
-				$fid  = $field['id'] ?? '';
-				$type = $field['type'] ?? 'text';
-
-				$tag_info = array(
-					'field_id'    => $fid,
-					'field_name'  => $field['name'] ?? '',
-					'field_type'  => $type,
-					'dynamic_tag' => '{mb_' . $fid . '}',
-				);
-
-				// Add usage hints based on field type.
-				if ( in_array( $type, array( 'image', 'image_advanced', 'image_upload', 'single_image', 'file', 'file_advanced', 'file_upload' ), true ) ) {
-					$tag_info['usage'] = 'Use in image element: {"useDynamicData": "{mb_' . $fid . '}"}';
-				} elseif ( in_array( $type, array( 'url', 'post', 'taxonomy' ), true ) ) {
-					$tag_info['usage'] = 'Use in link: {"type": "dynamic", "dynamicData": "{mb_' . $fid . '}"}';
-				} else {
-					$tag_info['usage'] = 'Use in text elements: {mb_' . $fid . '}';
-				}
-
-				$tags[] = $tag_info;
-			}
-		}
-
-		return array( 'tags' => $tags, 'total' => count( $tags ), 'post_type_filter' => $post_type ?: 'all' );
 	}
 
 	/**
@@ -1521,34 +905,16 @@ final class Router {
 			return;
 		}
 
-		// Tool: get_builder_guide.
-		$this->register_tool(
-			'get_builder_guide',
-			__( "Get the Bricks MCP builder guide — element settings reference, CSS gotchas, patterns, and workflows. Call this FIRST before building pages.", 'bricks-mcp' ),
-			array(
-				'type'       => 'object',
-				'properties' => array(
-					'section' => array(
-						'type'        => 'string',
-						'enum'        => array( 'all', 'professional', 'settings', 'animations', 'interactions', 'dynamic_data', 'forms', 'components', 'popups', 'element_conditions', 'woocommerce', 'seo', 'custom_code', 'fonts', 'import_export', 'workflows', 'gotchas', 'workflow', 'recipes', 'design_interpretation', 'connection_troubleshooting' ),
-						'description' => __( 'Which section to return. Defaults to "all" which returns a table of contents. Use a specific section key (e.g. "settings", "gotchas", "workflows") for full content.', 'bricks-mcp' ),
-					),
-				),
-			),
-			array( $this, 'tool_get_builder_guide' ),
-			array( 'readOnlyHint' => true )
-		);
-
-		// Bricks consolidated tool (replaces enable_bricks, disable_bricks, get_bricks_settings, get_breakpoints, get_element_schemas).
+		// Bricks consolidated tool.
 		$this->register_tool(
 			'bricks',
-			__( "Manage Bricks Builder settings, schema, and pattern library.\n\nActions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, analyze_patterns, save_pattern, use_pattern, map_design, get_notes, add_note, delete_note.", 'bricks-mcp' ),
+			__( "Manage Bricks Builder settings, schema, and AI notes.\n\nActions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, get_notes, add_note, delete_note.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
 					'action'       => array(
 						'type'        => 'string',
-						'enum'        => array( 'enable', 'disable', 'get_settings', 'get_breakpoints', 'get_element_schemas', 'get_dynamic_tags', 'get_query_types', 'get_form_schema', 'get_interaction_schema', 'get_component_schema', 'get_popup_schema', 'get_filter_schema', 'get_condition_schema', 'get_global_queries', 'set_global_query', 'delete_global_query', 'analyze_patterns', 'save_pattern', 'use_pattern', 'map_design', 'get_notes', 'add_note', 'delete_note' ),
+						'enum'        => array( 'enable', 'disable', 'get_settings', 'get_breakpoints', 'get_element_schemas', 'get_dynamic_tags', 'get_query_types', 'get_form_schema', 'get_interaction_schema', 'get_component_schema', 'get_popup_schema', 'get_filter_schema', 'get_condition_schema', 'get_global_queries', 'set_global_query', 'delete_global_query', 'get_notes', 'add_note', 'delete_note' ),
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					),
 					'post_id'      => array(
@@ -1591,69 +957,24 @@ final class Router {
 						'type'        => 'integer',
 						'description' => __( 'Max schemas to return (get_element_schemas: optional, default all)', 'bricks-mcp' ),
 					),
-					'pattern_id'      => array(
-						'type'        => 'string',
-						'description' => __( 'Pattern ID (use_pattern: required). Get IDs from analyze_patterns or save_pattern.', 'bricks-mcp' ),
-					),
-					'root_element_id' => array(
-						'type'        => 'string',
-						'description' => __( 'Root element ID of the subtree to save as a pattern (save_pattern: required)', 'bricks-mcp' ),
-					),
-					'overrides'       => array(
-						'type'        => 'object',
-						'description' => __( 'Placeholder overrides for pattern instantiation (use_pattern: optional). Keys are placeholder names (e.g., "heading", "text"), values are replacement strings.', 'bricks-mcp' ),
-					),
-					'text'            => array(
+					'text'         => array(
 						'type'        => 'string',
 						'description' => __( 'Note text (add_note: required)', 'bricks-mcp' ),
 					),
-					'note_id'         => array(
+					'note_id'      => array(
 						'type'        => 'string',
 						'description' => __( 'Note ID to delete (delete_note: required)', 'bricks-mcp' ),
-					),
-					'sections'        => array(
-						'type'        => 'array',
-						'description' => __( 'Array of section descriptions for design mapping (map_design: required). Each section: {description (required), layout (optional: split|grid|stacked|full-width), background (optional: dark|light|image|gradient), columns (optional: integer), content_types (optional: array of element types like heading, text, button, image, icon, card, list, form, video)}', 'bricks-mcp' ),
-						'items'       => array(
-							'type'       => 'object',
-							'properties' => array(
-								'description'   => array(
-									'type'        => 'string',
-									'description' => __( 'Free-text description of the section', 'bricks-mcp' ),
-								),
-								'layout'        => array(
-									'type'        => 'string',
-									'enum'        => array( 'split', 'grid', 'stacked', 'full-width' ),
-									'description' => __( 'Layout type', 'bricks-mcp' ),
-								),
-								'background'    => array(
-									'type'        => 'string',
-									'enum'        => array( 'dark', 'light', 'image', 'gradient' ),
-									'description' => __( 'Background treatment', 'bricks-mcp' ),
-								),
-								'columns'       => array(
-									'type'        => 'integer',
-									'description' => __( 'Number of columns', 'bricks-mcp' ),
-								),
-								'content_types' => array(
-									'type'        => 'array',
-									'items'       => array( 'type' => 'string' ),
-									'description' => __( 'Element types present (heading, text, button, image, icon, card, list, form, video)', 'bricks-mcp' ),
-								),
-							),
-							'required'   => array( 'description' ),
-						),
 					),
 				),
 				'required'   => array( 'action' ),
 			),
-			array( $this, 'tool_bricks' )
+			array( $this->bricks_tool_handler, 'handle' )
 		);
 
 		// Page consolidated tool (replaces list_pages, search_pages, get_bricks_content, create_bricks_page, update_bricks_content, update_page, delete_page, duplicate_page, get_page_settings, update_page_settings + SEO).
 		$this->register_tool(
 			'page',
-			__( "Manage pages and Bricks content.\n\n⚠️ CRITICAL: Before using 'create', 'update_content', or 'append_content' actions, you MUST call get_site_info, global_class:list, and get_builder_guide(section='professional') first. Use _cssGlobalClasses on every element. Create global classes if none exist. Inline styles only for instance overrides.\n\nActions: list, search, get (views: detail/summary/context/describe), create, update_content, append_content (add without replacing), import_clipboard, update_meta, delete, duplicate, get_settings, update_settings, get_seo, update_seo, snapshot, restore, list_snapshots.", 'bricks-mcp' ),
+			__( "Manage pages and Bricks content.\n\nActions: list, search, get (views: detail/summary/context/describe), create, update_content, append_content (add without replacing), import_clipboard, update_meta, delete, duplicate, get_settings, update_settings, get_seo, update_seo, snapshot, restore, list_snapshots.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
@@ -1814,7 +1135,7 @@ final class Router {
 		// Element consolidated tool (replaces add_element, update_element, remove_element).
 		$this->register_tool(
 			'element',
-			__( "Manage individual Bricks elements on a page.\n\n⚠️ CRITICAL: Before using 'add', 'update', or 'bulk_add' actions, you MUST call get_site_info, global_class:list, and get_builder_guide(section='professional') first. Use _cssGlobalClasses on every element. Create global classes if none exist. Inline styles only for instance overrides.\n\nActions: add, update, remove (optional cascade), get_conditions, set_conditions, move, bulk_update, bulk_add (supports nested tree format), duplicate, find.", 'bricks-mcp' ),
+			__( "Manage individual Bricks elements on a page.\n\nActions: add, update, remove (optional cascade), get_conditions, set_conditions, move, bulk_update, bulk_add (supports nested tree format), duplicate, find.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
@@ -1913,7 +1234,7 @@ final class Router {
 		// Template consolidated tool (replaces list_templates, get_template_content, create_template, update_template, delete_template, duplicate_template).
 		$this->register_tool(
 			'template',
-			__( "Manage Bricks templates (headers, footers, sections, popups, etc.).\n\n⚠️ CRITICAL: Before using 'create' or 'update' actions with element content, you MUST call get_site_info, global_class:list, and get_builder_guide(section='professional') first. Use _cssGlobalClasses on every element. Create global classes if none exist. Inline styles only for instance overrides.\n\nActions: list, get, create, update, delete, duplicate, get_popup_settings, set_popup_settings, export, import, import_url.", 'bricks-mcp' ),
+			__( "Manage Bricks templates (headers, footers, sections, popups, etc.).\n\nActions: list, get, create, update, delete, duplicate, get_popup_settings, set_popup_settings, export, import, import_url.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
@@ -2417,7 +1738,7 @@ final class Router {
 				),
 				'required'   => array( 'action' ),
 			),
-			array( $this, 'tool_media' )
+			array( $this->media_handler, 'handle' )
 		);
 
 		// Menu consolidated tool (replaces create_menu, update_menu, delete_menu, get_menu, list_menus, set_menu_items, assign_menu, unassign_menu, list_menu_locations).
@@ -2596,7 +1917,7 @@ final class Router {
 				),
 				'required'   => array( 'action' ),
 			),
-			array( $this, 'tool_font' )
+			array( $this->font_handler, 'handle' )
 		);
 
 		// Custom code consolidated tool.
@@ -2634,7 +1955,28 @@ final class Router {
 				),
 				'required'   => array( 'action' ),
 			),
-			array( $this, 'tool_code' )
+			array( $this->code_handler, 'handle' )
+		);
+
+		// Build from schema tool — the design build pipeline.
+		$this->register_tool(
+			'build_from_schema',
+			__( "Build Bricks page content from a declarative design schema. The schema describes structure, layout, and class intents; the MCP handles all Bricks mechanics (element IDs, settings, class resolution, normalization).\n\nAccepts a design schema with target (page_id, action), design_context (summary, mood, spacing), sections with nested structure trees, and optional patterns. Returns created elements, resolved classes, and a tree summary.\n\nUse dry_run: true to validate and preview without writing.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'schema'  => array(
+						'type'        => 'object',
+						'description' => __( 'Design schema object with target, design_context, sections, and optional patterns. See tool description for full format.', 'bricks-mcp' ),
+					),
+					'dry_run' => array(
+						'type'        => 'boolean',
+						'description' => __( 'When true, validate and resolve but do not write. Returns preview of what would be built.', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'schema' ),
+			),
+			array( $this->build_handler, 'handle' )
 		);
 	}
 
@@ -2653,371 +1995,6 @@ final class Router {
 			);
 		}
 		return null;
-	}
-
-	/**
-	 * Tool: WordPress dispatcher — routes to get_posts, get_post, get_users, get_plugins.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'action'.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	public function tool_wordpress( array $args ): array|\WP_Error {
-		$action = $args['action'] ?? '';
-
-		$action_caps = array(
-			'get_posts'         => 'read',
-			'get_post'          => 'read',
-			'get_users'         => 'list_users',
-			'get_plugins'       => 'activate_plugins',
-			'activate_plugin'   => 'activate_plugins',
-			'deactivate_plugin' => 'activate_plugins',
-			'create_user'       => 'create_users',
-			'update_user'       => 'edit_users',
-		);
-
-		// Reject unknown actions before capability check to prevent future actions
-		// from accidentally bypassing caps if added to match but not to $action_caps.
-		if ( ! isset( $action_caps[ $action ] ) ) {
-			return new \WP_Error(
-				'invalid_action',
-				sprintf(
-					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: get_posts, get_post, get_users, get_plugins, activate_plugin, deactivate_plugin, create_user, update_user', 'bricks-mcp' ),
-					sanitize_text_field( $action )
-				)
-			);
-		}
-
-		if ( ! current_user_can( $action_caps[ $action ] ) ) {
-			return new \WP_Error(
-				'bricks_mcp_forbidden',
-				sprintf(
-					/* translators: %s: Required capability */
-					__( 'You do not have the required capability (%s) to perform this action.', 'bricks-mcp' ),
-					$action_caps[ $action ]
-				)
-			);
-		}
-
-		return match ( $action ) {
-			'get_posts'         => $this->tool_get_posts( $args ),
-			'get_post'          => $this->tool_get_post( $args ),
-			'get_users'         => $this->tool_get_users( $args ),
-			'get_plugins'       => $this->tool_get_plugins( $args ),
-			'activate_plugin'   => $this->tool_activate_plugin( $args ),
-			'deactivate_plugin' => $this->tool_deactivate_plugin( $args ),
-			'create_user'       => $this->tool_create_user( $args ),
-			'update_user'       => $this->tool_update_user( $args ),
-			default             => new \WP_Error(
-				'invalid_action',
-				sprintf(
-					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: get_posts, get_post, get_users, get_plugins, activate_plugin, deactivate_plugin, create_user, update_user', 'bricks-mcp' ),
-					sanitize_text_field( $action )
-				)
-			),
-		};
-	}
-
-	/**
-	 * Tool: Bricks dispatcher — routes to enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_global_queries, set_global_query, delete_global_query.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'action'.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	public function tool_bricks( array $args ): array|\WP_Error {
-		$bricks_error = $this->require_bricks();
-		if ( null !== $bricks_error ) {
-			return $bricks_error;
-		}
-
-		$action        = sanitize_text_field( $args['action'] ?? '' );
-
-
-		return match ( $action ) {
-			'enable'                  => $this->tool_enable_bricks( $args ),
-			'disable'                 => $this->tool_disable_bricks( $args ),
-			'get_settings'            => $this->tool_get_bricks_settings( $args ),
-			'get_breakpoints'         => $this->tool_get_breakpoints( $args ),
-			'get_element_schemas'     => $this->schema_handler->tool_get_element_schemas( $args ),
-			'get_dynamic_tags'        => $this->schema_handler->tool_get_dynamic_tags( $args ),
-			'get_query_types'         => $this->schema_handler->tool_get_query_types( $args ),
-			'get_form_schema'         => $this->schema_handler->tool_get_form_schema( $args ),
-			'get_interaction_schema'  => $this->schema_handler->tool_get_interaction_schema( $args ),
-			'get_component_schema'    => $this->schema_handler->tool_get_component_schema( $args ),
-			'get_popup_schema'        => $this->schema_handler->tool_get_popup_schema( $args ),
-			'get_filter_schema'       => $this->schema_handler->tool_get_filter_schema( $args ),
-			'get_condition_schema'    => $this->schema_handler->tool_get_condition_schema( $args ),
-			'get_global_queries'      => $this->tool_get_global_queries( $args ),
-			'set_global_query'        => $this->tool_set_global_query( $args ),
-			'delete_global_query'     => $this->tool_delete_global_query( $args ),
-			'analyze_patterns'        => $this->bricks_service->analyze_patterns(),
-			'save_pattern'            => $this->bricks_service->save_pattern( (int) ( $args['post_id'] ?? 0 ), sanitize_text_field( $args['root_element_id'] ?? '' ), sanitize_text_field( $args['name'] ?? '' ) ),
-			'use_pattern'             => $this->bricks_service->use_pattern( sanitize_text_field( $args['pattern_id'] ?? '' ), (int) ( $args['post_id'] ?? 0 ), $args['overrides'] ?? [] ),
-			'map_design'              => $this->bricks_service->map_design( $args['sections'] ?? [] ),
-			'get_notes'               => [ 'notes' => $this->bricks_service->get_notes() ],
-			'add_note'                => $this->bricks_service->add_note( sanitize_text_field( $args['text'] ?? '' ) ),
-			'delete_note'             => [ 'deleted' => $this->bricks_service->delete_note( sanitize_text_field( $args['note_id'] ?? '' ) ) ],
-			default                   => new \WP_Error(
-				'invalid_action',
-				sprintf(
-					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, analyze_patterns, save_pattern, use_pattern, map_design, get_notes, add_note, delete_note', 'bricks-mcp' ),
-					$action
-				)
-			),
-		};
-	}
-
-
-	/**
-	 * Tool: Get global queries.
-	 *
-	 * Returns all reusable global query definitions stored in bricks_global_queries option.
-	 *
-	 * @param array<string, mixed> $args Tool arguments (unused).
-	 * @return array<string, mixed>|\WP_Error Global queries list or error.
-	 */
-	private function tool_get_global_queries( array $args ): array|\WP_Error { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		$queries = get_option( 'bricks_global_queries', array() );
-		$queries = is_array( $queries ) ? $queries : array();
-
-		return array(
-			'global_queries' => $queries,
-			'count'          => count( $queries ),
-			'usage_hint'     => 'Reference a global query on any loop element: set query.id to the global query ID. Bricks resolves the settings at runtime.',
-		);
-	}
-
-	/**
-	 * Tool: Set global query (create or update).
-	 *
-	 * Creates a new global query or updates an existing one by query_id.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including name, settings, optional query_id and category.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	private function tool_set_global_query( array $args ): array|\WP_Error {
-		$queries  = get_option( 'bricks_global_queries', array() );
-		$queries  = is_array( $queries ) ? $queries : array();
-		$query_id = isset( $args['query_id'] ) ? sanitize_text_field( (string) $args['query_id'] ) : '';
-		$name     = sanitize_text_field( $args['name'] ?? '' );
-		$settings = $args['settings'] ?? array();
-		$category = sanitize_text_field( $args['category'] ?? '' );
-
-		if ( empty( $name ) ) {
-			return new \WP_Error( 'missing_name', __( 'name is required for set_global_query.', 'bricks-mcp' ) );
-		}
-		if ( ! is_array( $settings ) || empty( $settings ) ) {
-			return new \WP_Error( 'missing_settings', __( 'settings (object with query configuration) is required for set_global_query.', 'bricks-mcp' ) );
-		}
-
-		// Security: strip queryEditor/useQueryEditor and sanitize settings recursively.
-		unset( $settings['queryEditor'], $settings['useQueryEditor'] );
-		$settings = $this->sanitize_query_settings( $settings );
-
-		$existing_index = false;
-		if ( ! empty( $query_id ) ) {
-			foreach ( $queries as $idx => $q ) {
-				if ( isset( $q['id'] ) && $q['id'] === $query_id ) {
-					$existing_index = $idx;
-					break;
-				}
-			}
-		}
-
-		$id_generator = new ElementIdGenerator();
-		$entry        = array(
-			'id'       => ! empty( $query_id ) && false !== $existing_index
-				? $query_id
-				: $id_generator->generate_unique( $queries ),
-			'name'     => $name,
-			'settings' => $settings,
-		);
-		if ( ! empty( $category ) ) {
-			$entry['category'] = $category;
-		}
-
-		if ( false !== $existing_index ) {
-			$queries[ $existing_index ] = $entry;
-			$action_taken               = 'updated';
-		} else {
-			$queries[]    = $entry;
-			$action_taken = 'created';
-		}
-
-		update_option( 'bricks_global_queries', $queries );
-
-		return array(
-			'action'     => $action_taken,
-			'query'      => $entry,
-			'usage_hint' => sprintf( 'Reference this global query on any loop element: set query.id to "%s".', $entry['id'] ),
-		);
-	}
-
-	/**
-	 * Recursively sanitize global query settings to prevent XSS/injection via stored values.
-	 *
-	 * @param array<string, mixed> $settings The query settings array.
-	 * @return array<string, mixed> Sanitized settings.
-	 */
-	private function sanitize_query_settings( array $settings ): array {
-		$sanitized = [];
-		foreach ( $settings as $key => $value ) {
-			$safe_key = sanitize_text_field( (string) $key );
-			if ( is_array( $value ) ) {
-				$sanitized[ $safe_key ] = $this->sanitize_query_settings( $value );
-			} elseif ( is_string( $value ) ) {
-				$sanitized[ $safe_key ] = sanitize_text_field( $value );
-			} elseif ( is_int( $value ) || is_float( $value ) || is_bool( $value ) ) {
-				$sanitized[ $safe_key ] = $value;
-			}
-		}
-		return $sanitized;
-	}
-
-	/**
-	 * Tool: Delete global query.
-	 *
-	 * Deletes a global query by ID and warns about orphaned element references.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including query_id.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	private function tool_delete_global_query( array $args ): array|\WP_Error {
-		$query_id = isset( $args['query_id'] ) ? sanitize_text_field( (string) $args['query_id'] ) : '';
-		if ( empty( $query_id ) ) {
-			return new \WP_Error( 'missing_query_id', __( 'query_id is required for delete_global_query.', 'bricks-mcp' ) );
-		}
-
-		$queries = get_option( 'bricks_global_queries', array() );
-		$queries = is_array( $queries ) ? $queries : array();
-
-		$found_index = false;
-		$found_query = null;
-		foreach ( $queries as $idx => $q ) {
-			if ( isset( $q['id'] ) && $q['id'] === $query_id ) {
-				$found_index = $idx;
-				$found_query = $q;
-				break;
-			}
-		}
-
-		if ( false === $found_index ) {
-			return new \WP_Error(
-				'not_found',
-				sprintf(
-					/* translators: %s: Query ID */
-					__( 'Global query "%s" not found. Use bricks:get_global_queries to list available queries.', 'bricks-mcp' ),
-					$query_id
-				)
-			);
-		}
-
-		if ( empty( $args['confirm'] ) ) {
-			return new \WP_Error(
-				'bricks_mcp_confirm_required',
-				sprintf(
-					/* translators: 1: Query name, 2: Query ID */
-					__( 'This will delete global query "%1$s" (ID: %2$s). Any elements referencing this query ID will stop working. Set confirm: true to proceed.', 'bricks-mcp' ),
-					$found_query['name'] ?? $query_id,
-					$query_id
-				)
-			);
-		}
-
-		array_splice( $queries, $found_index, 1 );
-		update_option( 'bricks_global_queries', $queries );
-
-		return array(
-			'deleted'  => true,
-			'query_id' => $query_id,
-			'name'     => $found_query['name'] ?? '',
-			'warning'  => 'Any elements referencing this global query ID will fall back to empty query settings. Check for elements with query.id set to this ID.',
-		);
-	}
-
-
-	/**
-	 * Tool: Enable the Bricks editor for a post.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	private function tool_enable_bricks( array $args ): array|\WP_Error {
-		if ( empty( $args['post_id'] ) ) {
-			return new \WP_Error(
-				'missing_post_id',
-				__( 'post_id is required. Provide the ID of the post to enable Bricks on.', 'bricks-mcp' )
-			);
-		}
-
-		$post_id = (int) $args['post_id'];
-		$post    = get_post( $post_id );
-
-		if ( ! $post ) {
-			return new \WP_Error(
-				'post_not_found',
-				sprintf(
-					/* translators: %d: Post ID */
-					__( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ),
-					$post_id
-				)
-			);
-		}
-
-		$was_already_enabled = $this->bricks_service->is_bricks_page( $post_id );
-		$this->bricks_service->enable_bricks_editor( $post_id );
-		$elements = $this->bricks_service->get_elements( $post_id );
-
-		return array(
-			'post_id'             => $post_id,
-			'title'               => $post->post_title,
-			'bricks_enabled'      => true,
-			'was_already_enabled' => $was_already_enabled,
-			'element_count'       => count( $elements ),
-			'edit_url'            => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
-		);
-	}
-
-	/**
-	 * Tool: Disable the Bricks editor for a post.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	private function tool_disable_bricks( array $args ): array|\WP_Error {
-		if ( empty( $args['post_id'] ) ) {
-			return new \WP_Error(
-				'missing_post_id',
-				__( 'post_id is required. Provide the ID of the post to disable Bricks on.', 'bricks-mcp' )
-			);
-		}
-
-		$post_id = (int) $args['post_id'];
-		$post    = get_post( $post_id );
-
-		if ( ! $post ) {
-			return new \WP_Error(
-				'post_not_found',
-				sprintf(
-					/* translators: %d: Post ID */
-					__( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ),
-					$post_id
-				)
-			);
-		}
-
-		$was_already_disabled = ! $this->bricks_service->is_bricks_page( $post_id );
-		$this->bricks_service->disable_bricks_editor( $post_id );
-
-		return array(
-			'post_id'              => $post_id,
-			'title'                => $post->post_title,
-			'bricks_enabled'       => false,
-			'was_already_disabled' => $was_already_disabled,
-			'note'                 => __( 'Bricks content preserved in database. Re-enable with bricks tool (action: enable).', 'bricks-mcp' ),
-		);
 	}
 
 	/**
@@ -3171,44 +2148,6 @@ final class Router {
 	}
 
 	/**
-	 * Tool: Media dispatcher — routes to search_unsplash, sideload, list, set_featured, remove_featured, get_image_settings.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'action'.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	public function tool_media( array $args ): array|\WP_Error {
-		$bricks_error = $this->require_bricks();
-		if ( null !== $bricks_error ) {
-			return $bricks_error;
-		}
-
-		$action        = sanitize_text_field( $args['action'] ?? '' );
-
-
-		// Map 'image_size' to 'size' for get_image_settings handler.
-		if ( isset( $args['image_size'] ) && ! isset( $args['size'] ) ) {
-			$args['size'] = $args['image_size'];
-		}
-
-		return match ( $action ) {
-			'search_unsplash'  => $this->tool_search_unsplash( $args ),
-			'sideload'         => $this->tool_sideload_image( $args ),
-			'list'             => $this->tool_get_media_library( $args ),
-			'set_featured'     => $this->tool_set_featured_image( $args ),
-			'remove_featured'  => $this->tool_remove_featured_image( $args ),
-			'get_image_settings' => $this->tool_get_image_element_settings( $args ),
-			default            => new \WP_Error(
-				'invalid_action',
-				sprintf(
-					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: search_unsplash, sideload, list, set_featured, remove_featured, get_image_settings', 'bricks-mcp' ),
-					$action
-				)
-			),
-		};
-	}
-
-	/**
 	 * Tool: Menu dispatcher — routes to list, get, create, update, delete, set_items, assign, unassign, list_locations.
 	 *
 	 * @param array<string, mixed> $args Tool arguments including 'action'.
@@ -3217,697 +2156,6 @@ final class Router {
 	public function tool_menu( array $args ): array|\WP_Error {
 		return $this->menu_handler->handle( $args );
 	}
-
-	/**
-	 * Tool: Get responsive breakpoints.
-	 *
-	 * Returns all available breakpoints with composite key format and examples.
-	 *
-	 * @param array<string, mixed> $args Tool arguments (unused).
-	 * @return array<string, mixed>|\WP_Error Breakpoint data or error.
-	 */
-	private function tool_get_breakpoints( array $args ): array|\WP_Error { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		$breakpoints = $this->bricks_service->get_breakpoints();
-
-		// Detect custom breakpoints setting.
-		$is_custom = false;
-		if ( class_exists( '\Bricks\Database' ) && method_exists( '\Bricks\Database', 'get_setting' ) ) {
-			$is_custom = ! empty( \Bricks\Database::get_setting( 'customBreakpoints' ) );
-		} else {
-			$global_settings = get_option( 'bricks_global_settings', array() );
-			$is_custom       = ! empty( $global_settings['customBreakpoints'] );
-		}
-
-		// Add sort_order and is_custom to each breakpoint.
-		$base_key   = 'desktop';
-		$base_width = 0;
-
-		foreach ( $breakpoints as $index => &$bp ) {
-			$bp['sort_order'] = $index;
-			$bp['is_custom']  = $is_custom;
-
-			if ( ! empty( $bp['base'] ) ) {
-				$base_key   = $bp['key'];
-				$base_width = $bp['width'];
-			}
-		}
-		unset( $bp );
-
-		// Determine approach.
-		$max_width = 0;
-		$min_width = PHP_INT_MAX;
-		foreach ( $breakpoints as $bp ) {
-			if ( $bp['width'] > $max_width ) {
-				$max_width = $bp['width'];
-			}
-			if ( $bp['width'] < $min_width ) {
-				$min_width = $bp['width'];
-			}
-		}
-
-		if ( $base_width >= $max_width ) {
-			$approach = 'desktop-first';
-		} elseif ( $base_width <= $min_width ) {
-			$approach = 'mobile-first';
-		} else {
-			$approach = 'custom';
-		}
-
-		return array(
-			'breakpoints'                => $breakpoints,
-			'base_breakpoint'            => $base_key,
-			'approach'                   => $approach,
-			'custom_breakpoints_enabled' => $is_custom,
-			'composite_key_format'       => '{property}:{breakpoint}:{pseudo}',
-			'examples'                   => array(
-				'_margin:tablet_portrait' => 'Margin on tablet portrait',
-				'_padding:mobile'         => 'Padding on mobile',
-				'_background:hover'       => 'Background on hover state',
-				'_margin:mobile:hover'    => 'Margin on mobile hover',
-			),
-		);
-	}
-
-	/**
-	 * Tool: Font dispatcher — routes to get_status, get_adobe_fonts, update_settings.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'action'.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	public function tool_font( array $args ): array|\WP_Error {
-		$bricks_error = $this->require_bricks();
-		if ( null !== $bricks_error ) {
-			return $bricks_error;
-		}
-
-		$action        = sanitize_text_field( $args['action'] ?? '' );
-
-
-		return match ( $action ) {
-			'get_status'      => $this->tool_get_font_status( $args ),
-			'get_adobe_fonts' => $this->tool_get_adobe_fonts( $args ),
-			'update_settings' => $this->tool_update_font_settings( $args ),
-			default           => new \WP_Error(
-				'invalid_action',
-				sprintf(
-					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: get_status, get_adobe_fonts, update_settings', 'bricks-mcp' ),
-					$action
-				)
-			),
-		};
-	}
-
-	/**
-	 * Tool: Get font configuration status overview.
-	 *
-	 * @param array<string, mixed> $args Tool arguments (unused).
-	 * @return array<string, mixed> Font status data.
-	 */
-	private function tool_get_font_status( array $args ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		return $this->bricks_service->get_font_status();
-	}
-
-	/**
-	 * Tool: Get cached Adobe Fonts.
-	 *
-	 * @param array<string, mixed> $args Tool arguments (unused).
-	 * @return array<string, mixed> Adobe Fonts data.
-	 */
-	private function tool_get_adobe_fonts( array $args ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		return $this->bricks_service->get_adobe_fonts();
-	}
-
-	/**
-	 * Tool: Update font-related settings.
-	 *
-	 * @param array<string, mixed> $args Tool arguments with font setting fields.
-	 * @return array<string, mixed>|\WP_Error Update result or error.
-	 */
-	private function tool_update_font_settings( array $args ): array|\WP_Error {
-		$fields = array();
-
-		if ( array_key_exists( 'disable_google_fonts', $args ) ) {
-			$fields['disableGoogleFonts'] = $args['disable_google_fonts'];
-		}
-
-		if ( array_key_exists( 'webfont_loading', $args ) ) {
-			$fields['webfontLoading'] = $args['webfont_loading'];
-		}
-
-		if ( array_key_exists( 'custom_fonts_preload', $args ) ) {
-			$fields['customFontsPreload'] = $args['custom_fonts_preload'];
-		}
-
-		if ( empty( $fields ) ) {
-			return new \WP_Error(
-				'no_fields',
-				__( 'No font settings provided. Use disable_google_fonts (boolean), webfont_loading (string), or custom_fonts_preload (boolean).', 'bricks-mcp' )
-			);
-		}
-
-		return $this->bricks_service->update_font_settings( $fields );
-	}
-
-	/**
-	 * Tool: Code dispatcher — routes to get_page_css, set_page_css, get_page_scripts, set_page_scripts.
-	 *
-	 * @param array<string, mixed> $args Tool arguments including 'action'.
-	 * @return array<string, mixed>|\WP_Error Result data or error.
-	 */
-	public function tool_code( array $args ): array|\WP_Error {
-		$bricks_error = $this->require_bricks();
-		if ( null !== $bricks_error ) {
-			return $bricks_error;
-		}
-
-		$action        = sanitize_text_field( $args['action'] ?? '' );
-
-
-		if ( 'set_page_scripts' === $action ) {
-			if ( ! $this->bricks_service->is_dangerous_actions_enabled() ) {
-				return new \WP_Error(
-					'dangerous_actions_disabled',
-					__( 'Custom scripts require the Dangerous Actions toggle to be enabled in Settings > Bricks MCP.', 'bricks-mcp' )
-				);
-			}
-		}
-
-		return match ( $action ) {
-			'get_page_css'     => $this->tool_get_page_css( $args ),
-			'set_page_css'     => $this->tool_set_page_css( $args ),
-			'get_page_scripts' => $this->tool_get_page_scripts( $args ),
-			'set_page_scripts' => $this->tool_set_page_scripts( $args ),
-			default            => new \WP_Error(
-				'invalid_action',
-				sprintf(
-					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: get_page_css, set_page_css, get_page_scripts, set_page_scripts', 'bricks-mcp' ),
-					$action
-				)
-			),
-		};
-	}
-
-	/**
-	 * Tool: Get page custom CSS and scripts.
-	 *
-	 * @param array<string, mixed> $args Tool arguments with 'post_id'.
-	 * @return array<string, mixed>|\WP_Error Code data or error.
-	 */
-	private function tool_get_page_css( array $args ): array|\WP_Error {
-		$post_id = $args['post_id'] ?? null;
-
-		if ( null === $post_id ) {
-			return new \WP_Error(
-				'missing_post_id',
-				__( 'post_id is required for get_page_css.', 'bricks-mcp' )
-			);
-		}
-
-		return $this->bricks_service->get_page_code( (int) $post_id );
-	}
-
-	/**
-	 * Tool: Set page custom CSS.
-	 *
-	 * @param array<string, mixed> $args Tool arguments with 'post_id' and 'css'.
-	 * @return array<string, mixed>|\WP_Error Update result or error.
-	 */
-	private function tool_set_page_css( array $args ): array|\WP_Error {
-		$post_id = $args['post_id'] ?? null;
-
-		if ( null === $post_id ) {
-			return new \WP_Error(
-				'missing_post_id',
-				__( 'post_id is required for set_page_css.', 'bricks-mcp' )
-			);
-		}
-
-		if ( ! array_key_exists( 'css', $args ) ) {
-			return new \WP_Error(
-				'missing_css',
-				__( 'css is required for set_page_css. Send empty string to remove custom CSS.', 'bricks-mcp' )
-			);
-		}
-
-		return $this->bricks_service->update_page_css( (int) $post_id, (string) $args['css'] );
-	}
-
-	/**
-	 * Tool: Get page custom scripts only.
-	 *
-	 * @param array<string, mixed> $args Tool arguments with 'post_id'.
-	 * @return array<string, mixed>|\WP_Error Script data or error.
-	 */
-	private function tool_get_page_scripts( array $args ): array|\WP_Error {
-		$post_id = $args['post_id'] ?? null;
-
-		if ( null === $post_id ) {
-			return new \WP_Error(
-				'missing_post_id',
-				__( 'post_id is required for get_page_scripts.', 'bricks-mcp' )
-			);
-		}
-
-		$code = $this->bricks_service->get_page_code( (int) $post_id );
-
-		if ( is_wp_error( $code ) ) {
-			return $code;
-		}
-
-		return array(
-			'post_id'                 => $code['post_id'],
-			'customScriptsHeader'     => $code['customScriptsHeader'],
-			'customScriptsBodyHeader' => $code['customScriptsBodyHeader'],
-			'customScriptsBodyFooter' => $code['customScriptsBodyFooter'],
-			'has_scripts'             => $code['has_scripts'],
-		);
-	}
-
-	/**
-	 * Tool: Set page custom scripts.
-	 *
-	 * @param array<string, mixed> $args Tool arguments with 'post_id' and script placement params.
-	 * @return array<string, mixed>|\WP_Error Update result or error.
-	 */
-	private function tool_set_page_scripts( array $args ): array|\WP_Error {
-		$post_id = $args['post_id'] ?? null;
-
-		if ( null === $post_id ) {
-			return new \WP_Error(
-				'missing_post_id',
-				__( 'post_id is required for set_page_scripts.', 'bricks-mcp' )
-			);
-		}
-
-		$scripts = array();
-
-		if ( array_key_exists( 'header', $args ) ) {
-			$scripts['customScriptsHeader'] = (string) $args['header'];
-		}
-
-		if ( array_key_exists( 'body_header', $args ) ) {
-			$scripts['customScriptsBodyHeader'] = (string) $args['body_header'];
-		}
-
-		if ( array_key_exists( 'body_footer', $args ) ) {
-			$scripts['customScriptsBodyFooter'] = (string) $args['body_footer'];
-		}
-
-		if ( empty( $scripts ) ) {
-			return new \WP_Error(
-				'no_scripts',
-				__( 'At least one script parameter is required: header, body_header, or body_footer.', 'bricks-mcp' )
-			);
-		}
-
-		return $this->bricks_service->update_page_scripts( (int) $post_id, $scripts );
-	}
-
-	/**
-	 * Tool: Get builder guide.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array{guide: string}|array{section: string, content: string} Guide content.
-	 */
-	public function tool_get_builder_guide( array $args ): array {
-		static $cached_content = null;
-
-		$guide_path = BRICKS_MCP_PLUGIN_DIR . 'docs/BUILDER_GUIDE.md';
-
-		if ( ! file_exists( $guide_path ) ) {
-			return array( 'guide' => 'Builder guide not found. Use get_element_schemas to discover available elements.' );
-		}
-
-		if ( null === $cached_content ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local file read.
-			$cached_content = file_get_contents( $guide_path );
-		}
-
-		$content = $cached_content;
-
-		if ( false === $content ) {
-			return array( 'guide' => 'Failed to read builder guide.' );
-		}
-
-		$section_map = array(
-			'professional'              => '## Professional Page Building',
-			'settings'                  => '## Element Settings Reference',
-			'animations'                => '## Animations',
-			'interactions'              => '## Animations',
-			'dynamic_data'              => '## Dynamic Data & Query Loops',
-			'forms'                     => '## Forms',
-			'components'                => '## Components',
-			'popups'                    => '## Popups',
-			'element_conditions'        => '## Element Conditions & Visibility',
-			'woocommerce'               => '## WooCommerce',
-			'seo'                       => '## SEO Optimization',
-			'custom_code'               => '## Custom Code',
-			'fonts'                     => '## Font Management',
-			'import_export'             => '## Import & Export',
-			'workflows'                 => '## Common Workflows',
-			'gotchas'                   => '## Key Gotchas',
-			'workflow'                  => '## Workflow',
-			'recipes'                   => '## Recipes',
-			'design_interpretation'     => '## Design Interpretation',
-			'connection_troubleshooting' => '## Connection Troubleshooting',
-		);
-
-		$section = $args['section'] ?? 'all';
-
-		// Return table of contents when requesting all sections (full guide is too large for a single response).
-		if ( 'all' === $section ) {
-			$toc = "# Bricks MCP Builder Guide — Table of Contents\n\n";
-			$toc .= "The full guide is split into sections. Request a specific section for detailed content.\n\n";
-			$toc .= "| Section key | Topic |\n|---|---|\n";
-			foreach ( $section_map as $key => $heading ) {
-				if ( 'interactions' === $key ) {
-					continue; // Alias for animations.
-				}
-				$toc .= "| `{$key}` | {$heading} |\n";
-			}
-			$toc .= "\nUse `get_builder_guide` with `section` parameter to fetch a specific section.";
-			$toc .= "\n\nRecommended first reads: `professional` (global-class-first approach and design system), `settings` (element properties reference), `gotchas` (common mistakes).";
-
-			return array( 'guide' => $toc );
-		}
-
-		if ( ! isset( $section_map[ $section ] ) ) {
-			return array(
-				'error'             => "Unknown section: '{$section}'.",
-				'available_sections' => array_keys( $section_map ),
-			);
-		}
-
-		$heading = $section_map[ $section ];
-		$pos     = strpos( $content, $heading );
-
-		if ( false === $pos ) {
-			return array( 'error' => "Section heading '{$heading}' not found in guide." );
-		}
-
-		// Extract from heading to next ## heading or end of file.
-		$rest      = substr( $content, $pos );
-		$next_h2   = strpos( $rest, "\n## ", strlen( $heading ) );
-		$extracted = false !== $next_h2 ? substr( $rest, 0, $next_h2 ) : $rest;
-
-		// Append persistent correction notes to gotchas section.
-		if ( 'gotchas' === $section ) {
-			$notes = $this->bricks_service->get_notes();
-			if ( ! empty( $notes ) ) {
-				$notes_text = "\n\n### AI Notes (persistent corrections)\n\n";
-				foreach ( $notes as $note ) {
-					$notes_text .= '- ' . ( $note['text'] ?? '' ) . "\n";
-				}
-				$extracted .= $notes_text;
-			}
-		}
-
-		return array(
-			'section' => $section,
-			'content' => trim( $extracted ),
-		);
-	}
-
-	/**
-	 * Tool: Get Bricks global settings.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, mixed>|\WP_Error Settings data or error.
-	 */
-	private function tool_get_bricks_settings( array $args ): array|\WP_Error {
-		$category = sanitize_key( $args['category'] ?? '' );
-
-		return $this->bricks_service->get_bricks_settings( $category );
-	}
-
-	/**
-	 * Tool: Search Unsplash photos.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, mixed>|\WP_Error Search results or error.
-	 */
-	private function tool_search_unsplash( array $args ): array|\WP_Error {
-		if ( empty( $args['query'] ) || ! is_string( $args['query'] ) ) {
-			return new \WP_Error(
-				'missing_query',
-				__( 'query parameter is required and must be a non-empty string.', 'bricks-mcp' )
-			);
-		}
-
-		return $this->media_service->search_photos( $args['query'] );
-	}
-
-	/**
-	 * Tool: Sideload image from URL into WordPress media library.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, mixed>|\WP_Error Sideload result or error.
-	 */
-	private function tool_sideload_image( array $args ): array|\WP_Error {
-		if ( empty( $args['url'] ) || ! is_string( $args['url'] ) ) {
-			return new \WP_Error(
-				'missing_url',
-				__( 'url parameter is required and must be a non-empty string.', 'bricks-mcp' )
-			);
-		}
-
-		$url               = $args['url'];
-		$alt_text          = isset( $args['alt_text'] ) && is_string( $args['alt_text'] ) ? $args['alt_text'] : '';
-		$title             = isset( $args['title'] ) && is_string( $args['title'] ) ? $args['title'] : '';
-		$unsplash_id       = isset( $args['unsplash_id'] ) && is_string( $args['unsplash_id'] ) ? $args['unsplash_id'] : null;
-		$download_location = isset( $args['download_location'] ) && is_string( $args['download_location'] ) ? $args['download_location'] : null;
-
-		return $this->media_service->sideload_from_url( $url, $alt_text, $title, $unsplash_id, $download_location );
-	}
-
-	/**
-	 * Tool: Browse the WordPress media library.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, mixed>|\WP_Error Media library results or error.
-	 */
-	private function tool_get_media_library( array $args ): array|\WP_Error {
-		$search    = isset( $args['search'] ) && is_string( $args['search'] ) ? $args['search'] : '';
-		$mime_type = isset( $args['mime_type'] ) && is_string( $args['mime_type'] ) ? $args['mime_type'] : 'image';
-		$per_page  = isset( $args['per_page'] ) && is_int( $args['per_page'] ) ? $args['per_page'] : 20;
-		$page      = isset( $args['page'] ) && is_int( $args['page'] ) ? $args['page'] : 1;
-
-		return $this->media_service->get_media_library_items( $search, $mime_type, $per_page, $page );
-	}
-
-	/**
-	 * Tool: Set or replace the featured image for a post.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, mixed>|\WP_Error Featured image result or error.
-	 */
-	private function tool_set_featured_image( array $args ): array|\WP_Error {
-		if ( empty( $args['post_id'] ) || ! is_numeric( $args['post_id'] ) ) {
-			return new \WP_Error(
-				'missing_post_id',
-				__( 'post_id parameter is required and must be an integer.', 'bricks-mcp' )
-			);
-		}
-
-		if ( empty( $args['attachment_id'] ) || ! is_numeric( $args['attachment_id'] ) ) {
-			return new \WP_Error(
-				'missing_attachment_id',
-				__( 'attachment_id parameter is required and must be an integer.', 'bricks-mcp' )
-			);
-		}
-
-		$post_id       = (int) $args['post_id'];
-		$attachment_id = (int) $args['attachment_id'];
-
-		// Validate post exists.
-		$post = get_post( $post_id );
-		if ( ! $post ) {
-			return new \WP_Error(
-				'post_not_found',
-				/* translators: %d: post ID */
-				sprintf( __( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ), $post_id )
-			);
-		}
-
-		// Validate post type supports thumbnails.
-		if ( ! post_type_supports( $post->post_type, 'thumbnail' ) ) {
-			return new \WP_Error(
-				'thumbnails_not_supported',
-				/* translators: %s: post type name */
-				sprintf( __( 'Post type "%s" does not support featured images (thumbnails).', 'bricks-mcp' ), $post->post_type )
-			);
-		}
-
-		// Validate attachment exists and is an attachment.
-		$attachment = get_post( $attachment_id );
-		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-			return new \WP_Error(
-				'attachment_not_found',
-				/* translators: %d: attachment ID */
-				sprintf( __( 'Attachment %d not found in media library. Use media:sideload to upload an image first, or media:list to find existing images.', 'bricks-mcp' ), $attachment_id )
-			);
-		}
-
-		// Get old thumbnail before replacing.
-		$old_thumbnail_id = get_post_thumbnail_id( $post_id );
-
-		$result = set_post_thumbnail( $post_id, $attachment_id );
-		if ( ! $result ) {
-			return new \WP_Error(
-				'set_thumbnail_failed',
-				__( 'Failed to set the featured image. The post or attachment may be invalid.', 'bricks-mcp' )
-			);
-		}
-
-		$response = array(
-			'post_id'       => $post_id,
-			'attachment_id' => $attachment_id,
-			'url'           => wp_get_attachment_url( $attachment_id ) ? wp_get_attachment_url( $attachment_id ) : '',
-			'title'         => get_the_title( $post_id ),
-		);
-
-		if ( $old_thumbnail_id && (int) $old_thumbnail_id !== $attachment_id ) {
-			$response['replaced_attachment_id'] = (int) $old_thumbnail_id;
-			$response['warning']                = sprintf(
-				/* translators: %d: old attachment ID */
-				__( 'Previous featured image (attachment ID %d) was replaced.', 'bricks-mcp' ),
-				(int) $old_thumbnail_id
-			);
-		}
-
-		return $response;
-	}
-
-	/**
-	 * Tool: Remove the featured image from a post.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, mixed>|\WP_Error Removal result or error.
-	 */
-	private function tool_remove_featured_image( array $args ): array|\WP_Error {
-		if ( empty( $args['post_id'] ) || ! is_numeric( $args['post_id'] ) ) {
-			return new \WP_Error(
-				'missing_post_id',
-				__( 'post_id parameter is required and must be an integer.', 'bricks-mcp' )
-			);
-		}
-
-		$post_id = (int) $args['post_id'];
-
-		// Validate post exists.
-		$post = get_post( $post_id );
-		if ( ! $post ) {
-			return new \WP_Error(
-				'post_not_found',
-				/* translators: %d: post ID */
-				sprintf( __( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ), $post_id )
-			);
-		}
-
-		// Check if post has a featured image.
-		$current_thumbnail_id = get_post_thumbnail_id( $post_id );
-		if ( ! $current_thumbnail_id ) {
-			return array(
-				'post_id' => $post_id,
-				'removed' => false,
-				'message' => __( 'Post has no featured image.', 'bricks-mcp' ),
-			);
-		}
-
-		delete_post_thumbnail( $post_id );
-
-		return array(
-			'post_id'               => $post_id,
-			'removed'               => true,
-			'removed_attachment_id' => (int) $current_thumbnail_id,
-		);
-	}
-
-	/**
-	 * Tool: Get Bricks image element settings for an attachment.
-	 *
-	 * @param array<string, mixed> $args Tool arguments.
-	 * @return array<string, mixed>|\WP_Error Image settings or error.
-	 */
-	private function tool_get_image_element_settings( array $args ): array|\WP_Error {
-		if ( empty( $args['attachment_id'] ) || ! is_numeric( $args['attachment_id'] ) ) {
-			return new \WP_Error(
-				'missing_attachment_id',
-				__( 'attachment_id parameter is required and must be an integer.', 'bricks-mcp' )
-			);
-		}
-
-		if ( empty( $args['target'] ) || ! is_string( $args['target'] ) ) {
-			return new \WP_Error(
-				'missing_target',
-				__( 'target parameter is required. Use "image", "background", or "gallery".', 'bricks-mcp' )
-			);
-		}
-
-		$attachment_id = (int) $args['attachment_id'];
-		$target        = $args['target'];
-		$size          = isset( $args['size'] ) && is_string( $args['size'] ) ? $args['size'] : 'full';
-
-		// Validate attachment exists.
-		$attachment = get_post( $attachment_id );
-		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-			return new \WP_Error(
-				'attachment_not_found',
-				/* translators: %d: attachment ID */
-				sprintf( __( 'Attachment %d not found in media library. Use media:sideload to upload an image first, or media:list to find existing images.', 'bricks-mcp' ), $attachment_id )
-			);
-		}
-
-		// Validate target.
-		$valid_targets = array( 'image', 'background', 'gallery' );
-		if ( ! in_array( $target, $valid_targets, true ) ) {
-			return new \WP_Error(
-				'invalid_target',
-				/* translators: %s: provided target value */
-				sprintf( __( 'Invalid target "%s". Use "image", "background", or "gallery".', 'bricks-mcp' ), $target )
-			);
-		}
-
-		$image_obj = $this->media_service->build_bricks_image_object( $attachment_id, $size );
-		if ( is_wp_error( $image_obj ) ) {
-			return $image_obj;
-		}
-
-		$response = array(
-			'attachment_id'       => $attachment_id,
-			'bricks_image_object' => $image_obj,
-		);
-
-		switch ( $target ) {
-			case 'image':
-				$response['target']       = 'image';
-				$response['usage']        = __( 'Set as settings.image on an Image element', 'bricks-mcp' );
-				$response['settings_key'] = 'image';
-				$response['value']        = $image_obj;
-				break;
-
-			case 'background':
-				$response['target']       = 'background';
-				$response['usage']        = __( 'Set as settings._background.image on a section or container', 'bricks-mcp' );
-				$response['settings_key'] = '_background';
-				$response['value']        = array( 'image' => $image_obj );
-				$response['note']         = __( "You can add 'position': 'center center', 'size': 'cover', 'repeat': 'no-repeat' alongside the image key inside _background.", 'bricks-mcp' );
-				break;
-
-			case 'gallery':
-				$response['target']       = 'gallery';
-				$response['usage']        = __( 'Add to settings.images array on a Gallery element', 'bricks-mcp' );
-				$response['settings_key'] = 'images';
-				$response['value']        = $image_obj;
-				$response['note']         = __( 'This is one item. For a gallery, collect multiple items into an array and set as settings.images.', 'bricks-mcp' );
-				break;
-		}
-
-		return $response;
-	}
-
 
 	/**
 	 * Tool: Component dispatcher — routes to list, get, create, update, delete, instantiate, update_properties, fill_slot.

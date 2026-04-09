@@ -2203,33 +2203,6 @@ The `%root%` is automatically replaced with `#brxe-{elementId}` during normaliza
 
 **Other:** `get_site_info`, `wordpress`, `get_builder_guide`
 
-## Key Gotchas
-
-1. **`_textAlign` does nothing** — put `text-align` inside `_typography` instead
-2. **`%root%` shorthand works** — use `%root%` in `_cssCustom` and it auto-replaces with `#brxe-{elementId}` during normalization. Example: `"%root% { box-shadow: 0 4px 12px var(--primary-trans-30); }"`
-3. **`_maxWidth` does not exist** — use `_widthMax` for `max-width`. **For multi-column layouts, use global grid classes** that reference `var(--grid-*)` variables. Create grid classes with `global_class:batch_create` if none exist. Fall back to inline `_display: 'grid'`, `_gridTemplateColumns`, `_gap` only if you cannot create global classes. Grid tokens: `--grid-1` through `--grid-12`, plus ratio variants `--grid-1-2`, `--grid-2-1`, etc.
-4. **Templates must be `publish` status** to be active in Bricks
-5. **Icon libraries:** `Ionicons`, `FontAwesome`, `Themify` — check `get_element_schemas` if unsure
-6. **Text supports HTML:** `"text": "<strong>Bold</strong> and normal"`
-7. **`update_element` calls are independent** — always fire them in parallel for speed
-8. **Gradients** use the `_gradient` key (separate from `_background`):
-   ```json
-   {"_gradient": {"colors": [{"color": {"raw": "hsl(46, 55%, 42%)"}}, {"color": {"raw": "hsl(46, 35%, 22%)"}, "stop": "30"}]}}
-   ```
-   Each color entry has `color.raw` (hex/hsl/rgb/variable) and optional `stop` (percentage string). The `_background` key is for solid colors/images only: `{"_background": {"color": {"hex": "#ff0000"}}}` or with CSS variables: `{"_background": {"color": {"raw": "var(--my-color)"}}}`
-9. **Dynamic tags need context** — `{post_title}`, `{post_url}` only work inside query loops or single post templates. On static pages they render empty.
-10. **Image vs text dynamic data format** — text fields use bare `{tag}`, image fields use `{"useDynamicData": "{tag}"}`, links use `{"type": "dynamic", "dynamicData": "{tag}"}`
-11. **`_animation` is deprecated** — `_animation`, `_animationDuration`, `_animationDelay` are deprecated since Bricks 1.6. Always use the `_interactions` array. Bricks shows a converter warning for deprecated keys.
-12. **Component instance `name` = component ID** — the element `name` for a component instance is the 6-char component ID (e.g., `"abc123"`), not a human-readable type like `"card"`. Both `name` and `cid` must equal the component ID.
-13. **Properties without `connections` do nothing** — defining properties on a component without setting the `connections` map means instance property values are stored but never applied to any element setting.
-14. **Slot content lives in the page array, not the component definition** — slot filler elements are stored as regular elements in the page's flat array with `parent = instance_id`. The component definition only contains the slot placeholder element (`name: "slot"`).
-15. **Popup triggers are NOT popup settings** — triggers use `_interactions` on elements (click, scroll, exit intent). `_bricks_template_settings` only stores display behavior (close, backdrop, sizing, limits). These are separate systems managed by different tools.
-16. **`toggle-mode` needs dark mode colors** — The toggle element only works if dark mode variants are configured in the Bricks color manager. Without them, the button renders but does nothing.
-17. **Builder paste/import behavior settings** — `builderHtmlCssConverter` controls HTML/CSS paste conversion (`confirm`|`enabled`|`disabled`), `builderGlobalClassesImport` controls global class auto-import on paste (`confirm`|`enabled`|`disabled`). Both default to `confirm`. Read via `bricks:get_settings` with `category: builder`.
-18. **The site always has a design system** — Fancy color palette (30 colors) + 109 CSS variables + child theme CSS. Sections already get `padding: var(--padding-section)`, containers get `gap: var(--content-gap)`, headings get `font-size: var(--h1)` through `var(--h6)`. Do NOT set these properties inline — you will override responsive fluid values with static ones.
-19. **Always use nestable element variants** — For tabs, accordion, and nav, ALWAYS use the nestable version (`tabs-nested`, `accordion-nested`, `nav-nested`). Basic versions (`tabs`, `accordion`) use flat repeaters that only support plain text. Nestable versions accept child elements for rich content (headings, images, icons, custom layouts). The schema response will warn you if a nestable variant exists — never ignore that warning.
-20. **`div` needs explicit `_display: flex` for flex layouts** — `block` and `container` default to `display: flex`, so `_direction: row` works alone. `div` does not — it requires `_display: flex` alongside `_direction`. The normalizer auto-injects `_display: flex` on div elements when `_direction` is set, but be aware of this difference when debugging layout issues.
-
 ## Workflow
 
 ### How to Build Any Page

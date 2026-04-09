@@ -22,6 +22,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Uses a WP transient keyed by user ID to track which prerequisite
  * calls have been made. Flags expire after 30 minutes of inactivity.
+ *
+ * Supports tiered gating:
+ * - 'direct'      → only site_info required (text edits, moves, property changes)
+ * - 'instructed'  → site_info + classes required (explicit structure builds)
+ * - 'full'        → site_info + classes + variables required (design builds)
  */
 final class PrerequisiteGateService {
 
@@ -34,6 +39,22 @@ final class PrerequisiteGateService {
 	 * Valid flag names.
 	 */
 	private const VALID_FLAGS = [ 'site_info', 'classes', 'variables' ];
+
+	/**
+	 * Tier definitions: which flags are required for each tier.
+	 */
+	public const TIER_DIRECT     = [ 'site_info' ];
+	public const TIER_INSTRUCTED = [ 'site_info', 'classes' ];
+	public const TIER_FULL       = [ 'site_info', 'classes', 'variables' ];
+
+	/**
+	 * Map tier names to their required flags.
+	 */
+	private const TIER_MAP = [
+		'direct'     => self::TIER_DIRECT,
+		'instructed' => self::TIER_INSTRUCTED,
+		'full'       => self::TIER_FULL,
+	];
 
 	/**
 	 * Human-readable tool names for each flag (used in error messages).
@@ -73,12 +94,15 @@ final class PrerequisiteGateService {
 	}
 
 	/**
-	 * Check if all prerequisites are met.
+	 * Check if prerequisites are met for a given tier.
 	 *
+	 * @param string $tier One of 'direct', 'instructed', 'full'. Defaults to 'full' for backward compatibility.
 	 * @return true|array{missing: string[], satisfied: string[], missing_tools: string[]}
-	 *               True if all flags set, or array with missing/satisfied details.
+	 *               True if all required flags set, or array with missing/satisfied details.
 	 */
-	public static function check(): true|array {
+	public static function check( string $tier = 'full' ): true|array {
+		$required_flags = self::TIER_MAP[ $tier ] ?? self::TIER_FULL;
+
 		$flags = get_transient( self::transient_key() );
 		if ( ! is_array( $flags ) ) {
 			$flags = [];
@@ -88,7 +112,7 @@ final class PrerequisiteGateService {
 		$satisfied     = [];
 		$missing_tools = [];
 
-		foreach ( self::VALID_FLAGS as $flag ) {
+		foreach ( $required_flags as $flag ) {
 			if ( ! empty( $flags[ $flag ] ) ) {
 				$satisfied[] = $flag;
 			} else {

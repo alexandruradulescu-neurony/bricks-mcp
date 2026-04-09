@@ -1,0 +1,35 @@
+{
+  "_comment": "Default settings per element type. Used by ElementSettingsGenerator to produce valid Bricks elements from design schemas. Content keys map schema 'content' to the correct Bricks settings key.",
+  "content_keys": {
+    "heading": "text",
+    "text-basic": "text",
+    "text": "text",
+    "text-link": "text",
+    "button": "text",
+    "icon-box": "content",
+    "alert": "content",
+    "counter": "countTo",
+    "animated-typing": "prefix"
+  },
+  "default_tags": {
+    "heading": "h2",
+    "text": "p",
+    "text-basic": "p"
+  },
+  "structural_elements": ["section", "container", "block", "div"],
+  "flex_by_default": ["section", "container", "block"],
+  "nestable_variants": {
+    "tabs": "tabs-nested",
+    "accordion": "accordion-nested",
+    "nav": "nav-nested"
+  },
+  "icon_defaults": {
+    "library": "themify",
+    "prefix": "ti-",
+    "fallback": "ti-star"
+  },
+  "button_defaults": {
+    "style": "primary",
+    "link": { "type": "external", "url": "#" }
+  }
+}

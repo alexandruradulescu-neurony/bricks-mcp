@@ -570,24 +570,15 @@ final class StreamableHttpHandler {
 
 		$instructions = "Bricks MCP connects AI assistants to a WordPress site running Bricks Builder.\n\n"
 			. "SITE CONTEXT: {$site_context}\n\n"
-			. "⚠️ MANDATORY FIRST STEP: Before ANY page/template/element creation or modification, you MUST:\n"
-			. "1. Call get_site_info - Understand design tokens, child theme CSS, color palette, gotchas, and page summaries\n"
-			. "2. Call global_class:list - Discover existing global classes with IDs and settings (if none exist, create them)\n"
-			. "3. Call global_variable:list - Discover all CSS variables available for use\n\n"
-			. "These are server-enforced — write operations will be REJECTED if you skip them.\n\n"
-			. "CRITICAL REMINDERS:\n"
-			. "- Global classes: Use _cssGlobalClasses on EVERY element. Create classes with global_class:batch_create if none exist.\n"
-			. "- Child theme CSS: Handles section padding, container gaps, heading sizes, text styles. Do NOT duplicate these inline.\n"
-			. "- Labels: Add label to every structural element (sections, containers, blocks, divs)\n"
-			. "- Semantic HTML: Use tag: 'ul', 'li', 'figure', 'address' on block/div elements\n"
-			. "- Element hierarchy: section > container > block/div > content. Use block and div for grouping, not nested containers.\n"
-			. "- Inline styles: ONLY for instance-specific overrides (_padding.top: '0', _order: '-1', unique background color)\n"
-			. "- Style properties: Use _widthMax NOT _maxWidth, _typography['text-align'] NOT _textAlign\n"
-			. "- Unfamiliar elements: Before using ANY element type you haven't used before (accordion, tabs, slider, etc.), ALWAYS call bricks:get_element_schemas(element='element_name') first. Do NOT guess repeater keys or item structure.\n"
-			. "- Nestable elements: ALWAYS use tabs-nested, accordion-nested, nav-nested instead of basic tabs, accordion, nav. Basic versions only support plain text.\n"
-			. "- Destructive actions: delete operations require confirm: true. Protected pages block all write operations."
-			. $notes_text
-			. "\n\nThe page:create, element:add, and template:create tool descriptions contain additional guidance. READ THEM.";
+			. "WORKFLOWS:\n"
+			. "- Direct operations (text changes, moves, property updates): use element, page, menu tools directly. Only get_site_info required.\n"
+			. "- Instructed builds (user specifies structure): use element:bulk_add or page:append_content. Requires get_site_info + global_class:list.\n"
+			. "- Design builds (user describes outcome): use build_from_schema with a design schema. Requires get_site_info + global_class:list + global_variable:list.\n\n"
+			. "Prerequisites are server-enforced per workflow — write operations will be REJECTED if you skip them.\n\n"
+			. "NOTES:\n"
+			. "- Destructive actions (delete, replace) require token-based confirmation.\n"
+			. "- Use bricks:get_element_schemas before working with unfamiliar element types."
+			. $notes_text;
 
 		return $instructions;
 	}

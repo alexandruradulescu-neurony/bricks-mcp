@@ -1,0 +1,85 @@
+{
+  "_comment": "Valid parent-child relationships for Bricks elements. Used by DesignSchemaValidator and ElementSettingsGenerator to enforce correct element hierarchy.",
+  "rules": {
+    "section": {
+      "valid_parents": ["root"],
+      "accepts_children": true,
+      "typical_children": ["container"]
+    },
+    "container": {
+      "valid_parents": ["section"],
+      "accepts_children": true,
+      "typical_children": ["block", "div", "heading", "text", "text-basic", "button", "image"]
+    },
+    "block": {
+      "valid_parents": ["container", "div", "block"],
+      "accepts_children": true,
+      "typical_children": ["heading", "text", "text-basic", "button", "image", "icon", "div", "block"]
+    },
+    "div": {
+      "valid_parents": ["container", "div", "block", "tabs-nested", "accordion-nested"],
+      "accepts_children": true,
+      "typical_children": ["heading", "text", "text-basic", "button", "image", "icon", "div", "block"],
+      "notes": "Requires explicit _display: flex for flex layouts"
+    },
+    "heading": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "text-basic": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "text": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "button": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "image": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "icon": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "icon-box": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "divider": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "video": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": false
+    },
+    "tabs-nested": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": true,
+      "typical_children": ["div"],
+      "notes": "Each tab pane is a div child"
+    },
+    "accordion-nested": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": true,
+      "typical_children": ["div"],
+      "notes": "Each accordion item is a div child"
+    },
+    "nav-nested": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": true,
+      "typical_children": ["div"]
+    },
+    "slider-nested": {
+      "valid_parents": ["container", "block", "div"],
+      "accepts_children": true,
+      "typical_children": ["div"],
+      "notes": "Each slide is a div child"
+    }
+  }
+}
