@@ -128,12 +128,13 @@ final class DesignSchemaValidator {
 		}
 
 		// Validate patterns if provided.
+		// Patterns are templates — skip parent-child hierarchy checks (they'll be validated in context when expanded).
 		if ( isset( $schema['patterns'] ) ) {
 			if ( ! is_array( $schema['patterns'] ) ) {
 				$errors[] = 'patterns must be an object.';
 			} else {
 				foreach ( $schema['patterns'] as $name => $pattern ) {
-					$this->validate_structure_node( $pattern, "patterns.{$name}", $schema['patterns'], $errors );
+					$this->validate_structure_node( $pattern, "patterns.{$name}", $schema['patterns'], $errors, '_pattern' );
 				}
 			}
 		}
@@ -181,9 +182,9 @@ final class DesignSchemaValidator {
 			$errors[] = "{$path}.type \"{$type}\" is not a known Bricks element.";
 		}
 
-		// Validate parent-child hierarchy (warnings, not errors).
+		// Validate parent-child hierarchy. Skip for pattern definitions (_pattern parent).
 		$rules = self::get_hierarchy_rules();
-		if ( isset( $rules[ $type ] ) ) {
+		if ( '_pattern' !== $parent_type && isset( $rules[ $type ] ) ) {
 			$valid_parents = $rules[ $type ]['valid_parents'] ?? [];
 			if ( ! empty( $valid_parents ) && ! in_array( $parent_type, $valid_parents, true ) ) {
 				$errors[] = "{$path}: \"{$type}\" is not typically placed inside \"{$parent_type}\". Expected parents: " . implode( ', ', $valid_parents ) . '.';
