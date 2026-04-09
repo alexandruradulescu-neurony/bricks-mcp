@@ -51,10 +51,11 @@ final class ClassIntentResolver {
 	 * 2. Normalized match (lowercase, strip hyphens/underscores)
 	 * 3. Create new global class with the intent as the name
 	 *
-	 * @param array<int, string> $intents Unique class intent strings.
-	 * @return array{map: array<string, string>, classes_reused: string[], classes_created: string[]}
+	 * @param array<int, string> $intents  Unique class intent strings.
+	 * @param bool              $dry_run  When true, only match existing classes — never create new ones.
+	 * @return array{map: array<string, string>, classes_reused: string[], classes_created: string[], classes_unresolved: string[]}
 	 */
-	public function resolve( array $intents ): array {
+	public function resolve( array $intents, bool $dry_run = false ): array {
 		$classes = $this->get_classes();
 
 		// Build lookup indexes.
@@ -95,7 +96,12 @@ final class ClassIntentResolver {
 				continue;
 			}
 
-			// 3. Create new class.
+			// 3. Create new class (skip in dry_run — just report it would be created).
+			if ( $dry_run ) {
+				$classes_created[] = $intent;
+				continue;
+			}
+
 			$result = $this->class_service->create_global_class( [
 				'name' => $intent,
 			] );

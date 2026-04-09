@@ -368,18 +368,18 @@ final class ElementSettingsGenerator {
 	private function apply_background( array $settings, string $background, array $design_context ): array {
 		switch ( $background ) {
 			case 'dark':
-				$settings['_background'] = [ 'color' => [ 'raw' => 'var(--bg-dark, #1a1a2e)' ] ];
-				$settings['_color']      = [ 'raw' => 'var(--text-light, #ffffff)' ];
+				$settings['_background'] = [ 'color' => [ 'raw' => 'var(--base-ultra-dark)' ] ];
+				$settings['_color']      = [ 'raw' => 'var(--white)' ];
 				break;
 			case 'light':
-				$settings['_background'] = [ 'color' => [ 'raw' => 'var(--bg-light, #f8f9fa)' ] ];
+				$settings['_background'] = [ 'color' => [ 'raw' => 'var(--base-ultra-light)' ] ];
 				break;
 			case 'gradient':
 				// Use _gradient key (separate from _background in Bricks).
 				$settings['_gradient'] = [
 					'colors' => [
-						[ 'color' => [ 'raw' => 'var(--primary, #3498db)' ] ],
-						[ 'color' => [ 'raw' => 'var(--primary-dark, #2c3e50)' ], 'stop' => '100' ],
+						[ 'color' => [ 'raw' => 'var(--primary)' ] ],
+						[ 'color' => [ 'raw' => 'var(--primary-dark)' ], 'stop' => '100' ],
 					],
 				];
 				break;

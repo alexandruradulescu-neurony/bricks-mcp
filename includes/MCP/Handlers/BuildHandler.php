@@ -126,7 +126,8 @@ final class BuildHandler {
 		$class_intents = $this->validator->extract_class_intents( $schema );
 
 		// Step 5: Resolve class intents to global class IDs.
-		$class_result = $this->class_resolver->resolve( $class_intents );
+		// In dry_run mode, only match existing classes — never create new ones.
+		$class_result = $this->class_resolver->resolve( $class_intents, $dry_run );
 		$class_map    = $class_result['map'];
 
 		// Step 6: Pre-fetch element schemas for all referenced types.
