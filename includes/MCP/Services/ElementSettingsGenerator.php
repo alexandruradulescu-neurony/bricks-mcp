@@ -33,6 +33,11 @@ final class ElementSettingsGenerator {
 	private ?MediaService $media_service;
 
 	/**
+	 * @var ClassIntentResolver|null
+	 */
+	private ?ClassIntentResolver $class_resolver;
+
+	/**
 	 * Cached element schemas keyed by element name.
 	 *
 	 * @var array<string, array<string, mixed>>
@@ -49,12 +54,14 @@ final class ElementSettingsGenerator {
 	/**
 	 * Constructor.
 	 *
-	 * @param SchemaGenerator   $schema_generator Schema generator instance.
-	 * @param MediaService|null $media_service    Optional media service for Unsplash image resolution.
+	 * @param SchemaGenerator        $schema_generator Schema generator instance.
+	 * @param MediaService|null      $media_service    Optional media service for Unsplash image resolution.
+	 * @param ClassIntentResolver|null $class_resolver Optional class resolver for contextual class suggestions.
 	 */
-	public function __construct( SchemaGenerator $schema_generator, ?MediaService $media_service = null ) {
+	public function __construct( SchemaGenerator $schema_generator, ?MediaService $media_service = null, ?ClassIntentResolver $class_resolver = null ) {
 		$this->schema_generator = $schema_generator;
 		$this->media_service    = $media_service;
+		$this->class_resolver   = $class_resolver;
 	}
 
 	/**
@@ -150,7 +157,7 @@ final class ElementSettingsGenerator {
 	 * @return array<string, mixed> Nested element tree (simplified format for ElementNormalizer).
 	 */
 	public function generate( array $structure, array $class_map, array $design_context ): array {
-		return $this->process_node( $structure, $class_map, $design_context );
+		return $this->process_node( $structure, $class_map, $design_context, 'root', [], 0 );
 	}
 
 	/**
@@ -159,11 +166,48 @@ final class ElementSettingsGenerator {
 	 * @param array<string, mixed>  $node           Structure node.
 	 * @param array<string, string> $class_map      class_intent => global_class_id map.
 	 * @param array<string, mixed>  $design_context Design context.
+	 * @param string                $parent_type    Parent element type ('root' for top-level).
+	 * @param array<string>         $sibling_types  Types of all siblings in order.
+	 * @param int                   $position       This node's position among siblings.
+	 * @param string|null           $parent_class   Class name applied to parent (for context rules).
 	 * @return array<string, mixed> Bricks element in simplified nested format.
 	 */
-	private function process_node( array $node, array $class_map, array $design_context ): array {
+	private function process_node(
+		array $node,
+		array $class_map,
+		array $design_context,
+		string $parent_type = 'root',
+		array $sibling_types = [],
+		int $position = 0,
+		?string $parent_class = null
+	): array {
 		$type     = $node['type'] ?? 'div';
 		$settings = $this->build_settings( $node, $type, $class_map, $design_context );
+
+		// Auto-suggest class if none was explicitly set and resolver is available.
+		if ( null !== $this->class_resolver && ! isset( $settings['_cssGlobalClasses'] ) ) {
+			$child_types = [];
+			foreach ( $node['children'] ?? [] as $child ) {
+				if ( is_array( $child ) && ! empty( $child['type'] ) ) {
+					$child_types[] = $child['type'];
+				}
+			}
+
+			$suggested_id = $this->class_resolver->suggest_for_context(
+				$type,
+				$parent_type,
+				$sibling_types,
+				$position,
+				$child_types,
+				$parent_class
+			);
+
+			if ( null !== $suggested_id ) {
+				if ( is_array( $settings ) ) {
+					$settings['_cssGlobalClasses'] = [ $suggested_id ];
+				}
+			}
+		}
 
 		// Ensure settings is never an empty array (would serialize as JSON [] instead of {}).
 		if ( empty( $settings ) ) {
@@ -175,12 +219,39 @@ final class ElementSettingsGenerator {
 			'settings' => $settings,
 		];
 
-		// Process children recursively.
+		// Determine this node's class name for child context (used by inside_pill rule etc.).
+		$this_class_name = null;
+		if ( ! empty( $node['class_intent'] ) ) {
+			$this_class_name = $node['class_intent'];
+		} elseif ( is_array( $settings ) && ! empty( $settings['_cssGlobalClasses'] ) ) {
+			// Reverse-lookup class name from ID for child context.
+			$this_class_name = $this->resolve_class_name_from_id( $settings['_cssGlobalClasses'][0] );
+		}
+
+		// Build sibling type list for children.
+		$child_sibling_types = [];
+		foreach ( $node['children'] ?? [] as $child ) {
+			if ( is_array( $child ) ) {
+				$child_sibling_types[] = $child['type'] ?? 'div';
+			}
+		}
+
+		// Process children recursively with context.
 		if ( ! empty( $node['children'] ) && is_array( $node['children'] ) ) {
 			$children = [];
+			$child_pos = 0;
 			foreach ( $node['children'] as $child ) {
 				if ( is_array( $child ) ) {
-					$children[] = $this->process_node( $child, $class_map, $design_context );
+					$children[] = $this->process_node(
+						$child,
+						$class_map,
+						$design_context,
+						$type,
+						$child_sibling_types,
+						$child_pos,
+						$this_class_name
+					);
+					$child_pos++;
 				}
 			}
 			if ( ! empty( $children ) ) {
@@ -455,5 +526,25 @@ final class ElementSettingsGenerator {
 		}
 
 		return $settings;
+	}
+
+	/**
+	 * Reverse-lookup a class name from its ID.
+	 *
+	 * Used to pass parent class name context to child elements for context rules.
+	 *
+	 * @param string $class_id Global class ID.
+	 * @return string|null Class name or null if not found.
+	 */
+	private function resolve_class_name_from_id( string $class_id ): ?string {
+		if ( null === $this->class_resolver ) {
+			return null;
+		}
+		foreach ( $this->class_resolver->get_classes_public() as $class ) {
+			if ( ( $class['id'] ?? '' ) === $class_id ) {
+				return $class['name'] ?? null;
+			}
+		}
+		return null;
 	}
 }
