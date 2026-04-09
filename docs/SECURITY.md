@@ -46,6 +46,38 @@ Some operations — specifically writing JavaScript to page scripts — are gate
 
 Recommendation: only enable on development sites or when working with a trusted AI agent team.
 
+## Destructive Action Confirmation
+
+Operations that delete or replace content (element removal with cascade, page deletion, bulk class deletion, template deletion, etc.) require a two-step token-based confirmation:
+
+1. The initial tool call returns a confirmation token (16-character hex string) and a human-readable description of the action, instead of executing it
+2. The AI (or user) must call `confirm_destructive_action` with the token to proceed
+3. Tokens expire after 2 minutes and can only be used once
+4. Expired or reused tokens are rejected
+
+This prevents accidental mass deletions from AI agent loops. The `PendingActionService` manages token generation, storage, and validation.
+
+## Design Build Gate
+
+The plugin enforces a design build gate that prevents AI assistants from creating large or complex layouts through low-level tools. When an AI attempts to use `page:append_content`, `page:update_content`, `element:bulk_add`, or `page:create` with:
+
+- Section-level elements (which indicate a full layout), or
+- More than 8 elements in a single operation
+
+the request is rejected with an error message redirecting the AI to use `build_from_schema` instead. The `build_from_schema` pipeline applies structural validation, hierarchy enforcement, class resolution, and element defaults — producing consistent, high-quality output.
+
+The gate can be bypassed with `bypass_design_gate: true` for legitimate direct operations where the AI has a specific reason to skip the pipeline.
+
+## Auto-Snapshots
+
+Before any content write operation (`page:update_content`, `page:append_content`, `build_from_schema`), the plugin automatically snapshots the existing page content. Snapshots are stored as post meta and can be restored via the `page` tool (`page:list_snapshots`, `page:restore`).
+
+This provides a safety net against destructive overwrites — if an AI build produces unwanted results, the previous state can be restored.
+
+## Element Count Safety Checks
+
+The plugin validates element counts before write operations to prevent accidental content wipes. If an update would result in significantly fewer elements than the existing content (suggesting a replacement rather than an edit), the operation is flagged and may require confirmation.
+
 ## What This Plugin Does NOT Do
 
 - No `eval()`, `assert()`, or dynamic PHP code execution

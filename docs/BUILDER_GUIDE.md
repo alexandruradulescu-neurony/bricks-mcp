@@ -1,3 +1,16 @@
+> **LEGACY REFERENCE** — This file is no longer served to AI assistants. It remains as a reference for developers.
+>
+> The active knowledge system is:
+> - **General building rules**: `bricks:get_knowledge(domain='building')`
+> - **Domain knowledge**: `bricks:get_knowledge(domain='forms|dynamic-data|components|popups|woocommerce|animations|seo')`
+> - **Design schema format**: documented in the `build_from_schema` tool description
+> - **Intent router**: in server instructions (StreamableHttpHandler)
+> - **Element defaults**: `data/element-defaults.json`
+> - **Hierarchy rules**: `data/element-hierarchy-rules.json`
+> - **Context rules**: `data/class-context-rules.json`
+
+---
+
 # Bricks MCP Builder Guide
 
 Patterns and reference for AI models building Bricks Builder pages via MCP tools.

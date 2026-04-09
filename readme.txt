@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 1.9.6.1
+Stable tag: 2.9.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -14,35 +14,44 @@ Connect AI assistants like Claude to your Bricks Builder site. Build and edit pa
 
 Bricks MCP turns your WordPress site into an AI-controlled page builder. It implements the Model Context Protocol (MCP) — an open standard for connecting AI assistants to external tools — so that any MCP-compatible client (Claude Desktop, Claude Code, and others) can read and modify your Bricks Builder pages through plain conversation.
 
-Tell your AI assistant "create a hero section with a headline and a call-to-action button" and it happens. No template hunting. No clicking through panels.
+The plugin supports three workflows:
+
+1. **Direct operations** — Edit text, move elements, swap images, update menus. The AI uses element/page/menu tools directly.
+2. **Instructed builds** — Add a heading and two columns, insert a form. The AI uses bulk_add or append_content with awareness of your global classes.
+3. **Design builds** — Design a services page, build a landing page, redesign the hero. The AI uses `build_from_schema`, a declarative design pipeline that handles all Bricks mechanics (element IDs, settings, class resolution, responsive overrides, dark section auto-colors).
+
+Tell your AI assistant "design a services section with three feature cards" and the `build_from_schema` pipeline translates your intent into a fully structured Bricks layout with proper global classes and CSS variables.
 
 = How It Works =
 
 The plugin registers a REST API endpoint on your WordPress site that speaks the MCP protocol. You add the endpoint URL to your AI client's MCP configuration, authenticate with a WordPress Application Password, and your AI can start working with your site immediately.
 
-= Available Tools (20 tools) =
+An intent router classifies every request into one of the three workflows above, each with server-enforced prerequisites (site info, global classes, CSS variables). A design build gate ensures that section-level layouts and large element trees are always routed through `build_from_schema` for consistent, high-quality output.
 
-* **get_site_info** — Site config, design tokens, child theme CSS, color palette, page summaries, class groups, design patterns
-* **get_builder_guide** — Complete builder reference with sections: professional, workflow, recipes, gotchas, and more
-* **page** — List, search, get (detail/summary/context/describe views), create, update content, append, delete, duplicate, snapshots, SEO
+= Available Tools (23 tools) =
+
+* **get_site_info** — Site config, design tokens, color palette, page summaries
+* **confirm_destructive_action** — Token-based confirmation for delete/replace operations
+* **page** — List, search, get (detail/summary/context/describe views), create, update content, append, import clipboard, delete, duplicate, snapshots, SEO
 * **element** — Add, update, remove, move, bulk add/update, duplicate, find elements on pages
 * **template** — Manage Bricks templates (header, footer, content, popup), import/export
 * **template_condition** — Set template display conditions
 * **template_taxonomy** — Manage template tags and bundles
-* **bricks** — Builder settings, element schemas, breakpoints, dynamic tags, pattern library (analyze/save/use), AI notes
-* **global_class** — Create/edit/delete CSS classes, batch operations, import CSS, categories
+* **bricks** — Enable/disable Bricks on pages, builder settings, element schemas, breakpoints, dynamic tags, query types, form/interaction/component/popup/filter/condition schemas, global queries, AI notes, on-demand knowledge fragments
+* **global_class** — Create/edit/delete CSS classes with styles, batch operations, import CSS/JSON, categories
 * **global_variable** — Manage CSS variables and categories
 * **color_palette** — Manage color palettes and individual colors
 * **typography_scale** — Manage typography scale variables
-* **theme_style** — Manage Bricks theme styles
-* **component** — List/create/update components, instantiate, fill slots
-* **font** — Adobe Fonts, font settings
+* **theme_style** — Manage Bricks theme styles (site-wide typography, colors, spacing)
+* **component** — List/create/update components, instantiate, update properties, fill slots
+* **font** — Adobe Fonts, font settings, webfont loading
 * **code** — Page CSS and custom scripts
-* **media** — Unsplash search, sideload images, manage featured images
+* **media** — Unsplash search, sideload images, manage featured images, image settings
 * **menu** — Create/edit/delete menus, assign to locations
 * **wordpress** — Get posts/users/plugins, activate/deactivate plugins, create/update users
-* **woocommerce** — WooCommerce status, elements, template scaffolding
 * **metabox** — Read Meta Box custom fields, list field groups, get dynamic tags
+* **woocommerce** — WooCommerce status, elements, dynamic tags, template scaffolding
+* **build_from_schema** — Declarative design pipeline: validates schema, resolves class intents, expands patterns, generates element settings, resolves CSS variables, and writes the final Bricks content
 
 All tools are free to use. The plugin is open source and hosted on [GitHub](https://github.com/alexandruradulescu-neurony/bricks-mcp).
 
@@ -107,7 +116,7 @@ Any MCP-compatible client can connect to this plugin. Verified clients include C
 
 = Is it safe to expose a REST API endpoint for AI access? =
 
-Yes, when configured correctly. The plugin includes multiple security layers: WordPress Application Password authentication (enabled by default), per-tool capability checks, configurable rate limiting (120-1000 RPM), a Dangerous Actions toggle that gates JavaScript/code injection, delete confirmation requirements (`confirm: true`), protected pages that block AI modifications, element count safety checks that prevent accidental content wipes, and centralized CSS sanitization. Never disable authentication on a publicly accessible site.
+Yes, when configured correctly. The plugin includes multiple security layers: WordPress Application Password authentication (enabled by default), per-tool capability checks, configurable rate limiting (120-1000 RPM), a Dangerous Actions toggle that gates JavaScript/code injection, token-based confirmation for destructive operations (delete, replace, cascade remove), auto-snapshots before content writes, element count safety checks that prevent accidental content wipes, and centralized CSS sanitization. Never disable authentication on a publicly accessible site.
 
 == Screenshots ==
 
@@ -116,6 +125,66 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 2.10.0 =
+* Added MetaBox integration: list field groups, get fields, read field values, dynamic tags for Meta Box custom fields.
+* Added WooCommerce builder tools: status checks, WC-specific elements and dynamic tags, template scaffolding for all WC pages.
+* Added template import from URL and JSON data.
+* Added page import from Bricks clipboard format.
+
+= 2.9.0 =
+* Added on-demand knowledge fragments via `bricks:get_knowledge` — 8 domain-specific guides (building, forms, dynamic-data, components, popups, woocommerce, animations, seo).
+* Replaced monolithic builder guide with modular knowledge system.
+* Removed `get_builder_guide` tool.
+
+= 2.8.0 =
+* Added element defaults system (`data/element-defaults.json`) for automatic element settings.
+* Added element hierarchy rules (`data/element-hierarchy-rules.json`) for structural validation.
+* Added class context rules (`data/class-context-rules.json`) for contextual class auto-suggestion.
+* Smart global class creation: styles are now accepted directly in `global_class:create` and `global_class:batch_create`.
+
+= 2.7.0 =
+* Added CSS variable resolution in `build_from_schema` — palette color references in class_intent automatically resolve to site CSS variables.
+* Added SiteVariableResolver service.
+* Contextual class auto-suggestion: `build_from_schema` suggests relevant global classes based on element type and section context.
+
+= 2.6.0 =
+* Added auto-snapshot before all content write operations (update_content, append_content, build_from_schema).
+* Added snapshot/restore/list_snapshots actions to the page tool.
+* Added page duplicate action.
+
+= 2.5.0 =
+* Added typography scale management tool for CSS variable-based type scales.
+* Added theme style management tool for site-wide typography, colors, and spacing.
+* Added font management tool (Adobe Fonts, webfont loading settings).
+
+= 2.4.0 =
+* Added component tool: list, create, update, delete, instantiate, update properties, fill slots.
+* Added `page:get` views: summary (tree outline), context (tree with text/classes), describe (human-readable descriptions).
+* Added element find action with type, text, and class filters.
+
+= 2.3.0 =
+* Added design build gate: section-level layouts and large element trees (>8 elements) are redirected to `build_from_schema` for consistent output.
+* Added tiered prerequisite gating: direct operations require site info, instructed builds add global classes, design builds add full context.
+* Intent router now classifies every request and enforces prerequisites via server instructions.
+
+= 2.2.0 =
+* Added SchemaExpander service for pattern references (`ref`/`repeat`/`data` substitution) in `build_from_schema`.
+* Added responsive_overrides support in design schemas for per-breakpoint style overrides.
+* Dark section auto-colors: text and headings in dark sections automatically get light color treatment.
+
+= 2.1.0 =
+* Added `build_from_schema` tool — declarative design pipeline that translates design intent into Bricks elements.
+* Pipeline services: DesignSchemaValidator, ClassIntentResolver, SchemaExpander, ElementSettingsGenerator, BuildHandler.
+* Automatic element ID generation, parent/child linkage, and settings normalization.
+
+= 2.0.0 =
+* Major architecture rewrite: Router reduced from ~3900 to ~1050 lines.
+* Introduced ToolRegistry for centralized tool definition and storage.
+* Split monolithic router into 16 focused handler files.
+* Introduced StreamableHttpHandler for MCP Streamable HTTP transport.
+* Added PrerequisiteGateService for server-enforced workflow prerequisites.
+* Moved from single REST endpoint to Streamable HTTP with session support.
 
 = 1.9.0 =
 * Added design interpretation workflow for building pages from visual references.
