@@ -259,6 +259,22 @@ final class ElementSettingsGenerator {
 				}
 			}
 			if ( ! empty( $children ) ) {
+				// Auto-center text in children when parent is flex-centered.
+				$is_centered = false;
+				if ( is_array( $settings ) ) {
+					$is_centered = ( $settings['_alignItems'] ?? '' ) === 'center';
+				}
+				if ( $is_centered ) {
+					$text_types = [ 'heading', 'text-basic', 'text', 'text-link' ];
+					foreach ( $children as &$child_el ) {
+						if ( in_array( $child_el['name'] ?? '', $text_types, true ) && is_array( $child_el['settings'] ?? null ) ) {
+							if ( ! isset( $child_el['settings']['_typography']['text-align'] ) ) {
+								$child_el['settings']['_typography']['text-align'] = 'center';
+							}
+						}
+					}
+					unset( $child_el );
+				}
 				$element['children'] = $children;
 			}
 		}
