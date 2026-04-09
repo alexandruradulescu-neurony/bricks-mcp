@@ -129,12 +129,64 @@ class SchemaGenerator {
 	];
 
 	/**
+	 * Cached CSS property map loaded from data file.
+	 *
+	 * @var array<string, mixed>|null
+	 */
+	private static ?array $css_property_map_data = null;
+
+	/**
 	 * Get CSS-to-Bricks property mapping.
 	 *
-	 * @return array<string, string>
+	 * Loads from data/css-property-map.json for the full structured map,
+	 * falls back to the hardcoded constant for backward compatibility.
+	 *
+	 * @return array<string, string> Key → description map (legacy format for schema responses).
 	 */
 	public function get_css_property_map(): array {
 		return self::CSS_PROPERTY_MAP;
+	}
+
+	/**
+	 * Get the full structured CSS property map from the data file.
+	 *
+	 * Returns the complete map with type, format, and css info for each property.
+	 *
+	 * @return array<string, array<string, string>> Key → {css, type, format} map.
+	 */
+	public static function get_css_property_map_full(): array {
+		if ( null === self::$css_property_map_data ) {
+			$path = dirname( __DIR__, 2 ) . '/data/css-property-map.json';
+			if ( file_exists( $path ) ) {
+				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+				$data = is_string( $json ) ? json_decode( $json, true ) : [];
+				self::$css_property_map_data = $data['properties'] ?? [];
+			} else {
+				self::$css_property_map_data = [];
+			}
+		}
+		return self::$css_property_map_data;
+	}
+
+	/**
+	 * Check if a settings key is a valid Bricks CSS property.
+	 *
+	 * Accepts both base keys (_padding) and composite keys (_padding:mobile:hover).
+	 *
+	 * @param string $key The settings key to validate.
+	 * @return bool True if valid.
+	 */
+	public static function is_valid_settings_key( string $key ): bool {
+		// Extract base key from composite key (e.g., _padding:mobile → _padding).
+		$base_key = str_contains( $key, ':' ) ? substr( $key, 0, strpos( $key, ':' ) ) : $key;
+
+		// Non-underscore keys are element-specific settings (text, tag, label, etc.) — always valid.
+		if ( ! str_starts_with( $base_key, '_' ) ) {
+			return true;
+		}
+
+		$map = self::get_css_property_map_full();
+		return isset( $map[ $base_key ] );
 	}
 
 	/**

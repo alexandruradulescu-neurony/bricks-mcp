@@ -1,0 +1,220 @@
+{
+  "_comment": "Maps Bricks settings keys to CSS properties. Used by SchemaGenerator for AI reference and ElementSettingsGenerator for style_overrides validation.",
+  "properties": {
+    "_padding": {
+      "css": "padding",
+      "type": "spacing",
+      "format": "top/right/bottom/left object"
+    },
+    "_margin": {
+      "css": "margin",
+      "type": "spacing",
+      "format": "top/right/bottom/left object"
+    },
+    "_background": {
+      "css": "background-color",
+      "type": "color",
+      "format": "color.raw or color.hex"
+    },
+    "_gradient": {
+      "css": "background-gradient",
+      "type": "gradient",
+      "format": "colors array with color+stop, angle"
+    },
+    "_typography": {
+      "css": "typography",
+      "type": "object",
+      "format": "font-size, font-weight, color, line-height, text-align, letter-spacing, text-transform, font-family"
+    },
+    "_direction": {
+      "css": "flex-direction",
+      "type": "string",
+      "format": "row, column, row-reverse, column-reverse"
+    },
+    "_display": {
+      "css": "display",
+      "type": "string",
+      "format": "flex, grid, block, none"
+    },
+    "_alignItems": {
+      "css": "align-items",
+      "type": "string",
+      "format": "flex-start, center, flex-end, stretch, baseline"
+    },
+    "_justifyContent": {
+      "css": "justify-content",
+      "type": "string",
+      "format": "flex-start, center, flex-end, space-between, space-around, space-evenly"
+    },
+    "_flexWrap": {
+      "css": "flex-wrap",
+      "type": "string",
+      "format": "nowrap, wrap, wrap-reverse"
+    },
+    "_flexGrow": {
+      "css": "flex-grow",
+      "type": "number",
+      "format": "integer"
+    },
+    "_flexShrink": {
+      "css": "flex-shrink",
+      "type": "number",
+      "format": "integer"
+    },
+    "_columnGap": {
+      "css": "column-gap",
+      "type": "string",
+      "format": "CSS length value"
+    },
+    "_rowGap": {
+      "css": "row-gap",
+      "type": "string",
+      "format": "CSS length value"
+    },
+    "_gap": {
+      "css": "gap",
+      "type": "string",
+      "format": "CSS shorthand gap"
+    },
+    "_gridTemplateColumns": {
+      "css": "grid-template-columns",
+      "type": "string",
+      "format": "repeat(N, 1fr) or var(--grid-N)"
+    },
+    "_gridTemplateRows": {
+      "css": "grid-template-rows",
+      "type": "string",
+      "format": "CSS grid row template"
+    },
+    "_border": {
+      "css": "border",
+      "type": "object",
+      "format": "width/style/color/radius object"
+    },
+    "_width": {
+      "css": "width",
+      "type": "string",
+      "format": "CSS length or percentage"
+    },
+    "_widthMax": {
+      "css": "max-width",
+      "type": "string",
+      "format": "CSS length value"
+    },
+    "_widthMin": {
+      "css": "min-width",
+      "type": "string",
+      "format": "CSS length value"
+    },
+    "_height": {
+      "css": "height",
+      "type": "string",
+      "format": "CSS length or percentage"
+    },
+    "_minHeight": {
+      "css": "min-height",
+      "type": "string",
+      "format": "CSS length value"
+    },
+    "_overflow": {
+      "css": "overflow",
+      "type": "string",
+      "format": "visible, hidden, scroll, auto"
+    },
+    "_position": {
+      "css": "position",
+      "type": "string",
+      "format": "relative, absolute, fixed, sticky"
+    },
+    "_top": {
+      "css": "top",
+      "type": "string",
+      "format": "CSS length value"
+    },
+    "_right": {
+      "css": "right",
+      "type": "string",
+      "format": "CSS length value"
+    },
+    "_bottom": {
+      "css": "bottom",
+      "type": "string",
+      "format": "CSS length value"
+    },
+    "_left": {
+      "css": "left",
+      "type": "string",
+      "format": "CSS length value"
+    },
+    "_zIndex": {
+      "css": "z-index",
+      "type": "number",
+      "format": "integer"
+    },
+    "_opacity": {
+      "css": "opacity",
+      "type": "number",
+      "format": "0 to 1"
+    },
+    "_transform": {
+      "css": "transform",
+      "type": "string",
+      "format": "CSS transform value"
+    },
+    "_transition": {
+      "css": "transition",
+      "type": "string",
+      "format": "CSS transition value"
+    },
+    "_boxShadow": {
+      "css": "box-shadow",
+      "type": "string",
+      "format": "CSS box-shadow value"
+    },
+    "_cssCustom": {
+      "css": "custom",
+      "type": "string",
+      "format": "Custom CSS block (any CSS, use %root% selector)"
+    },
+    "_cssGlobalClasses": {
+      "css": "classes",
+      "type": "array",
+      "format": "Array of global class IDs to apply"
+    },
+    "_objectFit": {
+      "css": "object-fit",
+      "type": "string",
+      "format": "cover, contain, fill, none, scale-down"
+    },
+    "_aspectRatio": {
+      "css": "aspect-ratio",
+      "type": "string",
+      "format": "width/height (e.g., 16/9, 1/1, 4/3)"
+    },
+    "_color": {
+      "css": "color",
+      "type": "color",
+      "format": "color.raw or color.hex"
+    },
+    "_hidden": {
+      "css": "internal",
+      "type": "object",
+      "format": "_cssClasses for tab-menu, tab-title, tab-content, tab-pane"
+    },
+    "_order": {
+      "css": "order",
+      "type": "number",
+      "format": "integer"
+    },
+    "_alignSelf": {
+      "css": "align-self",
+      "type": "string",
+      "format": "auto, flex-start, center, flex-end, stretch"
+    },
+    "_interactions": {
+      "css": "interactions",
+      "type": "array",
+      "format": "Array of interaction objects (trigger, action, target)"
+    }
+  }
+}

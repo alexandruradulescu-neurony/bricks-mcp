@@ -432,6 +432,14 @@ final class ElementSettingsGenerator {
 			}
 		}
 
+		// 10b. Validate style_override keys against CSS property map.
+		// Strip invalid underscore-prefixed keys that aren't real Bricks properties.
+		foreach ( array_keys( $settings ) as $key ) {
+			if ( is_string( $key ) && str_starts_with( $key, '_' ) && ! SchemaGenerator::is_valid_settings_key( $key ) ) {
+				unset( $settings[ $key ] );
+			}
+		}
+
 		// 11. Apply responsive overrides (breakpoint-specific settings).
 		if ( ! empty( $node['responsive_overrides'] ) && is_array( $node['responsive_overrides'] ) ) {
 			foreach ( $node['responsive_overrides'] as $breakpoint => $overrides ) {
