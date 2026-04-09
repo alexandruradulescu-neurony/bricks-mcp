@@ -90,6 +90,15 @@ final class ToolRegistry {
 	}
 
 	/**
+	 * Get all tools as a keyed array (for filters and internal use).
+	 *
+	 * @return array<string, array{name: string, description: string, inputSchema: array, handler: callable, annotations?: array}>
+	 */
+	public function get_all_raw(): array {
+		return $this->tools;
+	}
+
+	/**
 	 * Remove a tool from the registry.
 	 *
 	 * @param string $name Tool name.

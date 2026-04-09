@@ -462,17 +462,29 @@ final class Router {
 		 * Filter the registered MCP tools.
 		 *
 		 * Allows other plugins to add or modify MCP tools.
+		 * Third-party tools must include 'name', 'description', 'inputSchema', and 'handler'.
 		 *
-		 * @param array $tools Registered tools.
+		 * @param array $tools Registered tools keyed by name.
 		 */
-		$this->tools = apply_filters( 'bricks_mcp_tools', $this->tools );
+		$filtered = apply_filters( 'bricks_mcp_tools', $this->registry->get_all_raw() );
 
-		// Validate filtered tools — reject malformed entries from third-party plugins.
-		foreach ( $this->tools as $name => $tool ) {
-			if ( ! is_array( $tool ) || ! isset( $tool['handler'] ) || ! is_callable( $tool['handler'] ) ) {
-				unset( $this->tools[ $name ] );
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional debug logging.
-				error_log( 'BricksMCP: Rejected invalid tool from bricks_mcp_tools filter: ' . sanitize_text_field( $name ) );
+		// Re-register validated filtered tools.
+		if ( is_array( $filtered ) ) {
+			foreach ( $filtered as $name => $tool ) {
+				if ( ! is_array( $tool ) || ! isset( $tool['handler'] ) || ! is_callable( $tool['handler'] ) ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional debug logging.
+					error_log( 'BricksMCP: Rejected invalid tool from bricks_mcp_tools filter: ' . sanitize_text_field( $name ) );
+					continue;
+				}
+				if ( ! $this->registry->has( $name ) ) {
+					$this->registry->register(
+						$tool['name'] ?? $name,
+						$tool['description'] ?? '',
+						$tool['inputSchema'] ?? [],
+						$tool['handler'],
+						$tool['annotations'] ?? []
+					);
+				}
 			}
 		}
 	}
@@ -728,7 +740,8 @@ final class Router {
 		$tool_name = $pending['tool_name'];
 		$tool_args = $pending['args'];
 
-		if ( ! isset( $this->tools[ $tool_name ] ) ) {
+		$tool = $this->registry->get( $tool_name );
+		if ( null === $tool ) {
 			return new \WP_Error(
 				'tool_not_found',
 				/* translators: %s: Tool name */
@@ -740,7 +753,7 @@ final class Router {
 		// This bypasses execute_tool() which would strip confirm again.
 		$tool_args['confirm'] = true;
 
-		return call_user_func( $this->tools[ $tool_name ]['handler'], $tool_args );
+		return call_user_func( $tool['handler'], $tool_args );
 	}
 
 	/**
