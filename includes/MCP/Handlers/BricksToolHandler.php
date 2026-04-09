@@ -91,15 +91,68 @@ final class BricksToolHandler {
 			'get_notes'              => [ 'notes' => $this->bricks_service->get_notes() ],
 			'add_note'               => $this->bricks_service->add_note( sanitize_text_field( $args['text'] ?? '' ) ),
 			'delete_note'            => [ 'deleted' => $this->bricks_service->delete_note( sanitize_text_field( $args['note_id'] ?? '' ) ) ],
+			'get_knowledge'          => $this->tool_get_knowledge( $args ),
 			default                  => new \WP_Error(
 				'invalid_action',
 				sprintf(
 					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, get_notes, add_note, delete_note', 'bricks-mcp' ),
+					__( 'Invalid action "%s". Valid actions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, get_notes, add_note, delete_note, get_knowledge', 'bricks-mcp' ),
 					$action
 				)
 			),
 		};
+	}
+
+	/**
+	 * Tool: Get domain-specific knowledge fragment.
+	 *
+	 * Returns lean operational knowledge for a specific domain (forms, dynamic-data,
+	 * components, popups, woocommerce, animations, seo).
+	 *
+	 * @param array<string, mixed> $args Tool arguments including 'domain'.
+	 * @return array<string, mixed>|\WP_Error Knowledge content or error.
+	 */
+	private function tool_get_knowledge( array $args ): array|\WP_Error {
+		$domain = sanitize_text_field( $args['domain'] ?? '' );
+
+		$valid_domains = [ 'forms', 'dynamic-data', 'components', 'popups', 'woocommerce', 'animations', 'seo' ];
+
+		if ( empty( $domain ) ) {
+			return [
+				'available_domains' => $valid_domains,
+				'usage'             => 'Call bricks:get_knowledge with domain parameter to get domain-specific knowledge.',
+			];
+		}
+
+		if ( ! in_array( $domain, $valid_domains, true ) ) {
+			return new \WP_Error(
+				'invalid_domain',
+				sprintf(
+					/* translators: %s: domain name */
+					__( 'Unknown knowledge domain "%s". Available: %s', 'bricks-mcp' ),
+					$domain,
+					implode( ', ', $valid_domains )
+				)
+			);
+		}
+
+		$path = BRICKS_MCP_PLUGIN_DIR . "docs/knowledge/{$domain}.md";
+		if ( ! file_exists( $path ) ) {
+			return new \WP_Error(
+				'knowledge_not_found',
+				sprintf( __( 'Knowledge file for domain "%s" not found.', 'bricks-mcp' ), $domain )
+			);
+		}
+
+		$content = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		if ( false === $content ) {
+			return new \WP_Error( 'read_failed', __( 'Failed to read knowledge file.', 'bricks-mcp' ) );
+		}
+
+		return [
+			'domain'  => $domain,
+			'content' => trim( $content ),
+		];
 	}
 
 	/**
@@ -434,13 +487,13 @@ final class BricksToolHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'bricks',
-			__( "Manage Bricks Builder settings, schema, and AI notes.\n\nActions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, get_notes, add_note, delete_note.", 'bricks-mcp' ),
+			__( "Manage Bricks Builder settings, schema, AI notes, and knowledge.\n\nActions: enable, disable, get_settings, get_breakpoints, get_element_schemas, get_dynamic_tags, get_query_types, get_form_schema, get_interaction_schema, get_component_schema, get_popup_schema, get_filter_schema, get_condition_schema, get_global_queries, set_global_query, delete_global_query, get_notes, add_note, delete_note, get_knowledge.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
 					'action'       => array(
 						'type'        => 'string',
-						'enum'        => array( 'enable', 'disable', 'get_settings', 'get_breakpoints', 'get_element_schemas', 'get_dynamic_tags', 'get_query_types', 'get_form_schema', 'get_interaction_schema', 'get_component_schema', 'get_popup_schema', 'get_filter_schema', 'get_condition_schema', 'get_global_queries', 'set_global_query', 'delete_global_query', 'get_notes', 'add_note', 'delete_note' ),
+						'enum'        => array( 'enable', 'disable', 'get_settings', 'get_breakpoints', 'get_element_schemas', 'get_dynamic_tags', 'get_query_types', 'get_form_schema', 'get_interaction_schema', 'get_component_schema', 'get_popup_schema', 'get_filter_schema', 'get_condition_schema', 'get_global_queries', 'set_global_query', 'delete_global_query', 'get_notes', 'add_note', 'delete_note', 'get_knowledge' ),
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					),
 					'post_id'      => array(
@@ -490,6 +543,11 @@ final class BricksToolHandler {
 					'note_id'      => array(
 						'type'        => 'string',
 						'description' => __( 'Note ID to delete (delete_note: required)', 'bricks-mcp' ),
+					),
+					'domain'       => array(
+						'type'        => 'string',
+						'enum'        => array( 'forms', 'dynamic-data', 'components', 'popups', 'woocommerce', 'animations', 'seo' ),
+						'description' => __( 'Knowledge domain (get_knowledge: optional, omit to list available domains)', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),

@@ -151,25 +151,27 @@ final class ElementSettingsGenerator {
 	 *
 	 * Produces a nested array of element objects ready for ElementNormalizer.
 	 *
-	 * @param array<string, mixed> $structure       Expanded structure node.
-	 * @param array<string, string> $class_map      class_intent => global_class_id map.
-	 * @param array<string, mixed>  $design_context Design context from schema.
+	 * @param array<string, mixed>  $structure           Expanded structure node.
+	 * @param array<string, string> $class_map           class_intent => global_class_id map.
+	 * @param array<string, mixed>  $design_context      Design context from schema.
+	 * @param array<string>         $classes_with_styles  Class intents that have styles embedded in the class (skip inline).
 	 * @return array<string, mixed> Nested element tree (simplified format for ElementNormalizer).
 	 */
-	public function generate( array $structure, array $class_map, array $design_context ): array {
-		return $this->process_node( $structure, $class_map, $design_context, 'root', [], 0 );
+	public function generate( array $structure, array $class_map, array $design_context, array $classes_with_styles = [] ): array {
+		return $this->process_node( $structure, $class_map, $design_context, 'root', [], 0, null, $classes_with_styles );
 	}
 
 	/**
 	 * Process a single structure node into a Bricks element.
 	 *
-	 * @param array<string, mixed>  $node           Structure node.
-	 * @param array<string, string> $class_map      class_intent => global_class_id map.
-	 * @param array<string, mixed>  $design_context Design context.
-	 * @param string                $parent_type    Parent element type ('root' for top-level).
-	 * @param array<string>         $sibling_types  Types of all siblings in order.
-	 * @param int                   $position       This node's position among siblings.
-	 * @param string|null           $parent_class   Class name applied to parent (for context rules).
+	 * @param array<string, mixed>  $node                Structure node.
+	 * @param array<string, string> $class_map           class_intent => global_class_id map.
+	 * @param array<string, mixed>  $design_context      Design context.
+	 * @param string                $parent_type         Parent element type ('root' for top-level).
+	 * @param array<string>         $sibling_types       Types of all siblings in order.
+	 * @param int                   $position            This node's position among siblings.
+	 * @param string|null           $parent_class        Class name applied to parent (for context rules).
+	 * @param array<string>         $classes_with_styles  Class intents that have styles in the class (skip inline).
 	 * @return array<string, mixed> Bricks element in simplified nested format.
 	 */
 	private function process_node(
@@ -179,10 +181,11 @@ final class ElementSettingsGenerator {
 		string $parent_type = 'root',
 		array $sibling_types = [],
 		int $position = 0,
-		?string $parent_class = null
+		?string $parent_class = null,
+		array $classes_with_styles = []
 	): array {
 		$type     = $node['type'] ?? 'div';
-		$settings = $this->build_settings( $node, $type, $class_map, $design_context );
+		$settings = $this->build_settings( $node, $type, $class_map, $design_context, $classes_with_styles );
 
 		// Auto-suggest class if none was explicitly set and resolver is available.
 		if ( null !== $this->class_resolver && ! isset( $settings['_cssGlobalClasses'] ) ) {
@@ -249,7 +252,8 @@ final class ElementSettingsGenerator {
 						$type,
 						$child_sibling_types,
 						$child_pos,
-						$this_class_name
+						$this_class_name,
+						$classes_with_styles
 					);
 					$child_pos++;
 				}
@@ -265,13 +269,14 @@ final class ElementSettingsGenerator {
 	/**
 	 * Build settings for a single element.
 	 *
-	 * @param array<string, mixed>  $node           Structure node.
-	 * @param string                $type           Element type name.
-	 * @param array<string, string> $class_map      class_intent => global_class_id map.
-	 * @param array<string, mixed>  $design_context Design context.
+	 * @param array<string, mixed>  $node                Structure node.
+	 * @param string                $type                Element type name.
+	 * @param array<string, string> $class_map           class_intent => global_class_id map.
+	 * @param array<string, mixed>  $design_context      Design context.
+	 * @param array<string>         $classes_with_styles  Class intents that have styles embedded in the class.
 	 * @return array<string, mixed> Bricks element settings.
 	 */
-	private function build_settings( array $node, string $type, array $class_map, array $design_context ): array {
+	private function build_settings( array $node, string $type, array $class_map, array $design_context, array $classes_with_styles = [] ): array {
 		$settings = [];
 
 		// 1. Apply label on structural elements.
@@ -288,8 +293,21 @@ final class ElementSettingsGenerator {
 		}
 
 		// 3. Apply content to the correct settings key.
+		// First try element-defaults.json, then fall back to cached schema's working_example.
 		if ( isset( $node['content'] ) ) {
 			$content_key = self::get_content_key( $type );
+
+			// Schema-driven fallback: discover content key from working_example.
+			if ( null === $content_key && isset( $this->schema_cache[ $type ]['working_example'] ) ) {
+				$example = $this->schema_cache[ $type ]['working_example'];
+				foreach ( [ 'text', 'content', 'title', 'label' ] as $candidate ) {
+					if ( isset( $example[ $candidate ] ) && is_string( $example[ $candidate ] ) ) {
+						$content_key = $candidate;
+						break;
+					}
+				}
+			}
+
 			if ( null !== $content_key ) {
 				$settings[ $content_key ] = $node['content'];
 			}
@@ -305,7 +323,7 @@ final class ElementSettingsGenerator {
 			$settings['icon'] = $this->resolve_icon( $node['icon'] );
 		}
 
-		// 6. Handle button specifics.
+		// 6. Handle button specifics — use schema working_example for defaults.
 		if ( 'button' === $type ) {
 			if ( ! empty( $node['style'] ) ) {
 				$settings['style'] = $node['style'];
@@ -313,7 +331,9 @@ final class ElementSettingsGenerator {
 			if ( ! empty( $node['link'] ) ) {
 				$settings['link'] = $node['link'];
 			} elseif ( ! isset( $settings['link'] ) ) {
-				$settings['link'] = [ 'type' => 'external', 'url' => '#' ];
+				// Schema-driven default: use working_example link if available.
+				$example = $this->schema_cache['button']['working_example'] ?? [];
+				$settings['link'] = $example['link'] ?? [ 'type' => 'external', 'url' => '#' ];
 			}
 		}
 
@@ -342,7 +362,7 @@ final class ElementSettingsGenerator {
 			}
 		}
 
-		// 8. Handle flex requirement: elements not flex-by-default need explicit _display: flex.
+		// 9. Handle flex requirement: elements not flex-by-default need explicit _display: flex.
 		// Skip nestable elements (manage own display) and elements with _hidden (managed by parent).
 		$has_hidden = ! empty( $settings['_hidden'] ) || ! empty( $node['style_overrides']['_hidden'] ?? null );
 		if (
@@ -356,12 +376,22 @@ final class ElementSettingsGenerator {
 			$settings['_direction'] = 'column';
 		}
 
-		// 9. Apply style overrides (instance-specific inline styles).
+		// 10. Apply style overrides — but SKIP if the class already has these styles.
+		// When class_intent has styles embedded in the class, style_overrides are redundant.
 		if ( ! empty( $node['style_overrides'] ) && is_array( $node['style_overrides'] ) ) {
-			$settings = array_merge( $settings, $node['style_overrides'] );
+			$intent = $node['class_intent'] ?? '';
+			if ( '' !== $intent && in_array( $intent, $classes_with_styles, true ) ) {
+				// Class has styles — only merge _hidden (structural, not styling).
+				if ( isset( $node['style_overrides']['_hidden'] ) ) {
+					$settings['_hidden'] = $node['style_overrides']['_hidden'];
+				}
+			} else {
+				// No styled class — merge all overrides inline as before.
+				$settings = array_merge( $settings, $node['style_overrides'] );
+			}
 		}
 
-		// 10. Apply background from section-level hint.
+		// 11. Apply background from section-level hint.
 		if ( 'section' === $type && ! empty( $node['background'] ) ) {
 			$settings = $this->apply_background( $settings, $node['background'], $design_context );
 		}

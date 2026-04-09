@@ -51,11 +51,12 @@ final class ClassIntentResolver {
 	 * 2. Normalized match (lowercase, strip hyphens/underscores)
 	 * 3. Create new global class with the intent as the name
 	 *
-	 * @param array<int, string> $intents  Unique class intent strings.
-	 * @param bool              $dry_run  When true, only match existing classes — never create new ones.
-	 * @return array{map: array<string, string>, classes_reused: string[], classes_created: string[], classes_unresolved: string[]}
+	 * @param array<int, string>        $intents    Unique class intent strings.
+	 * @param bool                      $dry_run    When true, only match existing classes — never create new ones.
+	 * @param array<string, array>      $style_map  Optional class_intent => style_overrides map. When creating a new class, its styles are populated from this map.
+	 * @return array{map: array<string, string>, classes_reused: string[], classes_created: string[], classes_with_styles: string[]}
 	 */
-	public function resolve( array $intents, bool $dry_run = false ): array {
+	public function resolve( array $intents, bool $dry_run = false, array $style_map = [] ): array {
 		$classes = $this->get_classes();
 
 		// Build lookup indexes.
@@ -72,9 +73,10 @@ final class ClassIntentResolver {
 			$normalized_index[ self::normalize( $name ) ] = $id;
 		}
 
-		$map             = [];
-		$classes_reused  = [];
-		$classes_created = [];
+		$map                = [];
+		$classes_reused     = [];
+		$classes_created    = [];
+		$classes_with_styles = [];
 
 		foreach ( $intents as $intent ) {
 			if ( '' === $intent ) {
@@ -85,6 +87,14 @@ final class ClassIntentResolver {
 			if ( isset( $exact_index[ $intent ] ) ) {
 				$map[ $intent ]   = $exact_index[ $intent ];
 				$classes_reused[] = $intent;
+
+				// Check if the existing class already has styles.
+				foreach ( $classes as $class ) {
+					if ( ( $class['id'] ?? '' ) === $exact_index[ $intent ] && ! empty( $class['settings'] ) ) {
+						$classes_with_styles[] = $intent;
+						break;
+					}
+				}
 				continue;
 			}
 
@@ -93,18 +103,33 @@ final class ClassIntentResolver {
 			if ( isset( $normalized_index[ $normalized ] ) ) {
 				$map[ $intent ]   = $normalized_index[ $normalized ];
 				$classes_reused[] = $intent;
+
+				foreach ( $classes as $class ) {
+					if ( ( $class['id'] ?? '' ) === $normalized_index[ $normalized ] && ! empty( $class['settings'] ) ) {
+						$classes_with_styles[] = $intent;
+						break;
+					}
+				}
 				continue;
 			}
 
 			// 3. Create new class (skip in dry_run — just report it would be created).
 			if ( $dry_run ) {
 				$classes_created[] = $intent;
+				if ( ! empty( $style_map[ $intent ] ) ) {
+					$classes_with_styles[] = $intent;
+				}
 				continue;
 			}
 
-			$result = $this->class_service->create_global_class( [
-				'name' => $intent,
-			] );
+			// Create with styles if available from the schema.
+			$create_args = [ 'name' => $intent ];
+			if ( ! empty( $style_map[ $intent ] ) ) {
+				$create_args['styles'] = $style_map[ $intent ];
+				$classes_with_styles[] = $intent;
+			}
+
+			$result = $this->class_service->create_global_class( $create_args );
 
 			if ( is_wp_error( $result ) ) {
 				// If creation fails (e.g. duplicate), try to resolve again.
@@ -113,7 +138,6 @@ final class ClassIntentResolver {
 					$map[ $intent ]   = $resolved['id'];
 					$classes_reused[] = $intent;
 				}
-				// Skip silently if still unresolvable.
 				continue;
 			}
 
@@ -129,9 +153,10 @@ final class ClassIntentResolver {
 		}
 
 		return [
-			'map'             => $map,
-			'classes_reused'  => $classes_reused,
-			'classes_created' => $classes_created,
+			'map'                => $map,
+			'classes_reused'     => $classes_reused,
+			'classes_created'    => $classes_created,
+			'classes_with_styles' => $classes_with_styles,
 		];
 	}
 

@@ -311,4 +311,52 @@ final class DesignSchemaValidator {
 			}
 		}
 	}
+
+	/**
+	 * Extract a map of class_intent => style_overrides from the schema.
+	 *
+	 * For each node that has both class_intent and style_overrides,
+	 * maps the intent to its styles. First occurrence wins if the
+	 * same intent appears with different overrides.
+	 *
+	 * @param array<string, mixed> $schema The validated design schema.
+	 * @return array<string, array<string, mixed>> class_intent => style_overrides map.
+	 */
+	public function extract_class_styles( array $schema ): array {
+		$style_map = [];
+
+		foreach ( $schema['sections'] ?? [] as $section ) {
+			if ( ! empty( $section['structure'] ) ) {
+				$this->collect_class_styles( $section['structure'], $style_map );
+			}
+		}
+
+		foreach ( $schema['patterns'] ?? [] as $pattern ) {
+			$this->collect_class_styles( $pattern, $style_map );
+		}
+
+		return $style_map;
+	}
+
+	/**
+	 * Recursively collect class_intent => style_overrides pairs.
+	 *
+	 * @param array<string, mixed>              $node      Structure node.
+	 * @param array<string, array<string, mixed>> &$style_map Style map collector.
+	 */
+	private function collect_class_styles( array $node, array &$style_map ): void {
+		$intent = $node['class_intent'] ?? '';
+		$styles = $node['style_overrides'] ?? [];
+
+		// Only map if both class_intent and style_overrides exist, and first occurrence wins.
+		if ( '' !== $intent && ! empty( $styles ) && ! isset( $style_map[ $intent ] ) ) {
+			$style_map[ $intent ] = $styles;
+		}
+
+		foreach ( $node['children'] ?? [] as $child ) {
+			if ( is_array( $child ) ) {
+				$this->collect_class_styles( $child, $style_map );
+			}
+		}
+	}
 }

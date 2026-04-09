@@ -122,14 +122,17 @@ final class BuildHandler {
 			);
 		}
 
-		// Step 4: Extract element types and class intents.
+		// Step 4: Extract element types, class intents, and class styles.
 		$element_types = $this->validator->extract_element_types( $schema );
 		$class_intents = $this->validator->extract_class_intents( $schema );
+		$style_map     = $this->validator->extract_class_styles( $schema );
 
 		// Step 5: Resolve class intents to global class IDs.
 		// In dry_run mode, only match existing classes — never create new ones.
-		$class_result = $this->class_resolver->resolve( $class_intents, $dry_run );
-		$class_map    = $class_result['map'];
+		// Passes style_map so new classes are created WITH their styles.
+		$class_result       = $this->class_resolver->resolve( $class_intents, $dry_run, $style_map );
+		$class_map          = $class_result['map'];
+		$classes_with_styles = $class_result['classes_with_styles'] ?? [];
 
 		// Step 6: Pre-fetch element schemas for all referenced types.
 		$this->settings_generator->prefetch_schemas( $element_types );
@@ -147,7 +150,7 @@ final class BuildHandler {
 				if ( ! empty( $section['background'] ) && empty( $section['structure']['background'] ) ) {
 					$section['structure']['background'] = $section['background'];
 				}
-				$element_tree   = $this->settings_generator->generate( $section['structure'], $class_map, $design_context );
+				$element_tree   = $this->settings_generator->generate( $section['structure'], $class_map, $design_context, $classes_with_styles );
 				$all_elements[] = $element_tree;
 			}
 		}
