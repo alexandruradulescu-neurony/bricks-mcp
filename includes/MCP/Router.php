@@ -925,25 +925,9 @@ final class Router {
 			}
 		}
 
-		// Append color palette names.
-		$palettes = get_option( 'bricks_color_palette', [] );
-		if ( is_array( $palettes ) ) {
-			$palette_summary = [];
-			foreach ( $palettes as $palette ) {
-				$colors = [];
-				foreach ( ( $palette['colors'] ?? [] ) as $color ) {
-					if ( ! empty( $color['raw'] ) ) {
-						$colors[] = $color['raw'];
-					}
-				}
-				if ( ! empty( $colors ) ) {
-					$palette_summary[ $palette['name'] ?? 'unnamed' ] = $colors;
-				}
-			}
-			if ( ! empty( $palette_summary ) ) {
-				$info['color_palette'] = $palette_summary;
-			}
-		}
+		// Color palette removed — site custom colors are already in design_tokens
+		// under "Colors" category (primary, secondary, accent, base, white, etc.).
+		// The Bricks default palette (grey, amber, etc.) is noise for the AI.
 
 		// Pages summary: brief overview of all Bricks-enabled pages.
 		$pages_query = new \WP_Query( [
