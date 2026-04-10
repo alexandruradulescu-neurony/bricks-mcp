@@ -237,6 +237,9 @@ final class Settings {
 				<a href="?page=bricks-mcp&tab=settings" class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Settings', 'bricks-mcp' ); ?>
 				</a>
+				<a href="?page=bricks-mcp&tab=briefs" class="nav-tab <?php echo 'briefs' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Briefs', 'bricks-mcp' ); ?>
+				</a>
 				<a href="?page=bricks-mcp&tab=notes" class="nav-tab <?php echo 'notes' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'AI Notes', 'bricks-mcp' ); ?>
 				</a>
@@ -253,6 +256,9 @@ final class Settings {
 					break;
 				case 'settings':
 					$this->render_tab_settings();
+					break;
+				case 'briefs':
+					$this->render_tab_briefs();
 					break;
 				case 'notes':
 					$this->render_tab_notes();
@@ -553,6 +559,49 @@ final class Settings {
 				</tbody>
 			</table>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Render Briefs tab content.
+	 *
+	 * Two textareas for Design Brief and Business Brief.
+	 * Stored as separate WordPress option 'bricks_mcp_briefs'.
+	 *
+	 * @return void
+	 */
+	private function render_tab_briefs(): void {
+		// Handle save.
+		if ( isset( $_POST['bricks_mcp_briefs_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bricks_mcp_briefs_nonce'] ) ), 'bricks_mcp_save_briefs' ) ) {
+			$briefs = [
+				'design_brief'   => isset( $_POST['design_brief'] ) ? wp_kses_post( wp_unslash( $_POST['design_brief'] ) ) : '',
+				'business_brief' => isset( $_POST['business_brief'] ) ? wp_kses_post( wp_unslash( $_POST['business_brief'] ) ) : '',
+			];
+			update_option( 'bricks_mcp_briefs', $briefs );
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Briefs saved.', 'bricks-mcp' ) . '</p></div>';
+		}
+
+		$briefs        = get_option( 'bricks_mcp_briefs', [] );
+		$design_brief  = $briefs['design_brief'] ?? '';
+		$business_brief = $briefs['business_brief'] ?? '';
+		?>
+		<form method="post">
+			<?php wp_nonce_field( 'bricks_mcp_save_briefs', 'bricks_mcp_briefs_nonce' ); ?>
+
+			<div class="bricks-mcp-config-section">
+				<h3><?php esc_html_e( 'Design Brief', 'bricks-mcp' ); ?></h3>
+				<p class="description"><?php esc_html_e( 'Describe the site\'s visual language: color usage, typography preferences, card styles, button styles, spacing patterns, dark/light section conventions. The AI reads this before designing any section.', 'bricks-mcp' ); ?></p>
+				<textarea name="design_brief" rows="10" class="large-text" placeholder="<?php esc_attr_e( "Example:\n- Dark sections use var(--base-ultra-dark) background with 70% overlay on images\n- Cards have var(--radius-l) border radius, var(--space-l) padding\n- Buttons are pill-shaped (radius-pill), primary is filled, secondary is outline\n- Headings are centered in hero sections\n- Use Themify icons only", 'bricks-mcp' ); ?>"><?php echo esc_textarea( $design_brief ); ?></textarea>
+			</div>
+
+			<div class="bricks-mcp-config-section">
+				<h3><?php esc_html_e( 'Business Brief', 'bricks-mcp' ); ?></h3>
+				<p class="description"><?php esc_html_e( 'Describe the business: what it does, who it serves, key services, target audience, tone of voice, unique selling points. The AI uses this to generate relevant content instead of placeholder text.', 'bricks-mcp' ); ?></p>
+				<textarea name="business_brief" rows="10" class="large-text" placeholder="<?php esc_attr_e( "Example:\n- Towing company serving the Gub area and surroundings\n- Services: roadside assistance, vehicle towing, platform transport\n- Available 24/7 including holidays\n- Target: car owners, fleet managers, insurance companies\n- Tone: professional, trustworthy, fast response\n- USP: 20-minute average response time", 'bricks-mcp' ); ?>"><?php echo esc_textarea( $business_brief ); ?></textarea>
+			</div>
+
+			<?php submit_button( __( 'Save Briefs', 'bricks-mcp' ) ); ?>
+		</form>
 		<?php
 	}
 

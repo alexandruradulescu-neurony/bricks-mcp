@@ -997,6 +997,21 @@ final class Router {
 			$info['ai_notes_note'] = 'These are persistent instructions from the site owner. You MUST follow them.';
 		}
 
+		// Include design and business briefs if set.
+		$briefs = get_option( 'bricks_mcp_briefs', [] );
+		if ( is_array( $briefs ) ) {
+			$design_brief   = trim( $briefs['design_brief'] ?? '' );
+			$business_brief = trim( $briefs['business_brief'] ?? '' );
+
+			if ( '' !== $design_brief ) {
+				$info['design_brief'] = $design_brief;
+				$info['design_brief_note'] = 'Design guidelines from the site owner. Follow these visual rules when building sections.';
+			}
+			if ( '' !== $business_brief ) {
+				$info['business_brief'] = $business_brief;
+				$info['business_brief_note'] = 'Business context from the site owner. Use this to generate relevant content instead of placeholder text.';
+			}
+		}
 
 		PrerequisiteGateService::set_flag( 'site_info' );
 
