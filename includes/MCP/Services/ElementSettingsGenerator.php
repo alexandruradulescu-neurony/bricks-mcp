@@ -451,7 +451,24 @@ final class ElementSettingsGenerator {
 			}
 		}
 
-		// 12. Apply background from section-level hint.
+		// 12. Convert _background.overlay to Bricks _gradient overlay format.
+		// Bricks uses _gradient with applyTo: "overlay" for background overlays.
+		if ( isset( $settings['_background']['overlay'] ) ) {
+			$overlay_color = $settings['_background']['overlay']['color']['raw']
+				?? $settings['_background']['overlay']['color']['hex']
+				?? '';
+			if ( '' !== $overlay_color ) {
+				$settings['_gradient'] = [
+					'colors'  => [
+						[ 'color' => [ 'raw' => $overlay_color ] ],
+					],
+					'applyTo' => 'overlay',
+				];
+			}
+			unset( $settings['_background']['overlay'] );
+		}
+
+		// 13. Apply background from section-level hint.
 		if ( 'section' === $type && ! empty( $node['background'] ) ) {
 			$settings = $this->apply_background( $settings, $node['background'], $design_context );
 		}
