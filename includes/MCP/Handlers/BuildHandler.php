@@ -55,6 +55,8 @@ final class BuildHandler {
 	 */
 	private ElementSettingsGenerator $settings_generator;
 
+	private \BricksMCP\MCP\Services\ProposalService $proposal_service;
+
 	/**
 	 * Constructor.
 	 *
@@ -69,13 +71,15 @@ final class BuildHandler {
 		DesignSchemaValidator $validator,
 		ClassIntentResolver $class_resolver,
 		SchemaExpander $expander,
-		ElementSettingsGenerator $settings_generator
+		ElementSettingsGenerator $settings_generator,
+		\BricksMCP\MCP\Services\ProposalService $proposal_service
 	) {
 		$this->bricks_service     = $bricks_service;
 		$this->validator          = $validator;
 		$this->class_resolver     = $class_resolver;
 		$this->expander           = $expander;
 		$this->settings_generator = $settings_generator;
+		$this->proposal_service   = $proposal_service;
 	}
 
 	/**
@@ -94,6 +98,25 @@ final class BuildHandler {
 				__( 'schema parameter is required and must be an object.', 'bricks-mcp' )
 			);
 		}
+
+		// Step 0: Require a valid design proposal.
+		$proposal_id = $args['proposal_id'] ?? '';
+		if ( '' === $proposal_id ) {
+			return new \WP_Error(
+				'missing_proposal',
+				__( 'proposal_id is required. Call propose_design first to create a validated design proposal, then pass the returned proposal_id here.', 'bricks-mcp' )
+			);
+		}
+
+		if ( ! $this->proposal_service->validate( $proposal_id ) ) {
+			return new \WP_Error(
+				'invalid_proposal',
+				__( 'Proposal has expired or does not exist. Call propose_design again to create a new proposal (proposals expire after 10 minutes).', 'bricks-mcp' )
+			);
+		}
+
+		// Consume the proposal (one-time use).
+		$this->proposal_service->consume( $proposal_id );
 
 		// Step 1: Validate the schema.
 		$validation = $this->validator->validate( $schema );
@@ -343,8 +366,12 @@ final class BuildHandler {
 						'type'        => 'boolean',
 						'description' => __( 'When true, validate and resolve but do not write. Returns preview of what would be built.', 'bricks-mcp' ),
 					),
+					'proposal_id' => array(
+						'type'        => 'string',
+						'description' => __( 'Proposal ID from propose_design. Required — call propose_design first.', 'bricks-mcp' ),
+					),
 				),
-				'required'   => array( 'schema' ),
+				'required'   => array( 'schema', 'proposal_id' ),
 			),
 			array( $this, 'handle' )
 		);

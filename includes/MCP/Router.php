@@ -21,6 +21,7 @@ use BricksMCP\MCP\Services\SchemaExpander;
 use BricksMCP\MCP\Services\SchemaGenerator;
 use BricksMCP\MCP\Services\ValidationService;
 use BricksMCP\MCP\Services\PrerequisiteGateService;
+use BricksMCP\MCP\Services\ProposalService;
 use BricksMCP\MCP\ToolRegistry;
 use BricksMCP\Plugin;
 
@@ -73,6 +74,9 @@ final class Router {
 			'fill_slot'   => 'instructed',
 		],
 		'build_from_schema' => [
+			'_always' => 'full',
+		],
+		'propose_design' => [
 			'_always' => 'full',
 		],
 	];
@@ -225,6 +229,13 @@ final class Router {
 	private Handlers\BuildHandler $build_handler;
 
 	/**
+	 * Proposal handler instance.
+	 *
+	 * @var Handlers\ProposalHandler
+	 */
+	private Handlers\ProposalHandler $proposal_handler;
+
+	/**
 	 * Pending action service for token-based destructive action confirmation.
 	 *
 	 * @var PendingActionService
@@ -269,12 +280,15 @@ final class Router {
 		$class_resolver          = new ClassIntentResolver( $this->bricks_service->get_global_class_service() );
 		$schema_expander         = new SchemaExpander();
 		$element_settings_gen    = new ElementSettingsGenerator( $this->schema_generator, $this->media_service, $class_resolver );
+		$proposal_service        = new ProposalService( $this->bricks_service->get_global_class_service(), $this->schema_generator );
+		$this->proposal_handler  = new Handlers\ProposalHandler( $proposal_service, $require_bricks );
 		$this->build_handler     = new Handlers\BuildHandler(
 			$this->bricks_service,
 			$design_validator,
 			$class_resolver,
 			$schema_expander,
-			$element_settings_gen
+			$element_settings_gen,
+			$proposal_service
 		);
 
 		$this->pending_action_service = new PendingActionService();
@@ -1028,6 +1042,7 @@ final class Router {
 		$this->woocommerce_handler->register( $this->registry );
 		$this->font_handler->register( $this->registry );
 		$this->code_handler->register( $this->registry );
+		$this->proposal_handler->register( $this->registry );
 		$this->build_handler->register( $this->registry );
 	}
 
