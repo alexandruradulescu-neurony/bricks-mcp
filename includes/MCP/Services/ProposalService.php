@@ -21,14 +21,16 @@ final class ProposalService {
 
 	private const TTL = 600; // 10 minutes.
 
-	private const NEXT_STEP = 'Write a design schema using the resolved classes, variables, and element schemas. Then call build_from_schema with this proposal_id.';
+	private const NEXT_STEP = 'Review the suggested_schema below. Replace [PLACEHOLDER] content with real text, adjust structure if needed, then pass it directly to build_from_schema with this proposal_id. The schema is already valid — only content needs changing.';
 
 	private GlobalClassService $class_service;
 	private SchemaGenerator $schema_generator;
+	private SchemaSkeletonGenerator $skeleton_generator;
 
 	public function __construct( GlobalClassService $class_service, SchemaGenerator $schema_generator ) {
-		$this->class_service    = $class_service;
-		$this->schema_generator = $schema_generator;
+		$this->class_service        = $class_service;
+		$this->schema_generator     = $schema_generator;
+		$this->skeleton_generator   = new SchemaSkeletonGenerator();
 	}
 
 	/**
@@ -178,6 +180,14 @@ final class ProposalService {
 		if ( '' === $business_brief ) {
 			$proposal['warnings'][] = 'No business brief set. Content will be generic placeholder text.';
 		}
+
+		// Generate schema skeleton — the AI reviews and fills in content.
+		$proposal['suggested_schema'] = $this->skeleton_generator->generate(
+			$page_id,
+			$description,
+			$suggested_classes,
+			$scoped_variables
+		);
 
 		// Store as transient.
 		set_transient( "bricks_mcp_proposal_{$proposal_id}", $proposal, self::TTL );

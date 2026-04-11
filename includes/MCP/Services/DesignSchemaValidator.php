@@ -159,6 +159,49 @@ final class DesignSchemaValidator {
 	}
 
 	/**
+	 * Valid keys allowed on structure nodes.
+	 *
+	 * Any key NOT in this list triggers a validation error, preventing
+	 * AI clients from passing raw Bricks settings or invented keys.
+	 */
+	private const VALID_NODE_KEYS = [
+		'type', 'tag', 'label', 'content',
+		'class_intent', 'style_overrides', 'responsive_overrides',
+		'layout', 'columns', 'responsive',
+		'background',
+		'children',
+		'icon', 'src',
+		// Pattern/repeat keys.
+		'ref', 'repeat', 'data',
+	];
+
+	/**
+	 * Common mistakes mapped to correct key names for helpful error messages.
+	 */
+	private const KEY_SUGGESTIONS = [
+		'settings'     => 'style_overrides',
+		'styles'       => 'style_overrides',
+		'css'          => 'style_overrides',
+		'_background'  => 'style_overrides (nest _background inside style_overrides)',
+		'_padding'     => 'style_overrides (nest _padding inside style_overrides)',
+		'_margin'      => 'style_overrides (nest _margin inside style_overrides)',
+		'_display'     => 'style_overrides (nest _display inside style_overrides)',
+		'_direction'   => 'style_overrides (nest _direction inside style_overrides)',
+		'_gap'         => 'style_overrides (nest _gap inside style_overrides)',
+		'_minHeight'   => 'style_overrides (nest _minHeight inside style_overrides)',
+		'_gradient'    => 'style_overrides (nest _gradient inside style_overrides)',
+		'_typography'  => 'style_overrides (nest _typography inside style_overrides)',
+		'_color'       => 'style_overrides (nest _color inside style_overrides)',
+		'_border'      => 'style_overrides (nest _border inside style_overrides)',
+		'_width'       => 'style_overrides (nest _width inside style_overrides)',
+		'_height'      => 'style_overrides (nest _height inside style_overrides)',
+		'text'         => 'content',
+		'classes'      => 'class_intent',
+		'class'        => 'class_intent',
+		'image'        => 'src',
+	];
+
+	/**
 	 * Recursively validate a structure node.
 	 *
 	 * @param array<string, mixed>  $node        The structure node.
@@ -176,6 +219,15 @@ final class DesignSchemaValidator {
 			}
 			// Ref nodes don't need a type — the pattern provides it.
 			return;
+		}
+
+		// Reject unknown keys — prevents AI clients from passing raw Bricks settings.
+		foreach ( array_keys( $node ) as $key ) {
+			if ( ! in_array( $key, self::VALID_NODE_KEYS, true ) ) {
+				$suggestion = self::KEY_SUGGESTIONS[ $key ] ?? null;
+				$hint       = $suggestion ? " Did you mean \"{$suggestion}\"?" : ' Check the schema format documentation.';
+				$errors[]   = "{$path}: unknown key \"{$key}\".{$hint}";
+			}
 		}
 
 		// Validate type.

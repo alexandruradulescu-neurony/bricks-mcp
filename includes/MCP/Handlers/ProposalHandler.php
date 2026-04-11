@@ -67,7 +67,7 @@ final class ProposalHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'propose_design',
-			__( "Create a validated design proposal before calling build_from_schema. Describe what you want to build and the MCP resolves it against the site's actual classes, variables, element schemas, and briefs.\n\nReturns a proposal_id (required by build_from_schema) plus resolved data: available and suggested classes, scoped variables, prefetched element schemas, and design/business briefs.\n\nThe proposal expires after 10 minutes.", 'bricks-mcp' ),
+			__( "Create a validated design proposal before calling build_from_schema. Describe what you want to build and the MCP resolves it against the site's actual classes, variables, element schemas, and briefs.\n\nReturns:\n- proposal_id (required by build_from_schema)\n- suggested_schema: A COMPLETE, VALID schema skeleton with correct element hierarchy, class assignments, and patterns. Replace [PLACEHOLDER] content with real text, then pass directly to build_from_schema.\n- resolved data: classes, variables, element schemas, briefs\n\nIMPORTANT: Always use the suggested_schema as your starting point. Do NOT write schemas from scratch. The skeleton has the correct structure, hierarchy, class_intents, and style_overrides already set.\n\nThe proposal expires after 10 minutes.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
