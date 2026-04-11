@@ -130,11 +130,22 @@ final class OnboardingService {
     }
 
     /**
+     * Cached site context for the current request.
+     *
+     * @var array<string, mixed>|null
+     */
+    private static ?array $site_context_cache = null;
+
+    /**
      * Get site context information.
      *
      * @return array<string, mixed> Site context data.
      */
     private function get_site_context(): array {
+        if ( null !== self::$site_context_cache ) {
+            return self::$site_context_cache;
+        }
+
         $pages = get_posts( [
             'post_type'      => 'any',
             'posts_per_page' => -1,
@@ -150,7 +161,7 @@ final class OnboardingService {
         $global_classes   = get_option( 'bricks_global_classes', [] );
         $global_variables = get_option( 'bricks_global_variables', [] );
 
-        return [
+        self::$site_context_cache = [
             'name'                  => get_bloginfo( 'name' ),
             'url'                   => home_url(),
             'has_bricks'            => defined( 'BRICKS_VERSION' ),
@@ -161,6 +172,8 @@ final class OnboardingService {
             'global_class_count'    => is_array( $global_classes ) ? count( $global_classes ) : 0,
             'global_variable_count' => is_array( $global_variables ) ? count( $global_variables ) : 0,
         ];
+
+        return self::$site_context_cache;
     }
 
     /**
@@ -273,7 +286,7 @@ final class OnboardingService {
                     'element_id' => 'abc123',
                     'settings'   => [ 'text' => 'New text here' ],
                 ],
-                'expected'    => __( 'Element updated successfully', 'bricks-mcp' ),
+                'expected'    => __( 'Success response with updated element data', 'bricks-mcp' ),
             ],
         ];
     }
