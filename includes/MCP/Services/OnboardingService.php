@@ -45,15 +45,70 @@ final class OnboardingService {
     }
 
     /**
+     * Get total session count for a user.
+     *
+     * @param int $user_id WordPress user ID.
+     * @return int Session count.
+     */
+    public function get_session_count( int $user_id ): int {
+        $transient_key = "bricks_mcp_sessions_{$user_id}";
+        $sessions      = get_transient( $transient_key );
+
+        if ( false === $sessions ) {
+            return 0;
+        }
+
+        return count( $sessions );
+    }
+
+    /**
+     * Track a new session for a user.
+     *
+     * @param int    $user_id    WordPress user ID.
+     * @param string $session_id MCP session ID.
+     * @return void
+     */
+    public function track_session( int $user_id, string $session_id ): void {
+        $transient_key = "bricks_mcp_sessions_{$user_id}";
+        $sessions      = get_transient( $transient_key );
+
+        if ( false === $sessions ) {
+            $sessions = [];
+        }
+
+        $sessions[] = [
+            'session_id' => $session_id,
+            'started_at' => current_time( 'mysql' ),
+        ];
+
+        // Keep only last 100 sessions.
+        $sessions = array_slice( $sessions, -100 );
+
+        set_transient( $transient_key, $sessions, 30 * DAY_IN_SECONDS );
+    }
+
+    /**
      * Check if this is the user's first session.
      *
      * @param string $session_id MCP session ID.
+     * @param int    $user_id    WordPress user ID. Defaults to current user.
      * @return bool True if first session.
      */
-    public function is_first_session( string $session_id ): bool {
+    public function is_first_session( string $session_id, int $user_id = 0 ): bool {
+        if ( 0 === $user_id ) {
+            $user_id = get_current_user_id();
+        }
+
         $transient_key = "bricks_mcp_onboarding_{$session_id}";
         $data          = get_transient( $transient_key );
-        return false === $data;
+
+        // If no onboarding data exists, this is first session - track it.
+        if ( false === $data ) {
+            $this->track_session( $user_id, $session_id );
+            return true;
+        }
+
+        return false;
     }
 
     /**
