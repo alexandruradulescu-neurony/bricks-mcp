@@ -430,7 +430,7 @@ final class ProposalService {
 				$path = "design_plan.elements[{$idx}]";
 				if ( empty( $el['type'] ) ) {
 					$errors[] = "{$path}.type is required — pick from available_elements.";
-				} elseif ( ! isset( self::ELEMENT_PURPOSES[ $el['type'] ] ) && ! in_array( $el['type'], [ 'section', 'container', 'block', 'div' ], true ) ) {
+				} elseif ( ! isset( self::ELEMENT_CAPABILITIES[ $el['type'] ] ) && ! in_array( $el['type'], [ 'section', 'container', 'block', 'div' ], true ) ) {
 					// Check against Bricks catalog as fallback.
 					$schema = $this->schema_generator->get_element_schema( $el['type'] );
 					if ( is_wp_error( $schema ) ) {
