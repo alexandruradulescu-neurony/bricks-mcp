@@ -39,30 +39,114 @@ final class ProposalService {
 	];
 
 	/**
-	 * Element purpose descriptions for discovery phase.
-	 * The AI sees WHAT elements do, not Bricks internals.
+	 * Element capabilities for discovery phase.
+	 * Each entry describes PURPOSE + CAPABILITIES so the AI makes informed design decisions.
 	 */
-	private const ELEMENT_PURPOSES = [
-		'section'           => 'Full-width page section — the outermost wrapper for content rows',
-		'container'         => 'Content container inside a section — controls max-width and centering',
-		'block'             => 'Structural grouping element — use for columns, rows, card wrappers. Supports flex direction and CSS grid',
-		'div'               => 'Small wrapper — for icon circles, overlays. Does NOT support flex direction',
-		'heading'           => 'Title text (h1–h6) — use h1 for page titles, h2 for section titles, h3–h4 for card titles',
-		'text-basic'        => 'Paragraph or body text — descriptions, subtitles, taglines',
-		'text-link'         => 'Clickable text link — "View all →", "Read more", navigation links',
-		'button'            => 'Call-to-action button — primary CTAs, secondary actions, form submits',
-		'image'             => 'Image element — photos, illustrations, logos. Supports Unsplash auto-fetch',
-		'icon'              => 'Single icon — decorative or functional. Uses Themify icon library (ti-*)',
-		'icon-box'          => 'Icon + heading + text as a feature card — good for service/feature highlights',
-		'video'             => 'Video embed — YouTube, Vimeo, or self-hosted',
-		'divider'           => 'Horizontal line separator between content sections',
-		'tabs-nested'       => 'Tabbed content panels — each tab has its own content area',
-		'accordion-nested'  => 'Collapsible FAQ/accordion — click to expand/collapse sections',
-		'slider-nested'     => 'Image or content carousel/slideshow',
-		'form'              => 'Contact or input form with fields and submit button',
-		'counter'           => 'Animated number counter — good for statistics (e.g., "5000+ clients")',
-		'list'              => 'Bulleted or numbered list',
-		'pricing-tables'    => 'Pricing tier card with features list and CTA',
+	private const ELEMENT_CAPABILITIES = [
+		'section' => [
+			'purpose'      => 'Full-width page section — the outermost wrapper',
+			'capabilities' => [ 'background image with overlay', 'gradient background', 'min-height for hero sections', 'dark/light mode' ],
+			'rules'        => [ 'DO NOT set _padding — child theme handles it', 'only contains containers as direct children' ],
+		],
+		'container' => [
+			'purpose'      => 'Content container inside a section — controls max-width and centering',
+			'capabilities' => [ 'flex alignment (_alignItems, _justifyContent)', 'text-align for centered text layouts' ],
+			'rules'        => [ 'DO NOT set _gap — child theme handles it', 'use multiple containers for multiple visual rows' ],
+		],
+		'block' => [
+			'purpose'      => 'Structural grouping — columns, rows, card wrappers',
+			'capabilities' => [ 'flex direction (_direction: row for horizontal)', 'CSS grid (layout: grid + columns)', 'semantic HTML tags (ul, li, article, nav, figure)', 'responsive grid collapse' ],
+			'rules'        => [ 'use block for horizontal rows — NOT div (div ignores _direction)' ],
+		],
+		'div' => [
+			'purpose'      => 'Small wrapper — icon circles, overlays, decorative containers',
+			'capabilities' => [ 'explicit _display: flex for centering content' ],
+			'rules'        => [ 'does NOT support _direction — use block instead for rows' ],
+		],
+		'heading' => [
+			'purpose'      => 'Title text (h1–h6)',
+			'capabilities' => [ 'HTML in content — use <span style="color:var(--secondary)">text</span> for colored words', 'tag: h1 for page titles, h2 for sections, h3-h4 for cards' ],
+			'rules'        => [ 'DO NOT set font-size, color, line-height, font-weight — child theme handles all heading styles' ],
+		],
+		'text-basic' => [
+			'purpose'      => 'Paragraph or body text — descriptions, subtitles, taglines, eyebrows',
+			'capabilities' => [ 'HTML content supported', 'can be styled as tagline/eyebrow via class_intent' ],
+			'rules'        => [ 'DO NOT set font-size, color, line-height — child theme handles body text styles' ],
+		],
+		'text-link' => [
+			'purpose'      => 'Clickable text link',
+			'capabilities' => [ 'link URL (internal or external)', 'custom link text' ],
+		],
+		'button' => [
+			'purpose'      => 'Call-to-action button',
+			'capabilities' => [ 'ICON support — native icon left/right of text (ti-mobile, ti-comment-alt, etc.)', 'link with tel: or https:// URL', 'style variants via class_intent (primary, outline, ghost)' ],
+			'rules'        => [ 'use native icon feature — do NOT put emoji in button text' ],
+		],
+		'image' => [
+			'purpose'      => 'Image element — photos, illustrations, logos',
+			'capabilities' => [ 'Unsplash auto-fetch via src: "unsplash:query"', 'attachment ID reference', 'external URL', 'border-radius for rounded corners', 'aspect-ratio control' ],
+		],
+		'icon' => [
+			'purpose'      => 'Single decorative or functional icon',
+			'capabilities' => [ 'Themify icon library (ti-truck, ti-shield, ti-timer, etc.)', 'custom size, color' ],
+		],
+		'icon-box' => [
+			'purpose'      => 'Feature card — icon + heading + text combined',
+			'capabilities' => [ 'built-in icon, title, and description fields', 'good for feature grids and service highlights' ],
+		],
+		'video' => [
+			'purpose'      => 'Video embed',
+			'capabilities' => [ 'YouTube, Vimeo, or self-hosted video URL' ],
+		],
+		'divider' => [
+			'purpose'      => 'Horizontal separator line',
+			'capabilities' => [ 'custom width, color, style' ],
+		],
+		'tabs-nested' => [
+			'purpose'      => 'Tabbed content panels — each tab has full nested content',
+			'capabilities' => [ 'multiple tab panes with any content inside', 'tab labels, icons' ],
+			'rules'        => [ 'use tabs-nested NOT tabs — basic tabs only support plain text' ],
+		],
+		'accordion-nested' => [
+			'purpose'      => 'Collapsible FAQ/accordion sections',
+			'capabilities' => [ 'multiple panels with any nested content', 'click to expand/collapse' ],
+		],
+		'slider-nested' => [
+			'purpose'      => 'Image or content carousel/slideshow',
+			'capabilities' => [ 'multiple slides with any nested content', 'autoplay, navigation arrows, dots' ],
+		],
+		'form' => [
+			'purpose'      => 'Contact or input form',
+			'capabilities' => [ 'text fields, email, textarea, select, checkbox', 'submit button', 'email notifications' ],
+		],
+		'counter' => [
+			'purpose'      => 'Animated number counter',
+			'capabilities' => [ 'count-to target number', 'prefix/suffix text', 'animation on scroll' ],
+		],
+		'list' => [
+			'purpose'      => 'Bulleted or numbered list',
+			'capabilities' => [ 'custom icons per item', 'ordered or unordered' ],
+		],
+		'pricing-tables' => [
+			'purpose'      => 'Pricing tier card',
+			'capabilities' => [ 'plan name, price, features list, CTA button', 'highlight/featured tier' ],
+		],
+	];
+
+	/**
+	 * Building rules extracted from building.md — included in every discovery response.
+	 */
+	private const BUILDING_RULES = [
+		'structure'   => 'Every page follows: section > container > block/div > content elements. Multiple visual rows = multiple containers inside a section.',
+		'centering'   => 'Use flex alignment (_alignItems: center, _justifyContent: center) — NOT text-align. text-align only affects text inside an element.',
+		'no_override' => 'DO NOT set these inline — the child theme handles them globally: section _padding, container _gap, heading font-size/color/line-height/font-weight, body text font-size/color/line-height.',
+		'classes'     => 'Use class_intent on every element when possible. The pipeline creates reusable classes WITH styles. Inline style_overrides only for instance-specific overrides.',
+		'labels'      => 'Add label to sections ("Hero"), containers (row description), and blocks ("CTA Buttons", "Cards Grid").',
+		'variables'   => 'Always use var(--name) — never hardcode colors, spacing, radius, or font sizes. Examples: var(--space-m), var(--primary), var(--radius), var(--h2).',
+		'rows'        => 'For horizontal rows, use block with _direction: row. NOT div — div ignores _direction.',
+		'responsive'  => 'Composite keys for responsive: _property:tablet_portrait, _property:mobile. Grids should collapse: 3-col → 2-col at tablet → 1-col at mobile.',
+		'backgrounds' => 'Background overlays use _gradient with applyTo: "overlay". Background images need actual URLs (sideload from Unsplash first). Section background: "dark" auto-sets dark bg + white text on children.',
+		'buttons'     => 'Buttons support native icons (icon + iconPosition settings). Do NOT use emoji in button text. Use class_intent for styling (btn-hero-primary, btn-hero-ghost).',
 	];
 
 	private GlobalClassService $class_service;
@@ -152,9 +236,10 @@ final class ProposalService {
 				. 'Then call propose_design again with the same description PLUS a design_plan object. '
 				. 'The design_plan must include: section_type, layout, elements (each with type, role, content_hint), and optional patterns.',
 
-			'available_elements' => self::ELEMENT_PURPOSES,
+			'available_elements' => self::ELEMENT_CAPABILITIES,
 			'available_layouts'  => self::VALID_LAYOUTS,
 			'section_types'      => self::VALID_SECTION_TYPES,
+			'building_rules'     => self::BUILDING_RULES,
 
 			'site_context' => [
 				'classes' => [

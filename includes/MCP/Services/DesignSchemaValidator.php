@@ -170,7 +170,7 @@ final class DesignSchemaValidator {
 		'layout', 'columns', 'responsive',
 		'background',
 		'children',
-		'icon', 'src',
+		'icon', 'iconPosition', 'src',
 		// Pattern/repeat keys.
 		'ref', 'repeat', 'data',
 	];

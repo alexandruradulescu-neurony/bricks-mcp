@@ -364,15 +364,19 @@ final class ElementSettingsGenerator {
 			$settings['icon'] = $this->resolve_icon( $node['icon'] );
 		}
 
-		// 6. Handle button specifics — use schema working_example for defaults.
+		// 6. Handle button specifics — icon, style, link.
 		if ( 'button' === $type ) {
+			// Button icon support — Bricks buttons natively support icons.
+			if ( ! empty( $node['icon'] ) ) {
+				$settings['icon'] = $this->resolve_icon( $node['icon'] );
+				$settings['iconPosition'] = $node['iconPosition'] ?? 'left';
+			}
 			if ( ! empty( $node['style'] ) ) {
 				$settings['style'] = $node['style'];
 			}
 			if ( ! empty( $node['link'] ) ) {
 				$settings['link'] = $node['link'];
 			} elseif ( ! isset( $settings['link'] ) ) {
-				// Schema-driven default: use working_example link if available.
 				$example = $this->schema_cache['button']['working_example'] ?? [];
 				$settings['link'] = $example['link'] ?? [ 'type' => 'external', 'url' => '#' ];
 			}
@@ -432,7 +436,60 @@ final class ElementSettingsGenerator {
 			}
 		}
 
-		// 10b. Validate style_override keys against CSS property map.
+		// 10b. Auto-fix common invalid keys before validation.
+		if ( isset( $settings['_maxWidth'] ) ) {
+			$settings['_widthMax'] = $settings['_maxWidth'];
+			unset( $settings['_maxWidth'] );
+		}
+		if ( isset( $settings['_textAlign'] ) ) {
+			if ( ! isset( $settings['_typography'] ) ) {
+				$settings['_typography'] = [];
+			}
+			$settings['_typography']['text-align'] = $settings['_textAlign'];
+			unset( $settings['_textAlign'] );
+		}
+		if ( isset( $settings['_minWidth'] ) ) {
+			$settings['_widthMin'] = $settings['_minWidth'];
+			unset( $settings['_minWidth'] );
+		}
+
+		// 10c. Resolve Unsplash queries in background images.
+		if ( ! empty( $settings['_background']['image'] ) && null !== $this->media_service ) {
+			$bg_image = $settings['_background']['image'];
+			$bg_url   = is_array( $bg_image ) ? ( $bg_image['url'] ?? '' ) : (string) $bg_image;
+
+			if ( is_string( $bg_url ) && str_starts_with( $bg_url, 'unsplash:' ) ) {
+				$query  = trim( substr( $bg_url, 9 ) );
+				$result = $this->media_service->search_photos( $query );
+
+				if ( ! is_wp_error( $result ) && ! empty( $result['photos'][0]['urls']['regular'] ) ) {
+					$photo    = $result['photos'][0];
+					$url      = $photo['urls']['regular'];
+					$alt      = $photo['alt_description'] ?? $query;
+					$sideload = $this->media_service->sideload_from_url( $url, $alt, $query );
+
+					if ( ! is_wp_error( $sideload ) && ! empty( $sideload['attachment_id'] ) ) {
+						$settings['_background']['image'] = [
+							'useDynamicData' => false,
+							'id'             => (int) $sideload['attachment_id'],
+							'filename'       => $sideload['filename'] ?? '',
+							'full'           => $sideload['url'] ?? '',
+							'url'            => $sideload['url'] ?? '',
+							'size'           => 'full',
+						];
+						// Ensure background size is set for cover behavior.
+						if ( ! isset( $settings['_background']['size'] ) ) {
+							$settings['_background']['size'] = 'cover';
+						}
+						if ( ! isset( $settings['_background']['position'] ) ) {
+							$settings['_background']['position'] = 'center center';
+						}
+					}
+				}
+			}
+		}
+
+		// 10d. Validate style_override keys against CSS property map.
 		// Strip invalid underscore-prefixed keys that aren't real Bricks properties.
 		foreach ( array_keys( $settings ) as $key ) {
 			if ( is_string( $key ) && str_starts_with( $key, '_' ) && ! SchemaGenerator::is_valid_settings_key( $key ) ) {
