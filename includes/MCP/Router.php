@@ -332,6 +332,9 @@ final class Router {
 	 * @return void
 	 */
 	private function register_default_tools(): void {
+		// Onboarding handler - doesn't need Bricks, reads WordPress options only.
+		$this->onboarding_handler->register( $this->registry );
+
 		// Get site info tool.
 		$this->register_tool(
 			'get_site_info',
@@ -1056,7 +1059,6 @@ final class Router {
 		$this->code_handler->register( $this->registry );
 		$this->proposal_handler->register( $this->registry );
 		$this->build_handler->register( $this->registry );
-		$this->onboarding_handler->register( $this->registry );
 	}
 
 	/**
