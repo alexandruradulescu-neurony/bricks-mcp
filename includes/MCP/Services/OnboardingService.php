@@ -187,23 +187,113 @@ final class OnboardingService {
         ];
     }
 
+    /**
+     * Get quick-start examples.
+     *
+     * @return array<int, array> Quick-start examples.
+     */
     private function get_quick_start_examples(): array {
-        return [];
+        return [
+            [
+                'title'       => __( 'Get Site Info', 'bricks-mcp' ),
+                'description' => __( 'Read site metadata and design tokens', 'bricks-mcp' ),
+                'tool_name'   => 'get_site_info',
+                'tool_arguments' => [ 'action' => 'info' ],
+                'expected'    => __( 'JSON response with site metadata, design tokens, and page summaries', 'bricks-mcp' ),
+            ],
+            [
+                'title'       => __( 'List Global Classes', 'bricks-mcp' ),
+                'description' => __( 'Discover available CSS classes', 'bricks-mcp' ),
+                'tool_name'   => 'global_class',
+                'tool_arguments' => [ 'action' => 'list', 'limit' => 20 ],
+                'expected'    => __( 'Array of global CSS classes with styles', 'bricks-mcp' ),
+            ],
+            [
+                'title'       => __( 'Update Element Text', 'bricks-mcp' ),
+                'description' => __( 'Change text on an existing element', 'bricks-mcp' ),
+                'tool_name'   => 'element',
+                'tool_arguments' => [
+                    'action'     => 'update',
+                    'post_id'    => 94,
+                    'element_id' => 'abc123',
+                    'settings'   => [ 'text' => 'New text here' ],
+                ],
+                'expected'    => __( 'Element updated successfully', 'bricks-mcp' ),
+            ],
+        ];
     }
 
-    private function get_important_notes(): array {
-        return [];
-    }
-
-    private function get_design_brief_summary(): string {
-        return '';
-    }
-
-    private function get_business_brief_summary(): string {
-        return '';
-    }
-
+    /**
+     * Get test connection example.
+     *
+     * @return array<string, string> Test connection details.
+     */
     private function get_test_connection(): array {
-        return [];
+        return [
+            'description'    => __( 'Verify your connection works with a simple read operation', 'bricks-mcp' ),
+            'tool_name'      => 'get_site_info',
+            'tool_arguments' => json_encode( [ 'action' => 'info' ] ),
+            'expected'       => __( 'JSON response with site metadata, design tokens, and page summaries', 'bricks-mcp' ),
+        ];
+    }
+
+    /**
+     * Get important notes from AI notes option.
+     *
+     * @return array<int, string> Important notes.
+     */
+    private function get_important_notes(): array {
+        $briefs = get_option( 'bricks_mcp_briefs', [] );
+        $notes  = [];
+
+        // Add AI notes if they exist.
+        if ( ! empty( $briefs['ai_notes'] ) && is_array( $briefs['ai_notes'] ) ) {
+            $notes = $briefs['ai_notes'];
+        }
+
+        // Add default notes if none exist.
+        if ( empty( $notes ) ) {
+            $notes = [
+                __( 'Always use Romanian content for the homepage and service pages', 'bricks-mcp' ),
+                __( 'For horizontal rows, use block with _direction: row — NOT div', 'bricks-mcp' ),
+                __( 'Background overlays in Bricks use _gradient with applyTo: overlay', 'bricks-mcp' ),
+            ];
+        }
+
+        return $notes;
+    }
+
+    /**
+     * Get design brief summary.
+     *
+     * @return string Design brief summary.
+     */
+    private function get_design_brief_summary(): string {
+        $briefs = get_option( 'bricks_mcp_briefs', [] );
+        $design_brief = $briefs['design_brief'] ?? '';
+
+        if ( empty( $design_brief ) ) {
+            return __( 'No design brief set. Go to Bricks MCP > Briefs to add visual guidelines.', 'bricks-mcp' );
+        }
+
+        // Return first 500 characters as summary.
+        return wp_trim_words( $design_brief, 50, '...' );
+    }
+
+    /**
+     * Get business brief summary.
+     *
+     * @return string Business brief summary.
+     */
+    private function get_business_brief_summary(): string {
+        $briefs = get_option( 'bricks_mcp_briefs', [] );
+        $business_brief = $briefs['business_brief'] ?? '';
+
+        if ( empty( $business_brief ) ) {
+            return __( 'No business brief set. Go to Bricks MCP > Briefs to add business context.', 'bricks-mcp' );
+        }
+
+        // Return first 500 characters as summary.
+        return wp_trim_words( $business_brief, 50, '...' );
     }
 }
