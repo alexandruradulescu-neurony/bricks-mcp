@@ -74,13 +74,78 @@ final class OnboardingService {
         );
     }
 
-    // Stub methods for Task 1 - these will be implemented in subsequent tasks
-    private function get_welcome_message(): string {
-        return 'Welcome to Bricks MCP!';
+    /**
+     * Get site context information.
+     *
+     * @return array<string, mixed> Site context data.
+     */
+    private function get_site_context(): array {
+        $pages = get_posts( [
+            'post_type'      => 'any',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+        ] );
+
+        $templates = get_posts( [
+            'post_type'      => 'bricks_template',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+        ] );
+
+        $global_classes   = get_option( 'bricks_global_classes', [] );
+        $global_variables = get_option( 'bricks_global_variables', [] );
+
+        return [
+            'name'                  => get_bloginfo( 'name' ),
+            'url'                   => home_url(),
+            'has_bricks'            => defined( 'BRICKS_VERSION' ),
+            'has_woocommerce'       => class_exists( 'WooCommerce' ),
+            'page_count'            => count( $pages ),
+            'element_count'         => $this->count_total_elements(),
+            'template_count'        => count( $templates ),
+            'global_class_count'    => is_array( $global_classes ) ? count( $global_classes ) : 0,
+            'global_variable_count' => is_array( $global_variables ) ? count( $global_variables ) : 0,
+        ];
     }
 
-    private function get_site_context(): array {
-        return [];
+    /**
+     * Count total Bricks elements across all pages.
+     *
+     * @return int Total element count.
+     */
+    private function count_total_elements(): int {
+        $pages = get_posts( [
+            'post_type'      => 'page',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+        ] );
+
+        $total = 0;
+        foreach ( $pages as $page_id ) {
+            $elements = get_post_meta( $page_id, '_bricks_page_content_2', true );
+            if ( is_array( $elements ) ) {
+                $total += count( $elements );
+            }
+        }
+
+        return $total;
+    }
+
+    /**
+     * Get welcome message.
+     *
+     * @return string Welcome message.
+     */
+    private function get_welcome_message(): string {
+        $site_name = get_bloginfo( 'name' );
+        $site_url  = home_url();
+
+        return sprintf(
+            /* translators: 1: Site name, 2: Site URL */
+            __( 'Welcome to Bricks MCP! Connected to %1$s (%2$s)', 'bricks-mcp' ),
+            $site_name,
+            $site_url
+        );
     }
 
     private function get_workflow_guide(): array {
