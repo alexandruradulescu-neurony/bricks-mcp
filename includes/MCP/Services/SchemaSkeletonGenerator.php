@@ -213,11 +213,34 @@ final class SchemaSkeletonGenerator {
 			}
 		}
 
+		// Auto-wrap consecutive buttons in a row block.
+		$section_children = $this->auto_wrap_buttons( $section_children );
+
 		// Wrap in section > container.
 		$section_overrides = [];
 		if ( 'hero' === $section_type ) {
-			$section_overrides['_minHeight']       = '80vh';
-			$section_overrides['_justifyContent']   = 'center';
+			$section_overrides['_minHeight']     = '80vh';
+			$section_overrides['_justifyContent'] = 'center';
+		}
+
+		// Background image from design_plan.
+		$bg_image = $plan['background_image'] ?? '';
+		if ( '' !== $bg_image ) {
+			$section_overrides['_background'] = [
+				'image' => [ 'url' => $bg_image ],
+				'size'  => 'cover',
+				'position' => 'center center',
+			];
+			// Add default gradient overlay for dark sections with images.
+			if ( 'dark' === $background ) {
+				$section_overrides['_gradient'] = [
+					'colors'  => [
+						[ 'color' => [ 'raw' => 'rgba(46, 46, 61, 0.8)' ], 'stop' => '0' ],
+						[ 'color' => [ 'raw' => 'rgba(142, 47, 34, 0.6)' ], 'stop' => '100' ],
+					],
+					'applyTo' => 'overlay',
+				];
+			}
 		}
 
 		$section = [
@@ -245,6 +268,47 @@ final class SchemaSkeletonGenerator {
 		}
 
 		return $schema;
+	}
+
+	/**
+	 * Auto-wrap consecutive buttons in a row block.
+	 *
+	 * Scans children for runs of 2+ consecutive button elements and wraps
+	 * them in a block with _direction: row.
+	 *
+	 * @param array<int, array> $children Child nodes.
+	 * @return array<int, array> Children with button runs wrapped.
+	 */
+	private function auto_wrap_buttons( array $children ): array {
+		$result      = [];
+		$button_run  = [];
+
+		foreach ( $children as $child ) {
+			$is_button = ( $child['type'] ?? '' ) === 'button';
+
+			if ( $is_button ) {
+				$button_run[] = $child;
+			} else {
+				// Flush any accumulated buttons.
+				if ( count( $button_run ) >= 2 ) {
+					$result[] = $this->row( 'CTA Buttons', $button_run, [ '_justifyContent' => 'center' ] );
+				} elseif ( ! empty( $button_run ) ) {
+					// Single button — don't wrap.
+					$result[] = $button_run[0];
+				}
+				$button_run = [];
+				$result[]   = $child;
+			}
+		}
+
+		// Flush remaining buttons.
+		if ( count( $button_run ) >= 2 ) {
+			$result[] = $this->row( 'CTA Buttons', $button_run, [ '_justifyContent' => 'center' ] );
+		} elseif ( ! empty( $button_run ) ) {
+			$result[] = $button_run[0];
+		}
+
+		return $result;
 	}
 
 	/**

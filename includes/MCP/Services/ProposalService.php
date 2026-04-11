@@ -254,9 +254,10 @@ final class ProposalService {
 			],
 
 			'design_plan_format' => [
-				'section_type' => 'hero|features|pricing|cta|testimonials|split|generic (REQUIRED)',
-				'layout'       => 'centered|split-60-40|split-50-50|grid-2|grid-3|grid-4 (REQUIRED)',
-				'background'   => 'dark|light (optional, default: light)',
+				'section_type'     => 'hero|features|pricing|cta|testimonials|split|generic (REQUIRED)',
+				'layout'           => 'centered|split-60-40|split-50-50|grid-2|grid-3|grid-4 (REQUIRED)',
+				'background'       => 'dark|light (optional, default: light)',
+				'background_image' => 'optional — "unsplash:query" to auto-fetch a background image. Used with gradient overlay on dark sections.',
 				'elements'     => [
 					[
 						'type'         => 'REQUIRED — element type from available_elements',
