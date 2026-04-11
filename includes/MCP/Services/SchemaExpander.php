@@ -125,7 +125,7 @@ final class SchemaExpander {
 	 *
 	 * @var array<int, string>
 	 */
-	private const PROTECTED_KEYS = [ 'type', 'tag', 'ref', 'repeat', 'layout', 'class_intent' ];
+	private const PROTECTED_KEYS = [ 'type', 'tag', 'ref', 'repeat', 'layout' ];
 
 	/**
 	 * Substitute data values into a pattern tree.
