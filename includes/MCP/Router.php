@@ -16,6 +16,7 @@ use BricksMCP\MCP\Services\DesignSchemaValidator;
 use BricksMCP\MCP\Services\ElementSettingsGenerator;
 use BricksMCP\MCP\Services\MediaService;
 use BricksMCP\MCP\Services\MenuService;
+use BricksMCP\MCP\Services\OnboardingService;
 use BricksMCP\MCP\Services\PendingActionService;
 use BricksMCP\MCP\Services\SchemaExpander;
 use BricksMCP\MCP\Services\SchemaGenerator;
@@ -236,6 +237,13 @@ final class Router {
 	private Handlers\ProposalHandler $proposal_handler;
 
 	/**
+	 * Onboarding handler instance.
+	 *
+	 * @var Handlers\OnboardingHandler
+	 */
+	private Handlers\OnboardingHandler $onboarding_handler;
+
+	/**
 	 * Pending action service for token-based destructive action confirmation.
 	 *
 	 * @var PendingActionService
@@ -290,6 +298,9 @@ final class Router {
 			$element_settings_gen,
 			$proposal_service
 		);
+
+		// Onboarding handler.
+		$this->onboarding_handler = new Handlers\OnboardingHandler( new OnboardingService( $this->bricks_service ) );
 
 		$this->pending_action_service = new PendingActionService();
 
@@ -1044,6 +1055,7 @@ final class Router {
 		$this->code_handler->register( $this->registry );
 		$this->proposal_handler->register( $this->registry );
 		$this->build_handler->register( $this->registry );
+		$this->onboarding_handler->register( $this->registry );
 	}
 
 	/**
