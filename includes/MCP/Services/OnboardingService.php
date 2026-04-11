@@ -148,8 +148,43 @@ final class OnboardingService {
         );
     }
 
+    /**
+     * Get workflow guide with three tiers.
+     *
+     * @return array<string, array> Workflow guide.
+     */
     private function get_workflow_guide(): array {
-        return [];
+        return [
+            'direct_operations' => [
+                'description' => __( 'Quick edits to existing content (text, moves, swaps)', 'bricks-mcp' ),
+                'prerequisites' => [ 'get_site_info' ],
+                'tools' => [ 'element:update', 'element:move', 'element:remove', 'media:set_featured', 'menu:update' ],
+                'example' => __( 'Change the hero heading on the homepage', 'bricks-mcp' ),
+                'example_call' => [
+                    'name' => 'element',
+                    'arguments' => [
+                        'action' => 'update',
+                        'post_id' => 94,
+                        'element_id' => 'abc123',
+                        'settings' => [ 'text' => 'New heading text' ],
+                    ],
+                ],
+            ],
+            'instructed_builds' => [
+                'description' => __( 'Add new sections or element groups', 'bricks-mcp' ),
+                'prerequisites' => [ 'get_site_info', 'global_class:list' ],
+                'tools' => [ 'element:bulk_add', 'page:append_content' ],
+                'example' => __( 'Add a testimonials section with 3 customer cards', 'bricks-mcp' ),
+                'note' => __( 'Requires bypass_design_gate: true for sections', 'bricks-mcp' ),
+            ],
+            'design_builds' => [
+                'description' => __( 'Build complete pages from design schemas', 'bricks-mcp' ),
+                'prerequisites' => [ 'get_site_info', 'global_class:list', 'global_variable:list' ],
+                'tools' => [ 'propose_design', 'build_from_schema' ],
+                'example' => __( 'Design a services page with hero, features, pricing, and CTA sections', 'bricks-mcp' ),
+                'flow' => __( 'Call propose_design first → review resolved data → write schema → call build_from_schema', 'bricks-mcp' ),
+            ],
+        ];
     }
 
     private function get_quick_start_examples(): array {
