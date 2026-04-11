@@ -10,6 +10,9 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP;
 
+use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\Services\OnboardingService;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -331,6 +334,12 @@ final class StreamableHttpHandler {
 		];
 
 		$instructions = $this->generate_dynamic_instructions();
+
+		// Add onboarding data to serverInfo.
+		$onboarding_service = new OnboardingService( new BricksService() );
+		$session_id = $params['sessionId'] ?? '';
+		$server_info['onboarding'] = $onboarding_service->generate_onboarding( get_current_user_id() );
+		$server_info['requires_onboarding_review'] = $onboarding_service->is_first_session( $session_id );
 
 		return $this->jsonrpc_success(
 			$id,
