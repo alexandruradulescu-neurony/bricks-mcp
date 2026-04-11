@@ -324,6 +324,35 @@ final class ProposalService {
 		// Get scoped variables.
 		$scoped_variables = $this->get_scoped_variables( $description );
 
+		// Fetch real element schemas for the types the AI chose.
+		$chosen_types = [];
+		foreach ( $design_plan['elements'] ?? [] as $el ) {
+			$t = $el['type'] ?? '';
+			if ( '' !== $t ) {
+				$chosen_types[ $t ] = true;
+			}
+		}
+		foreach ( $design_plan['patterns'] ?? [] as $pat ) {
+			foreach ( $pat['element_structure'] ?? [] as $pel ) {
+				$t = $pel['type'] ?? '';
+				if ( '' !== $t ) {
+					$chosen_types[ $t ] = true;
+				}
+			}
+		}
+
+		$element_details = [];
+		foreach ( array_keys( $chosen_types ) as $type ) {
+			$schema = $this->schema_generator->get_element_schema( $type );
+			if ( ! is_wp_error( $schema ) ) {
+				$element_details[ $type ] = [
+					'label'           => $schema['label'] ?? $type,
+					'nesting'         => $schema['nesting'] ?? [],
+					'working_example' => $schema['working_example'] ?? [],
+				];
+			}
+		}
+
 		// Generate skeleton from the AI's design decisions.
 		$suggested_schema = $this->skeleton_generator->generate_from_plan(
 			$page_id,
@@ -343,10 +372,11 @@ final class ProposalService {
 			'design_plan'      => $design_plan,
 			'created_at'       => current_time( 'mysql' ),
 			'suggested_schema' => $suggested_schema,
-			'next_step'        => 'Review the suggested_schema. Replace [PLACEHOLDER] content with real text based on the briefs and your content_hints. Then call build_from_schema with this proposal_id and the modified schema.',
+			'next_step'        => 'Review the suggested_schema. Replace [PLACEHOLDER] content with real text based on the briefs and your content_hints. The element_schemas below show what each element accepts — use this to set correct content keys. Then call build_from_schema with this proposal_id and the modified schema.',
 			'resolved'         => [
 				'classes_suggested' => $suggested_classes,
 				'variables'         => $scoped_variables,
+				'element_schemas'   => $element_details,
 			],
 		];
 
