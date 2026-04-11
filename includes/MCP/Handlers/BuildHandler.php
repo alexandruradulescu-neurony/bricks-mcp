@@ -319,59 +319,32 @@ final class BuildHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'build_from_schema',
-			__( "Build Bricks page content from a declarative design schema. The schema describes structure, layout, and class intents; the MCP handles all Bricks mechanics (element IDs, settings, class resolution, normalization).\n\nAccepts a design schema with target (page_id, action), design_context (summary, mood, spacing), sections with nested structure trees, and optional patterns. Returns created elements, resolved classes, and a tree summary.\n\nUse dry_run: true to validate and preview without writing.", 'bricks-mcp' ),
+			__( "Build Bricks page content from a design schema.\n\n"
+				. "REQUIRED WORKFLOW:\n"
+				. "1. Call propose_design first — it returns proposal_id + suggested_schema\n"
+				. "2. Take the suggested_schema JSON object as-is\n"
+				. "3. Replace [PLACEHOLDER] text content with real content\n"
+				. "4. Pass the modified schema here along with the proposal_id\n\n"
+				. "DO NOT write schemas from scratch. DO NOT invent keys. The suggested_schema from propose_design has the correct structure.\n\n"
+				. "Valid node keys: type, tag, label, content, class_intent, style_overrides, responsive_overrides, layout, columns, responsive, background, children, icon, src, ref, repeat, data.\n"
+				. "Any other key (settings, _background, _padding, styles, css, etc.) will be REJECTED.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
+					'proposal_id' => array(
+						'type'        => 'string',
+						'description' => __( 'REQUIRED. The proposal_id returned by propose_design. Call propose_design first.', 'bricks-mcp' ),
+					),
 					'schema'  => array(
 						'type'        => 'object',
-						'description' => __( "Design schema object with target, design_context, sections, and optional patterns. See tool description for full format.\n\n"
-							. "SCHEMA FORMAT:\n"
-							. "{\n"
-							. "  \"target\": { \"page_id\": int, \"action\": \"append\"|\"replace\", \"parent_id\"?: string, \"position\"?: int },\n"
-							. "  \"design_context\": { \"summary\": string, \"mood\"?: string, \"palette_hints\"?: string[], \"spacing\"?: \"compact\"|\"normal\"|\"spacious\" },\n"
-							. "  \"sections\": [{ \"intent\": string, \"background\"?: \"dark\"|\"light\"|\"gradient\", \"structure\": <node> }],\n"
-							. "  \"patterns\"?: { \"pattern_name\": <node> }\n"
-							. "}\n\n"
-							. "STRUCTURE NODE FORMAT:\n"
-							. "{\n"
-							. "  \"type\": string,           // Bricks element name (section, container, block, div, heading, text-basic, button, image, icon, tabs-nested, etc.)\n"
-							. "  \"content\"?: string,        // Text content — mapped to correct Bricks key (text for heading/text-basic/button, content for icon-box/alert)\n"
-							. "  \"tag\"?: string,            // HTML tag (h1-h6, p, ul, li, figure, address)\n"
-							. "  \"label\"?: string,          // Editor label for structural elements\n"
-							. "  \"class_intent\"?: string,   // Semantic class purpose — matched to existing global classes by name, or created if new\n"
-							. "  \"layout\"?: \"grid\",         // Set on block/div to enable CSS grid\n"
-							. "  \"columns\"?: int,           // Grid column count (used with layout:grid)\n"
-							. "  \"responsive\"?: { \"tablet\"?: int, \"mobile\"?: int },  // Column overrides per breakpoint\n"
-							. "  \"responsive_overrides\"?: { \"breakpoint\": { \"_key\": value } },  // Per-breakpoint style overrides using composite keys\n"
-							. "  \"src\"?: string,            // Image source: attachment ID (\"105\"), URL, or \"unsplash:query\"\n"
-							. "  \"icon\"?: string|object,    // Icon shorthand (\"truck\" → ti-truck) or full {library, icon} object\n"
-							. "  \"ref\"?: string,            // Reference to a pattern defined in \"patterns\"\n"
-							. "  \"repeat\"?: int,            // Repeat the referenced pattern N times\n"
-							. "  \"data\"?: array,            // Array of data objects for each repeat instance\n"
-							. "  \"style_overrides\"?: {},    // Raw Bricks settings merged last (for _hidden, _background, etc.)\n"
-							. "  \"children\"?: [<node>]      // Nested child nodes\n"
-							. "}\n\n"
-							. "DATA SUBSTITUTION: In patterns, use \"data.key\" prefix for values (e.g. \"content\": \"data.title\"). Bare keys are NOT matched. Interpolation: \"Hello {data.name}\".\n\n"
-							. "KEY RULES:\n"
-							. "- Section > container > block/div > content elements. Use multiple containers for multiple rows.\n"
-							. "- Use style_overrides for _hidden (tab-menu, tab-title, tab-content, tab-pane CSS classes).\n"
-							. "- Use layout:grid + columns for grid layouts. The MCP generates _display:grid + _gridTemplateColumns.\n"
-							. "- class_intent matches by semantic name, not CSS similarity. \"hero-title\" won't match \"section-title\".\n"
-							. "- target accepts page_id or template_id (for headers, footers, content templates).\n\n"
-							. "EXAMPLE SCHEMA:\n"
-							. "{\"target\":{\"page_id\":94,\"action\":\"append\"},\"design_context\":{\"summary\":\"CTA section\",\"spacing\":\"normal\"},\"sections\":[{\"intent\":\"Call to action\",\"background\":\"dark\",\"structure\":{\"type\":\"section\",\"label\":\"CTA\",\"children\":[{\"type\":\"container\",\"children\":[{\"type\":\"text-basic\",\"content\":\"Tagline\"},{\"type\":\"heading\",\"tag\":\"h2\",\"content\":\"Ready to start?\"},{\"type\":\"button\",\"content\":\"Contact Us\"}]}]}}]}", 'bricks-mcp' ),
+						'description' => __( 'REQUIRED. The design schema — use suggested_schema from propose_design as your starting point. Replace [PLACEHOLDER] content with real text. Do NOT modify the structure, class_intents, or style_overrides unless you have a specific reason.', 'bricks-mcp' ),
 					),
 					'dry_run' => array(
 						'type'        => 'boolean',
-						'description' => __( 'When true, validate and resolve but do not write. Returns preview of what would be built.', 'bricks-mcp' ),
-					),
-					'proposal_id' => array(
-						'type'        => 'string',
-						'description' => __( 'Proposal ID from propose_design. Required — call propose_design first.', 'bricks-mcp' ),
+						'description' => __( 'When true, validate and preview without writing to the page.', 'bricks-mcp' ),
 					),
 				),
-				'required'   => array( 'schema', 'proposal_id' ),
+				'required'   => array( 'proposal_id', 'schema' ),
 			),
 			array( $this, 'handle' )
 		);
