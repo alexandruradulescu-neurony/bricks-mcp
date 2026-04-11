@@ -115,9 +115,6 @@ final class BuildHandler {
 			);
 		}
 
-		// Consume the proposal (one-time use).
-		$this->proposal_service->consume( $proposal_id );
-
 		// Step 1: Validate the schema.
 		$validation = $this->validator->validate( $schema );
 		if ( is_wp_error( $validation ) ) {
@@ -217,6 +214,9 @@ final class BuildHandler {
 				'elements_preview' => $all_elements,
 			];
 		}
+
+		// Consume the proposal (one-time use) — all validation passed, about to write.
+		$this->proposal_service->consume( $proposal_id );
 
 		// Step 10: Auto-snapshot before writing for safety.
 		$snapshot = $this->bricks_service->snapshot_page( $page_id, 'Pre build_from_schema' );

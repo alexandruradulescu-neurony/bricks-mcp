@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.0.6
+Stable tag: 3.0.7
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -126,10 +126,11 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 
 == Changelog ==
 
-= 3.0.6 =
+= 3.0.7 =
 * Fixed: get_onboarding_guide tool not being registered when Bricks Builder is not active
 * The onboarding tool now registers in register_default_tools() instead of register_bricks_tools()
 * Onboarding only reads WordPress options and doesn't require Bricks Builder
+* Fixed build_from_schema proposal consumption — proposals now consumed only after validation passes, allowing schema errors without burning the proposal
 
 = 3.0.5 =
 * Fixed: Missing import statement for OnboardingHandler in Router.php
