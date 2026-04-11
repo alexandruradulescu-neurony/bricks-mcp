@@ -76,7 +76,7 @@ final class Router {
 			'fill_slot'   => 'instructed',
 		],
 		'build_from_schema' => [
-			'_always' => 'full',
+			'_always' => 'design',
 		],
 		'propose_design' => [
 			'_always' => 'full',
@@ -245,6 +245,13 @@ final class Router {
 	private OnboardingHandler $onboarding_handler;
 
 	/**
+	 * Verify handler instance.
+	 *
+	 * @var Handlers\VerifyHandler
+	 */
+	private Handlers\VerifyHandler $verify_handler;
+
+	/**
 	 * Pending action service for token-based destructive action confirmation.
 	 *
 	 * @var PendingActionService
@@ -302,6 +309,9 @@ final class Router {
 
 		// Onboarding handler.
 		$this->onboarding_handler = new OnboardingHandler( new OnboardingService( $this->bricks_service ) );
+
+		// Verify handler.
+		$this->verify_handler = new Handlers\VerifyHandler( $this->bricks_service, $require_bricks );
 
 		$this->pending_action_service = new PendingActionService();
 
@@ -629,6 +639,13 @@ final class Router {
 				PrerequisiteGateService::set_flag( 'classes' );
 			} elseif ( 'global_variable' === $name && ( $arguments['action'] ?? '' ) === 'list' ) {
 				PrerequisiteGateService::set_flag( 'variables' );
+			} elseif ( 'propose_design' === $name && is_array( $result ) ) {
+				$phase = $result['phase'] ?? '';
+				if ( 'discovery' === $phase ) {
+					PrerequisiteGateService::set_flag( 'design_discovery' );
+				} elseif ( 'proposal' === $phase ) {
+					PrerequisiteGateService::set_flag( 'design_plan' );
+				}
 			}
 
 			return Response::success(
@@ -1059,6 +1076,7 @@ final class Router {
 		$this->code_handler->register( $this->registry );
 		$this->proposal_handler->register( $this->registry );
 		$this->build_handler->register( $this->registry );
+		$this->verify_handler->register( $this->registry );
 	}
 
 	/**

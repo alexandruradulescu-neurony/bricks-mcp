@@ -2,8 +2,9 @@
 /**
  * Proposal handler for MCP Router.
  *
- * Registers the propose_design tool that creates validated design
- * proposals before build_from_schema can be called.
+ * Two-phase design flow:
+ * Phase 1 (Discovery): Call with description only → get site context and element catalog.
+ * Phase 2 (Proposal): Call with description + design_plan → get validated schema skeleton.
  *
  * @package BricksMCP
  * @license GPL-2.0-or-later
@@ -50,15 +51,17 @@ final class ProposalHandler {
 
 		$page_id     = (int) ( $args['page_id'] ?? $args['template_id'] ?? 0 );
 		$description = sanitize_textarea_field( $args['description'] ?? '' );
+		$design_plan = $args['design_plan'] ?? null;
 
 		if ( 0 === $page_id ) {
 			return new \WP_Error( 'missing_page_id', 'page_id or template_id is required.' );
 		}
 		if ( '' === $description ) {
-			return new \WP_Error( 'missing_description', 'description is required. Describe what you want to build: layout, elements, style hints.' );
+			return new \WP_Error( 'missing_description', 'description is required. Describe what you want to build.' );
 		}
 
-		return $this->proposal_service->create( $page_id, $description );
+		// Pass design_plan (null for Phase 1, array for Phase 2).
+		return $this->proposal_service->create( $page_id, $description, is_array( $design_plan ) ? $design_plan : null );
 	}
 
 	/**
@@ -67,7 +70,21 @@ final class ProposalHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'propose_design',
-			__( "Create a validated design proposal before calling build_from_schema. Describe what you want to build and the MCP resolves it against the site's actual classes, variables, element schemas, and briefs.\n\nReturns:\n- proposal_id (required by build_from_schema)\n- suggested_schema: A COMPLETE, VALID schema skeleton with correct element hierarchy, class assignments, and patterns. Replace [PLACEHOLDER] content with real text, then pass directly to build_from_schema.\n- resolved data: classes, variables, element schemas, briefs\n\nIMPORTANT: Always use the suggested_schema as your starting point. Do NOT write schemas from scratch. The skeleton has the correct structure, hierarchy, class_intents, and style_overrides already set.\n\nThe proposal expires after 10 minutes.", 'bricks-mcp' ),
+			__( "Two-phase design tool. MUST be called twice before build_from_schema.\n\n"
+				. "PHASE 1 — DISCOVERY (description only, no design_plan):\n"
+				. "Returns site context, available element types with PURPOSE descriptions, available layouts, global classes, CSS variables, and design/business briefs.\n"
+				. "You use this to understand WHAT building blocks exist and WHAT the site looks like.\n"
+				. "Does NOT return a proposal_id or schema.\n\n"
+				. "PHASE 2 — PROPOSAL (description + design_plan):\n"
+				. "After reviewing Phase 1 data, think as a DESIGNER and provide a design_plan with your decisions.\n"
+				. "Returns proposal_id + suggested_schema generated from YOUR design decisions.\n"
+				. "Replace [PLACEHOLDER] content in suggested_schema, then call build_from_schema.\n\n"
+				. "design_plan REQUIRED fields:\n"
+				. "- section_type: hero|features|pricing|cta|testimonials|split|generic\n"
+				. "- layout: centered|split-60-40|split-50-50|grid-2|grid-3|grid-4\n"
+				. "- elements: [{type, role, content_hint, tag?, class_intent?}]\n"
+				. "- background?: dark|light\n"
+				. "- patterns?: [{name, repeat, element_structure: [{type, role}], content_hint}]", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
@@ -81,7 +98,11 @@ final class ProposalHandler {
 					),
 					'description' => array(
 						'type'        => 'string',
-						'description' => __( 'Free-text description of what to build. Include: layout structure (rows, columns), element types (heading, image, cards, tabs), style hints (dark background, rounded corners), and content intent. The more specific, the better the resolved data.', 'bricks-mcp' ),
+						'description' => __( 'Free-text description of what to build.', 'bricks-mcp' ),
+					),
+					'design_plan' => array(
+						'type'        => 'object',
+						'description' => __( 'Phase 2 ONLY. Your structured design decisions: section_type, layout, background, elements (each with type + role + content_hint), and optional patterns. Omit this for Phase 1 discovery.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'description' ),

@@ -38,7 +38,7 @@ final class PrerequisiteGateService {
 	/**
 	 * Valid flag names.
 	 */
-	private const VALID_FLAGS = [ 'site_info', 'classes', 'variables' ];
+	private const VALID_FLAGS = [ 'site_info', 'classes', 'variables', 'design_discovery', 'design_plan' ];
 
 	/**
 	 * Tier definitions: which flags are required for each tier.
@@ -46,6 +46,7 @@ final class PrerequisiteGateService {
 	public const TIER_DIRECT     = [ 'site_info' ];
 	public const TIER_INSTRUCTED = [ 'site_info', 'classes' ];
 	public const TIER_FULL       = [ 'site_info', 'classes', 'variables' ];
+	public const TIER_DESIGN     = [ 'site_info', 'classes', 'variables', 'design_discovery', 'design_plan' ];
 
 	/**
 	 * Map tier names to their required flags.
@@ -54,15 +55,18 @@ final class PrerequisiteGateService {
 		'direct'     => self::TIER_DIRECT,
 		'instructed' => self::TIER_INSTRUCTED,
 		'full'       => self::TIER_FULL,
+		'design'     => self::TIER_DESIGN,
 	];
 
 	/**
 	 * Human-readable tool names for each flag (used in error messages).
 	 */
 	private const FLAG_TOOL_NAMES = [
-		'site_info' => 'get_site_info',
-		'classes'   => 'global_class:list',
-		'variables' => 'global_variable:list',
+		'site_info'        => 'get_site_info',
+		'classes'          => 'global_class:list',
+		'variables'        => 'global_variable:list',
+		'design_discovery' => 'propose_design (Phase 1 — call without design_plan)',
+		'design_plan'      => 'propose_design (Phase 2 — call WITH design_plan)',
 	];
 
 	/**

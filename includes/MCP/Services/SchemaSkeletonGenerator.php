@@ -65,6 +65,288 @@ final class SchemaSkeletonGenerator {
 		return $schema;
 	}
 
+	// ================================================================
+	// Plan-driven generation (Phase 2)
+	// ================================================================
+
+	/**
+	 * Generate schema from a validated design_plan.
+	 *
+	 * Uses the AI's actual design decisions — section_type, layout, elements,
+	 * patterns — instead of keyword matching.
+	 *
+	 * @param int                    $page_id           Target page ID.
+	 * @param array<string, mixed>   $plan              Validated design_plan.
+	 * @param array<string, string>  $suggested_classes  class_name => class_id map.
+	 * @param array<string, array>   $scoped_variables   category => variable names.
+	 * @return array<string, mixed> Complete schema ready for build_from_schema.
+	 */
+	public function generate_from_plan( int $page_id, array $plan, array $suggested_classes, array $scoped_variables ): array {
+		$section_type = $plan['section_type'] ?? 'generic';
+		$layout       = $plan['layout'] ?? 'centered';
+		$background   = $plan['background'] ?? 'light';
+		$elements     = $plan['elements'] ?? [];
+		$patterns_def = $plan['patterns'] ?? [];
+		$roles        = $this->map_classes_to_roles( $suggested_classes );
+
+		// Build element nodes from the plan's element list.
+		$content_nodes = [];
+		foreach ( $elements as $el ) {
+			$content_nodes[] = $this->build_plan_element( $el, $roles );
+		}
+
+		// Build pattern definitions.
+		$schema_patterns = [];
+		$pattern_refs    = [];
+		foreach ( $patterns_def as $pat ) {
+			$pat_name    = $pat['name'];
+			$pat_repeat  = $pat['repeat'] ?? 3;
+			$pat_hint    = $pat['content_hint'] ?? '';
+			$pat_elements = $pat['element_structure'] ?? [];
+
+			// Build pattern node.
+			$pat_children = [];
+			foreach ( $pat_elements as $pel ) {
+				$pat_children[] = $this->build_plan_element( $pel, $roles, true );
+			}
+
+			$pat_class = $this->find_class_for_pattern( $pat_name, $roles );
+
+			$schema_patterns[ $pat_name ] = $this->node( 'block', [
+				'class_intent'    => $pat_class,
+				'style_overrides' => [
+					'_padding' => [
+						'top'    => 'var(--space-m)',
+						'right'  => 'var(--space-m)',
+						'bottom' => 'var(--space-m)',
+						'left'   => 'var(--space-m)',
+					],
+					'_border' => [
+						'radius' => [
+							'top'    => 'var(--radius)',
+							'right'  => 'var(--radius)',
+							'bottom' => 'var(--radius)',
+							'left'   => 'var(--radius)',
+						],
+					],
+				],
+			], $pat_children );
+
+			// Generate placeholder data array.
+			$data_items = [];
+			for ( $i = 1; $i <= $pat_repeat; $i++ ) {
+				$item = [];
+				foreach ( $pat_elements as $pel ) {
+					$role = $pel['role'] ?? 'item';
+					if ( 'icon' === ( $pel['type'] ?? '' ) || str_contains( $role, 'icon' ) ) {
+						$item[ $role ] = $this->get_placeholder_icon( $i );
+					} else {
+						$item[ $role ] = "[{$pat_hint} — ITEM {$i} " . strtoupper( $role ) . ']';
+					}
+				}
+				$data_items[] = $item;
+			}
+
+			$pattern_refs[] = [
+				'ref'    => $pat_name,
+				'repeat' => $pat_repeat,
+				'data'   => $data_items,
+			];
+		}
+
+		// Decide layout structure.
+		$is_split = str_starts_with( $layout, 'split' );
+		$is_grid  = str_starts_with( $layout, 'grid' );
+
+		$section_children = [];
+
+		if ( $is_split ) {
+			// Split elements into left (non-pattern) and right (patterns or last half).
+			$left_nodes  = $content_nodes;
+			$right_nodes = ! empty( $pattern_refs ) ? $pattern_refs : [ $this->node( 'text-basic', [ 'content' => '[RIGHT COLUMN CONTENT]' ] ) ];
+
+			$grid_template = 'split-60-40' === $layout ? 'var(--grid-3-2)' : 'var(--grid-2)';
+
+			$section_children[] = [
+				'type'            => 'block',
+				'layout'          => 'grid',
+				'columns'         => 2,
+				'label'           => 'Split Grid',
+				'style_overrides' => [ '_gridTemplateColumns' => $grid_template, '_alignItems' => 'center' ],
+				'responsive'      => [ 'tablet' => 1, 'mobile' => 1 ],
+				'children'        => [
+					$this->node( 'block', [ 'label' => 'Left Column' ], $left_nodes ),
+					$this->node( 'block', [ 'label' => 'Right Column' ], $right_nodes ),
+				],
+			];
+		} elseif ( $is_grid ) {
+			$cols = (int) substr( $layout, -1 ); // grid-2 → 2, grid-3 → 3
+			if ( $cols < 2 ) $cols = 3;
+
+			// Content nodes before the grid (heading, tagline, etc.).
+			$pre_grid  = [];
+			$grid_items = [];
+
+			foreach ( $content_nodes as $cn ) {
+				$type = $cn['type'] ?? '';
+				if ( in_array( $type, [ 'heading', 'text-basic' ], true ) && empty( $grid_items ) ) {
+					$pre_grid[] = $cn;
+				} else {
+					$grid_items[] = $cn;
+				}
+			}
+
+			// Add pattern refs as grid items.
+			foreach ( $pattern_refs as $pr ) {
+				$grid_items[] = $pr;
+			}
+
+			$section_children = $pre_grid;
+			if ( ! empty( $grid_items ) ) {
+				$section_children[] = $this->grid( $cols, ucfirst( $section_type ) . ' Grid', $grid_items );
+			}
+		} else {
+			// Centered layout: all elements stacked, patterns at the end.
+			$section_children = $content_nodes;
+			foreach ( $pattern_refs as $pr ) {
+				$section_children[] = $pr;
+			}
+		}
+
+		// Wrap in section > container.
+		$section_overrides = [];
+		if ( 'hero' === $section_type ) {
+			$section_overrides['_minHeight']       = '80vh';
+			$section_overrides['_justifyContent']   = 'center';
+		}
+
+		$section = [
+			'intent'    => $plan['section_type'] . ' section',
+			'structure' => $this->node( 'section', array_filter( [
+				'label'           => ucfirst( $section_type ),
+				'style_overrides' => ! empty( $section_overrides ) ? $section_overrides : null,
+			] ), [
+				$this->node( 'container', [ 'label' => ucfirst( $section_type ) . ' Content' ], $section_children ),
+			] ),
+		];
+
+		if ( 'dark' === $background ) {
+			$section['background'] = 'dark';
+		}
+
+		$schema = [
+			'target'         => [ 'page_id' => $page_id, 'action' => 'append' ],
+			'design_context' => [ 'summary' => $plan['section_type'] . ' section — ' . $layout, 'spacing' => 'normal' ],
+			'sections'       => [ $section ],
+		];
+
+		if ( ! empty( $schema_patterns ) ) {
+			$schema['patterns'] = $schema_patterns;
+		}
+
+		return $schema;
+	}
+
+	/**
+	 * Build a single element node from a plan element.
+	 */
+	private function build_plan_element( array $el, array $roles, bool $is_pattern = false ): array {
+		$type         = $el['type'] ?? 'text-basic';
+		$role         = $el['role'] ?? '';
+		$content_hint = $el['content_hint'] ?? '';
+		$tag          = $el['tag'] ?? null;
+		$class_intent = $el['class_intent'] ?? null;
+
+		// Auto-assign class from role if not explicitly set.
+		if ( null === $class_intent ) {
+			$class_intent = $this->role_to_class( $role, $roles );
+		}
+
+		$props = [];
+
+		if ( null !== $tag ) {
+			$props['tag'] = $tag;
+		}
+		if ( null !== $class_intent ) {
+			$props['class_intent'] = $class_intent;
+		}
+
+		// Content: use data substitution in patterns, placeholder otherwise.
+		if ( in_array( $type, [ 'heading', 'text-basic', 'text-link', 'button' ], true ) ) {
+			$props['content'] = $is_pattern ? "data.{$role}" : "[{$content_hint}]";
+		}
+
+		if ( 'icon' === $type ) {
+			$props['icon'] = $is_pattern ? "data.{$role}" : 'star';
+		}
+
+		if ( 'image' === $type ) {
+			$props['src'] = 'unsplash:[RELEVANT QUERY]';
+		}
+
+		return $this->node( $type, $props );
+	}
+
+	/**
+	 * Map a role name to a class from the roles map.
+	 */
+	private function role_to_class( string $role, array $roles ): ?string {
+		$role_lower = strtolower( $role );
+
+		// Direct role matches.
+		$role_map = [
+			'tagline'       => 'eyebrow',
+			'eyebrow'       => 'eyebrow',
+			'main_heading'  => null, // Headings don't usually need a class.
+			'subtitle'      => 'hero_description',
+			'description'   => 'hero_description',
+			'primary_cta'   => 'btn_primary',
+			'secondary_cta' => 'btn_ghost',
+		];
+
+		foreach ( $role_map as $key => $mapped_role ) {
+			if ( str_contains( $role_lower, $key ) && null !== $mapped_role ) {
+				return $this->role( $roles, $mapped_role );
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Find a class for a pattern name from the roles map.
+	 */
+	private function find_class_for_pattern( string $pattern_name, array $roles ): ?string {
+		$name = strtolower( $pattern_name );
+
+		if ( str_contains( $name, 'stat' ) || str_contains( $name, 'card' ) ) {
+			return $this->role( $roles, 'stat_card' ) ?? $pattern_name;
+		}
+		if ( str_contains( $name, 'feature' ) || str_contains( $name, 'service' ) ) {
+			return $this->role( $roles, 'service_card' ) ?? $this->role( $roles, 'stat_card' ) ?? $pattern_name;
+		}
+		if ( str_contains( $name, 'testimonial' ) ) {
+			return $pattern_name;
+		}
+		if ( str_contains( $name, 'pill' ) || str_contains( $name, 'tag' ) ) {
+			return $this->role( $roles, 'tag_pill' ) ?? $pattern_name;
+		}
+
+		return $pattern_name;
+	}
+
+	/**
+	 * Get a placeholder icon name by index.
+	 */
+	private function get_placeholder_icon( int $index ): string {
+		$icons = [ 'star', 'shield', 'settings', 'truck', 'bolt-alt', 'timer', 'car', 'check', 'heart', 'location-pin' ];
+		return $icons[ ( $index - 1 ) % count( $icons ) ];
+	}
+
+	// ================================================================
+	// Legacy keyword-based generation (kept for backward compatibility)
+	// ================================================================
+
 	// ──────────────────────────────────────────────
 	// Section type detection
 	// ──────────────────────────────────────────────
