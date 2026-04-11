@@ -21,6 +21,8 @@ final class ProposalService {
 
 	private const TTL = 600; // 10 minutes.
 
+	private const NEXT_STEP = 'Write a design schema using the resolved classes, variables, and element schemas. Then call build_from_schema with this proposal_id.';
+
 	private GlobalClassService $class_service;
 	private SchemaGenerator $schema_generator;
 
@@ -124,7 +126,17 @@ final class ProposalService {
 		$design_brief   = is_array( $briefs ) ? trim( $briefs['design_brief'] ?? '' ) : '';
 		$business_brief = is_array( $briefs ) ? trim( $briefs['business_brief'] ?? '' ) : '';
 
-		// 6. Generate proposal ID and store.
+		// 6. Generate summary.
+		$summary = $this->generate_summary(
+			$element_types,
+			$all_classes,
+			$suggested_classes,
+			$scoped_variables,
+			$design_brief,
+			$business_brief
+		);
+
+		// 7. Generate proposal ID and store.
 		$proposal_id = 'prop_' . substr( md5( (string) time() . wp_generate_password( 8 ) ), 0, 12 );
 
 		$proposal = [
@@ -132,6 +144,8 @@ final class ProposalService {
 			'page_id'     => $page_id,
 			'description' => $description,
 			'created_at'  => current_time( 'mysql' ),
+			'summary'     => $summary,
+			'next_step'   => self::NEXT_STEP,
 			'resolved'    => [
 				'classes' => [
 					'available' => $class_summary,
@@ -259,5 +273,81 @@ final class ProposalService {
 		}
 
 		return array_values( array_unique( $categories ) );
+	}
+
+	/**
+	 * Generate a human-readable summary of the proposal.
+	 *
+	 * Synthesizes resolved data into a concise summary for quick AI review.
+	 *
+	 * @param array<int, string>    $element_types     Detected element types.
+	 * @param array<int, array>     $all_classes       All global classes.
+	 * @param array<string, string> $suggested_classes Suggested classes map.
+	 * @param array<string, array>  $scoped_variables  Scoped CSS variables.
+	 * @param string                $design_brief      Design brief text.
+	 * @param string                $business_brief    Business brief text.
+	 * @return string Summary string.
+	 */
+	private function generate_summary(
+		array $element_types,
+		array $all_classes,
+		array $suggested_classes,
+		array $scoped_variables,
+		string $design_brief,
+		string $business_brief
+	): string {
+		$summary_parts = [];
+
+		// Element types detected.
+		$element_count = count( $element_types );
+		if ( $element_count > 0 ) {
+			$summary_parts[] = sprintf(
+				'Detected %d element type(s): %s',
+				$element_count,
+				implode( ', ', $element_types )
+			);
+		}
+
+		// Class availability.
+		$class_count = count( $all_classes );
+		$suggested_count = count( $suggested_classes );
+		if ( $suggested_count > 0 ) {
+			$summary_parts[] = sprintf(
+				'Found %d matching global class(es): %s',
+				$suggested_count,
+				implode( ', ', array_keys( $suggested_classes ) )
+			);
+		} else {
+			$summary_parts[] = 'No matching global classes found — new classes will be created for class_intent values';
+		}
+
+		// Variable scope.
+		$var_categories = array_keys( $scoped_variables );
+		$var_count = count( $var_categories );
+		if ( $var_count > 0 ) {
+			$summary_parts[] = sprintf(
+				'Scoped %d variable category(ies): %s',
+				$var_count,
+				implode( ', ', $var_categories )
+			);
+		}
+
+		// Briefs status.
+		if ( '' !== $design_brief || '' !== $business_brief ) {
+			$brief_parts = [];
+			if ( '' !== $design_brief ) {
+				$brief_parts[] = 'design';
+			}
+			if ( '' !== $business_brief ) {
+				$brief_parts[] = 'business';
+			}
+			$summary_parts[] = sprintf(
+				'%s brief(s) loaded: %s',
+				count( $brief_parts ) === 2 ? 'Both' : ucfirst( $brief_parts[0] ),
+				implode( ' + ', $brief_parts )
+			);
+		}
+
+		return implode( '. ', $summary_parts ) . '.';
 	}
 }

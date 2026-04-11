@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 2.9.0
+Stable tag: 3.0.2
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -125,6 +125,17 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.0.2 =
+* Added summary and next_step fields to propose_design tool output.
+* Summary provides human-readable synthesis of resolved data: element types detected, matching global classes, scoped variable categories, and briefs status.
+* Next step gives clear call-to-action for AI clients to write schema and call build_from_schema.
+
+= 3.0.1 =
+* Minor fixes and improvements.
+
+= 3.0.0 =
+* Initial 3.0 release with comprehensive build pipeline.
 
 = 2.10.0 =
 * Added MetaBox integration: list field groups, get fields, read field values, dynamic tags for Meta Box custom fields.
