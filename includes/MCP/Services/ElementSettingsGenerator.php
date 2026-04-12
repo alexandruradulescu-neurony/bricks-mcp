@@ -453,6 +453,22 @@ final class ElementSettingsGenerator {
 			unset( $settings['_minWidth'] );
 		}
 
+		// 10b-ii. Convert _gap to _columnGap/_rowGap on flex blocks.
+		// Bricks flex layout blocks don't generate CSS from _gap — they need _columnGap or _rowGap.
+		if ( isset( $settings['_gap'] ) && in_array( $type, [ 'block', 'div' ], true ) ) {
+			$direction = $settings['_direction'] ?? 'column';
+			if ( 'row' === $direction ) {
+				if ( ! isset( $settings['_columnGap'] ) ) {
+					$settings['_columnGap'] = $settings['_gap'];
+				}
+			} else {
+				if ( ! isset( $settings['_rowGap'] ) ) {
+					$settings['_rowGap'] = $settings['_gap'];
+				}
+			}
+			unset( $settings['_gap'] );
+		}
+
 		// 10c. Resolve Unsplash queries in background images.
 		if ( ! empty( $settings['_background']['image'] ) && null !== $this->media_service ) {
 			$bg_image = $settings['_background']['image'];

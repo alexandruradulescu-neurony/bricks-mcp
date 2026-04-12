@@ -147,6 +147,7 @@ final class ProposalService {
 		'responsive'  => 'Composite keys for responsive: _property:tablet_portrait, _property:mobile. Grids should collapse: 3-col → 2-col at tablet → 1-col at mobile.',
 		'backgrounds' => 'Background overlays use _gradient with applyTo: "overlay". Background images need actual URLs (sideload from Unsplash first). Section background: "dark" auto-sets dark bg + white text on children.',
 		'buttons'     => 'Buttons support native icons (icon + iconPosition settings). Do NOT use emoji in button text. Use class_intent for styling (btn-hero-primary, btn-hero-ghost).',
+		'gaps'        => 'On flex blocks: use _columnGap for horizontal spacing (row direction), _rowGap for vertical spacing (column direction). Plain _gap does NOT generate CSS on flex layout blocks. The pipeline auto-converts _gap to the correct key based on _direction.',
 	];
 
 	private GlobalClassService $class_service;
