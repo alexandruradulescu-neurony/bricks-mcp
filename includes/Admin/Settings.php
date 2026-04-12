@@ -566,7 +566,7 @@ final class Settings {
 	 * Render Briefs tab content.
 	 *
 	 * Two textareas for Design Brief and Business Brief.
-	 * Stored as separate WordPress option 'bricks_mcp_briefs'.
+	 * Stored as separate WordPress option \BricksMCP\MCP\Services\BricksCore::OPTION_BRIEFS.
 	 *
 	 * @return void
 	 */
@@ -577,11 +577,11 @@ final class Settings {
 				'design_brief'   => isset( $_POST['design_brief'] ) ? wp_kses_post( wp_unslash( $_POST['design_brief'] ) ) : '',
 				'business_brief' => isset( $_POST['business_brief'] ) ? wp_kses_post( wp_unslash( $_POST['business_brief'] ) ) : '',
 			];
-			update_option( 'bricks_mcp_briefs', $briefs );
+			update_option( \BricksMCP\MCP\Services\BricksCore::OPTION_BRIEFS, $briefs );
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Briefs saved.', 'bricks-mcp' ) . '</p></div>';
 		}
 
-		$briefs        = get_option( 'bricks_mcp_briefs', [] );
+		$briefs        = get_option( \BricksMCP\MCP\Services\BricksCore::OPTION_BRIEFS, [] );
 		$design_brief  = $briefs['design_brief'] ?? '';
 		$business_brief = $briefs['business_brief'] ?? '';
 		?>

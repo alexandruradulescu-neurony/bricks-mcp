@@ -9,7 +9,14 @@
     "icon-box": "content",
     "alert": "content",
     "counter": "countTo",
-    "animated-typing": "prefix"
+    "animated-typing": "prefix",
+    "video": "iframeUrl",
+    "pricing-tables": "pricingTables",
+    "testimonials": "items",
+    "social-icons": "icons",
+    "progress-bar": "bars",
+    "rating": "rating",
+    "pie-chart": "percent"
   },
   "default_tags": {
     "heading": "h2",

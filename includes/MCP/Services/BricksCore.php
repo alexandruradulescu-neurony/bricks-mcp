@@ -28,17 +28,24 @@ class BricksCore {
 
 	/**
 	 * Post meta key for Bricks page content.
-	 *
-	 * @var string
 	 */
 	public const META_KEY = '_bricks_page_content_2';
 
 	/**
 	 * Post meta key for Bricks editor mode.
-	 *
-	 * @var string
 	 */
 	public const EDITOR_MODE_KEY = '_bricks_editor_mode';
+
+	/**
+	 * WordPress option keys used throughout the plugin.
+	 */
+	public const OPTION_GLOBAL_CLASSES       = 'bricks_global_classes';
+	public const OPTION_GLOBAL_CLASSES_TRASH = 'bricks_global_classes_trash';
+	public const OPTION_GLOBAL_CLASSES_TS    = 'bricks_global_classes_timestamp';
+	public const OPTION_GLOBAL_CLASSES_USER  = 'bricks_global_classes_user';
+	public const OPTION_GLOBAL_VARIABLES     = 'bricks_global_variables';
+	public const OPTION_VARIABLE_CATEGORIES  = 'bricks_global_variables_categories';
+	public const OPTION_BRIEFS               = 'bricks_mcp_briefs';
 
 	/**
 	 * Element normalizer instance.

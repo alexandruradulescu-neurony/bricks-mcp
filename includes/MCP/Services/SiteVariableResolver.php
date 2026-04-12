@@ -34,8 +34,8 @@ final class SiteVariableResolver {
 			return;
 		}
 
-		$categories = get_option( 'bricks_global_variables_categories', [] );
-		$variables  = get_option( 'bricks_global_variables', [] );
+		$categories = get_option( BricksCore::OPTION_VARIABLE_CATEGORIES, [] );
+		$variables  = get_option( BricksCore::OPTION_GLOBAL_VARIABLES, [] );
 
 		if ( ! is_array( $categories ) ) {
 			$categories = [];

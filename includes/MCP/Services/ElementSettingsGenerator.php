@@ -384,7 +384,9 @@ final class ElementSettingsGenerator {
 
 		// 6b. Handle form element — apply default field configuration when none is set.
 		if ( 'form' === $type && empty( $settings['fields'] ) ) {
-			$form_type = $node['form_type'] ?? $this->detect_form_type( $node );
+			$form_type = $node['form_type'] ?? FormTypeDetector::detect(
+				( $node['role'] ?? '' ) . ' ' . ( $node['label'] ?? '' ) . ' ' . ( $node['content_hint'] ?? '' )
+			);
 			$defaults  = self::get_defaults();
 			$template  = $defaults['form_templates'][ $form_type ] ?? $defaults['form_templates']['contact'] ?? null;
 
@@ -574,28 +576,6 @@ final class ElementSettingsGenerator {
 	 * @param mixed $icon Icon data from schema.
 	 * @return array<string, string> Bricks icon object.
 	 */
-
-	/**
-	 * Detect form type from node metadata.
-	 *
-	 * @param array<string, mixed> $node Schema node.
-	 * @return string Form type: newsletter, login, or contact.
-	 */
-	private function detect_form_type( array $node ): string {
-		$combined = strtolower(
-			( $node['role'] ?? '' ) . ' ' .
-			( $node['label'] ?? '' ) . ' ' .
-			( $node['content_hint'] ?? '' )
-		);
-
-		if ( preg_match( '/newsletter|subscribe|signup|opt.?in|register|inregistr/', $combined ) ) {
-			return 'newsletter';
-		}
-		if ( preg_match( '/login|sign.?in|auth|conecta|autentific/', $combined ) ) {
-			return 'login';
-		}
-		return 'contact';
-	}
 
 	private function resolve_icon( mixed $icon ): array {
 		if ( is_array( $icon ) && isset( $icon['library'], $icon['icon'] ) ) {

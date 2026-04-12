@@ -60,7 +60,7 @@ class GlobalClassService {
 	public function get_global_classes( string $search = '', string $category = '' ): array {
 		// Use static cache — loaded once per request, invalidated on write.
 		if ( null === self::$cached_all ) {
-			$raw = get_option( 'bricks_global_classes', [] );
+			$raw = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 			self::$cached_all = is_array( $raw )
 				? array_values( array_filter(
 					$raw,
@@ -107,7 +107,7 @@ class GlobalClassService {
 		}
 
 		try {
-		$classes = get_option( 'bricks_global_classes', [] );
+		$classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		if ( ! is_array( $classes ) ) {
 			$classes = [];
 		}
@@ -157,13 +157,13 @@ class GlobalClassService {
 		}
 
 		$classes[] = $new_class;
-		update_option( 'bricks_global_classes', $classes );
-		update_option( 'bricks_global_classes_timestamp', time() );
-		update_option( 'bricks_global_classes_user', get_current_user_id() );
+		update_option( BricksCore::OPTION_GLOBAL_CLASSES, $classes );
+		update_option( BricksCore::OPTION_GLOBAL_CLASSES_TS, time() );
+		update_option( BricksCore::OPTION_GLOBAL_CLASSES_USER, get_current_user_id() );
 		self::clear_cache();
 
-		wp_cache_delete( 'bricks_global_classes', 'options' );
-		$stored = get_option( 'bricks_global_classes', null );
+		wp_cache_delete( BricksCore::OPTION_GLOBAL_CLASSES, 'options' );
+		$stored = get_option( BricksCore::OPTION_GLOBAL_CLASSES, null );
 		if ( null === $stored || ! is_array( $stored ) ) {
 			return new \WP_Error(
 				'global_class_create_failed',
@@ -190,7 +190,7 @@ class GlobalClassService {
 		}
 
 		try {
-		$classes = get_option( 'bricks_global_classes', [] );
+		$classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		if ( ! is_array( $classes ) ) {
 			$classes = [];
 		}
@@ -234,13 +234,13 @@ class GlobalClassService {
 				unset( $class['styles'] );
 			}
 
-			update_option( 'bricks_global_classes', $classes );
-			update_option( 'bricks_global_classes_timestamp', time() );
-			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES, $classes );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_TS, time() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_USER, get_current_user_id() );
 			self::clear_cache();
 
-			wp_cache_delete( 'bricks_global_classes', 'options' );
-			$stored = get_option( 'bricks_global_classes', null );
+			wp_cache_delete( BricksCore::OPTION_GLOBAL_CLASSES, 'options' );
+			$stored = get_option( BricksCore::OPTION_GLOBAL_CLASSES, null );
 			if ( null === $stored || ! is_array( $stored ) ) {
 				return new \WP_Error(
 					'global_class_update_failed',
@@ -276,12 +276,12 @@ class GlobalClassService {
 		}
 
 		try {
-		$classes = get_option( 'bricks_global_classes', [] );
+		$classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		if ( ! is_array( $classes ) ) {
 			$classes = [];
 		}
 
-		$trash = get_option( 'bricks_global_classes_trash', [] );
+		$trash = get_option( BricksCore::OPTION_GLOBAL_CLASSES_TRASH, [] );
 		if ( ! is_array( $trash ) ) {
 			$trash = [];
 		}
@@ -306,14 +306,14 @@ class GlobalClassService {
 			);
 		}
 
-		update_option( 'bricks_global_classes', $classes );
-		update_option( 'bricks_global_classes_trash', $trash );
-		update_option( 'bricks_global_classes_timestamp', time() );
-		update_option( 'bricks_global_classes_user', get_current_user_id() );
+		update_option( BricksCore::OPTION_GLOBAL_CLASSES, $classes );
+		update_option( BricksCore::OPTION_GLOBAL_CLASSES_TRASH, $trash );
+		update_option( BricksCore::OPTION_GLOBAL_CLASSES_TS, time() );
+		update_option( BricksCore::OPTION_GLOBAL_CLASSES_USER, get_current_user_id() );
 		self::clear_cache();
 
-		wp_cache_delete( 'bricks_global_classes', 'options' );
-		$stored = get_option( 'bricks_global_classes', null );
+		wp_cache_delete( BricksCore::OPTION_GLOBAL_CLASSES, 'options' );
+		$stored = get_option( BricksCore::OPTION_GLOBAL_CLASSES, null );
 		if ( null === $stored || ! is_array( $stored ) ) {
 			return new \WP_Error(
 				'global_class_trash_failed',
@@ -416,7 +416,7 @@ class GlobalClassService {
 		}
 
 		try {
-		$classes = get_option( 'bricks_global_classes', [] );
+		$classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		if ( ! is_array( $classes ) ) {
 			$classes = [];
 		}
@@ -467,13 +467,13 @@ class GlobalClassService {
 		}
 
 		if ( ! empty( $created ) ) {
-			update_option( 'bricks_global_classes', $classes );
-			update_option( 'bricks_global_classes_timestamp', time() );
-			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES, $classes );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_TS, time() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_USER, get_current_user_id() );
 			self::clear_cache();
 
-			wp_cache_delete( 'bricks_global_classes', 'options' );
-			$stored = get_option( 'bricks_global_classes', null );
+			wp_cache_delete( BricksCore::OPTION_GLOBAL_CLASSES, 'options' );
+			$stored = get_option( BricksCore::OPTION_GLOBAL_CLASSES, null );
 			if ( null === $stored || ! is_array( $stored ) ) {
 				$errors['_readback'] = 'Batch create appeared to save but verification read-back failed.';
 			}
@@ -500,12 +500,12 @@ class GlobalClassService {
 		}
 
 		try {
-		$classes = get_option( 'bricks_global_classes', [] );
+		$classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		if ( ! is_array( $classes ) ) {
 			$classes = [];
 		}
 
-		$trash = get_option( 'bricks_global_classes_trash', [] );
+		$trash = get_option( BricksCore::OPTION_GLOBAL_CLASSES_TRASH, [] );
 		if ( ! is_array( $trash ) ) {
 			$trash = [];
 		}
@@ -538,14 +538,14 @@ class GlobalClassService {
 		}
 
 		if ( ! empty( $deleted ) ) {
-			update_option( 'bricks_global_classes', $classes );
-			update_option( 'bricks_global_classes_trash', $trash );
-			update_option( 'bricks_global_classes_timestamp', time() );
-			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES, $classes );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_TRASH, $trash );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_TS, time() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_USER, get_current_user_id() );
 			self::clear_cache();
 
-			wp_cache_delete( 'bricks_global_classes', 'options' );
-			$stored = get_option( 'bricks_global_classes', null );
+			wp_cache_delete( BricksCore::OPTION_GLOBAL_CLASSES, 'options' );
+			$stored = get_option( BricksCore::OPTION_GLOBAL_CLASSES, null );
 			if ( null === $stored || ! is_array( $stored ) ) {
 				$errors['_readback'] = 'Batch trash appeared to save but verification read-back failed.';
 			}
@@ -657,7 +657,7 @@ class GlobalClassService {
 
 		update_option( 'bricks_global_classes_categories', $categories );
 
-		$classes  = get_option( 'bricks_global_classes', [] );
+		$classes  = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		$modified = false;
 
 		if ( is_array( $classes ) ) {
@@ -671,9 +671,9 @@ class GlobalClassService {
 		}
 
 		if ( $modified ) {
-			update_option( 'bricks_global_classes', $classes );
-			update_option( 'bricks_global_classes_timestamp', time() );
-			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES, $classes );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_TS, time() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_USER, get_current_user_id() );
 			self::clear_cache();
 		}
 
@@ -687,7 +687,7 @@ class GlobalClassService {
 	 * @return array<string, mixed>|null Full class array or null if not found.
 	 */
 	public function resolve_class_name( string $name ): ?array {
-		$classes = get_option( 'bricks_global_classes', [] );
+		$classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 
 		if ( ! is_array( $classes ) ) {
 			return null;
@@ -857,7 +857,7 @@ class GlobalClassService {
 	 * @return array<string, mixed> Export data.
 	 */
 	public function export_global_classes( string $category = '' ): array {
-		$classes = get_option( 'bricks_global_classes', array() );
+		$classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, array() );
 
 		if ( ! empty( $category ) ) {
 			$classes = array_filter(
@@ -893,7 +893,7 @@ class GlobalClassService {
 			);
 		}
 
-		$existing       = get_option( 'bricks_global_classes', array() );
+		$existing       = get_option( BricksCore::OPTION_GLOBAL_CLASSES, array() );
 		$existing_names = array_column( $existing, 'name' );
 		$existing_ids   = array_column( $existing, 'id' );
 		$id_generator   = new ElementIdGenerator();
@@ -941,9 +941,9 @@ class GlobalClassService {
 		}
 
 		if ( ! empty( $added ) ) {
-			update_option( 'bricks_global_classes', $existing );
-			update_option( 'bricks_global_classes_timestamp', time() );
-			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES, $existing );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_TS, time() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_USER, get_current_user_id() );
 			self::clear_cache();
 
 			$this->core->regenerate_style_manager_css();
@@ -982,7 +982,7 @@ class GlobalClassService {
 	 * @return array<string, array<int, string>> Summary with added and skipped class names.
 	 */
 	public function merge_imported_global_classes( array $import_classes ): array {
-		$existing       = get_option( 'bricks_global_classes', array() );
+		$existing       = get_option( BricksCore::OPTION_GLOBAL_CLASSES, array() );
 		$existing_names = array_column( $existing, 'name' );
 		$existing_ids   = array_column( $existing, 'id' );
 		$id_generator   = new ElementIdGenerator();
@@ -1028,9 +1028,9 @@ class GlobalClassService {
 		}
 
 		if ( ! empty( $added ) ) {
-			update_option( 'bricks_global_classes', $existing );
-			update_option( 'bricks_global_classes_timestamp', time() );
-			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES, $existing );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_TS, time() );
+			update_option( BricksCore::OPTION_GLOBAL_CLASSES_USER, get_current_user_id() );
 			self::clear_cache();
 		}
 

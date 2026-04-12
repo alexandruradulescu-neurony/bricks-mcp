@@ -569,15 +569,7 @@ final class SchemaSkeletonGenerator {
 		}
 
 		if ( 'form' === $type ) {
-			// Detect form type from role so ElementSettingsGenerator applies the right template.
-			$role_lower = strtolower( $role . ' ' . $content_hint );
-			if ( preg_match( '/newsletter|subscribe|signup|register|inregistr/', $role_lower ) ) {
-				$props['form_type'] = 'newsletter';
-			} elseif ( preg_match( '/login|sign.?in|auth|conecta/', $role_lower ) ) {
-				$props['form_type'] = 'login';
-			} else {
-				$props['form_type'] = 'contact';
-			}
+			$props['form_type'] = FormTypeDetector::detect( $role . ' ' . $content_hint );
 		}
 
 		return $this->node( $type, $props );

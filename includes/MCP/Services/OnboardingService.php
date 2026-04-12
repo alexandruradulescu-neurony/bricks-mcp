@@ -32,14 +32,20 @@ final class OnboardingService {
      * @return array<string, mixed> Onboarding payload.
      */
     public function generate_onboarding( int $user_id ): array {
+        // Load briefs once, pass to all methods that need them (was 3 separate get_option calls).
+        $briefs = get_option( BricksCore::OPTION_BRIEFS, [] );
+        if ( ! is_array( $briefs ) ) {
+            $briefs = [];
+        }
+
         return [
             'welcome_message' => $this->get_welcome_message(),
             'site_context'    => $this->get_site_context(),
             'workflow_guide'  => $this->get_workflow_guide(),
             'quick_start_examples' => $this->get_quick_start_examples(),
-            'important_notes' => $this->get_important_notes(),
-            'design_brief_summary' => $this->get_design_brief_summary(),
-            'business_brief_summary' => $this->get_business_brief_summary(),
+            'important_notes' => $this->get_important_notes( $briefs ),
+            'design_brief_summary' => $this->get_design_brief_summary( $briefs ),
+            'business_brief_summary' => $this->get_business_brief_summary( $briefs ),
             'test_connection' => $this->get_test_connection(),
         ];
     }
@@ -308,18 +314,16 @@ final class OnboardingService {
     /**
      * Get important notes from AI notes option.
      *
+     * @param array<string, mixed> $briefs Pre-loaded briefs option.
      * @return array<int, string> Important notes.
      */
-    private function get_important_notes(): array {
-        $briefs = get_option( 'bricks_mcp_briefs', [] );
-        $notes  = [];
+    private function get_important_notes( array $briefs ): array {
+        $notes = [];
 
-        // Add AI notes if they exist.
         if ( ! empty( $briefs['ai_notes'] ) && is_array( $briefs['ai_notes'] ) ) {
             $notes = $briefs['ai_notes'];
         }
 
-        // Add default notes if none exist.
         if ( empty( $notes ) ) {
             $notes = [
                 __( 'Always use Romanian content for the homepage and service pages', 'bricks-mcp' ),
@@ -334,34 +338,32 @@ final class OnboardingService {
     /**
      * Get design brief summary.
      *
+     * @param array<string, mixed> $briefs Pre-loaded briefs option.
      * @return string Design brief summary.
      */
-    private function get_design_brief_summary(): string {
-        $briefs = get_option( 'bricks_mcp_briefs', [] );
+    private function get_design_brief_summary( array $briefs ): string {
         $design_brief = $briefs['design_brief'] ?? '';
 
         if ( empty( $design_brief ) ) {
             return __( 'No design brief set. Go to Bricks MCP > Briefs to add visual guidelines.', 'bricks-mcp' );
         }
 
-        // Return first 500 characters as summary.
         return wp_trim_words( $design_brief, 50, '...' );
     }
 
     /**
      * Get business brief summary.
      *
+     * @param array<string, mixed> $briefs Pre-loaded briefs option.
      * @return string Business brief summary.
      */
-    private function get_business_brief_summary(): string {
-        $briefs = get_option( 'bricks_mcp_briefs', [] );
+    private function get_business_brief_summary( array $briefs ): string {
         $business_brief = $briefs['business_brief'] ?? '';
 
         if ( empty( $business_brief ) ) {
             return __( 'No business brief set. Go to Bricks MCP > Briefs to add business context.', 'bricks-mcp' );
         }
 
-        // Return first 500 characters as summary.
         return wp_trim_words( $business_brief, 50, '...' );
     }
 }
