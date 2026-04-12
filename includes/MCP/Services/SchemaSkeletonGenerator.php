@@ -157,13 +157,18 @@ final class SchemaSkeletonGenerator {
 		// Try to find a matching design pattern for layout intelligence.
 		$matched_pattern = $this->find_matching_pattern( $section_type, $layout, $background );
 
+		// Check for multi-row patterns (e.g., hero with split + badge grid below).
+		$is_multi_row = ! empty( $matched_pattern['has_two_rows'] ) && ! empty( $matched_pattern['rows'] );
+
 		// Decide layout structure.
 		$is_split = str_starts_with( $layout, 'split' );
 		$is_grid  = str_starts_with( $layout, 'grid' );
 
 		$section_children = [];
 
-		if ( $is_split ) {
+		if ( $is_multi_row && $matched_pattern ) {
+			$section_children = $this->build_multi_row_layout( $matched_pattern, $content_nodes, $pattern_refs, $layout );
+		} elseif ( $is_split ) {
 			// Separate elements by role: image/visual types go right, everything else left.
 			$left_nodes  = [];
 			$right_nodes = [];
@@ -374,6 +379,118 @@ final class SchemaSkeletonGenerator {
 	}
 
 	/**
+	 * Build a multi-row layout from a pattern with has_two_rows.
+	 *
+	 * Row 1: typically a split grid (left content, right image).
+	 * Row 2: typically a flat grid (badges, counters, etc.).
+	 *
+	 * @param array $pattern       Matched design pattern with 'rows' key.
+	 * @param array $content_nodes Content element nodes from the plan.
+	 * @param array $pattern_refs  Pattern repeat references.
+	 * @param string $layout       Layout string (split-60-40, etc.).
+	 * @return array<int, array> Section children (row blocks).
+	 */
+	private function build_multi_row_layout( array $pattern, array $content_nodes, array $pattern_refs, string $layout ): array {
+		$rows    = $pattern['rows'] ?? [];
+		$result  = [];
+
+		// ── Row 1 ──
+		$row1 = $rows['row_1'] ?? null;
+		if ( $row1 && 'split' === ( $row1['type'] ?? '' ) ) {
+			$grid_template = $row1['grid_template'] ?? ( 'split-60-40' === $layout ? 'var(--grid-3-2)' : 'var(--grid-2)' );
+
+			// Distribute content_nodes: images → right, everything else → left.
+			$left_nodes  = [];
+			$right_nodes = [];
+			foreach ( $content_nodes as $cn ) {
+				if ( 'image' === ( $cn['type'] ?? '' ) ) {
+					$right_nodes[] = $cn;
+				} else {
+					$left_nodes[] = $cn;
+				}
+			}
+
+			if ( empty( $right_nodes ) ) {
+				$right_nodes[] = $this->node( 'text-basic', [ 'content' => '[RIGHT COLUMN CONTENT]' ] );
+			}
+
+			// Apply column overrides from pattern.
+			$left_col  = $row1['columns']['left'] ?? [];
+			$right_col = $row1['columns']['right'] ?? [];
+
+			$left_overrides = [];
+			if ( 'center-vertically' === ( $left_col['alignment'] ?? '' ) ) {
+				$left_overrides['_justifyContent'] = 'center';
+			}
+			if ( ! empty( $left_col['max_width'] ) ) {
+				$left_overrides['_widthMax'] = $left_col['max_width'];
+			}
+
+			$right_overrides = [];
+			if ( ! empty( $right_col['fill'] ) ) {
+				$right_overrides['_alignSelf'] = 'stretch';
+			}
+
+			$left_props  = [ 'label' => 'Left Column' ];
+			$right_props = [ 'label' => 'Right Column' ];
+			if ( ! empty( $left_overrides ) ) {
+				$left_props['style_overrides'] = $left_overrides;
+			}
+			if ( ! empty( $right_overrides ) ) {
+				$right_props['style_overrides'] = $right_overrides;
+			}
+
+			$result[] = [
+				'type'            => 'block',
+				'layout'          => 'grid',
+				'columns'         => 2,
+				'label'           => 'Split Grid',
+				'style_overrides' => [ '_gridTemplateColumns' => $grid_template, '_alignItems' => 'stretch' ],
+				'responsive'      => [ 'tablet' => 1, 'mobile' => 1 ],
+				'children'        => [
+					$this->node( 'block', $left_props, $this->auto_wrap_buttons( $left_nodes ) ),
+					$this->node( 'block', $right_props, $right_nodes ),
+				],
+			];
+		}
+
+		// ── Row 2 ──
+		$row2 = $rows['row_2'] ?? null;
+		if ( $row2 && 'grid' === ( $row2['type'] ?? '' ) ) {
+			$cols        = $row2['columns'] ?? 4;
+			$tag         = $row2['tag'] ?? null;
+			$pat_name    = $row2['pattern_name'] ?? '';
+
+			// Find matching pattern_ref for this row.
+			$row2_children = [];
+			if ( '' !== $pat_name ) {
+				foreach ( $pattern_refs as $pr ) {
+					if ( ( $pr['ref'] ?? '' ) === $pat_name ) {
+						$row2_children[] = $pr;
+						break;
+					}
+				}
+			}
+
+			// If no pattern matched, put remaining pattern_refs here.
+			if ( empty( $row2_children ) && ! empty( $pattern_refs ) ) {
+				$row2_children = $pattern_refs;
+			}
+
+			if ( ! empty( $row2_children ) ) {
+				$grid_props = [ 'label' => 'Badge Grid' ];
+				if ( null !== $tag ) {
+					$grid_props['tag'] = $tag;
+				}
+
+				$result[] = $this->grid( $cols, $grid_props['label'], $row2_children, $tag ? [ 'tag' => $tag ] : [] );
+			}
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Auto-wrap consecutive buttons in a row block.
 	 *
 	 * Scans children for runs of 2+ consecutive button elements and wraps
@@ -449,6 +566,18 @@ final class SchemaSkeletonGenerator {
 
 		if ( 'image' === $type ) {
 			$props['src'] = 'unsplash:[RELEVANT QUERY]';
+		}
+
+		if ( 'form' === $type ) {
+			// Detect form type from role so ElementSettingsGenerator applies the right template.
+			$role_lower = strtolower( $role . ' ' . $content_hint );
+			if ( preg_match( '/newsletter|subscribe|signup|register|inregistr/', $role_lower ) ) {
+				$props['form_type'] = 'newsletter';
+			} elseif ( preg_match( '/login|sign.?in|auth|conecta/', $role_lower ) ) {
+				$props['form_type'] = 'login';
+			} else {
+				$props['form_type'] = 'contact';
+			}
 		}
 
 		return $this->node( $type, $props );

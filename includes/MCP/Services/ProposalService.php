@@ -25,6 +25,12 @@ final class ProposalService {
 	private const TTL = 600; // 10 minutes.
 
 	/**
+	 * Hash of the last discovery site_context. Used to detect unchanged data.
+	 * @var string|null
+	 */
+	private static ?string $last_discovery_hash = null;
+
+	/**
 	 * Valid section types for design_plan.
 	 */
 	private const VALID_SECTION_TYPES = [
@@ -243,40 +249,73 @@ final class ProposalService {
 			'building_rules'     => self::BUILDING_RULES,
 
 			'reference_patterns' => $this->find_reference_patterns( $description ),
+		];
 
-			'site_context' => [
-				'classes' => [
-					'available' => $class_summary,
-					'suggested' => $suggested_classes,
-				],
-				'variables' => $scoped_variables,
-				'briefs'    => array_filter( [
-					'design'   => $design_brief ?: null,
-					'business' => $business_brief ?: null,
-				] ),
+		// Build site_context.
+		$site_context = [
+			'classes' => [
+				'available' => $class_summary,
+				'suggested' => $suggested_classes,
 			],
+			'variables' => $scoped_variables,
+			'briefs'    => array_filter( [
+				'design'   => $design_brief ?: null,
+				'business' => $business_brief ?: null,
+			] ),
+		];
 
-			'design_plan_format' => [
-				'section_type'     => 'hero|features|pricing|cta|testimonials|split|generic (REQUIRED)',
-				'layout'           => 'centered|split-60-40|split-50-50|grid-2|grid-3|grid-4 (REQUIRED)',
-				'background'       => 'dark|light (optional, default: light)',
-				'background_image' => 'optional — "unsplash:query" to auto-fetch a background image. Used with gradient overlay on dark sections.',
-				'elements'     => [
-					[
-						'type'         => 'REQUIRED — element type from available_elements',
-						'role'         => 'REQUIRED — what this element does (e.g., "main_heading", "primary_cta", "tagline")',
-						'content_hint' => 'REQUIRED — describe what content goes here',
-						'tag'          => 'optional — h1-h6 for headings',
-						'class_intent' => 'optional — name of an existing class to reuse',
-					],
+		$context_hash = md5( wp_json_encode( $site_context ) );
+
+		// If site_context is unchanged from a previous discovery, return slim response.
+		if ( null !== self::$last_discovery_hash && $context_hash === self::$last_discovery_hash ) {
+			$response['site_context_hash'] = $context_hash;
+			$response['site_context_note'] = 'Unchanged from previous discovery — use cached context. Only reference_patterns are new (matched to your description).';
+			$response['next_step'] .= ' For subsequent sections, you can skip Phase 1 and call propose_design directly with a design_plan.';
+			$response['available_layouts']  = self::VALID_LAYOUTS;
+			$response['section_types']      = self::VALID_SECTION_TYPES;
+			$response['design_plan_format'] = $this->get_design_plan_format();
+			return $response;
+		}
+
+		// First discovery or site data changed — return full response.
+		self::$last_discovery_hash = $context_hash;
+
+		$response['available_elements'] = self::ELEMENT_CAPABILITIES;
+		$response['available_layouts']  = self::VALID_LAYOUTS;
+		$response['section_types']      = self::VALID_SECTION_TYPES;
+		$response['building_rules']     = self::BUILDING_RULES;
+		$response['site_context']       = $site_context;
+		$response['site_context_hash']  = $context_hash;
+		$response['design_plan_format'] = $this->get_design_plan_format();
+		$response['next_step'] .= ' For subsequent sections, you can skip Phase 1 and call propose_design directly with a design_plan.';
+
+		return $response;
+	}
+
+	/**
+	 * Get the design_plan_format structure (reused in full and slim responses).
+	 */
+	private function get_design_plan_format(): array {
+		return [
+			'section_type'     => 'hero|features|pricing|cta|testimonials|split|generic (REQUIRED)',
+			'layout'           => 'centered|split-60-40|split-50-50|grid-2|grid-3|grid-4 (REQUIRED)',
+			'background'       => 'dark|light (optional, default: light)',
+			'background_image' => 'optional — "unsplash:query" to auto-fetch a background image.',
+			'elements'     => [
+				[
+					'type'         => 'REQUIRED — element type from available_elements',
+					'role'         => 'REQUIRED — what this element does',
+					'content_hint' => 'REQUIRED — describe what content goes here',
+					'tag'          => 'optional — h1-h6 for headings',
+					'class_intent' => 'optional — name of an existing class to reuse',
 				],
-				'patterns' => [
-					[
-						'name'              => 'REQUIRED — pattern name (e.g., "feature-card")',
-						'repeat'            => 'REQUIRED — how many times to repeat',
-						'element_structure' => 'REQUIRED — array of {type, role} objects defining the pattern',
-						'content_hint'      => 'REQUIRED — describe what each instance contains',
-					],
+			],
+			'patterns' => [
+				[
+					'name'              => 'REQUIRED — pattern name',
+					'repeat'            => 'REQUIRED — how many times to repeat',
+					'element_structure' => 'REQUIRED — array of {type, role} objects',
+					'content_hint'      => 'REQUIRED — describe what each instance contains',
 				],
 			],
 		];
@@ -514,26 +553,16 @@ final class ProposalService {
 	 * Get scoped variables relevant to a description.
 	 */
 	private function get_scoped_variables( string $description ): array {
-		$categories = get_option( 'bricks_global_variables_categories', [] );
-		$variables  = get_option( 'bricks_global_variables', [] );
-
-		if ( ! is_array( $categories ) ) $categories = [];
-		if ( ! is_array( $variables ) ) $variables = [];
-
-		$cat_names = [];
-		foreach ( $categories as $cat ) {
-			$cat_names[ $cat['id'] ?? '' ] = $cat['name'] ?? '';
-		}
-
-		$relevant = $this->detect_relevant_categories( $description );
+		// Use SiteVariableResolver's static cache instead of calling get_option() directly.
+		$by_category = SiteVariableResolver::get_variables_by_category();
+		$relevant    = $this->detect_relevant_categories( $description );
 
 		$scoped = [];
-		foreach ( $variables as $var ) {
-			$cat_id   = $var['category'] ?? '';
-			$cat_name = $cat_names[ $cat_id ] ?? 'uncategorized';
-
+		foreach ( $by_category as $cat_name => $vars ) {
 			if ( in_array( $cat_name, $relevant, true ) ) {
-				$scoped[ $cat_name ][] = $var['name'] ?? '';
+				foreach ( $vars as $var ) {
+					$scoped[ $cat_name ][] = $var['name'] ?? '';
+				}
 			}
 		}
 

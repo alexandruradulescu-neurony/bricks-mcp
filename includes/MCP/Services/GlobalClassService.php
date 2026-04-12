@@ -29,6 +29,12 @@ class GlobalClassService {
 	private const MAX_REFERENCE_POSTS = 200;
 
 	/**
+	 * Static cache of all global classes. Loaded once per PHP request.
+	 * @var array<int, array<string, mixed>>|null
+	 */
+	private static ?array $cached_all = null;
+
+	/**
 	 * Core infrastructure.
 	 *
 	 * @var BricksCore
@@ -52,16 +58,18 @@ class GlobalClassService {
 	 * @return array<int, array<string, mixed>> Array of global classes.
 	 */
 	public function get_global_classes( string $search = '', string $category = '' ): array {
-		$classes = get_option( 'bricks_global_classes', [] );
-
-		if ( ! is_array( $classes ) ) {
-			return [];
+		// Use static cache — loaded once per request, invalidated on write.
+		if ( null === self::$cached_all ) {
+			$raw = get_option( 'bricks_global_classes', [] );
+			self::$cached_all = is_array( $raw )
+				? array_values( array_filter(
+					$raw,
+					static fn( $entry ) => is_array( $entry ) && isset( $entry['id'], $entry['name'] ) && is_string( $entry['id'] ) && is_string( $entry['name'] )
+				) )
+				: [];
 		}
 
-		$classes = array_filter(
-			$classes,
-			static fn( $entry ) => is_array( $entry ) && isset( $entry['id'], $entry['name'] ) && is_string( $entry['id'] ) && is_string( $entry['name'] )
-		);
+		$classes = self::$cached_all;
 
 		if ( '' !== $category ) {
 			$classes = array_filter(
@@ -78,6 +86,13 @@ class GlobalClassService {
 		}
 
 		return array_values( $classes );
+	}
+
+	/**
+	 * Clear the static class cache. Called after write operations.
+	 */
+	public static function clear_cache(): void {
+		self::$cached_all = null;
 	}
 
 	/**
@@ -145,6 +160,7 @@ class GlobalClassService {
 		update_option( 'bricks_global_classes', $classes );
 		update_option( 'bricks_global_classes_timestamp', time() );
 		update_option( 'bricks_global_classes_user', get_current_user_id() );
+		self::clear_cache();
 
 		wp_cache_delete( 'bricks_global_classes', 'options' );
 		$stored = get_option( 'bricks_global_classes', null );
@@ -221,6 +237,7 @@ class GlobalClassService {
 			update_option( 'bricks_global_classes', $classes );
 			update_option( 'bricks_global_classes_timestamp', time() );
 			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			self::clear_cache();
 
 			wp_cache_delete( 'bricks_global_classes', 'options' );
 			$stored = get_option( 'bricks_global_classes', null );
@@ -293,6 +310,7 @@ class GlobalClassService {
 		update_option( 'bricks_global_classes_trash', $trash );
 		update_option( 'bricks_global_classes_timestamp', time() );
 		update_option( 'bricks_global_classes_user', get_current_user_id() );
+		self::clear_cache();
 
 		wp_cache_delete( 'bricks_global_classes', 'options' );
 		$stored = get_option( 'bricks_global_classes', null );
@@ -452,6 +470,7 @@ class GlobalClassService {
 			update_option( 'bricks_global_classes', $classes );
 			update_option( 'bricks_global_classes_timestamp', time() );
 			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			self::clear_cache();
 
 			wp_cache_delete( 'bricks_global_classes', 'options' );
 			$stored = get_option( 'bricks_global_classes', null );
@@ -523,6 +542,7 @@ class GlobalClassService {
 			update_option( 'bricks_global_classes_trash', $trash );
 			update_option( 'bricks_global_classes_timestamp', time() );
 			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			self::clear_cache();
 
 			wp_cache_delete( 'bricks_global_classes', 'options' );
 			$stored = get_option( 'bricks_global_classes', null );
@@ -654,6 +674,7 @@ class GlobalClassService {
 			update_option( 'bricks_global_classes', $classes );
 			update_option( 'bricks_global_classes_timestamp', time() );
 			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			self::clear_cache();
 		}
 
 		return true;
@@ -923,6 +944,7 @@ class GlobalClassService {
 			update_option( 'bricks_global_classes', $existing );
 			update_option( 'bricks_global_classes_timestamp', time() );
 			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			self::clear_cache();
 
 			$this->core->regenerate_style_manager_css();
 		}
@@ -1009,6 +1031,7 @@ class GlobalClassService {
 			update_option( 'bricks_global_classes', $existing );
 			update_option( 'bricks_global_classes_timestamp', time() );
 			update_option( 'bricks_global_classes_user', get_current_user_id() );
+			self::clear_cache();
 		}
 
 		return array(

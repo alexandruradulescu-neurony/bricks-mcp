@@ -32,5 +32,49 @@
   "button_defaults": {
     "style": "primary",
     "link": { "type": "external", "url": "#" }
+  },
+  "form_templates": {
+    "newsletter": {
+      "fields": [
+        {"id": "nl_001", "type": "email", "label": "Email", "placeholder": "Adresa ta de email", "required": true, "width": "calc(67% - var(--space-xs)/2)"},
+        {"id": "nl_002", "type": "html", "label": "Termeni", "width": "100", "html": "<p style=\"margin-top:var(--space-xs);font-size:var(--text-xs)\">Prin inregistrare, accepti <a href=\"#\">Termenii si Conditiile</a> noastre.</p>"}
+      ],
+      "actions": ["email"],
+      "submitButtonStyle": "primary",
+      "submitButtonText": "Inregistrare",
+      "submitButtonWidth": "calc(33% - var(--space-xs)/2)",
+      "horizontalAlignFields": "space-between",
+      "successMessage": "Te-ai inregistrat cu succes!",
+      "emailSubject": "Inregistrare noua",
+      "emailTo": "admin_email",
+      "htmlEmail": true
+    },
+    "contact": {
+      "fields": [
+        {"id": "ct_001", "type": "text", "label": "Nume", "placeholder": "Numele tau", "width": "50"},
+        {"id": "ct_002", "type": "email", "label": "Email", "placeholder": "Email-ul tau", "required": true, "width": "50"},
+        {"id": "ct_003", "type": "textarea", "label": "Mesaj", "placeholder": "Mesajul tau", "required": true, "width": "100"}
+      ],
+      "actions": ["email"],
+      "submitButtonStyle": "primary",
+      "submitButtonText": "Trimite mesajul",
+      "successMessage": "Mesajul a fost trimis cu succes. Te vom contacta in cel mai scurt timp.",
+      "emailSubject": "Mesaj nou de pe site",
+      "emailTo": "admin_email",
+      "htmlEmail": true
+    },
+    "login": {
+      "fields": [
+        {"id": "lg_001", "type": "email", "label": "Email sau nume utilizator", "placeholder": "Email sau nume utilizator", "required": true, "width": "100"},
+        {"id": "lg_002", "type": "password", "label": "Parola", "placeholder": "Parola ta", "required": true, "width": "100"}
+      ],
+      "actions": ["email"],
+      "submitButtonStyle": "primary",
+      "submitButtonText": "Conectare",
+      "successMessage": "Conectare reusita.",
+      "emailSubject": "Tentativa de conectare",
+      "emailTo": "admin_email",
+      "htmlEmail": true
+    }
   }
 }

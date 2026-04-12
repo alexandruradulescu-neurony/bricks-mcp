@@ -241,6 +241,19 @@ final class SiteVariableResolver {
 	}
 
 	/**
+	 * Get all variables grouped by category name.
+	 *
+	 * Returns the cached data from load(). Each key is a category name,
+	 * each value is an array of variable arrays with 'name', 'value', etc.
+	 *
+	 * @return array<string, array<int, array<string, mixed>>> Variables by category.
+	 */
+	public static function get_variables_by_category(): array {
+		self::load();
+		return self::$by_category ?? [];
+	}
+
+	/**
 	 * Clear the cache (useful for testing).
 	 */
 	public static function clear_cache(): void {
