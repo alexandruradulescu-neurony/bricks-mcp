@@ -134,6 +134,59 @@
           ]
         }
       }
+    },
+    {
+      "id": "hero-split-form-badges",
+      "name": "Split Hero with Newsletter Form + Trust Badges",
+      "description": "3:2 split. Left: tagline, h1 heading, description, newsletter form. Right: square image with rounded corners. Below: 4-column trust badge grid with check icons. Light background.",
+      "tags": ["light", "split", "form", "newsletter", "badges", "trust", "image"],
+      "layout": "split-60-40",
+      "background": "light",
+      "section_overrides": {},
+      "container_overrides": {
+        "_direction": "column"
+      },
+      "has_two_rows": true,
+      "rows": {
+        "row_1": {
+          "type": "split",
+          "grid_template": "var(--grid-3-2)",
+          "columns": {
+            "left": {
+              "alignment": "center-vertically",
+              "elements": [
+                {"role": "tagline", "type": "text-basic", "class_role": "eyebrow", "content_example": "Tagline"},
+                {"role": "heading", "type": "heading", "tag": "h1", "content_example": "Tractari auto non-stop in Bucuresti si Ilfov"},
+                {"role": "description", "type": "text-basic", "content_example": "Ajungem la tine in maximum 30 de minute. Pretul comunicat la telefon este pretul final — cu TVA inclus.", "style": {"_widthMax": "var(--max-width-m)"}},
+                {"role": "newsletter_form", "type": "form", "note": "Email field + submit button. Can include terms text via HTML field."}
+              ]
+            },
+            "right": {
+              "fill": true,
+              "elements": [
+                {"role": "hero_image", "type": "image", "style": {"_aspectRatio": "1/1", "_objectFit": "cover", "_height": "100%", "_border": {"radius": {"top": "var(--radius-m)", "right": "var(--radius-m)", "bottom": "var(--radius-m)", "left": "var(--radius-m)"}}}}
+              ]
+            }
+          }
+        },
+        "row_2": {
+          "type": "grid",
+          "columns": 4,
+          "tag": "ul",
+          "pattern_name": "trust-badge",
+          "repeat": 4
+        }
+      },
+      "patterns": {
+        "trust-badge": {
+          "tag": "li",
+          "wrapper_style": {"_direction": "row", "_alignItems": "center", "_gap": "var(--space-xs)"},
+          "elements": [
+            {"role": "badge_icon", "type": "icon", "icon": {"library": "fontawesomeSolid", "icon": "fas fa-circle-check"}},
+            {"role": "badge_text", "type": "text-basic", "content": "data.text"}
+          ]
+        }
+      }
     }
   ]
 }
