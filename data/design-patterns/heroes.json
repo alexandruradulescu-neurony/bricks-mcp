@@ -72,6 +72,7 @@
       },
       "columns": {
         "left": {
+          "gap": "var(--space-l)",
           "elements": [
             {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
             {"role": "heading", "type": "heading", "tag": "h1"},
@@ -117,6 +118,7 @@
       },
       "columns": {
         "left": {
+          "gap": "var(--space-l)",
           "elements": [
             {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
             {"role": "heading", "type": "heading", "tag": "h1"},
@@ -154,6 +156,7 @@
           "columns": {
             "left": {
               "alignment": "center-vertically",
+              "gap": "var(--space-l)",
               "elements": [
                 {"role": "tagline", "type": "text-basic", "class_role": "eyebrow", "content_example": "Tagline"},
                 {"role": "heading", "type": "heading", "tag": "h1", "content_example": "Tractari auto non-stop in Bucuresti si Ilfov"},

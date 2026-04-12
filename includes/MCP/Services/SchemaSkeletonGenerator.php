@@ -207,27 +207,11 @@ final class SchemaSkeletonGenerator {
 				$left_col  = $matched_pattern['columns']['left'] ?? [];
 				$right_col = $matched_pattern['columns']['right'] ?? [];
 
-				// Left column: alignment, padding, max_width.
-				if ( 'center-vertically' === ( $left_col['alignment'] ?? '' ) ) {
-					$left_overrides['_justifyContent'] = 'center';
-				}
-				if ( ! empty( $left_col['padding'] ) ) {
-					$left_overrides['_padding'] = is_array( $left_col['padding'] ) ? $left_col['padding'] : null;
-				}
-				if ( ! empty( $left_col['max_width'] ) ) {
-					$left_overrides['_widthMax'] = $left_col['max_width'];
-				}
-
-				// Right column: fill, padding.
-				if ( ! empty( $right_col['fill'] ) ) {
-					$right_overrides['_alignSelf'] = 'stretch';
-				}
-				if ( ! empty( $right_col['padding'] ) ) {
-					$right_overrides['_padding'] = is_array( $right_col['padding'] ) ? $right_col['padding'] : null;
-				}
-				if ( 'center-vertically' === ( $right_col['alignment'] ?? '' ) ) {
-					$right_overrides['_justifyContent'] = 'center';
-				}
+				$left_overrides  = self::extract_column_overrides( $left_col );
+				$right_overrides = self::extract_column_overrides( $right_col );
+			} else {
+				// Default gap for split content columns when no pattern matched.
+				$left_overrides['_rowGap'] = 'var(--space-l)';
 			}
 
 			$left_props  = [ 'label' => 'Left Column' ];
@@ -379,6 +363,40 @@ final class SchemaSkeletonGenerator {
 	}
 
 	/**
+	 * Extract style overrides from a pattern column definition.
+	 *
+	 * Handles: alignment (center-vertically), padding, gap, max_width, fill.
+	 *
+	 * @param array<string, mixed> $col Column definition from pattern.
+	 * @return array<string, mixed> Style overrides for the column block.
+	 */
+	private static function extract_column_overrides( array $col ): array {
+		$overrides = [];
+
+		if ( 'center-vertically' === ( $col['alignment'] ?? '' ) ) {
+			$overrides['_justifyContent'] = 'center';
+		}
+
+		if ( ! empty( $col['padding'] ) && is_array( $col['padding'] ) ) {
+			$overrides['_padding'] = $col['padding'];
+		}
+
+		if ( ! empty( $col['gap'] ) ) {
+			$overrides['_rowGap'] = $col['gap'];
+		}
+
+		if ( ! empty( $col['max_width'] ) ) {
+			$overrides['_widthMax'] = $col['max_width'];
+		}
+
+		if ( ! empty( $col['fill'] ) ) {
+			$overrides['_alignSelf'] = 'stretch';
+		}
+
+		return $overrides;
+	}
+
+	/**
 	 * Build a multi-row layout from a pattern with has_two_rows.
 	 *
 	 * Row 1: typically a split grid (left content, right image).
@@ -418,18 +436,8 @@ final class SchemaSkeletonGenerator {
 			$left_col  = $row1['columns']['left'] ?? [];
 			$right_col = $row1['columns']['right'] ?? [];
 
-			$left_overrides = [];
-			if ( 'center-vertically' === ( $left_col['alignment'] ?? '' ) ) {
-				$left_overrides['_justifyContent'] = 'center';
-			}
-			if ( ! empty( $left_col['max_width'] ) ) {
-				$left_overrides['_widthMax'] = $left_col['max_width'];
-			}
-
-			$right_overrides = [];
-			if ( ! empty( $right_col['fill'] ) ) {
-				$right_overrides['_alignSelf'] = 'stretch';
-			}
+			$left_overrides  = self::extract_column_overrides( $left_col );
+			$right_overrides = self::extract_column_overrides( $right_col );
 
 			$left_props  = [ 'label' => 'Left Column' ];
 			$right_props = [ 'label' => 'Right Column' ];

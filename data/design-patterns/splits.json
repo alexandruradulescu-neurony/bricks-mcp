@@ -16,6 +16,7 @@
         "left": {
           "alignment": "center-vertically",
           "max_width": "var(--max-width-s)",
+          "gap": "var(--space-l)",
           "padding": {"top": "var(--space-xxl)", "right": "var(--space-xxl)", "bottom": "var(--space-xxl)", "left": "var(--space-xxl)"},
           "elements": [
             {"role": "logo", "type": "icon", "style": {"_typography": {"font-size": "28px"}, "_margin": {"bottom": "var(--space-l)"}}},
@@ -44,6 +45,7 @@
       "columns": {
         "left": {
           "alignment": "center-vertically",
+          "gap": "var(--space-l)",
           "elements": [
             {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
             {"role": "heading", "type": "heading", "tag": "h2"},
@@ -68,6 +70,7 @@
       "background": "light",
       "columns": {
         "left": {
+          "gap": "var(--space-l)",
           "elements": [
             {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
             {"role": "heading", "type": "heading", "tag": "h2"},
@@ -76,6 +79,7 @@
         },
         "right": {
           "alignment": "center-vertically",
+          "gap": "var(--space-l)",
           "elements": [
             {"role": "tag_grid", "type": "block", "class_role": "tag_grid", "children": [
               {"role": "pills", "type": "pattern", "pattern_name": "tag-pill", "repeat": 8}
@@ -103,6 +107,7 @@
       "background": "light",
       "columns": {
         "left": {
+          "gap": "var(--space-l)",
           "elements": [
             {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
             {"role": "heading", "type": "heading", "tag": "h2"},
@@ -111,6 +116,7 @@
           ]
         },
         "right": {
+          "gap": "var(--space-l)",
           "elements": [
             {"role": "form", "type": "form"}
           ]
