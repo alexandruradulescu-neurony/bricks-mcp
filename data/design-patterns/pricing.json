@@ -1,0 +1,34 @@
+{
+  "category": "pricing",
+  "patterns": [
+    {
+      "id": "pricing-3-tier",
+      "name": "3-Tier Pricing Cards",
+      "description": "Section header + 3 pricing cards in a grid. Each card: tier name, price, features list, CTA.",
+      "tags": ["light", "grid", "cards", "pricing"],
+      "layout": "centered",
+      "background": "light",
+      "container_overrides": {
+        "_alignItems": "center",
+        "_textAlign": "center"
+      },
+      "composition": [
+        {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
+        {"role": "heading", "type": "heading", "tag": "h2"},
+        {"role": "subtitle", "type": "text-basic"},
+        {"role": "pricing_grid", "type": "grid", "columns": 3, "pattern_name": "pricing-card", "repeat": 3}
+      ],
+      "patterns": {
+        "pricing-card": {
+          "wrapper_style": {"_padding": {"top": "var(--space-xl)", "right": "var(--space-l)", "bottom": "var(--space-xl)", "left": "var(--space-l)"}, "_border": {"radius": {"top": "var(--radius)", "right": "var(--radius)", "bottom": "var(--radius)", "left": "var(--radius)"}, "width": {"top": "1px", "right": "1px", "bottom": "1px", "left": "1px"}, "color": {"raw": "var(--base-light)"}}, "_alignItems": "center"},
+          "elements": [
+            {"role": "tier_name", "type": "text-basic", "content": "data.tier_name"},
+            {"role": "price", "type": "heading", "tag": "h3", "content": "data.price"},
+            {"role": "features", "type": "text-basic", "content": "data.features", "note": "Use HTML <ul> list for features"},
+            {"role": "cta", "type": "button", "class_role": "btn_primary", "content": "data.cta"}
+          ]
+        }
+      }
+    }
+  ]
+}

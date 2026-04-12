@@ -1,0 +1,69 @@
+{
+  "category": "cta",
+  "patterns": [
+    {
+      "id": "cta-centered-dark",
+      "name": "Centered Dark CTA",
+      "description": "Dark section with centered heading, subtitle, and two CTA buttons.",
+      "tags": ["dark", "centered", "buttons"],
+      "layout": "centered",
+      "background": "dark",
+      "container_overrides": {
+        "_alignItems": "center",
+        "_textAlign": "center"
+      },
+      "composition": [
+        {"role": "heading", "type": "heading", "tag": "h2"},
+        {"role": "subtitle", "type": "text-basic", "class_role": "hero_description"},
+        {"role": "cta_row", "wrapper": true, "wrapper_style": {"_direction": "row", "_gap": "var(--space-m)", "_justifyContent": "center", "_flexWrap": "wrap"}, "elements": [
+          {"role": "primary_cta", "type": "button", "class_role": "btn_primary", "icon": "mobile", "iconPosition": "left"},
+          {"role": "secondary_cta", "type": "button", "class_role": "btn_ghost", "icon": "comment-alt", "iconPosition": "left"}
+        ]}
+      ]
+    },
+    {
+      "id": "cta-split-image",
+      "name": "CTA with Image Split",
+      "description": "60/40 split. Left: heading, text, CTA button. Right: image.",
+      "tags": ["light", "split", "image"],
+      "layout": "split-60-40",
+      "background": "light",
+      "columns": {
+        "left": {
+          "alignment": "center-vertically",
+          "elements": [
+            {"role": "heading", "type": "heading", "tag": "h2"},
+            {"role": "paragraph", "type": "text-basic"},
+            {"role": "cta", "type": "button", "class_role": "btn_primary"}
+          ]
+        },
+        "right": {
+          "fill": true,
+          "elements": [
+            {"role": "image", "type": "image", "style": {"_border": {"radius": {"top": "var(--radius-l)", "right": "var(--radius-l)", "bottom": "var(--radius-l)", "left": "var(--radius-l)"}}, "_objectFit": "cover"}}
+          ]
+        }
+      }
+    },
+    {
+      "id": "cta-banner-accent",
+      "name": "Accent Banner CTA",
+      "description": "Colored accent background banner with centered heading and single CTA.",
+      "tags": ["accent", "centered", "banner", "compact"],
+      "layout": "centered",
+      "background": "light",
+      "section_overrides": {
+        "_background": {"color": {"raw": "var(--accent-ultra-light)"}}
+      },
+      "container_overrides": {
+        "_alignItems": "center",
+        "_textAlign": "center"
+      },
+      "composition": [
+        {"role": "heading", "type": "heading", "tag": "h3"},
+        {"role": "subtitle", "type": "text-basic"},
+        {"role": "cta", "type": "button", "class_role": "btn_primary"}
+      ]
+    }
+  ]
+}

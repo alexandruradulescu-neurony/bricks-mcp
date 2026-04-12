@@ -75,6 +75,8 @@ final class ProposalHandler {
 				. "Returns site context, available element types with PURPOSE descriptions, available layouts, global classes, CSS variables, and design/business briefs.\n"
 				. "You use this to understand WHAT building blocks exist and WHAT the site looks like.\n"
 				. "Does NOT return a proposal_id or schema.\n\n"
+				. "CRITICAL: Phase 1 also returns reference_patterns — curated design compositions showing proven arrangements.\n"
+				. "Pick the closest matching pattern and adapt it into your design_plan. Do NOT invent layouts from scratch.\n\n"
 				. "PHASE 2 — PROPOSAL (description + design_plan):\n"
 				. "After reviewing Phase 1 data, think as a DESIGNER and provide a design_plan with your decisions.\n"
 				. "Returns proposal_id + suggested_schema generated from YOUR design decisions.\n"
@@ -84,6 +86,7 @@ final class ProposalHandler {
 				. "- layout: centered|split-60-40|split-50-50|grid-2|grid-3|grid-4\n"
 				. "- elements: [{type, role, content_hint, tag?, class_intent?}]\n"
 				. "- background?: dark|light\n"
+				. "- background_image?: \"unsplash:query\" for background photo\n"
 				. "- patterns?: [{name, repeat, element_structure: [{type, role}], content_hint}]", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',

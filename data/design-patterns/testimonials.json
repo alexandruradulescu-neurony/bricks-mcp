@@ -1,0 +1,54 @@
+{
+  "category": "testimonials",
+  "patterns": [
+    {
+      "id": "testimonials-card-grid",
+      "name": "Testimonial Cards Grid",
+      "description": "Section header + 3 testimonial cards. Each card: quote text, author name, author role.",
+      "tags": ["light", "grid", "cards", "reviews"],
+      "layout": "centered",
+      "background": "light",
+      "container_overrides": {
+        "_alignItems": "center",
+        "_textAlign": "center"
+      },
+      "composition": [
+        {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
+        {"role": "heading", "type": "heading", "tag": "h2"},
+        {"role": "subtitle", "type": "text-basic"},
+        {"role": "testimonial_grid", "type": "grid", "columns": 3, "pattern_name": "testimonial-card", "repeat": 3}
+      ],
+      "patterns": {
+        "testimonial-card": {
+          "class_role": "testimonial_card",
+          "wrapper_style": {"_padding": {"top": "var(--space-l)", "right": "var(--space-l)", "bottom": "var(--space-l)", "left": "var(--space-l)"}, "_border": {"radius": {"top": "var(--radius)", "right": "var(--radius)", "bottom": "var(--radius)", "left": "var(--radius)"}, "width": {"top": "1px", "right": "1px", "bottom": "1px", "left": "1px"}, "color": {"raw": "var(--base-light)"}}, "_textAlign": "left"},
+          "elements": [
+            {"role": "stars", "type": "text-basic", "content_example": "★★★★★", "style": {"_typography": {"color": {"raw": "var(--secondary)"}}}},
+            {"role": "quote", "type": "text-basic", "content": "data.quote"},
+            {"role": "author", "type": "text-basic", "content": "data.author", "style": {"_typography": {"font-weight": "600"}}},
+            {"role": "author_role", "type": "text-basic", "content": "data.role"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "testimonials-dark-single",
+      "name": "Single Featured Testimonial",
+      "description": "Dark section with one large centered testimonial quote.",
+      "tags": ["dark", "centered", "single", "featured"],
+      "layout": "centered",
+      "background": "dark",
+      "container_overrides": {
+        "_alignItems": "center",
+        "_textAlign": "center",
+        "_widthMax": "var(--max-width)"
+      },
+      "composition": [
+        {"role": "stars", "type": "text-basic", "content_example": "★★★★★"},
+        {"role": "quote", "type": "heading", "tag": "h3", "note": "Use heading for emphasis on the quote text"},
+        {"role": "author", "type": "text-basic"},
+        {"role": "author_role", "type": "text-basic"}
+      ]
+    }
+  ]
+}

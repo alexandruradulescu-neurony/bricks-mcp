@@ -231,15 +231,17 @@ final class ProposalService {
 			'page_id'     => $page_id,
 			'description' => $description,
 
-			'next_step' => 'You now have the site context and available building blocks. '
-				. 'Think as a DESIGNER: decide on section_type, layout, background, which elements to use, and what content goes where. '
-				. 'Then call propose_design again with the same description PLUS a design_plan object. '
-				. 'The design_plan must include: section_type, layout, elements (each with type, role, content_hint), and optional patterns.',
+			'next_step' => 'You now have the site context, available building blocks, and REFERENCE PATTERNS showing proven compositions. '
+				. 'Think as a DESIGNER: pick the closest reference_pattern that matches the user\'s request, '
+				. 'then adapt it into a design_plan. The pattern shows the correct composition — you adjust the content. '
+				. 'Call propose_design again with the same description PLUS a design_plan object.',
 
 			'available_elements' => self::ELEMENT_CAPABILITIES,
 			'available_layouts'  => self::VALID_LAYOUTS,
 			'section_types'      => self::VALID_SECTION_TYPES,
 			'building_rules'     => self::BUILDING_RULES,
+
+			'reference_patterns' => $this->find_reference_patterns( $description ),
 
 			'site_context' => [
 				'classes' => [
@@ -560,5 +562,64 @@ final class ProposalService {
 		}
 
 		return array_values( array_unique( $categories ) );
+	}
+
+	/**
+	 * Find reference patterns matching a description.
+	 *
+	 * Extracts section type and mood tags from the description text,
+	 * then queries the DesignPatternService for matching patterns.
+	 *
+	 * @param string $description Free-text description.
+	 * @return array<int, array> Matching patterns (up to 3).
+	 */
+	private function find_reference_patterns( string $description ): array {
+		$desc = strtolower( $description );
+
+		// Detect section type.
+		$section_type = 'generic';
+		$type_map = [
+			'hero'         => '/\bhero\b/',
+			'features'     => '/feature|service|benefit/',
+			'pricing'      => '/pricing|price|plan|tier/',
+			'cta'          => '/\bcta\b|call.to.action/',
+			'testimonials' => '/testimonial|review|quote/',
+			'split'        => '/split|login|signup|register|form.*image|image.*form/',
+		];
+		foreach ( $type_map as $type => $regex ) {
+			if ( preg_match( $regex, $desc ) ) {
+				$section_type = $type;
+				break;
+			}
+		}
+
+		// Detect mood/style tags.
+		$tags = [];
+		if ( preg_match( '/dark|gradient|overlay/', $desc ) ) {
+			$tags[] = 'dark';
+		}
+		if ( preg_match( '/light|white|clean|minimal/', $desc ) ) {
+			$tags[] = 'light';
+		}
+		if ( preg_match( '/center|centred/', $desc ) ) {
+			$tags[] = 'centered';
+		}
+		if ( preg_match( '/split|column|left.*right/', $desc ) ) {
+			$tags[] = 'split';
+		}
+		if ( preg_match( '/image|photo|picture/', $desc ) ) {
+			$tags[] = 'image';
+		}
+		if ( preg_match( '/card|grid/', $desc ) ) {
+			$tags[] = 'cards';
+		}
+		if ( preg_match( '/form|login|signup|contact/', $desc ) ) {
+			$tags[] = 'form';
+		}
+		if ( preg_match( '/icon/', $desc ) ) {
+			$tags[] = 'icons';
+		}
+
+		return DesignPatternService::find( $section_type, $tags, 3 );
 	}
 }

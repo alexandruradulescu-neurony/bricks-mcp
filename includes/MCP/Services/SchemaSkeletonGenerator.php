@@ -154,6 +154,9 @@ final class SchemaSkeletonGenerator {
 			];
 		}
 
+		// Try to find a matching design pattern for layout intelligence.
+		$matched_pattern = $this->find_matching_pattern( $section_type, $layout, $background );
+
 		// Decide layout structure.
 		$is_split = str_starts_with( $layout, 'split' );
 		$is_grid  = str_starts_with( $layout, 'grid' );
@@ -161,22 +164,86 @@ final class SchemaSkeletonGenerator {
 		$section_children = [];
 
 		if ( $is_split ) {
-			// Split elements into left (non-pattern) and right (patterns or last half).
-			$left_nodes  = $content_nodes;
-			$right_nodes = ! empty( $pattern_refs ) ? $pattern_refs : [ $this->node( 'text-basic', [ 'content' => '[RIGHT COLUMN CONTENT]' ] ) ];
+			// Separate elements by role: image/visual types go right, everything else left.
+			$left_nodes  = [];
+			$right_nodes = [];
+
+			foreach ( $content_nodes as $cn ) {
+				$type = $cn['type'] ?? '';
+				if ( 'image' === $type ) {
+					$right_nodes[] = $cn;
+				} else {
+					$left_nodes[] = $cn;
+				}
+			}
+
+			// Patterns go to the right column if left has content.
+			if ( ! empty( $pattern_refs ) && ! empty( $left_nodes ) ) {
+				foreach ( $pattern_refs as $pr ) {
+					$right_nodes[] = $pr;
+				}
+			} elseif ( ! empty( $pattern_refs ) ) {
+				foreach ( $pattern_refs as $pr ) {
+					$right_nodes[] = $pr;
+				}
+			}
+
+			if ( empty( $right_nodes ) ) {
+				$right_nodes[] = $this->node( 'text-basic', [ 'content' => '[RIGHT COLUMN CONTENT]' ] );
+			}
 
 			$grid_template = 'split-60-40' === $layout ? 'var(--grid-3-2)' : 'var(--grid-2)';
+
+			// Apply pattern column overrides if matched.
+			$left_overrides  = [];
+			$right_overrides = [];
+
+			if ( $matched_pattern ) {
+				$left_col  = $matched_pattern['columns']['left'] ?? [];
+				$right_col = $matched_pattern['columns']['right'] ?? [];
+
+				// Left column: alignment, padding, max_width.
+				if ( 'center-vertically' === ( $left_col['alignment'] ?? '' ) ) {
+					$left_overrides['_justifyContent'] = 'center';
+				}
+				if ( ! empty( $left_col['padding'] ) ) {
+					$left_overrides['_padding'] = is_array( $left_col['padding'] ) ? $left_col['padding'] : null;
+				}
+				if ( ! empty( $left_col['max_width'] ) ) {
+					$left_overrides['_widthMax'] = $left_col['max_width'];
+				}
+
+				// Right column: fill, padding.
+				if ( ! empty( $right_col['fill'] ) ) {
+					$right_overrides['_alignSelf'] = 'stretch';
+				}
+				if ( ! empty( $right_col['padding'] ) ) {
+					$right_overrides['_padding'] = is_array( $right_col['padding'] ) ? $right_col['padding'] : null;
+				}
+				if ( 'center-vertically' === ( $right_col['alignment'] ?? '' ) ) {
+					$right_overrides['_justifyContent'] = 'center';
+				}
+			}
+
+			$left_props  = [ 'label' => 'Left Column' ];
+			$right_props = [ 'label' => 'Right Column' ];
+			if ( ! empty( $left_overrides ) ) {
+				$left_props['style_overrides'] = $left_overrides;
+			}
+			if ( ! empty( $right_overrides ) ) {
+				$right_props['style_overrides'] = $right_overrides;
+			}
 
 			$section_children[] = [
 				'type'            => 'block',
 				'layout'          => 'grid',
 				'columns'         => 2,
 				'label'           => 'Split Grid',
-				'style_overrides' => [ '_gridTemplateColumns' => $grid_template, '_alignItems' => 'center' ],
+				'style_overrides' => [ '_gridTemplateColumns' => $grid_template, '_alignItems' => 'stretch' ],
 				'responsive'      => [ 'tablet' => 1, 'mobile' => 1 ],
 				'children'        => [
-					$this->node( 'block', [ 'label' => 'Left Column' ], $left_nodes ),
-					$this->node( 'block', [ 'label' => 'Right Column' ], $right_nodes ),
+					$this->node( 'block', $left_props, $left_nodes ),
+					$this->node( 'block', $right_props, $right_nodes ),
 				],
 			];
 		} elseif ( $is_grid ) {
@@ -217,8 +284,12 @@ final class SchemaSkeletonGenerator {
 		$section_children = $this->auto_wrap_buttons( $section_children );
 
 		// Wrap in section > container.
-		$section_overrides = [];
-		if ( 'hero' === $section_type ) {
+		// Start with pattern overrides, then layer plan-specific overrides on top.
+		$section_overrides   = $matched_pattern['section_overrides'] ?? [];
+		$container_overrides = $matched_pattern['container_overrides'] ?? [];
+
+		// Hero default overrides (if no pattern matched).
+		if ( 'hero' === $section_type && empty( $section_overrides ) ) {
 			$section_overrides['_minHeight']     = '80vh';
 			$section_overrides['_justifyContent'] = 'center';
 		}
@@ -226,21 +297,29 @@ final class SchemaSkeletonGenerator {
 		// Background image from design_plan.
 		$bg_image = $plan['background_image'] ?? '';
 		if ( '' !== $bg_image ) {
-			$section_overrides['_background'] = [
-				'image' => [ 'url' => $bg_image ],
-				'size'  => 'cover',
-				'position' => 'center center',
-			];
-			// Add default gradient overlay for dark sections with images.
+			$section_overrides['_background'] = array_merge(
+				$section_overrides['_background'] ?? [],
+				[
+					'image'    => [ 'url' => $bg_image ],
+					'size'     => 'cover',
+					'position' => 'center center',
+				]
+			);
 			if ( 'dark' === $background ) {
-				$section_overrides['_gradient'] = [
+				$gradient = $matched_pattern['gradient_overlay'] ?? [
 					'colors'  => [
 						[ 'color' => [ 'raw' => 'rgba(46, 46, 61, 0.8)' ], 'stop' => '0' ],
 						[ 'color' => [ 'raw' => 'rgba(142, 47, 34, 0.6)' ], 'stop' => '100' ],
 					],
 					'applyTo' => 'overlay',
 				];
+				$section_overrides['_gradient'] = $gradient;
 			}
+		}
+
+		$container_props = [ 'label' => ucfirst( $section_type ) . ' Content' ];
+		if ( ! empty( $container_overrides ) ) {
+			$container_props['style_overrides'] = $container_overrides;
 		}
 
 		$section = [
@@ -249,7 +328,7 @@ final class SchemaSkeletonGenerator {
 				'label'           => ucfirst( $section_type ),
 				'style_overrides' => ! empty( $section_overrides ) ? $section_overrides : null,
 			] ), [
-				$this->node( 'container', [ 'label' => ucfirst( $section_type ) . ' Content' ], $section_children ),
+				$this->node( 'container', $container_props, $section_children ),
 			] ),
 		];
 
@@ -268,6 +347,30 @@ final class SchemaSkeletonGenerator {
 		}
 
 		return $schema;
+	}
+
+	/**
+	 * Find a matching design pattern for the given section type and layout.
+	 *
+	 * @param string $section_type Section type (hero, split, features, etc.)
+	 * @param string $layout       Layout (centered, split-50-50, etc.)
+	 * @param string $background   Background hint (dark, light).
+	 * @return array|null Matched pattern or null.
+	 */
+	private function find_matching_pattern( string $section_type, string $layout, string $background ): ?array {
+		$tags = [ $background ];
+		if ( str_starts_with( $layout, 'split' ) ) {
+			$tags[] = 'split';
+		}
+		if ( str_starts_with( $layout, 'grid' ) ) {
+			$tags[] = 'grid';
+		}
+		if ( 'centered' === $layout ) {
+			$tags[] = 'centered';
+		}
+
+		$matches = DesignPatternService::find( $section_type, $tags, 1 );
+		return $matches[0] ?? null;
 	}
 
 	/**

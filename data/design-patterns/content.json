@@ -1,0 +1,73 @@
+{
+  "category": "generic",
+  "patterns": [
+    {
+      "id": "content-faq-accordion",
+      "name": "FAQ Accordion Section",
+      "description": "Section header + accordion with collapsible FAQ items.",
+      "tags": ["light", "faq", "accordion", "centered"],
+      "layout": "centered",
+      "background": "light",
+      "container_overrides": {
+        "_alignItems": "center",
+        "_textAlign": "center",
+        "_widthMax": "var(--max-width)"
+      },
+      "composition": [
+        {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
+        {"role": "heading", "type": "heading", "tag": "h2"},
+        {"role": "subtitle", "type": "text-basic"},
+        {"role": "accordion", "type": "accordion-nested", "note": "Each panel has a question title and answer content"}
+      ]
+    },
+    {
+      "id": "content-stats-counter",
+      "name": "Stats Counter Row",
+      "description": "Horizontal row of animated number counters with labels.",
+      "tags": ["light", "stats", "counters", "centered"],
+      "layout": "centered",
+      "background": "light",
+      "container_overrides": {
+        "_alignItems": "center",
+        "_textAlign": "center"
+      },
+      "composition": [
+        {"role": "heading", "type": "heading", "tag": "h2"},
+        {"role": "stats_grid", "type": "grid", "columns": 4, "pattern_name": "stat-counter", "repeat": 4}
+      ],
+      "patterns": {
+        "stat-counter": {
+          "wrapper_style": {"_alignItems": "center", "_textAlign": "center"},
+          "elements": [
+            {"role": "number", "type": "counter", "content": "data.count_to"},
+            {"role": "label", "type": "text-basic", "content": "data.label"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "content-about-team",
+      "name": "About / Team Section",
+      "description": "Section header + text content + team member grid.",
+      "tags": ["light", "about", "team", "grid"],
+      "layout": "centered",
+      "background": "light",
+      "composition": [
+        {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
+        {"role": "heading", "type": "heading", "tag": "h2"},
+        {"role": "paragraph", "type": "text-basic"},
+        {"role": "team_grid", "type": "grid", "columns": 3, "pattern_name": "team-member", "repeat": 3}
+      ],
+      "patterns": {
+        "team-member": {
+          "wrapper_style": {"_alignItems": "center", "_textAlign": "center"},
+          "elements": [
+            {"role": "photo", "type": "image", "style": {"_border": {"radius": {"top": "var(--radius-circle)", "right": "var(--radius-circle)", "bottom": "var(--radius-circle)", "left": "var(--radius-circle)"}}, "_width": "120px", "_height": "120px", "_objectFit": "cover"}},
+            {"role": "name", "type": "heading", "tag": "h4", "content": "data.name"},
+            {"role": "title", "type": "text-basic", "content": "data.title"}
+          ]
+        }
+      }
+    }
+  ]
+}
