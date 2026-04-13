@@ -48,6 +48,11 @@ final class DesignPatternService {
 		}
 
 		foreach ( $files as $file ) {
+			// Skip the schema file itself.
+			if ( basename( $file ) === '_schema.json' ) {
+				continue;
+			}
+
 			$json = file_get_contents( $file ); // phpcs:ignore
 			if ( ! is_string( $json ) ) {
 				continue;
@@ -57,6 +62,11 @@ final class DesignPatternService {
 				continue;
 			}
 
+			// In debug mode, validate against the JSON Schema so contributors catch malformed patterns.
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				self::validate_against_schema( $file, $json );
+			}
+
 			$category = $data['category'] ?? 'generic';
 			foreach ( $data['patterns'] as $pattern ) {
 				self::$all_patterns[] = array_merge( $pattern, [ 'category' => $category ] );
@@ -64,6 +74,58 @@ final class DesignPatternService {
 		}
 
 		return self::$all_patterns;
+	}
+
+	/**
+	 * Validate a pattern file against the JSON Schema.
+	 *
+	 * Only runs in WP_DEBUG. Violations are logged via error_log so contributors
+	 * notice malformed patterns while developing. Production is never affected.
+	 *
+	 * @param string $file     Absolute path to the pattern file (for error messages).
+	 * @param string $raw_json Raw JSON contents.
+	 */
+	private static function validate_against_schema( string $file, string $raw_json ): void {
+		// Opis JSON Schema is optional — skip silently if the vendor autoloader didn't load it.
+		if ( ! class_exists( '\Opis\JsonSchema\Validator' ) ) {
+			return;
+		}
+
+		$schema_path = dirname( $file ) . '/_schema.json';
+		if ( ! is_readable( $schema_path ) ) {
+			return;
+		}
+
+		try {
+			$validator = new \Opis\JsonSchema\Validator();
+			$schema    = file_get_contents( $schema_path ); // phpcs:ignore
+			if ( ! is_string( $schema ) ) {
+				return;
+			}
+
+			$data_obj = json_decode( $raw_json );
+			if ( null === $data_obj ) {
+				return;
+			}
+
+			$result = $validator->validate( $data_obj, $schema );
+			if ( ! $result->isValid() ) {
+				$error = $result->error();
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional debug logging.
+				error_log( sprintf(
+					'BricksMCP: Design pattern file %s failed schema validation: %s',
+					basename( $file ),
+					$error ? $error->message() : 'unknown'
+				) );
+			}
+		} catch ( \Throwable $e ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional debug logging.
+			error_log( sprintf(
+				'BricksMCP: Design pattern schema validation threw on %s: %s',
+				basename( $file ),
+				$e->getMessage()
+			) );
+		}
 	}
 
 	/**

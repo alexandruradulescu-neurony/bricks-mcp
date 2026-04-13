@@ -1,0 +1,125 @@
+<?php
+/**
+ * Design pipeline health check.
+ *
+ * Verifies the pipeline's data files (design patterns, element defaults,
+ * hierarchy rules, class context rules) and the StarterClassesService
+ * are loadable and valid.
+ *
+ * @package BricksMCP
+ * @license GPL-2.0-or-later
+ */
+
+declare(strict_types=1);
+
+namespace BricksMCP\Admin\Checks;
+
+use BricksMCP\Admin\DiagnosticCheck;
+use BricksMCP\MCP\Services\StarterClassesService;
+
+// Prevent direct access.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Verifies that the design build pipeline's static data and services
+ * are healthy on this install.
+ */
+class DesignPipelineCheck implements DiagnosticCheck {
+
+	public function id(): string {
+		return 'design_pipeline';
+	}
+
+	public function label(): string {
+		return __( 'Design Pipeline Health', 'bricks-mcp' );
+	}
+
+	public function category(): string {
+		return 'pipeline';
+	}
+
+	public function dependencies(): array {
+		return array();
+	}
+
+	public function run(): array {
+		$base = defined( 'BRICKS_MCP_PLUGIN_DIR' ) ? BRICKS_MCP_PLUGIN_DIR : plugin_dir_path( __DIR__ . '/../../../' );
+
+		$problems = array();
+
+		// 1. data/design-patterns/ readable + at least one pattern parses.
+		$patterns_dir = $base . 'data/design-patterns';
+		if ( ! is_dir( $patterns_dir ) || ! is_readable( $patterns_dir ) ) {
+			$problems[] = sprintf( __( 'Design patterns directory missing or unreadable: %s', 'bricks-mcp' ), $patterns_dir );
+		} else {
+			$pattern_files = glob( $patterns_dir . '/*/*.json' );
+			if ( empty( $pattern_files ) ) {
+				$problems[] = __( 'No design pattern JSON files found in data/design-patterns/.', 'bricks-mcp' );
+			} else {
+				$first  = $pattern_files[0];
+				$json   = file_get_contents( $first ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+				$parsed = is_string( $json ) ? json_decode( $json, true ) : null;
+				if ( ! is_array( $parsed ) ) {
+					$problems[] = sprintf( __( 'First design pattern failed to parse as JSON: %s', 'bricks-mcp' ), basename( $first ) );
+				}
+			}
+		}
+
+		// 2. StarterClassesService returns >= 13 entries.
+		try {
+			$starters = StarterClassesService::get_starter_classes();
+			if ( ! is_array( $starters ) || count( $starters ) < 13 ) {
+				$problems[] = sprintf(
+					__( 'StarterClassesService returned %d classes (expected at least 13).', 'bricks-mcp' ),
+					is_array( $starters ) ? count( $starters ) : 0
+				);
+			}
+		} catch ( \Throwable $e ) {
+			$problems[] = sprintf( __( 'StarterClassesService threw: %s', 'bricks-mcp' ), $e->getMessage() );
+		}
+
+		// 3. Three core JSON data files load and parse.
+		$required_files = [
+			'data/element-defaults.json',
+			'data/element-hierarchy-rules.json',
+			'data/class-context-rules.json',
+		];
+		foreach ( $required_files as $rel ) {
+			$path = $base . $rel;
+			if ( ! is_readable( $path ) ) {
+				$problems[] = sprintf( __( 'Required data file missing or unreadable: %s', 'bricks-mcp' ), $rel );
+				continue;
+			}
+			$contents = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$parsed   = is_string( $contents ) ? json_decode( $contents, true ) : null;
+			if ( ! is_array( $parsed ) ) {
+				$problems[] = sprintf( __( 'Data file failed to parse as JSON: %s', 'bricks-mcp' ), $rel );
+			}
+		}
+
+		if ( ! empty( $problems ) ) {
+			return array(
+				'id'        => $this->id(),
+				'label'     => $this->label(),
+				'status'    => 'fail',
+				'message'   => implode( ' / ', $problems ),
+				'fix_steps' => array(
+					__( 'Reinstall or update the Bricks MCP plugin to restore missing data files.', 'bricks-mcp' ),
+					__( 'If the problem persists, check file permissions on the plugin directory.', 'bricks-mcp' ),
+				),
+				'category'  => $this->category(),
+			);
+		}
+
+		return array(
+			'id'        => $this->id(),
+			'label'     => $this->label(),
+			'status'    => 'pass',
+			'message'   => __( 'Design patterns, starter classes, and pipeline data files are healthy.', 'bricks-mcp' ),
+			'fix_steps' => array(),
+			'category'  => $this->category(),
+		);
+	}
+}

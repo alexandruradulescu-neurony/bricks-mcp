@@ -119,137 +119,14 @@ final class Router {
 	private MenuService $menu_service;
 
 	/**
-	 * Component handler instance.
+	 * Handler instances keyed by short name.
 	 *
-	 * @var Handlers\ComponentHandler
-	 */
-	private Handlers\ComponentHandler $component_handler;
-
-	/**
-	 * WooCommerce handler instance.
+	 * Bricks-only handlers register their tools deferred (see register_bricks_tools).
+	 * Universally-available handlers (onboarding) register their tools immediately.
 	 *
-	 * @var Handlers\WooCommerceHandler
+	 * @var array<string, object>
 	 */
-	private Handlers\WooCommerceHandler $woocommerce_handler;
-
-	/**
-	 * Schema handler instance.
-	 *
-	 * @var Handlers\SchemaHandler
-	 */
-	private Handlers\SchemaHandler $schema_handler;
-
-	/**
-	 * Menu handler instance.
-	 *
-	 * @var Handlers\MenuHandler
-	 */
-	private Handlers\MenuHandler $menu_handler;
-
-	/**
-	 * Page handler instance.
-	 *
-	 * @var Handlers\PageHandler
-	 */
-	private Handlers\PageHandler $page_handler;
-
-	/**
-	 * Element handler instance.
-	 *
-	 * @var Handlers\ElementHandler
-	 */
-	private Handlers\ElementHandler $element_handler;
-
-	/**
-	 * Template handler instance.
-	 *
-	 * @var Handlers\TemplateHandler
-	 */
-	private Handlers\TemplateHandler $template_handler;
-
-	/**
-	 * Global class handler instance.
-	 *
-	 * @var Handlers\GlobalClassHandler
-	 */
-	private Handlers\GlobalClassHandler $global_class_handler;
-
-	/**
-	 * Design system handler instance.
-	 *
-	 * @var Handlers\DesignSystemHandler
-	 */
-	private Handlers\DesignSystemHandler $design_system_handler;
-
-	/**
-	 * WordPress handler instance.
-	 *
-	 * @var Handlers\WordPressHandler
-	 */
-	private Handlers\WordPressHandler $wordpress_handler;
-
-	/**
-	 * MetaBox handler instance.
-	 *
-	 * @var Handlers\MetaBoxHandler
-	 */
-	private Handlers\MetaBoxHandler $metabox_handler;
-
-	/**
-	 * Bricks tool handler instance.
-	 *
-	 * @var Handlers\BricksToolHandler
-	 */
-	private Handlers\BricksToolHandler $bricks_tool_handler;
-
-	/**
-	 * Media handler instance.
-	 *
-	 * @var Handlers\MediaHandler
-	 */
-	private Handlers\MediaHandler $media_handler;
-
-	/**
-	 * Font handler instance.
-	 *
-	 * @var Handlers\FontHandler
-	 */
-	private Handlers\FontHandler $font_handler;
-
-	/**
-	 * Code handler instance.
-	 *
-	 * @var Handlers\CodeHandler
-	 */
-	private Handlers\CodeHandler $code_handler;
-
-	/**
-	 * Build handler instance.
-	 *
-	 * @var Handlers\BuildHandler
-	 */
-	private Handlers\BuildHandler $build_handler;
-
-	/**
-	 * Proposal handler instance.
-	 *
-	 * @var Handlers\ProposalHandler
-	 */
-	private Handlers\ProposalHandler $proposal_handler;
-
-	/**
-	 * Onboarding handler instance.
-	 *
-	 * @var OnboardingHandler
-	 */
-	private OnboardingHandler $onboarding_handler;
-
-	/**
-	 * Verify handler instance.
-	 *
-	 * @var Handlers\VerifyHandler
-	 */
-	private Handlers\VerifyHandler $verify_handler;
+	private array $handlers = [];
 
 	/**
 	 * Pending action service for token-based destructive action confirmation.
@@ -272,46 +149,43 @@ final class Router {
 
 		$require_bricks = \Closure::fromCallable( array( $this, 'require_bricks' ) );
 
-		// Existing handlers.
-		$this->component_handler    = new Handlers\ComponentHandler( $this->bricks_service, $require_bricks );
-		$this->woocommerce_handler  = new Handlers\WooCommerceHandler( $this->bricks_service, $this->schema_generator, $require_bricks );
-		$this->schema_handler       = new Handlers\SchemaHandler( $this->schema_generator, $this->bricks_service );
-		$this->menu_handler         = new Handlers\MenuHandler( $this->menu_service, $require_bricks );
-		$this->page_handler         = new Handlers\PageHandler( $this->bricks_service, $this->validation_service, $require_bricks );
-		$this->element_handler      = new Handlers\ElementHandler( $this->bricks_service, $require_bricks );
-		$this->template_handler     = new Handlers\TemplateHandler( $this->bricks_service, $require_bricks );
-		$this->global_class_handler = new Handlers\GlobalClassHandler( $this->bricks_service, $require_bricks );
-		$this->design_system_handler = new Handlers\DesignSystemHandler( $this->bricks_service, $require_bricks );
+		// Build pipeline shared dependencies (created once, injected into multiple handlers).
+		$design_validator     = new DesignSchemaValidator( $this->schema_generator );
+		$class_resolver       = new ClassIntentResolver( $this->bricks_service->get_global_class_service() );
+		$schema_expander      = new SchemaExpander();
+		$element_settings_gen = new ElementSettingsGenerator( $this->schema_generator, $this->media_service, $class_resolver );
+		$proposal_service     = new ProposalService( $this->bricks_service->get_global_class_service(), $this->schema_generator, $this->bricks_service );
+		$schema_handler       = new Handlers\SchemaHandler( $this->schema_generator, $this->bricks_service );
 
-		// New extracted handlers.
-		$this->wordpress_handler    = new Handlers\WordPressHandler();
-		$this->metabox_handler      = new Handlers\MetaBoxHandler();
-		$this->bricks_tool_handler  = new Handlers\BricksToolHandler( $this->bricks_service, $this->schema_handler, $require_bricks );
-		$this->media_handler        = new Handlers\MediaHandler( $this->media_service, $require_bricks );
-		$this->font_handler         = new Handlers\FontHandler( $this->bricks_service, $require_bricks );
-		$this->code_handler         = new Handlers\CodeHandler( $this->bricks_service, $require_bricks );
-
-		// Build pipeline handler.
-		$design_validator        = new DesignSchemaValidator( $this->schema_generator );
-		$class_resolver          = new ClassIntentResolver( $this->bricks_service->get_global_class_service() );
-		$schema_expander         = new SchemaExpander();
-		$element_settings_gen    = new ElementSettingsGenerator( $this->schema_generator, $this->media_service, $class_resolver );
-		$proposal_service        = new ProposalService( $this->bricks_service->get_global_class_service(), $this->schema_generator, $this->bricks_service );
-		$this->proposal_handler  = new Handlers\ProposalHandler( $proposal_service, $require_bricks );
-		$this->build_handler     = new Handlers\BuildHandler(
-			$this->bricks_service,
-			$design_validator,
-			$class_resolver,
-			$schema_expander,
-			$element_settings_gen,
-			$proposal_service
-		);
-
-		// Onboarding handler.
-		$this->onboarding_handler = new OnboardingHandler( new OnboardingService( $this->bricks_service ) );
-
-		// Verify handler.
-		$this->verify_handler = new Handlers\VerifyHandler( $this->bricks_service, $require_bricks );
+		// All handlers indexed by short name.
+		$this->handlers = [
+			'component'     => new Handlers\ComponentHandler( $this->bricks_service, $require_bricks ),
+			'woocommerce'   => new Handlers\WooCommerceHandler( $this->bricks_service, $this->schema_generator, $require_bricks ),
+			'schema'        => $schema_handler,
+			'menu'          => new Handlers\MenuHandler( $this->menu_service, $require_bricks ),
+			'page'          => new Handlers\PageHandler( $this->bricks_service, $this->validation_service, $require_bricks ),
+			'element'       => new Handlers\ElementHandler( $this->bricks_service, $require_bricks ),
+			'template'      => new Handlers\TemplateHandler( $this->bricks_service, $require_bricks ),
+			'global_class'  => new Handlers\GlobalClassHandler( $this->bricks_service, $require_bricks ),
+			'design_system' => new Handlers\DesignSystemHandler( $this->bricks_service, $require_bricks ),
+			'wordpress'     => new Handlers\WordPressHandler(),
+			'metabox'       => new Handlers\MetaBoxHandler(),
+			'bricks_tool'   => new Handlers\BricksToolHandler( $this->bricks_service, $schema_handler, $require_bricks ),
+			'media'         => new Handlers\MediaHandler( $this->media_service, $require_bricks ),
+			'font'          => new Handlers\FontHandler( $this->bricks_service, $require_bricks ),
+			'code'          => new Handlers\CodeHandler( $this->bricks_service, $require_bricks ),
+			'proposal'      => new Handlers\ProposalHandler( $proposal_service, $require_bricks ),
+			'build'         => new Handlers\BuildHandler(
+				$this->bricks_service,
+				$design_validator,
+				$class_resolver,
+				$schema_expander,
+				$element_settings_gen,
+				$proposal_service
+			),
+			'onboarding'    => new OnboardingHandler( new OnboardingService( $this->bricks_service ) ),
+			'verify'        => new Handlers\VerifyHandler( $this->bricks_service, $require_bricks ),
+		];
 
 		$this->pending_action_service = new PendingActionService();
 
@@ -342,10 +216,12 @@ final class Router {
 	 * @return void
 	 */
 	private function register_default_tools(): void {
-		// Onboarding handler - doesn't need Bricks, reads WordPress options only.
-		$this->onboarding_handler->register( $this->registry );
+		// Universal handlers (don't require Bricks Builder).
+		$this->handlers['onboarding']->register( $this->registry );
+		$this->handlers['wordpress']->register( $this->registry );
+		$this->handlers['metabox']->register( $this->registry );
 
-		// Get site info tool.
+		// Two Router-owned tools that don't fit into a handler (introspection/auth concerns).
 		$this->register_tool(
 			'get_site_info',
 			__( "Get WordPress site information including design tokens, child theme CSS, and color palette.\n\nActions: info (default), diagnose.", 'bricks-mcp' ),
@@ -363,7 +239,6 @@ final class Router {
 			array( 'readOnlyHint' => true )
 		);
 
-		// Confirm destructive action tool (token-based confirmation).
 		$this->register_tool(
 			'confirm_destructive_action',
 			__( "Confirm a destructive action using a one-time token. When a destructive operation (delete, bulk replace, cascade remove, etc.) is requested, the server returns a confirmation token instead of executing immediately. Present the action description to the user and call this tool with the token only after they approve.\n\nThe token expires after 2 minutes and can only be used once.", 'bricks-mcp' ),
@@ -380,121 +255,6 @@ final class Router {
 			),
 			array( $this, 'tool_confirm_destructive_action' ),
 			array( 'destructiveHint' => true )
-		);
-
-		// WordPress consolidated tool (replaces get_posts, get_post, get_users, get_plugins).
-		$this->register_tool(
-			'wordpress',
-			__( "Query and manage WordPress data.\n\nActions: get_posts, get_post, get_users, get_plugins, activate_plugin, deactivate_plugin, create_user, update_user.", 'bricks-mcp' ),
-			array(
-				'type'       => 'object',
-				'properties' => array(
-					'action'         => array(
-						'type'        => 'string',
-						'enum'        => array( 'get_posts', 'get_post', 'get_users', 'get_plugins', 'activate_plugin', 'deactivate_plugin', 'create_user', 'update_user' ),
-						'description' => __( 'Action to perform', 'bricks-mcp' ),
-					),
-					'post_type'      => array(
-						'type'        => 'string',
-						'description' => __( 'Post type to query (get_posts: default post)', 'bricks-mcp' ),
-					),
-					'posts_per_page' => array(
-						'type'        => 'integer',
-						'description' => __( 'Number of posts to return (get_posts: default 10, max 100)', 'bricks-mcp' ),
-					),
-					'orderby'        => array(
-						'type'        => 'string',
-						'description' => __( 'Order by field (get_posts: date, title, modified, etc.)', 'bricks-mcp' ),
-					),
-					'order'          => array(
-						'type'        => 'string',
-						'enum'        => array( 'ASC', 'DESC' ),
-						'description' => __( 'Sort order (get_posts: ASC or DESC)', 'bricks-mcp' ),
-					),
-					'id'             => array(
-						'type'        => 'integer',
-						'description' => __( 'Post ID (get_post: required)', 'bricks-mcp' ),
-					),
-					'role'           => array(
-						'type'        => 'string',
-						'description' => __( 'Filter by user role (get_users)', 'bricks-mcp' ),
-					),
-					'number'         => array(
-						'type'        => 'integer',
-						'description' => __( 'Number of users to return (get_users: default 10)', 'bricks-mcp' ),
-					),
-					'status'         => array(
-						'type'        => 'string',
-						'enum'        => array( 'all', 'active', 'inactive' ),
-						'description' => __( 'Filter by plugin status (get_plugins)', 'bricks-mcp' ),
-					),
-					'include_pii'    => array(
-						'type'        => 'boolean',
-						'description' => __( 'Include sensitive fields (email, login). Warning: data may be logged by AI services. (get_users: default false)', 'bricks-mcp' ),
-					),
-					'plugin_file'    => array(
-						'type'        => 'string',
-						'description' => __( 'Plugin file path relative to plugins directory (activate_plugin, deactivate_plugin: required, e.g. "akismet/akismet.php")', 'bricks-mcp' ),
-					),
-					'username'       => array(
-						'type'        => 'string',
-						'description' => __( 'Username (create_user: required)', 'bricks-mcp' ),
-					),
-					'email'          => array(
-						'type'        => 'string',
-						'description' => __( 'User email (create_user: required, update_user: optional)', 'bricks-mcp' ),
-					),
-					'password'       => array(
-						'type'        => 'string',
-						'description' => __( 'User password (create_user: optional, auto-generated if omitted)', 'bricks-mcp' ),
-					),
-					'display_name'   => array(
-						'type'        => 'string',
-						'description' => __( 'Display name (create_user, update_user: optional)', 'bricks-mcp' ),
-					),
-					'user_role'      => array(
-						'type'        => 'string',
-						'description' => __( 'User role (create_user: default "subscriber", update_user: optional)', 'bricks-mcp' ),
-					),
-					'user_id'        => array(
-						'type'        => 'integer',
-						'description' => __( 'User ID (update_user: required)', 'bricks-mcp' ),
-					),
-				),
-				'required'   => array( 'action' ),
-			),
-			array( $this->wordpress_handler, 'handle' )
-		);
-
-		// MetaBox integration tool (read-only).
-		$this->register_tool(
-			'metabox',
-			__( "Read Meta Box custom fields and field groups.\n\nActions: list_field_groups, get_fields, get_field_value, get_dynamic_tags.", 'bricks-mcp' ),
-			array(
-				'type'       => 'object',
-				'properties' => array(
-					'action'    => array(
-						'type'        => 'string',
-						'enum'        => array( 'list_field_groups', 'get_fields', 'get_field_value', 'get_dynamic_tags' ),
-						'description' => __( 'Action to perform', 'bricks-mcp' ),
-					),
-					'post_type' => array(
-						'type'        => 'string',
-						'description' => __( 'Post type to get fields for (get_fields: required, get_dynamic_tags: optional filter)', 'bricks-mcp' ),
-					),
-					'post_id'   => array(
-						'type'        => 'integer',
-						'description' => __( 'Post ID to read field values from (get_field_value: required)', 'bricks-mcp' ),
-					),
-					'field_id'  => array(
-						'type'        => 'string',
-						'description' => __( 'MetaBox field ID (get_field_value: required)', 'bricks-mcp' ),
-					),
-				),
-				'required'   => array( 'action' ),
-			),
-			array( $this->metabox_handler, 'handle' ),
-			array( 'readOnlyHint' => true )
 		);
 
 		/**
@@ -743,13 +503,21 @@ final class Router {
 			return null;
 		}
 
+		// Page ID for the suggested next call (if available).
+		$page_id     = (int) ( $arguments['post_id'] ?? $arguments['page_id'] ?? 0 );
+		$next_target = $page_id > 0 ? sprintf( 'page_id=%d', $page_id ) : 'page_id=<your_page_id>';
+
 		// Check 1: Any root element is a section.
 		foreach ( $elements as $el ) {
 			$el_name = $el['name'] ?? '';
 			if ( 'section' === $el_name ) {
 				return Response::error(
 					'bricks_mcp_use_build_from_schema',
-					__( 'Section elements must be built using build_from_schema. Convert your section into a design schema and call build_from_schema instead. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
+					sprintf(
+						/* translators: %s: Suggested next call (e.g. propose_design(page_id=42, description='...')). */
+						__( 'Section elements must be built using build_from_schema. Start the 4-step pipeline now: call %s to discover site context, then again with a design_plan, then build_from_schema. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
+						sprintf( "propose_design(%s, description='<describe the section>')", $next_target )
+					),
 					422
 				);
 			}
@@ -761,8 +529,10 @@ final class Router {
 			return Response::error(
 				'bricks_mcp_use_build_from_schema',
 				sprintf(
-					__( 'Complex content (%d elements) must be built using build_from_schema. Convert your elements into a design schema and call build_from_schema instead. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
-					$count
+					/* translators: 1: Element count, 2: Suggested next call. */
+					__( 'Complex content (%1$d elements) must be built using build_from_schema. Start the 4-step pipeline now: call %2$s to discover site context, then again with a design_plan, then build_from_schema. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
+					$count,
+					sprintf( "propose_design(%s, description='<describe the section>')", $next_target )
 				),
 				422
 			);
@@ -1062,21 +832,18 @@ final class Router {
 			return;
 		}
 
-		$this->bricks_tool_handler->register( $this->registry );
-		$this->page_handler->register( $this->registry );
-		$this->element_handler->register( $this->registry );
-		$this->template_handler->register( $this->registry );
-		$this->global_class_handler->register( $this->registry );
-		$this->design_system_handler->register( $this->registry );
-		$this->media_handler->register( $this->registry );
-		$this->menu_handler->register( $this->registry );
-		$this->component_handler->register( $this->registry );
-		$this->woocommerce_handler->register( $this->registry );
-		$this->font_handler->register( $this->registry );
-		$this->code_handler->register( $this->registry );
-		$this->proposal_handler->register( $this->registry );
-		$this->build_handler->register( $this->registry );
-		$this->verify_handler->register( $this->registry );
+		// Handlers that register Bricks-only tools. Order matches the v3.x grouping.
+		$bricks_handler_keys = [
+			'bricks_tool', 'page', 'element', 'template', 'global_class',
+			'design_system', 'media', 'menu', 'component', 'woocommerce',
+			'font', 'code', 'proposal', 'build', 'verify',
+		];
+
+		foreach ( $bricks_handler_keys as $key ) {
+			if ( isset( $this->handlers[ $key ] ) && method_exists( $this->handlers[ $key ], 'register' ) ) {
+				$this->handlers[ $key ]->register( $this->registry );
+			}
+		}
 	}
 
 	/**

@@ -25,10 +25,48 @@ final class ProposalService {
 	private const TTL = 600; // 10 minutes.
 
 	/**
-	 * Hash of the last discovery site_context. Used to detect unchanged data.
+	 * Request-scoped cache (first-level).
 	 * @var string|null
 	 */
 	private static ?string $last_discovery_hash = null;
+
+	/**
+	 * Cross-request discovery cache (second-level).
+	 *
+	 * Stored in a user-scoped transient with the same 30-min TTL as
+	 * PrerequisiteGateService. Survives across MCP HTTP requests so the
+	 * slim-response optimization also applies to the *first* discovery call
+	 * in a subsequent request (not just second+ calls in the same process).
+	 */
+	private const DISCOVERY_CACHE_TTL = 1800;
+
+	/**
+	 * Get the transient key for the current user.
+	 */
+	private static function discovery_cache_key(): string {
+		return 'bricks_mcp_discovery_hash_' . get_current_user_id();
+	}
+
+	/**
+	 * Read the persisted discovery hash from the transient.
+	 *
+	 * Falls back to the static request-scoped hash when the transient is empty.
+	 */
+	private static function get_persisted_discovery_hash(): ?string {
+		if ( null !== self::$last_discovery_hash ) {
+			return self::$last_discovery_hash;
+		}
+		$value = get_transient( self::discovery_cache_key() );
+		return is_string( $value ) && $value !== '' ? $value : null;
+	}
+
+	/**
+	 * Persist the discovery hash across requests.
+	 */
+	private static function persist_discovery_hash( string $hash ): void {
+		self::$last_discovery_hash = $hash;
+		set_transient( self::discovery_cache_key(), $hash, self::DISCOVERY_CACHE_TTL );
+	}
 
 	/**
 	 * Valid section types for design_plan.
@@ -290,12 +328,15 @@ final class ProposalService {
 			] ),
 		];
 
-		$context_hash = md5( wp_json_encode( $site_context ) );
+		$context_hash    = md5( wp_json_encode( $site_context ) );
+		$previous_hash   = self::get_persisted_discovery_hash();
+		$context_changed = ( null === $previous_hash ) || ( $context_hash !== $previous_hash );
 
-		// If site_context is unchanged from a previous discovery, return slim response.
-		if ( null !== self::$last_discovery_hash && $context_hash === self::$last_discovery_hash ) {
-			$response['site_context_hash'] = $context_hash;
-			$response['site_context_note'] = 'Unchanged from previous discovery — use cached context. Only reference_patterns are new (matched to your description).';
+		// If site_context is unchanged from a previous discovery (this request OR prior one), return slim response.
+		if ( ! $context_changed ) {
+			$response['site_context_hash']    = $context_hash;
+			$response['site_context_changed'] = false;
+			$response['site_context_note']    = 'Unchanged from previous discovery — use cached context. Only reference_patterns are new (matched to your description).';
 			$response['next_step'] .= ' For subsequent sections, you can skip Phase 1 and call propose_design directly with a design_plan.';
 			$response['available_layouts']  = self::VALID_LAYOUTS;
 			$response['section_types']      = self::VALID_SECTION_TYPES;
@@ -303,16 +344,17 @@ final class ProposalService {
 			return $response;
 		}
 
-		// First discovery or site data changed — return full response.
-		self::$last_discovery_hash = $context_hash;
+		// First discovery or site data changed — return full response and persist the hash.
+		self::persist_discovery_hash( $context_hash );
 
-		$response['available_elements'] = self::ELEMENT_CAPABILITIES;
-		$response['available_layouts']  = self::VALID_LAYOUTS;
-		$response['section_types']      = self::VALID_SECTION_TYPES;
-		$response['building_rules']     = self::BUILDING_RULES;
-		$response['site_context']       = $site_context;
-		$response['site_context_hash']  = $context_hash;
-		$response['design_plan_format'] = $this->get_design_plan_format();
+		$response['available_elements']   = self::ELEMENT_CAPABILITIES;
+		$response['available_layouts']    = self::VALID_LAYOUTS;
+		$response['section_types']        = self::VALID_SECTION_TYPES;
+		$response['building_rules']       = self::BUILDING_RULES;
+		$response['site_context']         = $site_context;
+		$response['site_context_hash']    = $context_hash;
+		$response['site_context_changed'] = true;
+		$response['design_plan_format']   = $this->get_design_plan_format();
 		$response['next_step'] .= ' For subsequent sections, you can skip Phase 1 and call propose_design directly with a design_plan.';
 
 		return $response;

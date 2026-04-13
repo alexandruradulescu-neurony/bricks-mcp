@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP\Handlers;
 
+use BricksMCP\MCP\ToolRegistry;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -436,6 +438,94 @@ final class WordPressHandler {
 			'user_id'        => $user_id,
 			'updated_fields' => $updated_fields,
 			'message'        => 'User updated successfully.',
+		);
+	}
+
+	/**
+	 * Register the wordpress tool.
+	 */
+	public function register( ToolRegistry $registry ): void {
+		$registry->register(
+			'wordpress',
+			__( "Query and manage WordPress data.\n\nActions: get_posts, get_post, get_users, get_plugins, activate_plugin, deactivate_plugin, create_user, update_user.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'         => array(
+						'type'        => 'string',
+						'enum'        => array( 'get_posts', 'get_post', 'get_users', 'get_plugins', 'activate_plugin', 'deactivate_plugin', 'create_user', 'update_user' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'post_type'      => array(
+						'type'        => 'string',
+						'description' => __( 'Post type to query (get_posts: default post)', 'bricks-mcp' ),
+					),
+					'posts_per_page' => array(
+						'type'        => 'integer',
+						'description' => __( 'Number of posts to return (get_posts: default 10, max 100)', 'bricks-mcp' ),
+					),
+					'orderby'        => array(
+						'type'        => 'string',
+						'description' => __( 'Order by field (get_posts: date, title, modified, etc.)', 'bricks-mcp' ),
+					),
+					'order'          => array(
+						'type'        => 'string',
+						'enum'        => array( 'ASC', 'DESC' ),
+						'description' => __( 'Sort order (get_posts: ASC or DESC)', 'bricks-mcp' ),
+					),
+					'id'             => array(
+						'type'        => 'integer',
+						'description' => __( 'Post ID (get_post: required)', 'bricks-mcp' ),
+					),
+					'role'           => array(
+						'type'        => 'string',
+						'description' => __( 'Filter by user role (get_users)', 'bricks-mcp' ),
+					),
+					'number'         => array(
+						'type'        => 'integer',
+						'description' => __( 'Number of users to return (get_users: default 10)', 'bricks-mcp' ),
+					),
+					'include_pii'    => array(
+						'type'        => 'boolean',
+						'description' => __( 'Include sensitive fields (email, login). Warning: data may be logged by AI services. (get_users: default false)', 'bricks-mcp' ),
+					),
+					'status'         => array(
+						'type'        => 'string',
+						'enum'        => array( 'all', 'active', 'inactive' ),
+						'description' => __( 'Filter by plugin status (get_plugins)', 'bricks-mcp' ),
+					),
+					'plugin_file'    => array(
+						'type'        => 'string',
+						'description' => __( 'Plugin file path relative to plugins directory (activate_plugin, deactivate_plugin: required, e.g. "akismet/akismet.php")', 'bricks-mcp' ),
+					),
+					'username'       => array(
+						'type'        => 'string',
+						'description' => __( 'Username (create_user: required)', 'bricks-mcp' ),
+					),
+					'email'          => array(
+						'type'        => 'string',
+						'description' => __( 'User email (create_user: required, update_user: optional)', 'bricks-mcp' ),
+					),
+					'password'       => array(
+						'type'        => 'string',
+						'description' => __( 'User password (create_user: optional, auto-generated if omitted)', 'bricks-mcp' ),
+					),
+					'display_name'   => array(
+						'type'        => 'string',
+						'description' => __( 'Display name (create_user, update_user: optional)', 'bricks-mcp' ),
+					),
+					'user_role'      => array(
+						'type'        => 'string',
+						'description' => __( 'User role (create_user: default "subscriber", update_user: optional)', 'bricks-mcp' ),
+					),
+					'user_id'        => array(
+						'type'        => 'integer',
+						'description' => __( 'User ID (update_user: required)', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' )
 		);
 	}
 }

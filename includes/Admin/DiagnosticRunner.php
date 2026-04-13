@@ -13,6 +13,7 @@ namespace BricksMCP\Admin;
 use BricksMCP\Admin\Checks\AppPasswordsAvailableCheck;
 use BricksMCP\Admin\Checks\AppPasswordsUserCheck;
 use BricksMCP\Admin\Checks\BricksActiveCheck;
+use BricksMCP\Admin\Checks\DesignPipelineCheck;
 use BricksMCP\Admin\Checks\HostingProviderCheck;
 use BricksMCP\Admin\Checks\HttpsCheck;
 use BricksMCP\Admin\Checks\McpEndpointCheck;
@@ -70,6 +71,7 @@ class DiagnosticRunner {
 		$this->register( new BricksActiveCheck() );
 		$this->register( new McpEndpointCheck() );
 		$this->register( new PhpTimeoutCheck() );
+		$this->register( new DesignPipelineCheck() );
 
 		/**
 		 * Filter the registered diagnostic checks.

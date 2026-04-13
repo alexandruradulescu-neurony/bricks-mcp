@@ -23,10 +23,24 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Uses a WP transient keyed by user ID to track which prerequisite
  * calls have been made. Flags expire after 30 minutes of inactivity.
  *
- * Supports tiered gating:
- * - 'direct'      → only site_info required (text edits, moves, property changes)
- * - 'instructed'  → site_info + classes required (explicit structure builds)
- * - 'full'        → site_info + classes + variables required (design builds)
+ * ## Tier inclusion hierarchy
+ *
+ * Tiers are strict supersets — each tier includes all flags from the tier above:
+ *
+ *     direct      ⊂ instructed ⊂ full ⊂ design
+ *     site_info   + classes    + variables + (design_discovery, design_plan)
+ *
+ * | Tier         | Required flags                                                                | Used by                                          |
+ * |--------------|-------------------------------------------------------------------------------|--------------------------------------------------|
+ * | `direct`     | site_info                                                                      | element:update, element:bulk_update              |
+ * | `instructed` | direct + classes                                                               | element:add, element:bulk_add, page:append, etc. |
+ * | `full`       | instructed + variables                                                         | propose_design (Phase 1 + Phase 2)               |
+ * | `design`     | full + design_discovery + design_plan                                          | build_from_schema                                |
+ *
+ * The two design flags are set automatically by ProposalService when the AI
+ * completes Phase 1 (discovery) and Phase 2 (proposal) of `propose_design`.
+ * This means `build_from_schema` is unreachable without first running both
+ * phases, enforcing the 4-step pipeline server-side.
  */
 final class PrerequisiteGateService {
 
@@ -42,11 +56,13 @@ final class PrerequisiteGateService {
 
 	/**
 	 * Tier definitions: which flags are required for each tier.
+	 *
+	 * Defined as strict supersets so the inclusion chain is provable at a glance.
 	 */
 	public const TIER_DIRECT     = [ 'site_info' ];
-	public const TIER_INSTRUCTED = [ 'site_info', 'classes' ];
-	public const TIER_FULL       = [ 'site_info', 'classes', 'variables' ];
-	public const TIER_DESIGN     = [ 'site_info', 'classes', 'variables', 'design_discovery', 'design_plan' ];
+	public const TIER_INSTRUCTED = [ ...self::TIER_DIRECT, 'classes' ];
+	public const TIER_FULL       = [ ...self::TIER_INSTRUCTED, 'variables' ];
+	public const TIER_DESIGN     = [ ...self::TIER_FULL, 'design_discovery', 'design_plan' ];
 
 	/**
 	 * Map tier names to their required flags.
@@ -134,6 +150,20 @@ final class PrerequisiteGateService {
 			'satisfied'     => $satisfied,
 			'missing_tools' => $missing_tools,
 		];
+	}
+
+	/**
+	 * Get the required flags for a named tier.
+	 *
+	 * Public API for callers that want to introspect tier requirements
+	 * (e.g. for documentation, error messages, or testing) without depending
+	 * on the private TIER_MAP constant.
+	 *
+	 * @param string $tier One of 'direct', 'instructed', 'full', 'design'.
+	 * @return string[] Required flag names for that tier (empty array on unknown tier).
+	 */
+	public static function get_required_flags( string $tier ): array {
+		return self::TIER_MAP[ $tier ] ?? [];
 	}
 
 	/**

@@ -136,20 +136,84 @@ final class OnboardingService {
     }
 
     /**
-     * Cached site context for the current request.
+     * Request-scoped cache (first-level, avoids re-hitting object cache within the same request).
      *
      * @var array<string, mixed>|null
      */
     private static ?array $site_context_cache = null;
 
     /**
+     * Object cache group + key (second-level, survives across MCP HTTP requests).
+     *
+     * Invalidated via bump_cache_version() on save_post (Bricks post types) and
+     * on updates to bricks_global_classes / bricks_global_variables options.
+     */
+    private const CACHE_GROUP        = 'bricks_mcp';
+    private const CACHE_KEY_BASE     = 'site_context_v1';
+    private const CACHE_VERSION_OPT  = 'bricks_mcp_site_context_cache_v';
+    private const CACHE_TTL          = 1800; // 30 minutes.
+
+    /**
+     * Register the invalidation hooks. Called once from the constructor.
+     */
+    private static function register_cache_invalidation(): void {
+        static $registered = false;
+        if ( $registered ) {
+            return;
+        }
+        $registered = true;
+
+        // Invalidate when any Bricks content post is saved.
+        add_action( 'save_post', function ( int $post_id ): void {
+            $meta = get_post_meta( $post_id, '_bricks_page_content_2', true );
+            if ( ! empty( $meta ) ) {
+                self::bump_cache_version();
+            }
+        }, 10, 1 );
+
+        // Invalidate when the underlying options change.
+        foreach ( [ 'bricks_global_classes', 'bricks_global_variables' ] as $option ) {
+            add_action( "update_option_{$option}", fn() => self::bump_cache_version() );
+            add_action( "add_option_{$option}", fn() => self::bump_cache_version() );
+        }
+    }
+
+    /**
+     * Bump the cache version. Effectively invalidates all previous entries.
+     */
+    private static function bump_cache_version(): void {
+        $v = (int) get_option( self::CACHE_VERSION_OPT, 1 );
+        update_option( self::CACHE_VERSION_OPT, $v + 1, false );
+        self::$site_context_cache = null;
+    }
+
+    /**
+     * Build the versioned cache key (so we don't have to enumerate keys on invalidation).
+     */
+    private static function cache_key(): string {
+        $v = (int) get_option( self::CACHE_VERSION_OPT, 1 );
+        return self::CACHE_KEY_BASE . '_v' . $v;
+    }
+
+    /**
      * Get site context information.
+     *
+     * Two-level cache: request-scoped static → object cache (persists across requests).
+     * Invalidates on Bricks content saves and global class/variable option changes.
      *
      * @return array<string, mixed> Site context data.
      */
     private function get_site_context(): array {
+        self::register_cache_invalidation();
+
         if ( null !== self::$site_context_cache ) {
             return self::$site_context_cache;
+        }
+
+        $cached = wp_cache_get( self::cache_key(), self::CACHE_GROUP );
+        if ( is_array( $cached ) ) {
+            self::$site_context_cache = $cached;
+            return $cached;
         }
 
         $pages = get_posts( [
@@ -167,7 +231,7 @@ final class OnboardingService {
         $global_classes   = get_option( 'bricks_global_classes', [] );
         $global_variables = get_option( 'bricks_global_variables', [] );
 
-        self::$site_context_cache = [
+        $context = [
             'name'                  => get_bloginfo( 'name' ),
             'url'                   => home_url(),
             'has_bricks'            => defined( 'BRICKS_VERSION' ),
@@ -179,7 +243,10 @@ final class OnboardingService {
             'global_variable_count' => is_array( $global_variables ) ? count( $global_variables ) : 0,
         ];
 
-        return self::$site_context_cache;
+        self::$site_context_cache = $context;
+        wp_cache_set( self::cache_key(), $context, self::CACHE_GROUP, self::CACHE_TTL );
+
+        return $context;
     }
 
     /**

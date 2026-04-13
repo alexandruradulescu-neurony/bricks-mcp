@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP\Handlers;
 
+use BricksMCP\MCP\ToolRegistry;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -231,5 +233,40 @@ final class MetaBoxHandler {
 		}
 
 		return array( 'tags' => $tags, 'total' => count( $tags ), 'post_type_filter' => $post_type ?: 'all' );
+	}
+
+	/**
+	 * Register the metabox tool.
+	 */
+	public function register( ToolRegistry $registry ): void {
+		$registry->register(
+			'metabox',
+			__( "Read Meta Box custom fields and field groups.\n\nActions: list_field_groups, get_fields, get_field_value, get_dynamic_tags.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action'    => array(
+						'type'        => 'string',
+						'enum'        => array( 'list_field_groups', 'get_fields', 'get_field_value', 'get_dynamic_tags' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'post_type' => array(
+						'type'        => 'string',
+						'description' => __( 'Post type to get fields for (get_fields: required, get_dynamic_tags: optional filter)', 'bricks-mcp' ),
+					),
+					'post_id'   => array(
+						'type'        => 'integer',
+						'description' => __( 'Post ID to read field values from (get_field_value: required)', 'bricks-mcp' ),
+					),
+					'field_id'  => array(
+						'type'        => 'string',
+						'description' => __( 'MetaBox field ID (get_field_value: required)', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle' ),
+			array( 'readOnlyHint' => true )
+		);
 	}
 }
