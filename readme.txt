@@ -18,9 +18,27 @@ The plugin supports three workflows:
 
 1. **Direct operations** — Edit text, move elements, swap images, update menus. The AI uses element/page/menu tools directly.
 2. **Instructed builds** — Add a heading and two columns, insert a form. The AI uses bulk_add or append_content with awareness of your global classes.
-3. **Design builds** — Design a services page, build a landing page, redesign the hero. The AI uses `build_from_schema`, a declarative design pipeline that handles all Bricks mechanics (element IDs, settings, class resolution, responsive overrides, dark section auto-colors).
+3. **Design builds** — Design a services page, build a landing page, redesign the hero. Server-enforced 4-step pipeline: DISCOVER (site context + element capabilities + reference patterns) → DESIGN (structured design_plan) → BUILD (build_from_schema with class resolution, pattern expansion, auto-fixes) → VERIFY (human-readable section descriptions).
 
-Tell your AI assistant "design a services section with three feature cards" and the `build_from_schema` pipeline translates your intent into a fully structured Bricks layout with proper global classes and CSS variables.
+Tell your AI assistant "design a services section with three feature cards" and the design build pipeline analyzes your existing site, picks a reference pattern, generates a valid schema, and writes the final Bricks elements with proper global classes and CSS variables.
+
+= Site-Aware Building =
+
+When connecting to a site with existing designed pages, the discovery phase analyzes those sections and tells the AI to reuse the same classes, layouts, and background treatments for visual consistency. For sites with no design system yet, the plugin offers 13 curated starter classes (grids, typography, buttons, cards, tags) that can be bootstrapped with one `global_class:batch_create` call.
+
+= Design Pattern Library =
+
+17 curated section compositions (heroes, splits, features, CTAs, pricing, testimonials, content) serve as reference examples during discovery. Patterns capture *composition* — what elements in what arrangement — not appearance. The site's design system handles how sections actually look.
+
+= Pipeline Auto-Fixes =
+
+- `_gap` on flex blocks auto-converts to `_columnGap` / `_rowGap` based on direction
+- `_maxWidth` → `_widthMax`, `_textAlign` → `_typography.text-align`
+- Button `icon` → native Bricks icon settings (no emoji)
+- Form without fields → auto-detects type (newsletter/login/contact) and applies template
+- `unsplash:query` in `_background.image` → auto sideload
+- `background: "dark"` → merges with existing background settings (preserves images)
+- Unknown schema keys → rejected with suggestions ("Did you mean style_overrides?")
 
 = How It Works =
 
@@ -125,6 +143,60 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.4.0 =
+* Site-aware design: discovery response includes existing_page_sections (top 5 sections with label, description, background, layout, classes) and site_style_hints (aggregated common layouts, backgrounds, frequently used classes). AI is instructed to match existing patterns for consistency.
+* Bootstrap design system: when site has fewer than 5 global classes, discovery returns bootstrap_recommendation with 13 starter classes (grid-2/3/4, eyebrow, tagline, hero-description, btn-primary, btn-outline, card, card-dark, card-glass, tag-pill, tag-grid). AI can bootstrap upfront or let classes emerge.
+* verify_build now returns human-readable section descriptions via describe_page() — "Dark section with background image and overlay. Contains h1, text, 2 buttons" — alongside type_counts and classes_used.
+* New StarterClassesService with curated starter set using CSS variables for portability.
+
+= 3.3.2 =
+* Pattern column gap and padding now applied from pattern definitions. extract_column_overrides() reads gap, padding, alignment, max_width, fill.
+* All split and hero patterns updated with gap: var(--space-l).
+* Default _rowGap on content columns when no pattern matched.
+
+= 3.3.1 =
+* FormTypeDetector utility: extracted duplicate form type detection regex from 3 files into single static class.
+* Option key constants in BricksCore: replaced 58 hardcoded option keys across services.
+* OnboardingService briefs caching: 3 get_option calls per session → 1.
+* Added content keys for video, pricing-tables, testimonials, social-icons, progress-bar, rating, pie-chart.
+
+= 3.3.0 =
+* Static cache in GlobalClassService: 11 class fetches per 3-section build → 1 database read.
+* ProposalService uses SiteVariableResolver's cache for variables.
+* Multi-row pattern support: build_multi_row_layout() handles has_two_rows patterns with separate row_1 (split) and row_2 (grid) blocks.
+* Form styling defaults: auto-detect form type (newsletter/login/contact) and apply template with proper fields.
+* Discovery response hash caching: second+ calls return slim response (~3KB vs ~16KB).
+
+= 3.2.1 =
+* New design pattern: hero-split-form-badges (from Brixies) — 3:2 split with newsletter form + 4-column trust badge grid below.
+
+= 3.2.0 =
+* Design Pattern Library: 17 curated compositions across 6 categories (heroes, splits, features, CTAs, pricing, testimonials, content).
+* DesignPatternService loads patterns from /data/design-patterns/ with tag-based matching.
+* Discovery returns reference_patterns (2-3 matches) for AI to adapt.
+* SchemaSkeletonGenerator uses pattern column overrides for layout intelligence.
+
+= 3.1.3 =
+* Background merge fix: apply_background() merges with existing _background instead of replacing (preserves images through dark mode).
+* background_image field in design_plan with "unsplash:query" support.
+* Auto-wrap consecutive buttons in row block.
+
+= 3.1.2 =
+* Fix: stale ELEMENT_PURPOSES reference (renamed to ELEMENT_CAPABILITIES).
+
+= 3.1.1 =
+* Element capabilities with purpose + capabilities + rules for 20 elements.
+* Building rules from BUILDER_GUIDE.md served in discovery.
+* Dynamic element schemas in proposal phase for all 80-90 Bricks elements.
+* Button icon pipeline support, Unsplash background resolution, invalid key auto-fix (_maxWidth → _widthMax, _textAlign → _typography.text-align).
+* Gap auto-conversion: _gap on flex blocks → _columnGap/_rowGap based on direction.
+
+= 3.1.0 =
+* Design-first pipeline with two-phase propose_design. Phase 1 discovery returns site context and element capabilities, no proposal_id. Phase 2 with design_plan returns proposal_id and suggested_schema.
+* New prerequisite gates: design_discovery and design_plan flags. build_from_schema requires 5 flags.
+* New verify_build tool with element counts, type counts, classes used, hierarchy summary.
+* Strict schema validation: unknown keys rejected with suggestions.
 
 = 3.0.7 =
 * Fixed: get_onboarding_guide tool not being registered when Bricks Builder is not active

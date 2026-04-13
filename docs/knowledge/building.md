@@ -93,3 +93,73 @@ Always use `var(--name)` instead of hardcoded values:
 - Radius: `var(--radius)`, `var(--radius-btn)`, `var(--radius-pill)`
 - Grid: `var(--grid-1)` through `var(--grid-12)`, plus ratios `var(--grid-1-2)`, etc.
 - Gaps: `var(--grid-gap)`, `var(--content-gap)`, `var(--container-gap)`
+
+## Gap Handling on Flex Blocks
+
+On flex blocks (block/div with `_direction: row` or default column):
+- Use `_columnGap` for horizontal spacing (row direction)
+- Use `_rowGap` for vertical spacing (column direction, default)
+- Plain `_gap` does NOT generate CSS on flex layout blocks
+
+The pipeline auto-converts `_gap` to the correct key based on `_direction`. You can use `_gap` in schemas and it will work — but directly in element settings, use the specific key.
+
+## Background Images and Overlays
+
+Background image with gradient overlay pattern:
+
+```json
+{
+  "_background": {
+    "image": {"url": "https://...jpg", "id": 124, "size": "full"},
+    "size": "cover",
+    "position": "center center"
+  },
+  "_gradient": {
+    "colors": [
+      {"color": {"raw": "rgba(46, 46, 61, 0.8)"}, "stop": "0"},
+      {"color": {"raw": "rgba(142, 47, 34, 0.6)"}, "stop": "100"}
+    ],
+    "applyTo": "overlay"
+  }
+}
+```
+
+Key rules:
+- Overlay uses `_gradient` with `applyTo: "overlay"` — NOT `_background.overlay` or `_overlay`
+- Background image needs a real URL (sideload from Unsplash first, OR use `"unsplash:query"` in design schemas and let the pipeline resolve it)
+- When setting `background: "dark"` on a section with an image, the pipeline merges — the image is preserved, color overlay is added
+
+## Button Icons
+
+Buttons support native icons — do NOT use emoji in button text:
+
+```json
+{
+  "type": "button",
+  "content": "Suna Acum: 0722 222 222",
+  "icon": "mobile",
+  "iconPosition": "left"
+}
+```
+
+The `icon` string (e.g., `"mobile"`) resolves to Themify `ti-mobile`. You can also pass full object: `{"library": "fontawesomeSolid", "icon": "fas fa-phone"}`.
+
+## Form Auto-Detection
+
+When a form element has no fields explicitly set, the pipeline detects the form type from the element's `role`, `label`, or `content_hint` and applies a template:
+
+- **newsletter** — detected from: newsletter, subscribe, signup, opt-in, register, inregistr. Template: email field (67% width) + submit button (33% width) + terms HTML field.
+- **login** — detected from: login, sign-in, auth, conecta, autentific. Template: email + password fields.
+- **contact** (default) — Template: name (50%) + email (50%) + textarea + submit.
+
+To use a specific type regardless of content_hint, set `form_type` on the schema node.
+
+## Invalid Keys That Get Auto-Fixed
+
+The pipeline auto-converts these common mistakes:
+- `_maxWidth` → `_widthMax` (Bricks uses `_widthMax`)
+- `_minWidth` → `_widthMin`
+- `_textAlign` → `_typography.text-align`
+- `_gap` → `_columnGap` or `_rowGap` based on direction
+
+Unknown keys (e.g., `settings`, `styles`, `css`, raw Bricks keys like `_padding` on node level) are rejected with suggestions.
