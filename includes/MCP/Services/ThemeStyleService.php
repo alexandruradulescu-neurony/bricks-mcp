@@ -138,6 +138,36 @@ class ThemeStyleService {
 	}
 
 	/**
+	 * Deep merge two style arrays recursively.
+	 *
+	 * Preserves nested structure when merging Bricks composite key styles.
+	 * For example, merging {"_fontSize": "18px"} into
+	 * {"_fontFamily": "Inter", "_fontWeight": "400"} will result in
+	 * {"_fontFamily": "Inter", "_fontWeight": "400", "_fontSize": "18px"}.
+	 *
+	 * @param array<string, mixed> $existing Existing styles.
+	 * @param array<string, mixed> $new      New styles to merge in.
+	 * @return array<string, mixed> Merged styles.
+	 */
+	private function deep_merge_styles( array $existing, array $new ): array {
+		$result = $existing;
+
+		foreach ( $new as $key => $value ) {
+			if (
+				isset( $result[ $key ] )
+				&& is_array( $result[ $key ] )
+				&& is_array( $value )
+			) {
+				$result[ $key ] = $this->deep_merge_styles( $result[ $key ], $value );
+			} else {
+				$result[ $key ] = $value;
+			}
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Update an existing theme style with partial merge support.
 	 *
 	 * Supports deep-merge (default) or section-replace for settings groups.
@@ -189,8 +219,8 @@ class ThemeStyleService {
 					// Replace the entire group or create new group.
 					$styles[ $style_id ]['settings'][ $group_key ] = $group_settings;
 				} else {
-					// Deep merge: merge within the group (control-level granularity).
-					$styles[ $style_id ]['settings'][ $group_key ] = array_merge(
+					// Deep merge: recursively merge nested style properties.
+					$styles[ $style_id ]['settings'][ $group_key ] = $this->deep_merge_styles(
 						$styles[ $style_id ]['settings'][ $group_key ],
 						$group_settings
 					);

@@ -578,7 +578,7 @@ final class GlobalClassHandler {
 					),
 					'styles'         => array(
 						'type'        => 'object',
-						'description' => __( 'Bricks composite key styles: _padding, _background, _margin:hover, etc. (create, update: optional)', 'bricks-mcp' ),
+						'description' => __( 'Bricks composite key styles: _padding, _background, _margin:hover, etc. (create, update: optional). When updating, styles are deep-merged with existing styles — nested properties are preserved. Use replace_styles: true to fully replace instead.', 'bricks-mcp' ),
 					),
 					'color'          => array(
 						'type'        => 'string',

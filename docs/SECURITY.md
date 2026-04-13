@@ -107,6 +107,54 @@ CSS written via `global_class:create`, `global_class:update`, `code:set_page_css
 
 CSS cannot execute code even without sanitization, but the sanitizer provides defense-in-depth against XSS via stored style vectors.
 
+## Style Merge Behavior
+
+When updating global classes (`global_class:update`) or theme styles (`theme_style:update`), the plugin uses **deep merge** to combine new styles with existing styles. This prevents accidental data loss when updating partial style properties.
+
+### Deep Merge Example
+
+**Before update:**
+```json
+{
+  "_border": {
+    "width": {"top": "1px", "right": "1px", "bottom": "1px", "left": "1px"},
+    "style": {"top": "solid", "right": "solid", "bottom": "solid", "left": "solid"},
+    "color": {"raw": "var(--border-color)"}
+  }
+}
+```
+
+**Update with:**
+```json
+{
+  "_border": {
+    "color": {"raw": "lightgray"}
+  }
+}
+```
+
+**After update (deep merge preserves width and style):**
+```json
+{
+  "_border": {
+    "width": {"top": "1px", "right": "1px", "bottom": "1px", "left": "1px"},
+    "style": {"top": "solid", "right": "solid", "bottom": "solid", "left": "solid"},
+    "color": {"raw": "lightgray"}
+  }
+}
+```
+
+### Replace Mode
+
+Both `global_class:update` and `theme_style:update` support a `replace_styles: true` parameter to bypass deep merge and fully replace the styles object. Use this when you want to overwrite all existing styles rather than merge.
+
+**When to use `replace_styles: true`:**
+- Resetting a class to a known baseline
+- Migrating styles from one structure to another
+- Removing multiple properties at once
+
+**Default behavior (recommended):** Omit `replace_styles` or set to `false` for safe partial updates.
+
 ## Schema Validation
 
 `build_from_schema` rejects unknown keys with specific suggestions (e.g., `"settings"` → `"Did you mean style_overrides?"`). This prevents arbitrary payloads from being stored as element metadata and confines writes to the documented schema surface. Valid node keys are enumerated in `DesignSchemaValidator` — anything outside that list is rejected before the write reaches Bricks.

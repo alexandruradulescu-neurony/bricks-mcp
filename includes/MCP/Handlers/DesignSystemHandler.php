@@ -1040,7 +1040,7 @@ final class DesignSystemHandler {
 					),
 					'styles'          => array(
 						'type'        => 'object',
-						'description' => __( 'Settings organized by group: typography, links, colors, general, contextualSpacing, css, heading, button, section, container, block, div, text, form, image, navMenu, accordion, alert, carousel, divider, iconBox, imageGallery, list, iconList, postContent, postTitle, tabs, video, wordpress, woocommerceButton. (create, update: optional)', 'bricks-mcp' ),
+						'description' => __( 'Settings organized by group: typography, links, colors, general, contextualSpacing, css, heading, button, section, container, block, div, text, form, image, navMenu, accordion, alert, carousel, divider, iconBox, imageGallery, list, iconList, postContent, postTitle, tabs, video, wordpress, woocommerceButton. (create, update: optional). When updating, styles are deep-merged within each group — nested properties are preserved. Use replace_section: true to fully replace each group instead.', 'bricks-mcp' ),
 					),
 					'conditions'      => array(
 						'type'        => 'array',

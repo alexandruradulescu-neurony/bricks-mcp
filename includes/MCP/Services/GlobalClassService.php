@@ -178,6 +178,36 @@ class GlobalClassService {
 	}
 
 	/**
+	 * Deep merge two style arrays recursively.
+	 *
+	 * Preserves nested structure when merging Bricks composite key styles.
+	 * For example, merging {"_border": {"color": "red"}} into
+	 * {"_border": {"width": "1px", "style": "solid"}} will result in
+	 * {"_border": {"width": "1px", "style": "solid", "color": "red"}}.
+	 *
+	 * @param array<string, mixed> $existing Existing styles.
+	 * @param array<string, mixed> $new      New styles to merge in.
+	 * @return array<string, mixed> Merged styles.
+	 */
+	private function deep_merge_styles( array $existing, array $new ): array {
+		$result = $existing;
+
+		foreach ( $new as $key => $value ) {
+			if (
+				isset( $result[ $key ] )
+				&& is_array( $result[ $key ] )
+				&& is_array( $value )
+			) {
+				$result[ $key ] = $this->deep_merge_styles( $result[ $key ], $value );
+			} else {
+				$result[ $key ] = $value;
+			}
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Update an existing global CSS class.
 	 *
 	 * @param string               $class_id Class ID to update.
@@ -226,10 +256,12 @@ class GlobalClassService {
 
 			if ( isset( $args['styles'] ) ) {
 				$sanitized_styles = $this->core->sanitize_styles_array( $args['styles'] );
+				$existing_styles  = $class['settings'] ?? $class['styles'] ?? [];
+
 				if ( ! empty( $args['replace_styles'] ) ) {
 					$class['settings'] = $sanitized_styles;
 				} else {
-					$class['settings'] = array_merge( $class['settings'] ?? $class['styles'] ?? [], $sanitized_styles );
+					$class['settings'] = $this->deep_merge_styles( $existing_styles, $sanitized_styles );
 				}
 				unset( $class['styles'] );
 			}
