@@ -296,7 +296,7 @@ final class Router {
 		$class_resolver          = new ClassIntentResolver( $this->bricks_service->get_global_class_service() );
 		$schema_expander         = new SchemaExpander();
 		$element_settings_gen    = new ElementSettingsGenerator( $this->schema_generator, $this->media_service, $class_resolver );
-		$proposal_service        = new ProposalService( $this->bricks_service->get_global_class_service(), $this->schema_generator );
+		$proposal_service        = new ProposalService( $this->bricks_service->get_global_class_service(), $this->schema_generator, $this->bricks_service );
 		$this->proposal_handler  = new Handlers\ProposalHandler( $proposal_service, $require_bricks );
 		$this->build_handler     = new Handlers\BuildHandler(
 			$this->bricks_service,

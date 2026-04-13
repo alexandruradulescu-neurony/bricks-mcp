@@ -159,10 +159,12 @@ final class ProposalService {
 	private GlobalClassService $class_service;
 	private SchemaGenerator $schema_generator;
 	private SchemaSkeletonGenerator $skeleton_generator;
+	private ?BricksService $bricks_service;
 
-	public function __construct( GlobalClassService $class_service, SchemaGenerator $schema_generator ) {
+	public function __construct( GlobalClassService $class_service, SchemaGenerator $schema_generator, ?BricksService $bricks_service = null ) {
 		$this->class_service      = $class_service;
 		$this->schema_generator   = $schema_generator;
+		$this->bricks_service     = $bricks_service;
 		$this->skeleton_generator = new SchemaSkeletonGenerator();
 	}
 
@@ -233,23 +235,47 @@ final class ProposalService {
 		$design_brief   = is_array( $briefs ) ? trim( $briefs['design_brief'] ?? '' ) : '';
 		$business_brief = is_array( $briefs ) ? trim( $briefs['business_brief'] ?? '' ) : '';
 
-		return [
+		// Analyze existing page sections (site-aware design).
+		$existing_sections = $this->analyze_existing_sections( $page_id );
+		$style_hints       = $this->aggregate_site_style_hints( $existing_sections );
+
+		// Bootstrap check — few or no global classes.
+		$bootstrap_recommendation = null;
+		if ( count( $all_classes ) < 5 ) {
+			$bootstrap_recommendation = [
+				'warning' => 'Site has few/no global classes. Building will create new classes as needed, but starting with a curated set produces more consistent results.',
+				'action'  => 'Optional: call global_class:batch_create with suggested_starter_classes below before building.',
+				'suggested_starter_classes' => StarterClassesService::get_starter_classes(),
+			];
+		}
+
+		$next_step = 'You now have the site context, available building blocks, and REFERENCE PATTERNS showing proven compositions. '
+			. 'Think as a DESIGNER: pick the closest reference_pattern that matches the user\'s request, '
+			. 'then adapt it into a design_plan. The pattern shows the correct composition — you adjust the content. '
+			. 'Call propose_design again with the same description PLUS a design_plan object.';
+
+		if ( ! empty( $existing_sections ) ) {
+			$next_step .= ' IMPORTANT: This page already has ' . count( $existing_sections ) . ' section(s). Study existing_page_sections and site_style_hints — reuse the same classes, layout patterns, and background treatments for visual consistency. Only deviate if the user explicitly asks for a different style.';
+		}
+
+		$response = [
 			'phase'       => 'discovery',
 			'page_id'     => $page_id,
 			'description' => $description,
 
-			'next_step' => 'You now have the site context, available building blocks, and REFERENCE PATTERNS showing proven compositions. '
-				. 'Think as a DESIGNER: pick the closest reference_pattern that matches the user\'s request, '
-				. 'then adapt it into a design_plan. The pattern shows the correct composition — you adjust the content. '
-				. 'Call propose_design again with the same description PLUS a design_plan object.',
-
-			'available_elements' => self::ELEMENT_CAPABILITIES,
-			'available_layouts'  => self::VALID_LAYOUTS,
-			'section_types'      => self::VALID_SECTION_TYPES,
-			'building_rules'     => self::BUILDING_RULES,
+			'next_step' => $next_step,
 
 			'reference_patterns' => $this->find_reference_patterns( $description ),
 		];
+
+		if ( ! empty( $existing_sections ) ) {
+			$response['existing_page_sections'] = $existing_sections;
+			$response['site_style_hints']       = $style_hints;
+		}
+
+		if ( null !== $bootstrap_recommendation ) {
+			$response['bootstrap_recommendation'] = $bootstrap_recommendation;
+		}
 
 		// Build site_context.
 		$site_context = [
@@ -651,5 +677,79 @@ final class ProposalService {
 		}
 
 		return DesignPatternService::find( $section_type, $tags, 3 );
+	}
+
+	/**
+	 * Analyze existing sections on the target page.
+	 *
+	 * Returns up to 5 existing sections with their label, description,
+	 * background, layout, and classes used. Gives the AI context about
+	 * the site's visual language so new sections match.
+	 *
+	 * @param int $page_id Target page ID.
+	 * @return array<int, array<string, mixed>> Section summaries.
+	 */
+	private function analyze_existing_sections( int $page_id ): array {
+		if ( null === $this->bricks_service ) {
+			return [];
+		}
+
+		$described = $this->bricks_service->describe_page( $page_id );
+		if ( is_wp_error( $described ) || empty( $described['sections'] ) ) {
+			return [];
+		}
+
+		$summaries = [];
+		foreach ( array_slice( $described['sections'], 0, 5 ) as $section ) {
+			$summaries[] = [
+				'label'         => $section['label'] ?? 'Section',
+				'description'   => $section['description'] ?? '',
+				'background'    => $section['background'] ?? 'light',
+				'layout'        => $section['layout'] ?? 'stacked',
+				'classes_used'  => $section['classes'] ?? [],
+				'element_count' => $section['element_count'] ?? 0,
+			];
+		}
+
+		return $summaries;
+	}
+
+	/**
+	 * Aggregate style hints across all existing sections.
+	 *
+	 * Identifies patterns in the site's design: common layouts, common
+	 * class combinations, background treatments. The AI uses these as
+	 * style signals to keep new sections consistent with existing ones.
+	 *
+	 * @param array<int, array<string, mixed>> $sections Output of analyze_existing_sections.
+	 * @return array<string, mixed> Aggregated style hints.
+	 */
+	private function aggregate_site_style_hints( array $sections ): array {
+		if ( empty( $sections ) ) {
+			return [];
+		}
+
+		$layouts     = [];
+		$backgrounds = [];
+		$all_classes = [];
+
+		foreach ( $sections as $s ) {
+			$layouts[ $s['layout'] ]         = ( $layouts[ $s['layout'] ] ?? 0 ) + 1;
+			$backgrounds[ $s['background'] ] = ( $backgrounds[ $s['background'] ] ?? 0 ) + 1;
+			foreach ( $s['classes_used'] ?? [] as $cls ) {
+				$all_classes[ $cls ] = ( $all_classes[ $cls ] ?? 0 ) + 1;
+			}
+		}
+
+		arsort( $layouts );
+		arsort( $backgrounds );
+		arsort( $all_classes );
+
+		return [
+			'most_common_layouts'     => array_keys( array_slice( $layouts, 0, 3, true ) ),
+			'most_common_backgrounds' => array_keys( array_slice( $backgrounds, 0, 3, true ) ),
+			'frequently_used_classes' => array_keys( array_slice( $all_classes, 0, 10, true ) ),
+			'guidance'                => 'For visual consistency, match the most common background and layout patterns when building similar section types. Reuse frequently_used_classes when their purpose aligns with your new section.',
+		];
 	}
 }

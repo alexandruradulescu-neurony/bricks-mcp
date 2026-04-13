@@ -112,16 +112,35 @@ final class VerifyHandler {
 			$hierarchy = $this->build_hierarchy_summary( $elements, $last_section['id'] );
 		}
 
+		// Rich description from describe_page() — human-readable section breakdown.
+		$described = $this->bricks_service->describe_page( $page_id );
+		$described_sections = [];
+		$page_description   = '';
+		if ( ! is_wp_error( $described ) ) {
+			$page_description   = $described['page_description'] ?? '';
+			$described_sections = $described['sections'] ?? [];
+
+			// Filter to single section if section_id provided.
+			if ( null !== $section_id ) {
+				$described_sections = array_values( array_filter(
+					$described_sections,
+					fn( $s ) => ( $s['id'] ?? '' ) === $section_id
+				) );
+			}
+		}
+
 		return [
-			'page_id'        => $page_id,
-			'element_count'  => count( $elements ),
-			'type_counts'    => $type_counts,
-			'classes_used'   => array_values( array_unique( $class_names ) ),
-			'labels'         => $labels,
-			'last_section'   => $hierarchy,
-			'section_count'  => count( $sections ),
-			'status'         => 'ok',
-			'verification'   => 'Compare type_counts and classes_used against your design_plan to verify the build matches your intent.',
+			'page_id'           => $page_id,
+			'page_description'  => $page_description,
+			'sections'          => $described_sections,
+			'element_count'     => count( $elements ),
+			'type_counts'       => $type_counts,
+			'classes_used'      => array_values( array_unique( $class_names ) ),
+			'labels'            => $labels,
+			'last_section'      => $hierarchy,
+			'section_count'     => count( $sections ),
+			'status'            => 'ok',
+			'verification'      => 'Compare page_description and sections[*].description with your design intent. Compare type_counts and classes_used against your design_plan to verify structural match.',
 		];
 	}
 
