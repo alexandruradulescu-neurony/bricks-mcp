@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.4.0
+Stable tag: 3.5.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -143,6 +143,18 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.5.0 =
+* Refactor pass: Router collapsed 18 typed handler properties into a single $handlers array (1099 → 866 lines). SchemaHandler extracted 4 large reference arrays into dedicated catalog classes under includes/MCP/Reference/ (1615 → 787 lines).
+* Tool registration: wordpress and metabox handlers now self-register via register(ToolRegistry) methods, matching the existing VerifyHandler/OnboardingHandler pattern.
+* Cross-request discovery cache: ProposalService now persists the site_context hash in a user-scoped transient (30-min TTL) so the slim discovery response applies across MCP HTTP requests, not just within one process. New site_context_changed boolean in the response.
+* Tier hierarchy documented: PrerequisiteGateService tiers are now strict supersets using spread syntax (direct ⊂ instructed ⊂ full ⊂ design) with a class-level doc table and a new get_required_flags() public API.
+* Design gate error messages now include a copy-pasteable propose_design(page_id=X, ...) next call, trimming one round-trip for AI clients learning the gate.
+* Design pipeline diagnostic: new DesignPipelineCheck verifies data/design-patterns/ readable, pattern JSON parses, StarterClassesService returns >= 13 classes, core data JSON files valid. Surfaces as the 11th admin diagnostic.
+* OnboardingService site context now uses two-level caching (request-scoped + wp_cache with version bump) and invalidates on Bricks save_post + bricks_global_classes/variables option updates.
+* Design patterns JSON Schema (data/design-patterns/_schema.json) + Opis JSON Schema validation when WP_DEBUG is on. Malformed patterns log via error_log for contributors; production is unaffected.
+* Minimal unit test harness under tests/ with PSR-4 autoloader and WP function stubs. Covers FormTypeDetector, PrerequisiteGateService, StarterClassesService.
+* New CONTRIBUTING.md (how to add a handler, design pattern, diagnostic check) and CHANGELOG.md (Keep-a-Changelog format for GitHub release notes).
 
 = 3.4.0 =
 * Site-aware design: discovery response includes existing_page_sections (top 5 sections with label, description, background, layout, classes) and site_style_hints (aggregated common layouts, backgrounds, frequently used classes). AI is instructed to match existing patterns for consistency.
