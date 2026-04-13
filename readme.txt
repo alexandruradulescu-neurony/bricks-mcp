@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.6.3
+Stable tag: 3.6.4
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -143,6 +143,10 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.6.4 =
+* Unsplash image resolution no longer fails silently. ElementSettingsGenerator now attaches _pipeline_warnings to element settings when Unsplash search, sideload, or API key lookup fails. BuildHandler collects warnings and returns them as "warnings" array in the build response so the AI knows image slots were left empty.
+* Warnings include the specific failure reason (missing API key, network error, zero results) so users know whether to configure the Unsplash API key in settings or upload manually.
 
 = 3.6.3 =
 * Phase 2 gate fix: propose_design Phase 2 now sets BOTH design_discovery + design_plan flags. This unblocks the documented "skip Phase 1 for subsequent sections" flow when session flags reset mid-session (e.g. plugin reload).

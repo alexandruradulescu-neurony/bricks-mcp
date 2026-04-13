@@ -656,28 +656,52 @@ final class ElementSettingsGenerator {
 	 */
 	private function resolve_image( array $settings, string $src ): array {
 		// Unsplash integration: "unsplash:mountain landscape"
-		if ( str_starts_with( $src, 'unsplash:' ) && null !== $this->media_service ) {
-			$query  = trim( substr( $src, 9 ) );
-			$result = $this->media_service->search_photos( $query );
+		if ( str_starts_with( $src, 'unsplash:' ) ) {
+			$query    = trim( substr( $src, 9 ) );
+			$reason   = null;
 
-			if ( ! is_wp_error( $result ) && ! empty( $result['photos'][0]['urls']['regular'] ) ) {
-				$photo    = $result['photos'][0];
-				$url      = $photo['urls']['regular'];
-				$alt      = $photo['alt_description'] ?? $query;
-				$sideload = $this->media_service->sideload_from_url( $url, $alt, $query );
+			if ( null === $this->media_service ) {
+				$reason = 'media_service not available';
+			} else {
+				$result = $this->media_service->search_photos( $query );
 
-				if ( ! is_wp_error( $sideload ) && ! empty( $sideload['attachment_id'] ) ) {
-					$settings['image'] = [
-						'id'       => (int) $sideload['attachment_id'],
-						'filename' => $sideload['filename'] ?? '',
-						'size'     => 'full',
-						'full'     => $sideload['url'] ?? '',
-						'url'      => $sideload['url'] ?? '',
-					];
-					return $settings;
+				if ( is_wp_error( $result ) ) {
+					$reason = 'search_photos failed: ' . $result->get_error_message();
+				} elseif ( empty( $result['photos'][0]['urls']['regular'] ) ) {
+					$reason = sprintf( 'No Unsplash results for query "%s" (is the Unsplash API key configured in Settings > Bricks MCP?)', $query );
+				} else {
+					$photo    = $result['photos'][0];
+					$url      = $photo['urls']['regular'];
+					$alt      = $photo['alt_description'] ?? $query;
+					$sideload = $this->media_service->sideload_from_url( $url, $alt, $query );
+
+					if ( is_wp_error( $sideload ) ) {
+						$reason = 'sideload_from_url failed: ' . $sideload->get_error_message();
+					} elseif ( empty( $sideload['attachment_id'] ) ) {
+						$reason = 'sideload returned no attachment_id';
+					} else {
+						$settings['image'] = [
+							'id'       => (int) $sideload['attachment_id'],
+							'filename' => $sideload['filename'] ?? '',
+							'size'     => 'full',
+							'full'     => $sideload['url'] ?? '',
+							'url'      => $sideload['url'] ?? '',
+						];
+						return $settings;
+					}
 				}
 			}
-			// Fall through to URL-based if sideload fails.
+
+			// Surface the failure instead of silently falling through to empty.
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional warning.
+			error_log( sprintf( 'BricksMCP: Unsplash image resolution failed for "%s" — %s. Image slot left empty.', $src, $reason ?? 'unknown' ) );
+
+			// Attach a warning on the settings so the build response can report it.
+			$settings['_pipeline_warnings'] = array_merge(
+				$settings['_pipeline_warnings'] ?? [],
+				[ sprintf( 'Unsplash sideload failed for "%s": %s. Upload an image manually or configure an Unsplash API key.', $src, $reason ?? 'unknown' ) ]
+			);
+			return $settings;
 		}
 
 		// Attachment ID: "123"

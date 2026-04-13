@@ -201,6 +201,12 @@ final class BuildHandler {
 		$element_count = $this->count_elements( $all_elements );
 		$tree_summary  = $this->build_tree_summary( $all_elements );
 
+		// Extract and strip _pipeline_warnings from element settings.
+		// These are internal markers from ElementSettingsGenerator for problems
+		// that couldn't be hard-errored (e.g. Unsplash sideload failed, image
+		// slot left empty). Surface them in the response so the AI knows to fix.
+		$pipeline_warnings = $this->collect_and_strip_warnings( $all_elements );
+
 		// Dry run: return what would be built without writing.
 		if ( $dry_run ) {
 			return [
@@ -260,7 +266,7 @@ final class BuildHandler {
 			);
 		}
 
-		return [
+		$response = [
 			'success'          => true,
 			'page_id'          => $page_id,
 			'action'           => $target['action'],
@@ -270,6 +276,39 @@ final class BuildHandler {
 			'tree_summary'     => $tree_summary,
 			'snapshot_id'      => $snapshot_id,
 		];
+
+		if ( ! empty( $pipeline_warnings ) ) {
+			$response['warnings'] = $pipeline_warnings;
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Recursively collect and strip `_pipeline_warnings` from element settings.
+	 *
+	 * ElementSettingsGenerator attaches these to surface non-fatal issues
+	 * (e.g. Unsplash sideload failed, image slot empty) that would otherwise
+	 * be silent. Strip them from settings before write — Bricks rejects
+	 * unknown root keys in settings.
+	 *
+	 * @param array<int, array<string, mixed>> $elements  Nested element trees (modified in place).
+	 * @return array<int, string>  Collected warning messages.
+	 */
+	private function collect_and_strip_warnings( array &$elements ): array {
+		$warnings = [];
+		foreach ( $elements as &$el ) {
+			if ( isset( $el['settings']['_pipeline_warnings'] ) && is_array( $el['settings']['_pipeline_warnings'] ) ) {
+				foreach ( $el['settings']['_pipeline_warnings'] as $w ) {
+					$warnings[] = $w;
+				}
+				unset( $el['settings']['_pipeline_warnings'] );
+			}
+			if ( ! empty( $el['children'] ) && is_array( $el['children'] ) ) {
+				$warnings = array_merge( $warnings, $this->collect_and_strip_warnings( $el['children'] ) );
+			}
+		}
+		return $warnings;
 	}
 
 	/**
