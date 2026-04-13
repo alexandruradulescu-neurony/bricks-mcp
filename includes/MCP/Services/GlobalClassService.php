@@ -145,11 +145,17 @@ class GlobalClassService {
 			$new_id = $id_generator->generate();
 		} while ( in_array( $new_id, $existing_ids, true ) );
 
+		// Sanitize + normalize styles. Normalization collapses per-side structures
+		// that Bricks expects as scalars (e.g. _border.style must be "dashed",
+		// not {top: "dashed", right: ...}). Without this, malformed styles crash
+		// the frontend with "Array to string conversion" during render.
+		$sanitized_styles = $this->core->sanitize_styles_array( $args['styles'] ?? [] );
+		$normalized       = $this->normalize_bricks_styles( $sanitized_styles );
 		$new_class = [
-			'id'     => $new_id,
-			'name'   => $name,
-			'color'  => isset( $args['color'] ) ? sanitize_text_field( $args['color'] ) : '#686868',
-			'settings' => $this->core->sanitize_styles_array( $args['styles'] ?? [] ),
+			'id'       => $new_id,
+			'name'     => $name,
+			'color'    => isset( $args['color'] ) ? sanitize_text_field( $args['color'] ) : '#686868',
+			'settings' => $normalized['styles'],
 		];
 
 		if ( ! empty( $args['category'] ) ) {
@@ -308,7 +314,10 @@ class GlobalClassService {
 				unset( $class['styles'] );
 
 				// Store warnings for response.
-				$this->store_normalization_warnings( $normalization_warnings );
+				$warnings = $normalized['warnings'] ?? [];
+				if ( ! empty( $warnings ) ) {
+					$this->store_normalization_warnings( $warnings );
+				}
 			}
 
 			update_option( BricksCore::OPTION_GLOBAL_CLASSES, $classes );

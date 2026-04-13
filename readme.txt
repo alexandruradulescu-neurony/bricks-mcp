@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.6.4
+Stable tag: 3.6.5
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -143,6 +143,11 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.6.5 =
+* Fix: global_class:update crashed with TypeError when styles were updated — store_normalization_warnings() was called with null instead of the warnings array from normalize_bricks_styles(). The update flow is now correctly wired.
+* Fix: create_global_class now runs normalize_bricks_styles() on new classes. Previously only global_class:update normalized; auto-created classes from ClassIntentResolver (the design pipeline) could slip per-side _border.style objects through, causing "Array to string conversion" PHP errors on frontend render. Affected any pipeline build that specified dashed/dotted borders via style_overrides.
+* Auto-created classes now have the same correctness guarantees as manually-updated classes.
 
 = 3.6.4 =
 * Unsplash image resolution no longer fails silently. ElementSettingsGenerator now attaches _pipeline_warnings to element settings when Unsplash search, sideload, or API key lookup fails. BuildHandler collects warnings and returns them as "warnings" array in the build response so the AI knows image slots were left empty.

@@ -4,6 +4,15 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.6.5] — 2026-04-13
+
+### Fixed
+- **`global_class:update` TypeError** — `GlobalClassService::update_global_class()` called `store_normalization_warnings()` with an undefined variable `$normalization_warnings` (should have been `$normalized['warnings']`). Every style-bearing update crashed with `Argument #1 ($warnings) must be of type array, null given`. Now correctly reads the warnings from the normalizer return value and only stores them if non-empty.
+- **Per-side `_border.style` rendering crash** — `create_global_class()` previously only called `sanitize_styles_array()`, skipping `normalize_bricks_styles()`. So classes auto-created by the design pipeline (`ClassIntentResolver`) could slip through objects like `style: {top: "dashed", right: "dashed", ...}` that Bricks' frontend expects as strings. The result was `PHP Warning: Array to string conversion` in section render. Both paths (`create` and `update`) now normalize identically.
+
+### Known gaps still being worked
+- No generic way to pass element-specific settings (pie-chart `percent`, counter `count-to`, video `url`, etc.) through the design schema. The `element_settings` whitelist feature is deferred to the next release.
+
 ## [3.6.4] — 2026-04-13
 
 ### Fixed
