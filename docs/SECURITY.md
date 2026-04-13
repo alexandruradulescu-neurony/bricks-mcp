@@ -57,6 +57,18 @@ Operations that delete or replace content (element removal with cascade, page de
 
 This prevents accidental mass deletions from AI agent loops. The `PendingActionService` manages token generation, storage, and validation.
 
+## Tiered Prerequisite Gating
+
+Every write operation requires the AI to have first gathered appropriate site context, enforced server-side via `PrerequisiteGateService`. This prevents "fire and forget" AI writes on sites the agent hasn't actually analyzed.
+
+| Workflow tier | Required prerequisite flags |
+|---|---|
+| Direct operation (text edits, moves, deletes) | `site_info` |
+| Instructed build (bulk_add, append_content) | `site_info` + `global_classes` |
+| Design build (`build_from_schema`) | `site_info` + `global_classes` + `css_variables` + `design_discovery` + `design_plan` |
+
+Flags persist for 30 minutes per session, keyed by session ID. A fresh session must re-gather context. The `design_discovery` and `design_plan` flags are set by the two phases of `propose_design`, forcing the AI through the structured design pipeline before building.
+
 ## Design Build Gate
 
 The plugin enforces a design build gate that prevents AI assistants from creating large or complex layouts through low-level tools. When an AI attempts to use `page:append_content`, `page:update_content`, `element:bulk_add`, or `page:create` with:
@@ -64,9 +76,15 @@ The plugin enforces a design build gate that prevents AI assistants from creatin
 - Section-level elements (which indicate a full layout), or
 - More than 8 elements in a single operation
 
-the request is rejected with an error message redirecting the AI to use `build_from_schema` instead. The `build_from_schema` pipeline applies structural validation, hierarchy enforcement, class resolution, and element defaults — producing consistent, high-quality output.
+the request is rejected with an error message redirecting the AI to use `build_from_schema` instead. The `build_from_schema` pipeline applies structural validation, hierarchy enforcement, class resolution, element defaults, schema validation, and auto-fixes — producing consistent, high-quality output.
 
 The gate can be bypassed with `bypass_design_gate: true` for legitimate direct operations where the AI has a specific reason to skip the pipeline.
+
+## Proposal TTL
+
+Design proposals returned by `propose_design` (Phase 2) are one-shot, single-use tokens with a 10-minute TTL. Once consumed by `build_from_schema`, the proposal is invalidated and cannot be replayed. This prevents stale proposals from being used against a site whose state has since changed.
+
+If a proposal expires before the build completes, the AI must restart the design flow from discovery or Phase 2.
 
 ## Auto-Snapshots
 
@@ -77,6 +95,21 @@ This provides a safety net against destructive overwrites — if an AI build pro
 ## Element Count Safety Checks
 
 The plugin validates element counts before write operations to prevent accidental content wipes. If an update would result in significantly fewer elements than the existing content (suggesting a replacement rather than an edit), the operation is flagged and may require confirmation.
+
+## CSS Sanitization
+
+CSS written via `global_class:create`, `global_class:update`, `code:set_page_css`, and `theme_style:*` is centrally sanitized by `CssSanitizer` before being stored. The sanitizer:
+
+- Strips `<script>`, `<iframe>`, and similar HTML tags that could break out of CSS context
+- Removes `javascript:`, `data:text/html`, and other executable URL schemes
+- Blocks `expression()` and `@import` of remote URLs
+- Preserves valid CSS syntax including `@media`, `@supports`, and custom properties (`--var-name`)
+
+CSS cannot execute code even without sanitization, but the sanitizer provides defense-in-depth against XSS via stored style vectors.
+
+## Schema Validation
+
+`build_from_schema` rejects unknown keys with specific suggestions (e.g., `"settings"` → `"Did you mean style_overrides?"`). This prevents arbitrary payloads from being stored as element metadata and confines writes to the documented schema surface. Valid node keys are enumerated in `DesignSchemaValidator` — anything outside that list is rejected before the write reaches Bricks.
 
 ## What This Plugin Does NOT Do
 

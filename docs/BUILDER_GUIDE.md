@@ -1,13 +1,17 @@
-> **LEGACY REFERENCE** — This file is no longer served to AI assistants. It remains as a reference for developers.
+> **LEGACY REFERENCE (superseded as of v3.4.0)** — This file is no longer served to AI assistants. It remains as a reference for developers reading the plugin source.
 >
 > The active knowledge system is:
+> - **4-step design pipeline reference**: [DESIGN_PIPELINE.md](DESIGN_PIPELINE.md)
+> - **Architecture overview**: [WordPress MCP Server for Bricks.md](WordPress%20MCP%20Server%20for%20Bricks.md)
 > - **General building rules**: `bricks:get_knowledge(domain='building')`
 > - **Domain knowledge**: `bricks:get_knowledge(domain='forms|dynamic-data|components|popups|woocommerce|animations|seo')`
 > - **Design schema format**: documented in the `build_from_schema` tool description
-> - **Intent router**: in server instructions (StreamableHttpHandler)
+> - **Intent router**: in server instructions (`StreamableHttpHandler`)
 > - **Element defaults**: `data/element-defaults.json`
 > - **Hierarchy rules**: `data/element-hierarchy-rules.json`
 > - **Context rules**: `data/class-context-rules.json`
+> - **Design patterns**: `data/design-patterns/` (17 curated section compositions, v3.2.0+)
+> - **Starter classes**: `StarterClassesService` (13 curated definitions for new sites, v3.4.0+)
 
 ---
 
