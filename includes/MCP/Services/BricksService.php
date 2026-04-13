@@ -441,6 +441,15 @@ class BricksService {
 		return $this->global_class_service;
 	}
 
+	/**
+	 * Get the theme style service instance.
+	 *
+	 * @return ThemeStyleService
+	 */
+	public function get_theme_style_service(): ThemeStyleService {
+		return $this->theme_style_service;
+	}
+
 	public function get_global_classes( string $search = '', string $category = '' ): array {
 		return $this->global_class_service->get_global_classes( $search, $category );
 	}

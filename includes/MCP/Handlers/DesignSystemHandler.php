@@ -348,6 +348,12 @@ final class DesignSystemHandler {
 			return $result;
 		}
 
+		// Add normalization warnings if present.
+		$warnings = $this->bricks_service->get_theme_style_service()->get_normalization_warnings();
+		if ( ! empty( $warnings ) ) {
+			$result['warnings'] = $warnings;
+		}
+
 		// Add warning if modifying the site-wide active style.
 		if ( ! empty( $result['is_sitewide_active'] ) ) {
 			$result['warning'] = __( 'This style applies to the entire website. Changes are live immediately.', 'bricks-mcp' );

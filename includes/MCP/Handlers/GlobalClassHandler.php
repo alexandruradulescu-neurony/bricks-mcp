@@ -292,7 +292,17 @@ final class GlobalClassHandler {
 			);
 		}
 
-		return $this->bricks_service->update_global_class( $class['id'], $args );
+		$result = $this->bricks_service->update_global_class( $class['id'], $args );
+
+		// Add normalization warnings if present.
+		if ( ! is_wp_error( $result ) ) {
+			$warnings = $this->bricks_service->get_global_class_service()->get_normalization_warnings();
+			if ( ! empty( $warnings ) ) {
+				$result['warnings'] = $warnings;
+			}
+		}
+
+		return $result;
 	}
 
 	/**

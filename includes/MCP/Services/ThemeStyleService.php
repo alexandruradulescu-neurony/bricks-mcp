@@ -168,6 +168,45 @@ class ThemeStyleService {
 	}
 
 	/**
+	 * Normalize Bricks style properties to their correct formats.
+	 *
+	 * Ensures properties like border style are strings (not arrays),
+	 * and other Bricks-specific formats are correct.
+	 *
+	 * @param array<string, mixed> $styles Styles to normalize.
+	 * @return array{styles: array<string, mixed>, warnings: array<string>} Normalized styles and any warnings.
+	 */
+	private function normalize_bricks_styles( array $styles ): array {
+		$warnings = [];
+
+		// Normalize border style - must be a string, not an array with per-side values.
+		if ( isset( $styles['_border']['style'] ) && is_array( $styles['_border']['style'] ) ) {
+			$style_array = $styles['_border']['style'];
+			$first_value = is_string( $style_array['top'] ?? '' ) && '' !== $style_array['top']
+				? $style_array['top']
+				: ( is_string( reset( $style_array ) ) ? reset( $style_array ) : 'solid' );
+
+			$styles['_border']['style'] = $first_value;
+			$warnings[] = 'Border style must be a string (e.g., "solid", "dashed"). Array value was converted to "' . esc_attr( $first_value ) . '". Use a string format in future requests.';
+		}
+
+		// Recursively normalize nested style groups.
+		foreach ( $styles as $key => $value ) {
+			// Skip if this looks like a border object (has width/style/color/radius keys).
+			if ( is_array( $value ) && ! isset( $value['width'] ) && ! isset( $value['style'] ) && ! isset( $value['color'] ) && ! isset( $value['radius'] ) ) {
+				$nested = $this->normalize_bricks_styles( $value );
+				$styles[ $key ] = $nested['styles'];
+				$warnings = array_merge( $warnings, $nested['warnings'] );
+			}
+		}
+
+		return array(
+			'styles'   => $styles,
+			'warnings' => $warnings,
+		);
+	}
+
+	/**
 	 * Update an existing theme style with partial merge support.
 	 *
 	 * Supports deep-merge (default) or section-replace for settings groups.
@@ -209,6 +248,8 @@ class ThemeStyleService {
 		// Update settings if provided — sanitize to prevent CSS injection.
 		if ( null !== $settings ) {
 			$sanitized_settings = $this->core->sanitize_styles_array( $settings );
+			$all_warnings       = [];
+
 			foreach ( $sanitized_settings as $group_key => $group_settings ) {
 				// Skip conditions key — handled separately below.
 				if ( 'conditions' === $group_key ) {
@@ -217,14 +258,25 @@ class ThemeStyleService {
 
 				if ( $replace_section || ! isset( $styles[ $style_id ]['settings'][ $group_key ] ) ) {
 					// Replace the entire group or create new group.
-					$styles[ $style_id ]['settings'][ $group_key ] = $group_settings;
+					$normalized                     = $this->normalize_bricks_styles( $group_settings );
+					$styles[ $style_id ]['settings'][ $group_key ] = $normalized['styles'];
+					$all_warnings                  = array_merge( $all_warnings, $normalized['warnings'] );
 				} else {
 					// Deep merge: recursively merge nested style properties.
-					$styles[ $style_id ]['settings'][ $group_key ] = $this->deep_merge_styles(
+					$merged = $this->deep_merge_styles(
 						$styles[ $style_id ]['settings'][ $group_key ],
 						$group_settings
 					);
+					// Normalize after merge.
+					$normalized                     = $this->normalize_bricks_styles( $merged );
+					$styles[ $style_id ]['settings'][ $group_key ] = $normalized['styles'];
+					$all_warnings                  = array_merge( $all_warnings, $normalized['warnings'] );
 				}
+			}
+
+			// Store warnings for response.
+			if ( ! empty( $all_warnings ) ) {
+				$this->store_normalization_warnings( $all_warnings );
 			}
 		}
 
@@ -266,6 +318,27 @@ class ThemeStyleService {
 			) ) ),
 			'is_sitewide_active' => $is_sitewide,
 		];
+	}
+
+	/**
+	 * Get any stored normalization warnings from the last update operation.
+	 *
+	 * @return array<string> Array of warning messages.
+	 */
+	public function get_normalization_warnings(): array {
+		global $bricks_mcp_normalization_warnings;
+		return is_array( $bricks_mcp_normalization_warnings ) ? $bricks_mcp_normalization_warnings : [];
+	}
+
+	/**
+	 * Store normalization warnings for the response.
+	 *
+	 * @param array<string> $warnings Warning messages.
+	 * @return void
+	 */
+	private function store_normalization_warnings( array $warnings ): void {
+		global $bricks_mcp_normalization_warnings;
+		$bricks_mcp_normalization_warnings = $warnings;
 	}
 
 	/**

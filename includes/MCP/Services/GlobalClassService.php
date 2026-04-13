@@ -208,6 +208,45 @@ class GlobalClassService {
 	}
 
 	/**
+	 * Normalize Bricks style properties to their correct formats.
+	 *
+	 * Ensures properties like border style are strings (not arrays),
+	 * and other Bricks-specific formats are correct.
+	 *
+	 * @param array<string, mixed> $styles Styles to normalize.
+	 * @return array{styles: array<string, mixed>, warnings: array<string>} Normalized styles and any warnings.
+	 */
+	private function normalize_bricks_styles( array $styles ): array {
+		$warnings = [];
+
+		// Normalize border style - must be a string, not an array with per-side values.
+		if ( isset( $styles['_border']['style'] ) && is_array( $styles['_border']['style'] ) ) {
+			$style_array = $styles['_border']['style'];
+			$first_value = is_string( $style_array['top'] ?? '' ) && '' !== $style_array['top']
+				? $style_array['top']
+				: ( is_string( reset( $style_array ) ) ? reset( $style_array ) : 'solid' );
+
+			$styles['_border']['style'] = $first_value;
+			$warnings[] = 'Border style must be a string (e.g., "solid", "dashed"). Array value was converted to "' . esc_attr( $first_value ) . '". Use a string format in future requests.';
+		}
+
+		// Recursively normalize nested style groups (for theme styles).
+		foreach ( $styles as $key => $value ) {
+			// Skip if this looks like a border object (has width/style/color/radius keys).
+			if ( is_array( $value ) && ! isset( $value['width'] ) && ! isset( $value['style'] ) && ! isset( $value['color'] ) && ! isset( $value['radius'] ) ) {
+				$nested = $this->normalize_bricks_styles( $value );
+				$styles[ $key ] = $nested['styles'];
+				$warnings = array_merge( $warnings, $nested['warnings'] );
+			}
+		}
+
+		return array(
+			'styles'   => $styles,
+			'warnings' => $warnings,
+		);
+	}
+
+	/**
 	 * Update an existing global CSS class.
 	 *
 	 * @param string               $class_id Class ID to update.
@@ -259,11 +298,17 @@ class GlobalClassService {
 				$existing_styles  = $class['settings'] ?? $class['styles'] ?? [];
 
 				if ( ! empty( $args['replace_styles'] ) ) {
-					$class['settings'] = $sanitized_styles;
+					$normalized       = $this->normalize_bricks_styles( $sanitized_styles );
+					$class['settings'] = $normalized['styles'];
 				} else {
-					$class['settings'] = $this->deep_merge_styles( $existing_styles, $sanitized_styles );
+					$merged           = $this->deep_merge_styles( $existing_styles, $sanitized_styles );
+					$normalized       = $this->normalize_bricks_styles( $merged );
+					$class['settings'] = $normalized['styles'];
 				}
 				unset( $class['styles'] );
+
+				// Store warnings for response.
+				$this->store_normalization_warnings( $normalization_warnings );
 			}
 
 			update_option( BricksCore::OPTION_GLOBAL_CLASSES, $classes );
@@ -294,6 +339,27 @@ class GlobalClassService {
 		} finally {
 			$this->core->release_lock( 'global_classes' );
 		}
+	}
+
+	/**
+	 * Get any stored normalization warnings from the last update operation.
+	 *
+	 * @return array<string> Array of warning messages.
+	 */
+	public function get_normalization_warnings(): array {
+		global $bricks_mcp_normalization_warnings;
+		return is_array( $bricks_mcp_normalization_warnings ) ? $bricks_mcp_normalization_warnings : [];
+	}
+
+	/**
+	 * Store normalization warnings for the response.
+	 *
+	 * @param array<string> $warnings Warning messages.
+	 * @return void
+	 */
+	private function store_normalization_warnings( array $warnings ): void {
+		global $bricks_mcp_normalization_warnings;
+		$bricks_mcp_normalization_warnings = $warnings;
 	}
 
 	/**
