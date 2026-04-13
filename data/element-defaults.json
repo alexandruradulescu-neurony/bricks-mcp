@@ -40,6 +40,13 @@
     "style": "primary",
     "link": { "type": "external", "url": "#" }
   },
+  "element_settings_defaults": {
+    "counter":         { "countTo": 100, "duration": 2000 },
+    "pie-chart":       { "percent": 75, "size": 200, "lineWidth": 16 },
+    "progress-bar":    { "bars": [ { "label": "Progress", "percentage": 75 } ] },
+    "rating":          { "rating": 5, "maxRating": 5 },
+    "animated-typing": { "strings": [ "Loading..." ], "typeSpeed": 80 }
+  },
   "form_templates": {
     "newsletter": {
       "fields": [

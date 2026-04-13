@@ -105,6 +105,26 @@
     "animated-typing": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false
+    },
+    "progress-bar": {
+      "valid_parents": ["section", "container", "block", "div"],
+      "accepts_children": false
+    },
+    "pie-chart": {
+      "valid_parents": ["section", "container", "block", "div"],
+      "accepts_children": false
+    },
+    "rating": {
+      "valid_parents": ["section", "container", "block", "div"],
+      "accepts_children": false
+    },
+    "social-icons": {
+      "valid_parents": ["section", "container", "block", "div"],
+      "accepts_children": false
+    },
+    "text-link": {
+      "valid_parents": ["section", "container", "block", "div", "text-basic"],
+      "accepts_children": false
     }
   }
 }

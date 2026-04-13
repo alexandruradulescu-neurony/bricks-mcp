@@ -151,6 +151,9 @@ class GlobalClassService {
 		// the frontend with "Array to string conversion" during render.
 		$sanitized_styles = $this->core->sanitize_styles_array( $args['styles'] ?? [] );
 		$normalized       = $this->normalize_bricks_styles( $sanitized_styles );
+		$shape_result     = StyleShapeValidator::validate_and_fix( $normalized['styles'] );
+		$normalized['styles']   = $shape_result['styles'];
+		$normalized['warnings'] = array_merge( $normalized['warnings'], $shape_result['warnings'] );
 		$new_class = [
 			'id'       => $new_id,
 			'name'     => $name,
@@ -305,10 +308,16 @@ class GlobalClassService {
 
 				if ( ! empty( $args['replace_styles'] ) ) {
 					$normalized       = $this->normalize_bricks_styles( $sanitized_styles );
+					$shape_result     = StyleShapeValidator::validate_and_fix( $normalized['styles'] );
+					$normalized['styles']   = $shape_result['styles'];
+					$normalized['warnings'] = array_merge( $normalized['warnings'], $shape_result['warnings'] );
 					$class['settings'] = $normalized['styles'];
 				} else {
 					$merged           = $this->deep_merge_styles( $existing_styles, $sanitized_styles );
 					$normalized       = $this->normalize_bricks_styles( $merged );
+					$shape_result     = StyleShapeValidator::validate_and_fix( $normalized['styles'] );
+					$normalized['styles']   = $shape_result['styles'];
+					$normalized['warnings'] = array_merge( $normalized['warnings'], $shape_result['warnings'] );
 					$class['settings'] = $normalized['styles'];
 				}
 				unset( $class['styles'] );

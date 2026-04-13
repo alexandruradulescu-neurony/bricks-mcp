@@ -4,6 +4,32 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.7.0] — 2026-04-13
+
+### Added
+- **`StyleShapeValidator` service** (`includes/MCP/Services/StyleShapeValidator.php`) — 7 auto-fix rules for Bricks settings shape mismatches that previously caused silent style failures or "Array to string conversion" frontend errors. Wraps color strings into `{raw}`/`{hex}` objects (`_typography.color`, `_background.color`, `_color`, `_border.color`), collapses per-side `_border.style` to a string, expands flat `_border.width` to per-side, joins `_cssCustom` arrays. **All fixes return warnings — never hard-error.** Wired into `GlobalClassService::create_global_class`, `GlobalClassService::update_global_class`, and `ElementSettingsGenerator::build_settings`.
+- **`element_settings` escape hatch** — design schema now accepts an `element_settings` key on 8 element types (pie-chart, counter, video, slider-nested, form, progress-bar, rating, animated-typing) with type-specific whitelisted keys. Pie-chart can specify `percent`, counter can specify `countTo`, video can specify URL / autoplay / loop / etc.
+- **Element capabilities expanded** — `ProposalService::ELEMENT_CAPABILITIES` now describes 6 additional elements: `progress-bar`, `pie-chart`, `alert`, `animated-typing`, `rating`, `social-icons`. Element hierarchy rules updated for the 5 missing ones.
+- **Sane element-settings defaults** in `data/element-defaults.json`'s new `element_settings_defaults` map: counter countTo=100, pie-chart percent=75, progress-bar with sample bar, rating=5, animated-typing strings. Applied automatically when element_settings is omitted.
+- **Class attribution warnings** — `ClassIntentResolver::resolve()` now returns `classes_auto_added`. `BuildHandler` surfaces these in the response so AI sees which classes were attached by context rules vs requested in the plan.
+- **Element count reconciliation** in `BuildHandler` — warns when fewer elements were generated than the schema intended (catches silent drops). Always logs both counts via `error_log`.
+- **Element-level `_cssCustom` quarantine** — when `_cssCustom` appears on `text-basic`/`heading`/`button`/`icon`/`text`/`text-link` (which crash with array-to-string), the CSS is stripped and a warning recommends moving it to a `class_intent`.
+
+### Track C — element_settings value auto-fixes
+- **Counter `countTo`** — "500+", "1,200", "$99" auto-extract to integer 500/1200/99 with prefix/suffix extraction.
+- **Pie-chart `percent`** — string "92%" → integer 92, clamped to 0-100.
+- **Video URL conversion** — `youtube.com/watch?v=ID` and `youtu.be/ID` → `ytId` + `videoType: youtube`. `vimeo.com/ID` → `vimeoId` + `videoType: vimeo`.
+- **Rating value** — clamped to 0–maxRating.
+
+### Changed
+- **Class context guards** in `data/class-context-rules.json`:
+  - `tagline` rule requires content under 60 chars and an uppercase/short check (stops red-text auto-attaching to neutral subtitles).
+  - `tag-grid` rule requires children to have `tag-pill` class with min 2 (stops auto-attaching to feature-card grids).
+- **`DesignSchemaValidator`** — adds `element_settings` to `VALID_NODE_KEYS` and a new `ELEMENT_SETTINGS_ALLOWED` constant. Validation rejects `element_settings` on disallowed element types or with non-whitelisted keys.
+
+### Risk-mitigated by design
+- `StyleShapeValidator` never throws or rejects. Worst case for a malformed input: auto-fix + warning. Hard validation lives in `DesignSchemaValidator` above it. Legacy classes with weird shapes are auto-corrected on next save, never blocked.
+
 ## [3.6.5] — 2026-04-13
 
 ### Fixed

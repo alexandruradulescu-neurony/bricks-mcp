@@ -173,6 +173,30 @@ final class DesignSchemaValidator {
 		'icon', 'iconPosition', 'src', 'form_type',
 		// Pattern/repeat keys.
 		'ref', 'repeat', 'data',
+		// Element-specific settings escape hatch.
+		'element_settings',
+	];
+
+	/**
+	 * Per-element settings that can be passed via the element_settings escape hatch.
+	 *
+	 * Most elements get their settings from style_overrides + content + class_intent,
+	 * but some Bricks elements have type-specific settings that don't fit those
+	 * categories (pie-chart percent, counter count-to, video URL, etc.).
+	 *
+	 * The validator allows element_settings ONLY for the element types listed here,
+	 * and only with the keys whitelisted per type. This keeps the attack surface narrow
+	 * while letting AI clients fully use these elements.
+	 */
+	private const ELEMENT_SETTINGS_ALLOWED = [
+		'pie-chart'       => [ 'percent', 'content', 'barColor', 'trackColor', 'size', 'lineWidth' ],
+		'counter'         => [ 'countTo', 'countFrom', 'prefix', 'suffix', 'duration', 'separator' ],
+		'video'           => [ 'videoType', 'ytId', 'vimeoId', 'mp4', 'fileUrl', 'iframeUrl', 'autoplay', 'loop', 'muted', 'controls', 'preload' ],
+		'slider-nested'   => [ 'sliderOptions' ],
+		'form'            => [ 'formFields', 'actions', 'submitButtonText', 'submitButtonStyle' ],
+		'progress-bar'    => [ 'bars', 'showLabel', 'showPercentage', 'animation' ],
+		'rating'          => [ 'rating', 'maxRating', 'icon', 'starColor', 'starColorEmpty' ],
+		'animated-typing' => [ 'strings', 'typeSpeed', 'backSpeed', 'loop' ],
 	];
 
 	/**
@@ -240,6 +264,23 @@ final class DesignSchemaValidator {
 
 		if ( ! $this->is_valid_element_type( $type ) ) {
 			$errors[] = "{$path}.type \"{$type}\" is not a known Bricks element.";
+		}
+
+		// Validate element_settings if provided.
+		if ( isset( $node['element_settings'] ) ) {
+			if ( ! is_array( $node['element_settings'] ) ) {
+				$errors[] = "{$path}.element_settings must be an object.";
+			} elseif ( ! isset( self::ELEMENT_SETTINGS_ALLOWED[ $type ] ) ) {
+				$allowed_types = implode( ', ', array_keys( self::ELEMENT_SETTINGS_ALLOWED ) );
+				$errors[] = "{$path}.element_settings is not allowed on element type \"{$type}\" — only on: {$allowed_types}.";
+			} else {
+				$allowed_keys = self::ELEMENT_SETTINGS_ALLOWED[ $type ];
+				foreach ( array_keys( $node['element_settings'] ) as $es_key ) {
+					if ( ! in_array( $es_key, $allowed_keys, true ) ) {
+						$errors[] = "{$path}.element_settings.{$es_key} is not allowed on element type \"{$type}\". Allowed keys: " . implode( ', ', $allowed_keys ) . '.';
+					}
+				}
+			}
 		}
 
 		// Validate parent-child hierarchy. Skip for pattern definitions (_pattern parent).

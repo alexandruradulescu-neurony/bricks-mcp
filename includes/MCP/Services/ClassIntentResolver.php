@@ -35,6 +35,13 @@ final class ClassIntentResolver {
 	private ?array $cached_classes = null;
 
 	/**
+	 * Tracks class names auto-added by context rules (not requested in design_plan).
+	 *
+	 * @var array<int, string>
+	 */
+	private array $classes_auto_added = [];
+
+	/**
 	 * Constructor.
 	 *
 	 * @param GlobalClassService $class_service Global class service.
@@ -54,7 +61,7 @@ final class ClassIntentResolver {
 	 * @param array<int, string>        $intents    Unique class intent strings.
 	 * @param bool                      $dry_run    When true, only match existing classes — never create new ones.
 	 * @param array<string, array>      $style_map  Optional class_intent => style_overrides map. When creating a new class, its styles are populated from this map.
-	 * @return array{map: array<string, string>, classes_reused: string[], classes_created: string[], classes_with_styles: string[]}
+	 * @return array{map: array<string, string>, classes_reused: string[], classes_created: string[], classes_with_styles: string[], classes_auto_added: string[]}
 	 */
 	public function resolve( array $intents, bool $dry_run = false, array $style_map = [] ): array {
 		$intents = array_values( array_unique( $intents ) );
@@ -154,10 +161,11 @@ final class ClassIntentResolver {
 		}
 
 		return [
-			'map'                => $map,
-			'classes_reused'     => $classes_reused,
-			'classes_created'    => $classes_created,
+			'map'                 => $map,
+			'classes_reused'      => $classes_reused,
+			'classes_created'     => $classes_created,
 			'classes_with_styles' => $classes_with_styles,
+			'classes_auto_added'  => $this->classes_auto_added,
 		];
 	}
 
@@ -207,12 +215,13 @@ final class ClassIntentResolver {
 	 * Used when no explicit class_intent is set. Checks context rules
 	 * against existing global classes to find a semantic match.
 	 *
-	 * @param string        $element_type  Bricks element type (e.g., 'text-basic', 'block', 'icon').
-	 * @param string        $parent_type   Parent element type (e.g., 'container', 'block').
-	 * @param array<string> $sibling_types Types of sibling elements in order.
-	 * @param int           $position      This element's position among siblings (0-indexed).
-	 * @param array<string> $child_types   Types of this element's children.
-	 * @param string|null   $parent_class  Class applied to the parent element (name, not ID).
+	 * @param string               $element_type    Bricks element type (e.g., 'text-basic', 'block', 'icon').
+	 * @param string               $parent_type     Parent element type (e.g., 'container', 'block').
+	 * @param array<string>        $sibling_types   Types of sibling elements in order.
+	 * @param int                  $position        This element's position among siblings (0-indexed).
+	 * @param array<string>        $child_types     Types of this element's children.
+	 * @param string|null          $parent_class    Class applied to the parent element (name, not ID).
+	 * @param array<string, mixed> $element_context Optional context: content text, child class intents, etc.
 	 * @return string|null Global class ID if a match is found, null otherwise.
 	 */
 	public function suggest_for_context(
@@ -221,7 +230,8 @@ final class ClassIntentResolver {
 		array $sibling_types,
 		int $position,
 		array $child_types = [],
-		?string $parent_class = null
+		?string $parent_class = null,
+		array $element_context = []
 	): ?string {
 		$rules   = self::get_context_rules();
 		$classes = $this->get_classes();
@@ -260,15 +270,36 @@ final class ClassIntentResolver {
 				continue;
 			}
 
+			// Evaluate guard conditions (if any) to prevent over-application.
+			if ( ! empty( $rule['guard_conditions'] ) && ! $this->should_apply_with_guards( $rule['guard_conditions'], $element_context, $child_types ) ) {
+				continue;
+			}
+
 			// Find a class matching this pattern.
 			foreach ( $class_by_name as $name => $class ) {
 				if ( $name === $pattern || str_starts_with( $name, $pattern . '-' ) || str_starts_with( $name, $pattern . '_' ) ) {
-					return $class['id'] ?? null;
+					$class_id = $class['id'] ?? null;
+					if ( null !== $class_id ) {
+						$this->classes_auto_added[] = $name;
+					}
+					return $class_id;
 				}
 			}
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get the list of class names that were auto-added by context rules.
+	 *
+	 * These classes were applied via suggest_for_context() rather than being
+	 * explicitly requested in the design plan's class_intent.
+	 *
+	 * @return array<int, string> Auto-added class names.
+	 */
+	public function get_classes_auto_added(): array {
+		return array_values( array_unique( $this->classes_auto_added ) );
 	}
 
 	/**
@@ -316,6 +347,60 @@ final class ClassIntentResolver {
 	 */
 	private function check_inside_pill( ?string $parent_class ): bool {
 		return null !== $parent_class && str_contains( $parent_class, 'tag-pill' );
+	}
+
+	/**
+	 * Evaluate guard conditions from a context rule to prevent over-application.
+	 *
+	 * Guards are optional constraints that must ALL pass for the rule to apply.
+	 * They provide content-aware filtering beyond structural context checks.
+	 *
+	 * @param array<string, mixed> $guards          Guard conditions from the rule.
+	 * @param array<string, mixed> $element_context  Element context (content, child_class_intents, etc.).
+	 * @param array<string>        $child_types      Types of this element's children.
+	 * @return bool True if all guards pass, false if any guard fails.
+	 */
+	private function should_apply_with_guards( array $guards, array $element_context, array $child_types ): bool {
+		// Guard: max_content_length — reject if content text exceeds threshold.
+		if ( isset( $guards['max_content_length'] ) ) {
+			$content = $element_context['content'] ?? '';
+			if ( is_string( $content ) && mb_strlen( strip_tags( $content ) ) > (int) $guards['max_content_length'] ) {
+				return false;
+			}
+		}
+
+		// Guard: must_be_uppercase_or_short — tagline heuristic.
+		// Content should either start with an uppercase letter or be very short (< 30 chars).
+		if ( ! empty( $guards['must_be_uppercase_or_short'] ) ) {
+			$content = trim( strip_tags( $element_context['content'] ?? '' ) );
+			if ( '' !== $content ) {
+				$is_short     = mb_strlen( $content ) < 30;
+				$starts_upper = preg_match( '/^\p{Lu}/u', $content );
+				if ( ! $is_short && ! $starts_upper ) {
+					return false;
+				}
+			}
+		}
+
+		// Guard: children_must_have_class — at least min_pill_children must have the required class intent.
+		if ( isset( $guards['children_must_have_class'] ) ) {
+			$required_class = $guards['children_must_have_class'];
+			$min_count      = (int) ( $guards['min_pill_children'] ?? 2 );
+			$child_intents  = $element_context['child_class_intents'] ?? [];
+			$matching       = 0;
+
+			foreach ( $child_intents as $intent ) {
+				if ( is_string( $intent ) && str_contains( $intent, $required_class ) ) {
+					$matching++;
+				}
+			}
+
+			if ( $matching < $min_count ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**

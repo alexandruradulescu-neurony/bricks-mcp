@@ -206,6 +206,36 @@ final class ProposalService {
 			'purpose'      => 'Pricing tier card',
 			'capabilities' => [ 'plan name, price, features list, CTA button', 'highlight/featured tier' ],
 		],
+		'progress-bar' => [
+			'purpose'      => 'Animated horizontal progress bar — for skill bars, completion meters',
+			'capabilities' => [ 'multiple bars in one element via "bars" array', 'animation on scroll', 'percentage label visibility' ],
+			'rules'        => [ 'use element_settings.bars for an array of {label, percentage} objects', 'pair with a heading for context' ],
+		],
+		'pie-chart' => [
+			'purpose'      => 'Circular percentage chart / radial progress',
+			'capabilities' => [ 'percent (0-100)', 'bar color, track color', 'inner content (percent text)' ],
+			'rules'        => [ 'use element_settings.percent (integer 0-100), barColor and trackColor are {raw} color objects' ],
+		],
+		'alert' => [
+			'purpose'      => 'Notification banner — info, success, warning, error',
+			'capabilities' => [ 'icon + text content', 'dismissible flag', 'color variants' ],
+			'rules'        => [ 'content goes in the alert text setting; choose alert type for color' ],
+		],
+		'animated-typing' => [
+			'purpose'      => 'Typewriter / typing animation effect — cycles through a list of strings',
+			'capabilities' => [ 'multiple strings to cycle through', 'type/back speed', 'loop' ],
+			'rules'        => [ 'use element_settings.strings (array of strings to cycle), typeSpeed (ms per char)' ],
+		],
+		'rating' => [
+			'purpose'      => 'Star rating display (or other icon) — for review summaries, product ratings',
+			'capabilities' => [ 'rating value (e.g. 4.5)', 'max rating (default 5)', 'icon style' ],
+			'rules'        => [ 'use element_settings.rating (number 0-maxRating)' ],
+		],
+		'social-icons' => [
+			'purpose'      => 'Row of social media icons with links',
+			'capabilities' => [ 'icons array (facebook, twitter, instagram, etc.)', 'shape (circle, square, none)', 'size variants' ],
+			'rules'        => [ 'each icon needs a URL; pair with a heading for context' ],
+		],
 	];
 
 	/**

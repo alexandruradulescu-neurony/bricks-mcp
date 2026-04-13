@@ -197,15 +197,43 @@ final class BuildHandler {
 			);
 		}
 
+		// Initialize pipeline warnings collector (populated by steps below + element-level warnings).
+		$pipeline_warnings = [];
+
+		// Step 8b: Check for auto-added classes (applied by context rules, not in design_plan).
+		$auto_added = $this->class_resolver->get_classes_auto_added();
+		if ( ! empty( $auto_added ) ) {
+			$pipeline_warnings[] = sprintf(
+				'Auto-attached classes (verify visual fit): %s. These were applied by context rules, not requested in your design_plan.',
+				implode( ', ', $auto_added )
+			);
+		}
+
 		// Step 9: Build summary.
 		$element_count = $this->count_elements( $all_elements );
 		$tree_summary  = $this->build_tree_summary( $all_elements );
+
+		// Step 9b: Element count reconciliation.
+		// Compare intended (from input schema) vs actual (from generated tree).
+		// Pattern expansion (ref + repeat) legitimately produces more elements than
+		// the input schema describes, so only warn when actual < intended (lost elements).
+		$intended_count = $this->count_intended_elements( $schema );
+		if ( $intended_count > 0 && $element_count < $intended_count ) {
+			$pipeline_warnings[] = sprintf(
+				'Element count mismatch: schema described %d element(s) but only %d were generated. Some elements may have been dropped during expansion.',
+				$intended_count,
+				$element_count
+			);
+		}
+		// Log counts for diagnostics regardless of mismatch direction.
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		error_log( sprintf( 'BricksMCP build: intended=%d, generated=%d elements.', $intended_count, $element_count ) );
 
 		// Extract and strip _pipeline_warnings from element settings.
 		// These are internal markers from ElementSettingsGenerator for problems
 		// that couldn't be hard-errored (e.g. Unsplash sideload failed, image
 		// slot left empty). Surface them in the response so the AI knows to fix.
-		$pipeline_warnings = $this->collect_and_strip_warnings( $all_elements );
+		$pipeline_warnings = array_merge( $pipeline_warnings, $this->collect_and_strip_warnings( $all_elements ) );
 
 		// Dry run: return what would be built without writing.
 		if ( $dry_run ) {
@@ -347,6 +375,41 @@ final class BuildHandler {
 			}
 		}
 		return implode( ', ', $parts );
+	}
+
+	/**
+	 * Count the number of intended elements in the input schema (pre-expansion).
+	 *
+	 * Walks sections and counts every node + descendant. Pattern refs count as 1
+	 * (not their expanded repeat count), so the intended count is a lower bound.
+	 *
+	 * @param array<string, mixed> $schema Input design schema.
+	 * @return int Intended element count.
+	 */
+	private function count_intended_elements( array $schema ): int {
+		$count = 0;
+		foreach ( $schema['sections'] ?? [] as $section ) {
+			if ( ! empty( $section['structure'] ) ) {
+				$count += $this->count_node_recursive( $section['structure'] );
+			}
+		}
+		return $count;
+	}
+
+	/**
+	 * Recursively count nodes in a structure tree.
+	 *
+	 * @param array<string, mixed> $node Structure node.
+	 * @return int Node count (this node + descendants).
+	 */
+	private function count_node_recursive( array $node ): int {
+		$count = 1;
+		foreach ( $node['children'] ?? [] as $child ) {
+			if ( is_array( $child ) ) {
+				$count += $this->count_node_recursive( $child );
+			}
+		}
+		return $count;
 	}
 
 	/**

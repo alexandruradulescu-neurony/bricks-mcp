@@ -197,13 +197,23 @@ final class ElementSettingsGenerator {
 				}
 			}
 
+			// Build element context for guard condition evaluation.
+			$element_context = [
+				'content'              => $node['content'] ?? '',
+				'child_class_intents'  => array_map(
+					static fn( $child ) => is_array( $child ) ? ( $child['class_intent'] ?? '' ) : '',
+					$node['children'] ?? []
+				),
+			];
+
 			$suggested_id = $this->class_resolver->suggest_for_context(
 				$type,
 				$parent_type,
 				$sibling_types,
 				$position,
 				$child_types,
-				$parent_class
+				$parent_class,
+				$element_context
 			);
 
 			if ( null !== $suggested_id ) {
@@ -455,6 +465,19 @@ final class ElementSettingsGenerator {
 			}
 		}
 
+		// 10a-ii. Quarantine _cssCustom on non-structural element types.
+		// Element-level _cssCustom on text/heading/button/icon elements is unreliable
+		// and can cause "Array to string conversion" frontend errors.
+		if ( isset( $settings['_cssCustom'] ) && in_array( $type, [ 'text-basic', 'heading', 'button', 'icon', 'text', 'text-link' ], true ) ) {
+			$css = $settings['_cssCustom'];
+			unset( $settings['_cssCustom'] );
+			$settings['_pipeline_warnings'][] = sprintf(
+				'Element-level _cssCustom on a %s element is unreliable (causes "Array to string conversion" frontend errors). The CSS was stripped: %s. Move this CSS into a class_intent instead.',
+				$type,
+				substr( is_string( $css ) ? $css : '', 0, 80 )
+			);
+		}
+
 		// 10b. Auto-fix common invalid keys before validation.
 		if ( isset( $settings['_maxWidth'] ) ) {
 			$settings['_widthMax'] = $settings['_maxWidth'];
@@ -560,9 +583,43 @@ final class ElementSettingsGenerator {
 			unset( $settings['_background']['overlay'] );
 		}
 
+		// 12b. Merge element_settings escape hatch (type-specific settings like percent, countTo, bars).
+		if ( ! empty( $node['element_settings'] ) && is_array( $node['element_settings'] ) ) {
+			// Load sane defaults first, then overlay the AI's element_settings on top.
+			$defaults     = self::get_defaults();
+			$es_defaults  = $defaults['element_settings_defaults'][ $type ] ?? [];
+			$merged_es    = array_merge( $es_defaults, $node['element_settings'] );
+
+			foreach ( $merged_es as $es_key => $es_value ) {
+				$settings[ $es_key ] = $es_value;
+			}
+		} elseif ( isset( self::get_defaults()['element_settings_defaults'][ $type ] ) ) {
+			// No element_settings provided but defaults exist — apply defaults
+			// so the element renders with sensible values out of the box.
+			$es_defaults = self::get_defaults()['element_settings_defaults'][ $type ];
+			foreach ( $es_defaults as $es_key => $es_value ) {
+				if ( ! isset( $settings[ $es_key ] ) ) {
+					$settings[ $es_key ] = $es_value;
+				}
+			}
+		}
+
+		// 12c. Auto-fix common element_settings value mistakes that AI clients make.
+		$settings = $this->auto_fix_element_settings( $settings, $type );
+
 		// 13. Apply background from section-level hint.
 		if ( 'section' === $type && ! empty( $node['background'] ) ) {
 			$settings = $this->apply_background( $settings, $node['background'], $design_context );
+		}
+
+		// 14. Validate and auto-fix style shapes (color objects, border formats, etc.).
+		$shape_result = StyleShapeValidator::validate_and_fix( $settings );
+		$settings     = $shape_result['styles'];
+		if ( ! empty( $shape_result['warnings'] ) ) {
+			$settings['_pipeline_warnings'] = array_merge(
+				$settings['_pipeline_warnings'] ?? [],
+				$shape_result['warnings']
+			);
 		}
 
 		return $settings;
@@ -576,6 +633,105 @@ final class ElementSettingsGenerator {
 	 * @param mixed $icon Icon data from schema.
 	 * @return array<string, string> Bricks icon object.
 	 */
+
+	/**
+	 * Auto-fix common AI-author mistakes in element_settings values.
+	 *
+	 * Track C of v3.7.0. AI clients consistently send element settings in the
+	 * wrong shape: counter countTo as "500+" or "1,200" (must be numeric),
+	 * video URLs as full youtube.com/watch?v=ID (must be embed format),
+	 * pie-chart percent as a string. Rather than reject these, we normalize
+	 * them and continue. Warnings are added to _pipeline_warnings so the AI
+	 * sees what we changed.
+	 *
+	 * @param array<string, mixed> $settings Current element settings.
+	 * @param string               $type     Element type (counter, video, pie-chart, etc.).
+	 * @return array<string, mixed> Settings with auto-fixes applied.
+	 */
+	private function auto_fix_element_settings( array $settings, string $type ): array {
+		$warnings = [];
+
+		// Counter: countTo must be a numeric integer. Strip non-digits.
+		// Extract prefix/suffix from common patterns like "$500", "1,200", "99+".
+		if ( 'counter' === $type && isset( $settings['countTo'] ) && ! is_int( $settings['countTo'] ) ) {
+			$raw = (string) $settings['countTo'];
+			// Match optional non-numeric prefix, the digits (with optional commas/dots), optional suffix.
+			if ( preg_match( '/^(?<prefix>[^\d]*)(?<num>[\d.,]+)(?<suffix>.*)$/', $raw, $m ) ) {
+				$digits = (int) preg_replace( '/[^0-9]/', '', $m['num'] );
+				$settings['countTo'] = $digits;
+				if ( ! empty( $m['prefix'] ) && ! isset( $settings['prefix'] ) ) {
+					$settings['prefix'] = $m['prefix'];
+				}
+				if ( ! empty( $m['suffix'] ) && ! isset( $settings['suffix'] ) ) {
+					$settings['suffix'] = $m['suffix'];
+				}
+				if ( $raw !== (string) $digits ) {
+					$warnings[] = sprintf(
+						'Auto-fixed: counter.countTo "%s" → integer %d (extracted prefix="%s", suffix="%s").',
+						$raw, $digits, $m['prefix'] ?? '', $m['suffix'] ?? ''
+					);
+				}
+			}
+		}
+
+		// Pie-chart: percent must be a numeric integer 0-100.
+		if ( 'pie-chart' === $type && isset( $settings['percent'] ) && ! is_int( $settings['percent'] ) ) {
+			$raw = (string) $settings['percent'];
+			$num = (int) preg_replace( '/[^0-9]/', '', $raw );
+			$num = max( 0, min( 100, $num ) );
+			$settings['percent'] = $num;
+			if ( $raw !== (string) $num ) {
+				$warnings[] = sprintf( 'Auto-fixed: pie-chart.percent "%s" → integer %d (clamped to 0-100).', $raw, $num );
+			}
+		}
+
+		// Video: convert youtube.com/watch?v=ID and youtu.be/ID to embed format,
+		// or extract ytId so Bricks builds the embed URL itself.
+		if ( 'video' === $type ) {
+			$raw_url = $settings['fileUrl'] ?? $settings['iframeUrl'] ?? '';
+			if ( is_string( $raw_url ) && '' !== $raw_url ) {
+				// youtube.com/watch?v=ID → ytId
+				if ( preg_match( '~youtube\.com/watch\?v=([A-Za-z0-9_-]+)~', $raw_url, $m ) ) {
+					$settings['videoType'] = 'youtube';
+					$settings['ytId']      = $m[1];
+					unset( $settings['fileUrl'] );
+					$warnings[] = sprintf( 'Auto-fixed: video URL "%s" → ytId "%s" (videoType: youtube).', $raw_url, $m[1] );
+				}
+				// youtu.be/ID → ytId
+				elseif ( preg_match( '~youtu\.be/([A-Za-z0-9_-]+)~', $raw_url, $m ) ) {
+					$settings['videoType'] = 'youtube';
+					$settings['ytId']      = $m[1];
+					unset( $settings['fileUrl'] );
+					$warnings[] = sprintf( 'Auto-fixed: video URL "%s" → ytId "%s" (videoType: youtube).', $raw_url, $m[1] );
+				}
+				// vimeo.com/ID → vimeoId
+				elseif ( preg_match( '~vimeo\.com/(\d+)~', $raw_url, $m ) ) {
+					$settings['videoType'] = 'vimeo';
+					$settings['vimeoId']   = $m[1];
+					unset( $settings['fileUrl'] );
+					$warnings[] = sprintf( 'Auto-fixed: video URL "%s" → vimeoId "%s" (videoType: vimeo).', $raw_url, $m[1] );
+				}
+			}
+		}
+
+		// Rating: clamp to 0-maxRating range.
+		if ( 'rating' === $type && isset( $settings['rating'] ) ) {
+			$raw       = $settings['rating'];
+			$max       = isset( $settings['maxRating'] ) ? (float) $settings['maxRating'] : 5.0;
+			$num       = is_numeric( $raw ) ? (float) $raw : (float) preg_replace( '/[^0-9.]/', '', (string) $raw );
+			$clamped   = max( 0, min( $max, $num ) );
+			if ( $clamped !== (float) $raw ) {
+				$settings['rating'] = $clamped;
+				$warnings[] = sprintf( 'Auto-fixed: rating.rating "%s" → %s (clamped to 0-%s).', $raw, $clamped, $max );
+			}
+		}
+
+		if ( ! empty( $warnings ) ) {
+			$settings['_pipeline_warnings'] = array_merge( $settings['_pipeline_warnings'] ?? [], $warnings );
+		}
+
+		return $settings;
+	}
 
 	private function resolve_icon( mixed $icon ): array {
 		if ( is_array( $icon ) && isset( $icon['library'], $icon['icon'] ) ) {

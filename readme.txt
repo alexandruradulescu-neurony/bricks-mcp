@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.6.5
+Stable tag: 3.7.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -143,6 +143,18 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.7.0 =
+* StyleShapeValidator service: 7 auto-fix rules for Bricks settings shape mismatches that previously caused silent failures or "Array to string conversion" frontend errors. Wraps color strings in {raw|hex} objects (typography.color, background.color, _color, border.color), collapses per-side _border.style to string, expands flat _border.width to per-side, joins _cssCustom arrays. All fixes return warnings — never hard-error.
+* element_settings escape hatch: design schema now accepts an element_settings key on 8 element types (pie-chart, counter, video, slider-nested, form, progress-bar, rating, animated-typing) with type-specific whitelisted keys. Pie-chart can finally specify percent, counter can specify countTo, video can specify URL/autoplay/etc.
+* Element coverage: ELEMENT_CAPABILITIES now describes 6 additional elements with purpose + capabilities + rules: progress-bar, pie-chart, alert, animated-typing, rating, social-icons. AI clients can now intentionally use these instead of working around them.
+* Sane defaults for element_settings: when an element of these types is created without element_settings, defaults are applied (counter countTo=100, pie-chart percent=75, progress-bar with sample bar, rating=5, animated-typing strings).
+* Class context guards: tagline rule now requires content under 60 chars and uppercase/short check; tag-grid rule now requires children to have tag-pill class. Stops the over-application of these classes to neutral text and CSS grids.
+* Class attribution warnings: build_from_schema response now includes warnings when classes were auto-attached by context rules without being requested in the design plan, so AI sees "tagline auto-attached to 3 subtitles".
+* Element count reconciliation: pipeline warns when fewer elements were generated than the schema intended (catches silent drops). Always logs intended/actual counts via error_log for debugging.
+* Element-level _cssCustom quarantine: when _cssCustom appears on text-basic, heading, button, icon, text, or text-link elements (which crash the frontend with array-to-string), the CSS is stripped and a warning recommends moving it to a class_intent.
+* Track C auto-fixes for element_settings values: counter countTo "500+" → integer 500 with prefix/suffix extraction, pie-chart percent string → integer clamped 0-100, video YouTube/Vimeo URL → ytId/vimeoId with videoType, rating value clamped to 0-maxRating range.
+* GlobalClassService now wires StyleShapeValidator after normalize_bricks_styles in both create and update paths. ElementSettingsGenerator runs StyleShapeValidator at the end of build_settings.
 
 = 3.6.5 =
 * Fix: global_class:update crashed with TypeError when styles were updated — store_normalization_warnings() was called with null instead of the warnings array from normalize_bricks_styles(). The update flow is now correctly wired.
