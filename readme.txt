@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.6.2
+Stable tag: 3.6.3
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -143,6 +143,13 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.6.3 =
+* Phase 2 gate fix: propose_design Phase 2 now sets BOTH design_discovery + design_plan flags. This unblocks the documented "skip Phase 1 for subsequent sections" flow when session flags reset mid-session (e.g. plugin reload).
+* Background vocabulary expanded: design_plan.background now accepts tinted-neutral, tinted-accent, tinted-warning, tinted-danger in addition to dark/light. Tinted values resolve to *-ultra-light CSS variables for the alternating-section pattern.
+* Pricing sections auto-feature the middle tier: SchemaSkeletonGenerator emits a second "{pattern}-featured" variant with yellow border + larger padding for the middle card when section_type=pricing and repeat>=3. Matches industry convention.
+* verify_build section_id validation: now rejects non-string, empty, or malformed section IDs with a clear error instead of silently returning an empty sections array.
+* Class suggestions are section-type-aware: ProposalService adds conventional class-name patterns per section type (e.g. pricing → btn-primary, btn-outline, pricing-*, card). Previously only classes whose names matched words in the description were suggested.
 
 = 3.6.0 =
 * PageHandler split: 1074 lines of handler monolith broken into 6 focused sub-handlers under includes/MCP/Handlers/Page/ (PageReadSubHandler, PageSnapshotSubHandler, PageSettingsSubHandler, PageSeoSubHandler, PageCrudSubHandler, PageContentSubHandler). PageHandler is now a 342-line dispatcher + tool schema.

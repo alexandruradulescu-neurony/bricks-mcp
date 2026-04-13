@@ -83,6 +83,37 @@ final class ProposalService {
 	];
 
 	/**
+	 * Valid background values for design_plan.
+	 *
+	 * Core: dark (ultra-dark base) / light (white).
+	 * Tinted: resolve to site's *-ultra-light CSS variables, used for the
+	 * "alternating sections" pattern recommended by most design briefs.
+	 * The values are mapped to actual CSS in BACKGROUND_COLOR_MAP.
+	 */
+	public const VALID_BACKGROUNDS = [
+		'dark', 'light',
+		'tinted-neutral',  // var(--base-ultra-light) — off-white alternation
+		'tinted-accent',   // var(--accent-ultra-light) — trust/success tone
+		'tinted-warning',  // var(--secondary-ultra-light) — pricing/offer tone
+		'tinted-danger',   // var(--primary-ultra-light) — urgency/accident tone
+	];
+
+	/**
+	 * Map background keyword to its resolved CSS color value.
+	 *
+	 * Consumed by SchemaSkeletonGenerator when building the section's
+	 * _background.color style_override. Keeping the mapping here means the
+	 * source of truth for "what does tinted-neutral look like" lives with
+	 * the vocabulary that defines it.
+	 */
+	public const BACKGROUND_COLOR_MAP = [
+		'tinted-neutral' => 'var(--base-ultra-light)',
+		'tinted-accent'  => 'var(--accent-ultra-light)',
+		'tinted-warning' => 'var(--secondary-ultra-light)',
+		'tinted-danger'  => 'var(--primary-ultra-light)',
+	];
+
+	/**
 	 * Element capabilities for discovery phase.
 	 * Each entry describes PURPOSE + CAPABILITIES so the AI makes informed design decisions.
 	 */
@@ -367,7 +398,7 @@ final class ProposalService {
 		return [
 			'section_type'     => 'hero|features|pricing|cta|testimonials|split|generic (REQUIRED)',
 			'layout'           => 'centered|split-60-40|split-50-50|grid-2|grid-3|grid-4 (REQUIRED)',
-			'background'       => 'dark|light (optional, default: light)',
+			'background'       => 'dark|light|tinted-neutral|tinted-accent|tinted-warning|tinted-danger (optional, default: light). Use tinted-* values for alternating sections on light-themed sites.',
 			'background_image' => 'optional — "unsplash:query" to auto-fetch a background image.',
 			'elements'     => [
 				[
@@ -428,6 +459,23 @@ final class ProposalService {
 						$suggested_classes[ $intent ] = $class['id'] ?? '';
 						break;
 					}
+				}
+			}
+		}
+
+		// Section-type-aware suggestions: surface classes that are conventionally
+		// useful for a given section type even when the description doesn't name
+		// them. Without this, a pricing section gets zero button/eyebrow class
+		// suggestions unless the AI description happens to contain those words.
+		$section_type = $design_plan['section_type'] ?? '';
+		foreach ( $this->get_section_type_class_hints( $section_type ) as $pattern ) {
+			foreach ( $all_classes as $class ) {
+				$name = $class['name'] ?? '';
+				if ( '' === $name || isset( $suggested_classes[ $name ] ) ) {
+					continue;
+				}
+				if ( str_starts_with( $name, $pattern ) || $name === $pattern ) {
+					$suggested_classes[ $name ] = $class['id'] ?? '';
 				}
 			}
 		}
@@ -526,10 +574,10 @@ final class ProposalService {
 			$errors[] = sprintf( 'design_plan.layout "%s" is not valid. Valid values: %s', $layout, implode( ', ', self::VALID_LAYOUTS ) );
 		}
 
-		// background.
+		// background — supports dark/light plus 4 tinted variants for alternating section patterns.
 		$bg = $plan['background'] ?? 'light';
-		if ( ! in_array( $bg, [ 'dark', 'light' ], true ) ) {
-			$errors[] = 'design_plan.background must be "dark" or "light".';
+		if ( ! in_array( $bg, self::VALID_BACKGROUNDS, true ) ) {
+			$errors[] = sprintf( 'design_plan.background must be one of: %s', implode( ', ', self::VALID_BACKGROUNDS ) );
 		}
 
 		// elements.
@@ -615,6 +663,34 @@ final class ProposalService {
 		}
 		delete_transient( "bricks_mcp_proposal_{$proposal_id}" );
 		return is_array( $proposal ) ? $proposal : null;
+	}
+
+	/**
+	 * Get class-name prefix patterns that are conventionally useful for each section type.
+	 *
+	 * Returned patterns are matched against global class names via str_starts_with
+	 * OR exact-match. This lets a pricing section auto-suggest any `btn-*`,
+	 * `eyebrow`, `hero-subtitle`, `card*` etc. even when the description doesn't
+	 * name them explicitly.
+	 *
+	 * @param string $section_type  Section type (hero, features, pricing, etc.).
+	 * @return array<int, string>   Class-name patterns (prefixes or exact names).
+	 */
+	private function get_section_type_class_hints( string $section_type ): array {
+		// Common hints across most section types.
+		$common = [ 'eyebrow', 'tagline', 'hero-subtitle', 'btn-' ];
+
+		$by_type = [
+			'hero'         => [ 'hero-', 'btn-hero-', 'hero-description', 'hero-price-pill', 'hero-trust-text' ],
+			'features'     => [ 'feature-', 'card', 'stat-card-', 'icon-' ],
+			'pricing'      => [ 'pricing-', 'btn-primary', 'btn-outline', 'card' ],
+			'testimonials' => [ 'testimonial-', 'rating-stars', 'card' ],
+			'cta'          => [ 'btn-primary', 'btn-hero-', 'btn-outline' ],
+			'split'        => [ 'card', 'btn-' ],
+			'generic'      => [],
+		];
+
+		return array_merge( $common, $by_type[ $section_type ] ?? [] );
 	}
 
 	/**

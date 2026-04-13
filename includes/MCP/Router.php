@@ -404,6 +404,11 @@ final class Router {
 				if ( 'discovery' === $phase ) {
 					PrerequisiteGateService::set_flag( 'design_discovery' );
 				} elseif ( 'proposal' === $phase ) {
+					// Phase 2 implicitly subsumes Phase 1 — successfully producing a
+					// validated design_plan proves the AI has enough context. This
+					// unblocks the documented "skip Phase 1 for subsequent sections"
+					// flow after session flags reset (e.g. plugin reload).
+					PrerequisiteGateService::set_flag( 'design_discovery' );
 					PrerequisiteGateService::set_flag( 'design_plan' );
 				}
 			}

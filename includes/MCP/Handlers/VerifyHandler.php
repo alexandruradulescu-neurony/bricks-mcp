@@ -48,6 +48,24 @@ final class VerifyHandler {
 			return new \WP_Error( 'missing_page_id', 'page_id or template_id is required.' );
 		}
 
+		// Validate section_id format if provided. Bricks element IDs are 6-character
+		// alphanumeric strings. Reject integers, empty strings, and malformed IDs
+		// instead of silently returning an empty result.
+		if ( null !== $section_id ) {
+			if ( ! is_string( $section_id ) || '' === $section_id ) {
+				return new \WP_Error(
+					'invalid_section_id',
+					sprintf( 'section_id must be a non-empty string. Received: %s (%s). Omit it to verify the whole page.', var_export( $section_id, true ), gettype( $section_id ) )
+				);
+			}
+			if ( ! preg_match( '/^[a-zA-Z0-9_-]{3,32}$/', $section_id ) ) {
+				return new \WP_Error(
+					'invalid_section_id',
+					sprintf( 'section_id "%s" is not a valid Bricks element ID (expected 3-32 alphanumeric chars). Omit section_id to verify the whole page.', $section_id )
+				);
+			}
+		}
+
 		$post = get_post( $page_id );
 		if ( ! $post ) {
 			return new \WP_Error( 'invalid_page', sprintf( 'Page %d not found.', $page_id ) );

@@ -132,26 +132,69 @@ final class SchemaSkeletonGenerator {
 				],
 			], $pat_children );
 
-			// Generate placeholder data array.
-			$data_items = [];
-			for ( $i = 1; $i <= $pat_repeat; $i++ ) {
-				$item = [];
-				foreach ( $pat_elements as $pel ) {
-					$role = $pel['role'] ?? 'item';
-					if ( 'icon' === ( $pel['type'] ?? '' ) || str_contains( $role, 'icon' ) ) {
-						$item[ $role ] = $this->get_placeholder_icon( $i );
-					} else {
-						$item[ $role ] = "[{$pat_hint} — ITEM {$i} " . strtoupper( $role ) . ']';
-					}
-				}
-				$data_items[] = $item;
+			// For pricing sections with 3+ tiers, emit a featured variant for the middle card.
+			// This matches the industry convention where the recommended/middle tier gets
+			// a distinct visual treatment (highlighted border, featured badge).
+			$featured_pattern_name = null;
+			if ( 'pricing' === $section_type && $pat_repeat >= 3 ) {
+				$featured_pattern_name                         = $pat_name . '-featured';
+				$schema_patterns[ $featured_pattern_name ]     = $this->node( 'block', [
+					'class_intent'    => $pat_class . '-featured',
+					'style_overrides' => [
+						'_padding' => [
+							'top'    => 'var(--space-l)',
+							'right'  => 'var(--space-l)',
+							'bottom' => 'var(--space-l)',
+							'left'   => 'var(--space-l)',
+						],
+						'_border' => [
+							'width'  => [ 'top' => '2px', 'right' => '2px', 'bottom' => '2px', 'left' => '2px' ],
+							'color'  => [ 'raw' => 'var(--secondary)' ],
+							'radius' => [
+								'top'    => 'var(--radius)',
+								'right'  => 'var(--radius)',
+								'bottom' => 'var(--radius)',
+								'left'   => 'var(--radius)',
+							],
+						],
+					],
+				], $pat_children );
 			}
 
-			$pattern_refs[] = [
-				'ref'    => $pat_name,
-				'repeat' => $pat_repeat,
-				'data'   => $data_items,
-			];
+			// Generate placeholder data + pattern refs.
+			if ( null !== $featured_pattern_name ) {
+				// Pricing: emit three sequential refs preserving card order.
+				// Middle card uses the featured pattern variant with yellow accent border.
+				$middle_idx = (int) floor( $pat_repeat / 2 );
+				$before     = [];
+				$middle     = null;
+				$after      = [];
+				for ( $i = 1; $i <= $pat_repeat; $i++ ) {
+					$is_featured = ( $i - 1 === $middle_idx );
+					$item        = $this->make_pattern_item( $pat_elements, $pat_hint, $i, $section_type, $is_featured );
+					if ( $i - 1 < $middle_idx ) {
+						$before[] = $item;
+					} elseif ( $is_featured ) {
+						$middle = $item;
+					} else {
+						$after[] = $item;
+					}
+				}
+				if ( ! empty( $before ) ) {
+					$pattern_refs[] = [ 'ref' => $pat_name, 'repeat' => count( $before ), 'data' => $before ];
+				}
+				$pattern_refs[] = [ 'ref' => $featured_pattern_name, 'repeat' => 1, 'data' => [ $middle ] ];
+				if ( ! empty( $after ) ) {
+					$pattern_refs[] = [ 'ref' => $pat_name, 'repeat' => count( $after ), 'data' => $after ];
+				}
+			} else {
+				// Default: one ref with all items (no featured variant).
+				$data_items = [];
+				for ( $i = 1; $i <= $pat_repeat; $i++ ) {
+					$data_items[] = $this->make_pattern_item( $pat_elements, $pat_hint, $i, $section_type, false );
+				}
+				$pattern_refs[] = [ 'ref' => $pat_name, 'repeat' => $pat_repeat, 'data' => $data_items ];
+			}
 		}
 
 		// Try to find a matching design pattern for layout intelligence.
@@ -309,6 +352,15 @@ final class SchemaSkeletonGenerator {
 		$container_props = [ 'label' => ucfirst( $section_type ) . ' Content' ];
 		if ( ! empty( $container_overrides ) ) {
 			$container_props['style_overrides'] = $container_overrides;
+		}
+
+		// Apply tinted background via style_overrides. Pipeline's own 'background'
+		// key still handles dark mode (text coloring, overlay merging), so tinted
+		// backgrounds flow in separately as an explicit _background.color.
+		if ( isset( ProposalService::BACKGROUND_COLOR_MAP[ $background ] ) ) {
+			$section_overrides['_background'] = [
+				'color' => [ 'raw' => ProposalService::BACKGROUND_COLOR_MAP[ $background ] ],
+			];
 		}
 
 		$section = [
@@ -637,6 +689,37 @@ final class SchemaSkeletonGenerator {
 	private function get_placeholder_icon( int $index ): string {
 		$icons = [ 'star', 'shield', 'settings', 'truck', 'bolt-alt', 'timer', 'car', 'check', 'heart', 'location-pin' ];
 		return $icons[ ( $index - 1 ) % count( $icons ) ];
+	}
+
+	/**
+	 * Build a single pattern data item from the element structure.
+	 *
+	 * For pricing sections, items can be marked as featured — the hint gets
+	 * an extra annotation and an explicit "_featured_badge" key is added so
+	 * the AI knows to include "RECOMANDAT" / "FEATURED" marker content.
+	 *
+	 * @param array<int, array>   $pat_elements  Pattern element_structure.
+	 * @param string              $pat_hint      Content hint for the whole pattern.
+	 * @param int                 $index         1-based index of the repeated instance.
+	 * @param string              $section_type  The section type (pricing, features, etc.).
+	 * @param bool                $is_featured   True if this item is the featured middle item.
+	 * @return array<string, mixed>
+	 */
+	private function make_pattern_item( array $pat_elements, string $pat_hint, int $index, string $section_type, bool $is_featured ): array {
+		$item = [];
+		foreach ( $pat_elements as $pel ) {
+			$role = $pel['role'] ?? 'item';
+			if ( 'icon' === ( $pel['type'] ?? '' ) || str_contains( $role, 'icon' ) ) {
+				$item[ $role ] = $this->get_placeholder_icon( $index );
+			} else {
+				$annotation     = $is_featured ? ' (FEATURED / RECOMMENDED TIER)' : '';
+				$item[ $role ]  = "[{$pat_hint}{$annotation} — ITEM {$index} " . strtoupper( $role ) . ']';
+			}
+		}
+		if ( $is_featured && 'pricing' === $section_type ) {
+			$item['_featured_badge'] = 'RECOMANDAT';
+		}
+		return $item;
 	}
 
 	// ================================================================
