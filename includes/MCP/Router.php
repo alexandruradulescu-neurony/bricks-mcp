@@ -23,6 +23,7 @@ use BricksMCP\MCP\Services\SchemaGenerator;
 use BricksMCP\MCP\Services\ValidationService;
 use BricksMCP\MCP\Services\PrerequisiteGateService;
 use BricksMCP\MCP\Services\ProposalService;
+use BricksMCP\MCP\Services\PageLayoutService;
 use BricksMCP\MCP\Handlers\OnboardingHandler;
 use BricksMCP\MCP\ToolRegistry;
 use BricksMCP\Plugin;
@@ -185,6 +186,7 @@ final class Router {
 			),
 			'onboarding'    => new OnboardingHandler( new OnboardingService( $this->bricks_service ) ),
 			'verify'        => new Handlers\VerifyHandler( $this->bricks_service, $require_bricks ),
+			'page_layout'   => new Handlers\PageLayoutHandler( new PageLayoutService(), $require_bricks ),
 		];
 
 		$this->pending_action_service = new PendingActionService();
@@ -841,7 +843,7 @@ final class Router {
 		$bricks_handler_keys = [
 			'bricks_tool', 'page', 'element', 'template', 'global_class',
 			'design_system', 'media', 'menu', 'component', 'woocommerce',
-			'font', 'code', 'proposal', 'build', 'verify',
+			'font', 'code', 'proposal', 'build', 'verify', 'page_layout',
 		];
 
 		foreach ( $bricks_handler_keys as $key ) {

@@ -89,8 +89,10 @@ final class BuildHandler {
 	 * @return array<string, mixed>|\WP_Error Build result or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
-		$schema  = $args['schema'] ?? null;
-		$dry_run = ! empty( $args['dry_run'] );
+		$schema      = $args['schema'] ?? null;
+		$dry_run_raw = $args['dry_run'] ?? false;
+		$dry_run     = false !== $dry_run_raw && '' !== $dry_run_raw;
+		$dry_run_summary = is_string( $dry_run_raw ) && 'summary' === $dry_run_raw;
 
 		if ( null === $schema || ! is_array( $schema ) ) {
 			return new \WP_Error(
@@ -237,6 +239,35 @@ final class BuildHandler {
 
 		// Dry run: return what would be built without writing.
 		if ( $dry_run ) {
+			// Slim summary mode: compact response without full element tree.
+			if ( $dry_run_summary ) {
+				$class_intents_resolved = [];
+				foreach ( $class_intents as $intent ) {
+					$class_intents_resolved[ $intent ] = $class_map[ $intent ] ?? null;
+				}
+
+				$classes_created_preview = [];
+				$classes_reused_preview  = [];
+				foreach ( $class_intents_resolved as $intent_name => $resolved_id ) {
+					if ( null === $resolved_id ) {
+						$classes_created_preview[] = $intent_name;
+					} else {
+						$classes_reused_preview[] = $intent_name;
+					}
+				}
+
+				return [
+					'dry_run'                  => 'summary',
+					'intended_element_count'   => $element_count,
+					'tree_summary'             => $tree_summary,
+					'validation_warnings'      => $pipeline_warnings,
+					'class_intents_resolved'   => $class_intents_resolved,
+					'classes_created_preview'  => $classes_created_preview,
+					'classes_reused_preview'   => $classes_reused_preview,
+				];
+			}
+
+			// Full dry-run: return complete element tree preview.
 			return [
 				'dry_run'          => true,
 				'page_id'          => $page_id,
@@ -442,8 +473,7 @@ final class BuildHandler {
 						'description' => __( 'REQUIRED. The design schema — use suggested_schema from propose_design as your starting point. Replace [PLACEHOLDER] content with real text. Do NOT modify the structure, class_intents, or style_overrides unless you have a specific reason.', 'bricks-mcp' ),
 					),
 					'dry_run' => array(
-						'type'        => 'boolean',
-						'description' => __( 'When true, validate and preview without writing to the page.', 'bricks-mcp' ),
+						'description' => __( 'When true, validate and return full element preview without writing. When "summary", return a slim response with element count, tree summary, and class resolution only (no full element tree). Default: false.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'proposal_id', 'schema' ),

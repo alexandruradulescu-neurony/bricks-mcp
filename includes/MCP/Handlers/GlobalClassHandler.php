@@ -89,11 +89,13 @@ final class GlobalClassHandler {
 			'delete_category' => $this->tool_delete_global_class_category( $args ),
 			'export'          => $this->tool_export_global_classes( $args ),
 			'import_json'     => $this->tool_import_global_classes_json( $args ),
+			'semantic_search' => $this->tool_semantic_search( $args ),
+			'render_sample'   => $this->tool_render_sample( $args ),
 			default           => new \WP_Error(
 				'invalid_action',
 				sprintf(
 					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: list, create, update, delete, apply, remove, batch_create, batch_delete, import_css, list_categories, create_category, delete_category, export, import_json', 'bricks-mcp' ),
+					__( 'Invalid action "%s". Valid actions: list, create, update, delete, apply, remove, batch_create, batch_delete, import_css, list_categories, create_category, delete_category, export, import_json, semantic_search, render_sample', 'bricks-mcp' ),
 					$action
 				)
 			),
@@ -561,6 +563,49 @@ final class GlobalClassHandler {
 	}
 
 	/**
+	 * Tool: Semantic search for global classes using heuristic keyword scoring.
+	 *
+	 * @param array<string, mixed> $args Tool arguments.
+	 * @return array<string, mixed>|\WP_Error Search results or error.
+	 */
+	private function tool_semantic_search( array $args ): array|\WP_Error {
+		if ( empty( $args['query'] ) || ! is_string( $args['query'] ) ) {
+			return new \WP_Error(
+				'missing_query',
+				__( 'query is required for semantic_search. Provide a natural language description like "card with white bg and shadow".', 'bricks-mcp' )
+			);
+		}
+
+		$limit = isset( $args['limit'] ) ? max( 1, min( 50, (int) $args['limit'] ) ) : 10;
+
+		return $this->bricks_service->get_global_class_service()->semantic_search_classes(
+			sanitize_text_field( $args['query'] ),
+			$limit
+		);
+	}
+
+	/**
+	 * Tool: Render a sample description, CSS rules, and HTML snippet for a global class.
+	 *
+	 * @param array<string, mixed> $args Tool arguments.
+	 * @return array<string, mixed>|\WP_Error Render sample or error.
+	 */
+	private function tool_render_sample( array $args ): array|\WP_Error {
+		$identifier = $args['class_name'] ?? $args['class_id'] ?? '';
+
+		if ( empty( $identifier ) || ! is_string( $identifier ) ) {
+			return new \WP_Error(
+				'missing_class',
+				__( 'class_name or class_id is required for render_sample.', 'bricks-mcp' )
+			);
+		}
+
+		return $this->bricks_service->get_global_class_service()->render_sample(
+			sanitize_text_field( $identifier )
+		);
+	}
+
+	/**
 	 * Register the global_class tool with the given registry.
 	 *
 	 * @param ToolRegistry $registry Tool registry instance.
@@ -569,13 +614,13 @@ final class GlobalClassHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'global_class',
-			__( "Manage Bricks global CSS classes.\n\nActions: list, create, update, delete, apply (to elements), remove (from elements), batch_create, batch_delete, import_css, list_categories, create_category, delete_category, export, import_json.", 'bricks-mcp' ),
+			__( "Manage Bricks global CSS classes.\n\nActions: list, create, update, delete, apply (to elements), remove (from elements), batch_create, batch_delete, import_css, list_categories, create_category, delete_category, export, import_json, semantic_search, render_sample.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
 					'action'         => array(
 						'type'        => 'string',
-						'enum'        => array( 'list', 'create', 'update', 'delete', 'apply', 'remove', 'batch_create', 'batch_delete', 'import_css', 'list_categories', 'create_category', 'delete_category', 'export', 'import_json' ),
+						'enum'        => array( 'list', 'create', 'update', 'delete', 'apply', 'remove', 'batch_create', 'batch_delete', 'import_css', 'list_categories', 'create_category', 'delete_category', 'export', 'import_json', 'semantic_search', 'render_sample' ),
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					),
 					'class_name'     => array(
@@ -638,6 +683,14 @@ final class GlobalClassHandler {
 					'limit'          => array(
 						'type'        => 'integer',
 						'description' => __( 'Max classes to return (list: optional, default all)', 'bricks-mcp' ),
+					),
+					'query'          => array(
+						'type'        => 'string',
+						'description' => __( 'Natural language search query (semantic_search: required, e.g. "card with white bg and shadow")', 'bricks-mcp' ),
+					),
+					'class_id'       => array(
+						'type'        => 'string',
+						'description' => __( 'Class ID (render_sample: alternative to class_name)', 'bricks-mcp' ),
 					),
 					'classes_data'   => array(
 						'type'        => 'object',

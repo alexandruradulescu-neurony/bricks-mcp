@@ -255,6 +255,406 @@ final class PageReadSubHandler {
 	}
 
 	/**
+	 * Describe a single section with rich human-readable details.
+	 *
+	 * Walks the section subtree and produces a prose description plus a
+	 * structured element breakdown with key style facts per element.
+	 *
+	 * @param array<string, mixed> $args Tool arguments (post_id, section_id).
+	 * @return array<string, mixed>|\WP_Error Section description or error.
+	 */
+	public function describe_section( array $args ): array|\WP_Error {
+		if ( empty( $args['post_id'] ) ) {
+			return new \WP_Error( 'missing_post_id', __( 'post_id is required. Use page:list to find valid post IDs.', 'bricks-mcp' ) );
+		}
+		if ( empty( $args['section_id'] ) ) {
+			return new \WP_Error( 'missing_section_id', __( 'section_id is required. Use page:get with view=summary to find section element IDs.', 'bricks-mcp' ) );
+		}
+
+		$post_id    = (int) $args['post_id'];
+		$section_id = sanitize_text_field( $args['section_id'] );
+
+		if ( ! $this->bricks_service->is_bricks_page( $post_id ) ) {
+			return new \WP_Error(
+				'not_bricks_page',
+				sprintf( __( 'Post %d is not using the Bricks editor.', 'bricks-mcp' ), $post_id )
+			);
+		}
+
+		$elements = $this->bricks_service->get_elements( $post_id );
+		if ( ! is_array( $elements ) ) {
+			$elements = [];
+		}
+
+		// Index by ID.
+		$by_id = [];
+		foreach ( $elements as $el ) {
+			$by_id[ $el['id'] ?? '' ] = $el;
+		}
+
+		if ( ! isset( $by_id[ $section_id ] ) ) {
+			return new \WP_Error(
+				'element_not_found',
+				sprintf( __( 'Element "%1$s" not found on post %2$d.', 'bricks-mcp' ), $section_id, $post_id )
+			);
+		}
+
+		$section = $by_id[ $section_id ];
+
+		// Load global classes for context.
+		$global_classes = get_option( 'bricks_global_classes', [] );
+		$class_map      = [];
+		if ( is_array( $global_classes ) ) {
+			foreach ( $global_classes as $gc ) {
+				if ( isset( $gc['id'], $gc['name'] ) ) {
+					$class_map[ $gc['id'] ] = $gc;
+				}
+			}
+		}
+
+		// Collect subtree elements (flat).
+		$subtree = $this->collect_subtree( $elements, $section_id );
+
+		// Build element breakdown.
+		$element_breakdown = [];
+		$description_parts = [];
+
+		// Section-level summary.
+		$bg_summary        = $this->summarize_background( $section, $class_map );
+		$container_summary = '';
+		$label             = $section['settings']['label'] ?? $section['label'] ?? 'Section';
+
+		// Find first container child for container summary.
+		foreach ( $section['children'] ?? [] as $child_id ) {
+			$child = $by_id[ $child_id ] ?? [];
+			if ( 'container' === ( $child['name'] ?? '' ) ) {
+				$container_summary = $this->summarize_container( $child, $class_map );
+				break;
+			}
+		}
+
+		$description_parts[] = ucfirst( $bg_summary ) . ' section.';
+		if ( $container_summary ) {
+			$description_parts[] = 'Container: ' . $container_summary . '.';
+		}
+
+		// Walk all subtree elements for breakdown.
+		$content_descriptions = [];
+		foreach ( $subtree as $el ) {
+			$eid  = $el['id'] ?? '';
+			$name = $el['name'] ?? '';
+
+			// Skip structural wrappers from breakdown (but include container).
+			if ( in_array( $name, [ 'section' ], true ) ) {
+				continue;
+			}
+
+			$entry = [
+				'id'   => $eid,
+				'type' => $name,
+			];
+
+			$settings = $el['settings'] ?? [];
+
+			// Tag.
+			if ( ! empty( $settings['tag'] ) ) {
+				$entry['tag'] = $settings['tag'];
+			}
+
+			// Text content (from content keys).
+			$text = $this->extract_text_content( $el );
+			if ( '' !== $text ) {
+				$entry['text'] = mb_strlen( $text ) > 60 ? mb_substr( $text, 0, 57 ) . '...' : $text;
+			}
+
+			// Key styles.
+			$key_styles = $this->extract_key_styles( $settings, $class_map );
+			if ( ! empty( $key_styles ) ) {
+				$entry['key_styles'] = $key_styles;
+			}
+
+			// Classes.
+			$class_names = [];
+			foreach ( $settings['_cssGlobalClasses'] ?? [] as $cid ) {
+				if ( isset( $class_map[ $cid ] ) ) {
+					$class_names[] = $class_map[ $cid ]['name'];
+				}
+			}
+			if ( ! empty( $class_names ) ) {
+				$entry['classes'] = $class_names;
+			}
+
+			$element_breakdown[] = $entry;
+
+			// Build content line for prose description.
+			if ( ! in_array( $name, [ 'container', 'block', 'div' ], true ) ) {
+				$content_desc = $name;
+				if ( ! empty( $entry['tag'] ) ) {
+					$content_desc = $entry['tag'] . ' ' . $name;
+				}
+				if ( isset( $entry['text'] ) ) {
+					$content_desc .= ": '" . $entry['text'] . "'";
+				}
+				$content_descriptions[] = $content_desc;
+			}
+		}
+
+		if ( ! empty( $content_descriptions ) ) {
+			$description_parts[] = 'Contains:';
+			foreach ( $content_descriptions as $cd ) {
+				$description_parts[] = '- ' . $cd;
+			}
+		}
+
+		$rendered_description = implode( "\n", $description_parts );
+
+		return [
+			'section_id'           => $section_id,
+			'label'                => $label,
+			'background_summary'   => $bg_summary,
+			'container_summary'    => $container_summary,
+			'rendered_description' => $rendered_description,
+			'element_breakdown'    => $element_breakdown,
+		];
+	}
+
+	/**
+	 * Summarize a section's background as a human-readable string.
+	 *
+	 * @param array<string, mixed> $element   The element.
+	 * @param array<string, mixed> $class_map Global classes keyed by ID.
+	 * @return string Background summary.
+	 */
+	private function summarize_background( array $element, array $class_map ): string {
+		$parts    = [];
+		$settings = $element['settings'] ?? [];
+
+		// Inline background color.
+		$bg_color = $settings['_background']['color']['raw'] ?? $settings['_background']['color']['hex'] ?? '';
+		if ( $bg_color ) {
+			$parts[] = $bg_color;
+		}
+
+		// Gradient.
+		if ( ! empty( $settings['_gradient'] ) ) {
+			$gradient = $settings['_gradient'];
+			$type     = $gradient['type'] ?? 'linear';
+			$apply_to = $gradient['applyTo'] ?? '';
+			$colors   = [];
+			foreach ( $gradient['colors'] ?? [] as $gc ) {
+				$colors[] = $gc['color']['raw'] ?? $gc['color']['hex'] ?? '?';
+			}
+			$desc = $type . ' gradient';
+			if ( ! empty( $colors ) ) {
+				$desc .= ' (' . implode( ' to ', array_slice( $colors, 0, 2 ) ) . ')';
+			}
+			if ( 'overlay' === $apply_to ) {
+				$desc .= ' overlay';
+			}
+			$parts[] = $desc;
+		}
+
+		// Background image.
+		if ( ! empty( $settings['_background']['image'] ) ) {
+			$parts[] = 'background image';
+		}
+
+		// Class-based background.
+		foreach ( $settings['_cssGlobalClasses'] ?? [] as $cid ) {
+			$class = $class_map[ $cid ] ?? null;
+			if ( ! $class ) {
+				continue;
+			}
+			$class_bg = $class['settings']['_background']['color']['raw'] ?? '';
+			if ( $class_bg ) {
+				$parts[] = 'class ' . $class['name'] . ' (' . $class_bg . ')';
+			}
+		}
+
+		if ( empty( $parts ) ) {
+			return 'light (no explicit background)';
+		}
+
+		return implode( ', ', $parts );
+	}
+
+	/**
+	 * Summarize a container element's key layout properties.
+	 *
+	 * @param array<string, mixed> $element   The container element.
+	 * @param array<string, mixed> $class_map Global classes keyed by ID.
+	 * @return string Container summary.
+	 */
+	private function summarize_container( array $element, array $class_map ): string {
+		$parts    = [];
+		$settings = $element['settings'] ?? [];
+
+		// Max width.
+		$max_w = $settings['_widthMax'] ?? '';
+		if ( $max_w ) {
+			$parts[] = 'max-width ' . $max_w;
+		}
+
+		// Alignment.
+		$align = $settings['_alignItems'] ?? '';
+		if ( $align ) {
+			$parts[] = 'align-items ' . $align;
+		}
+
+		$justify = $settings['_justifyContent'] ?? '';
+		if ( $justify ) {
+			$parts[] = 'justify ' . $justify;
+		}
+
+		// Padding.
+		$padding = $settings['_padding'] ?? [];
+		if ( ! empty( $padding ) ) {
+			if ( is_string( $padding ) ) {
+				$parts[] = 'padding ' . $padding;
+			} elseif ( is_array( $padding ) ) {
+				$top = $padding['top'] ?? '';
+				if ( $top ) {
+					$parts[] = 'padding ' . $top;
+				}
+			}
+		}
+
+		// Class names.
+		$class_names = [];
+		foreach ( $settings['_cssGlobalClasses'] ?? [] as $cid ) {
+			if ( isset( $class_map[ $cid ] ) ) {
+				$class_names[] = $class_map[ $cid ]['name'];
+			}
+		}
+		if ( ! empty( $class_names ) ) {
+			$parts[] = 'classes: ' . implode( ', ', $class_names );
+		}
+
+		return ! empty( $parts ) ? implode( ', ', $parts ) : 'default layout';
+	}
+
+	/**
+	 * Extract text content from an element using known content keys.
+	 *
+	 * @param array<string, mixed> $element The element.
+	 * @return string Extracted text or empty string.
+	 */
+	private function extract_text_content( array $element ): string {
+		$settings = $element['settings'] ?? [];
+		$name     = $element['name'] ?? '';
+
+		// Common content keys by element type.
+		$content_keys = [
+			'heading'        => 'text',
+			'text-basic'     => 'text',
+			'text'           => 'text',
+			'text-link'      => 'text',
+			'button'         => 'text',
+			'icon-box'       => 'title',
+			'alert'          => 'content',
+			'counter'        => 'countTo',
+			'animated-typing' => 'content',
+		];
+
+		$key = $content_keys[ $name ] ?? '';
+		if ( $key && isset( $settings[ $key ] ) ) {
+			$val = $settings[ $key ];
+			return is_string( $val ) ? strip_tags( $val ) : (string) $val;
+		}
+
+		return '';
+	}
+
+	/**
+	 * Extract key style facts from element settings.
+	 *
+	 * @param array<string, mixed> $settings  Element settings.
+	 * @param array<string, mixed> $class_map Global classes keyed by ID.
+	 * @return array<string, string> Key style facts.
+	 */
+	private function extract_key_styles( array $settings, array $class_map ): array {
+		$styles = [];
+
+		// Typography color.
+		$color = $settings['_typography']['color']['raw'] ?? $settings['_typography']['color']['hex'] ?? '';
+		if ( $color ) {
+			$styles['color'] = $color;
+		}
+
+		// Text alignment.
+		$text_align = $settings['_typography']['text-align'] ?? '';
+		if ( $text_align ) {
+			$styles['alignment'] = $text_align;
+		}
+
+		// Font weight.
+		$weight = $settings['_typography']['font-weight'] ?? '';
+		if ( $weight ) {
+			$styles['weight'] = (string) $weight;
+		}
+
+		// Font size.
+		$font_size = $settings['_typography']['font-size'] ?? '';
+		if ( $font_size ) {
+			$styles['font_size'] = $font_size;
+		}
+
+		// Line height.
+		$line_height = $settings['_typography']['line-height'] ?? '';
+		if ( $line_height ) {
+			$styles['line_height'] = $line_height;
+		}
+
+		// Background color.
+		$bg = $settings['_background']['color']['raw'] ?? $settings['_background']['color']['hex'] ?? '';
+		if ( $bg ) {
+			$styles['background'] = $bg;
+		}
+
+		// Border.
+		$border_style = $settings['_border']['style'] ?? '';
+		$border_color = $settings['_border']['color']['raw'] ?? $settings['_border']['color']['hex'] ?? '';
+		$border_width = $settings['_border']['width'] ?? '';
+		if ( $border_style || $border_color ) {
+			$border_desc = [];
+			if ( $border_width ) {
+				$border_desc[] = is_string( $border_width ) ? $border_width : '';
+			}
+			if ( $border_style ) {
+				$border_desc[] = is_string( $border_style ) ? $border_style : '';
+			}
+			if ( $border_color ) {
+				$border_desc[] = $border_color;
+			}
+			$styles['border'] = implode( ' ', array_filter( $border_desc ) );
+		}
+
+		// Border radius.
+		$radius = $settings['_border']['radius'] ?? '';
+		if ( $radius ) {
+			if ( is_array( $radius ) ) {
+				$styles['border_radius'] = implode( ' ', array_filter( $radius ) );
+			} else {
+				$styles['border_radius'] = (string) $radius;
+			}
+		}
+
+		// Position.
+		$position = $settings['_position'] ?? '';
+		if ( $position ) {
+			$styles['position'] = $position;
+		}
+
+		// Display / direction.
+		$direction = $settings['_direction'] ?? '';
+		if ( $direction ) {
+			$styles['direction'] = $direction;
+		}
+
+		return $styles;
+	}
+
+	/**
 	 * Format a post for list/search responses.
 	 *
 	 * @param \WP_Post $post The post object.

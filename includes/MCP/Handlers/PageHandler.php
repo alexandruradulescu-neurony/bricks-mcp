@@ -143,6 +143,7 @@ final class PageHandler {
 			'list'             => $this->read_sub->list_pages( $args ),
 			'search'           => $this->read_sub->search( $args ),
 			'get'              => $this->read_sub->get( $args ),
+			'describe_section' => $this->read_sub->describe_section( $args ),
 			'create'           => $this->crud_sub->create( $args ),
 			'update_content'   => $this->content_sub->update_content( $args ),
 			'append_content'   => $this->content_sub->append_content( $args ),
@@ -161,7 +162,7 @@ final class PageHandler {
 				'invalid_action',
 				sprintf(
 					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: list, search, get, create, update_content, append_content, import_clipboard, update_meta, delete, duplicate, get_settings, update_settings, get_seo, update_seo, snapshot, restore, list_snapshots', 'bricks-mcp' ),
+					__( 'Invalid action "%s". Valid actions: list, search, get, describe_section, create, update_content, append_content, import_clipboard, update_meta, delete, duplicate, get_settings, update_settings, get_seo, update_seo, snapshot, restore, list_snapshots', 'bricks-mcp' ),
 					$action
 				)
 			),
@@ -177,13 +178,13 @@ final class PageHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'page',
-			__( "Manage pages and Bricks content.\n\nActions: list, search, get (views: detail/summary/context/describe), create, update_content, append_content (add without replacing), import_clipboard, update_meta, delete, duplicate, get_settings, update_settings, get_seo, update_seo, snapshot, restore, list_snapshots.", 'bricks-mcp' ),
+			__( "Manage pages and Bricks content.\n\nActions: list, search, get (views: detail/summary/context/describe), describe_section (rich per-section description with style details), create, update_content, append_content (add without replacing), import_clipboard, update_meta, delete, duplicate, get_settings, update_settings, get_seo, update_seo, snapshot, restore, list_snapshots.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
 					'action'              => array(
 						'type'        => 'string',
-						'enum'        => array( 'list', 'search', 'get', 'create', 'update_content', 'append_content', 'import_clipboard', 'update_meta', 'delete', 'duplicate', 'get_settings', 'update_settings', 'get_seo', 'update_seo', 'snapshot', 'restore', 'list_snapshots' ),
+						'enum'        => array( 'list', 'search', 'get', 'describe_section', 'create', 'update_content', 'append_content', 'import_clipboard', 'update_meta', 'delete', 'duplicate', 'get_settings', 'update_settings', 'get_seo', 'update_seo', 'snapshot', 'restore', 'list_snapshots' ),
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					),
 					'post_id'             => array(
@@ -232,6 +233,10 @@ final class PageHandler {
 						'type'        => 'array',
 						'items'       => array( 'type' => 'string' ),
 						'description' => __( 'Filter to specific element IDs in detail view (get: optional). Returns only these elements and their settings.', 'bricks-mcp' ),
+					),
+					'section_id'          => array(
+						'type'        => 'string',
+						'description' => __( 'Section element ID for describe_section action (describe_section: required). Use page:get with view=summary to find section IDs.', 'bricks-mcp' ),
 					),
 					'root_element_id'     => array(
 						'type'        => 'string',

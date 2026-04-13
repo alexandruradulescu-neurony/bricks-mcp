@@ -74,11 +74,12 @@ final class MediaHandler {
 			'set_featured'       => $this->tool_set_featured_image( $args ),
 			'remove_featured'    => $this->tool_remove_featured_image( $args ),
 			'get_image_settings' => $this->tool_get_image_element_settings( $args ),
+			'smart_search'       => $this->tool_smart_search( $args ),
 			default              => new \WP_Error(
 				'invalid_action',
 				sprintf(
 					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: search_unsplash, sideload, list, set_featured, remove_featured, get_image_settings', 'bricks-mcp' ),
+					__( 'Invalid action "%s". Valid actions: search_unsplash, sideload, list, set_featured, remove_featured, get_image_settings, smart_search', 'bricks-mcp' ),
 					$action
 				)
 			),
@@ -337,6 +338,28 @@ final class MediaHandler {
 	}
 
 	/**
+	 * Tool: Smart search — Unsplash with business context enrichment.
+	 *
+	 * @param array<string, mixed> $args Tool arguments.
+	 * @return array<string, mixed>|\WP_Error Smart search results or error.
+	 */
+	private function tool_smart_search( array $args ): array|\WP_Error {
+		if ( empty( $args['query'] ) || ! is_string( $args['query'] ) ) {
+			return new \WP_Error(
+				'missing_query',
+				__( 'query parameter is required for smart_search.', 'bricks-mcp' )
+			);
+		}
+
+		$per_page = isset( $args['per_page'] ) ? min( (int) $args['per_page'], 30 ) : 5;
+
+		return $this->media_service->smart_search(
+			sanitize_text_field( $args['query'] ),
+			$per_page
+		);
+	}
+
+	/**
 	 * Register the media tool with the given registry.
 	 *
 	 * @param ToolRegistry $registry Tool registry instance.
@@ -345,13 +368,13 @@ final class MediaHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'media',
-			__( "Manage images and media library.\n\nActions: search_unsplash, sideload (URL to library), list, set_featured, remove_featured, get_image_settings.", 'bricks-mcp' ),
+			__( "Manage images and media library.\n\nActions: search_unsplash, sideload (URL to library), list, set_featured, remove_featured, get_image_settings, smart_search (business-context-enriched Unsplash search).", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
 					'action'        => array(
 						'type'        => 'string',
-						'enum'        => array( 'search_unsplash', 'sideload', 'list', 'set_featured', 'remove_featured', 'get_image_settings' ),
+						'enum'        => array( 'search_unsplash', 'sideload', 'list', 'set_featured', 'remove_featured', 'get_image_settings', 'smart_search' ),
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					),
 					'query'         => array(

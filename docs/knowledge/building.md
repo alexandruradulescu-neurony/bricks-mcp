@@ -68,6 +68,62 @@ Use `tag` on block/div elements for semantic HTML:
 - `tag: "nav"` for navigation
 - `tag: "article"` for blog cards
 
+## Color Object Format
+
+Color values in Bricks settings MUST be objects, not plain strings:
+
+```json
+"_typography": { "color": { "raw": "var(--primary)" } }
+"_typography": { "color": { "hex": "#ec4e38" } }
+"_background": { "color": { "raw": "var(--base-ultra-dark)" } }
+```
+
+NOT:
+```json
+"_typography": { "color": "#ec4e38" }
+"_background": { "color": "var(--primary)" }
+```
+
+Use `"raw"` for CSS variables (`var(--name)`) and `rgba()` values. Use `"hex"` for hex color codes.
+
+The v3.7.0+ pipeline auto-fixes string colors (wraps them in the correct object format), but always use the correct format from the start to avoid silent rendering failures in direct element operations.
+
+## Element-Specific Settings via element_settings
+
+The `element_settings` key is an escape hatch for type-specific Bricks settings that do not fit into `style_overrides`, `content`, or `class_intent` in the design schema.
+
+### Supported element types and whitelisted keys
+
+- **pie-chart**: `percent`, `barColor`, `trackColor`, `size`, `lineWidth`
+- **counter**: `countTo`, `prefix`, `suffix`, `duration`
+- **video**: `iframeUrl`, `videoType`, `overlay`
+- **slider-nested**: `autoplay`, `speed`, `effect`, `loop`, `arrows`, `dots`
+- **form**: `fields`, `submitButtonText`, `formId`, `actions`
+- **progress-bar**: `bars` (array of `{label, percentage}`)
+- **rating**: `rating`, `scale`, `iconEmpty`, `iconFull`
+- **animated-typing**: `content`, `typeSpeed`, `loop`
+
+### Example usage in design schema
+
+```json
+{
+  "type": "pie-chart",
+  "element_settings": {
+    "percent": 92,
+    "barColor": {"raw": "var(--accent-dark)"},
+    "trackColor": {"raw": "var(--white)"},
+    "size": 140,
+    "lineWidth": 12
+  }
+}
+```
+
+### Important notes
+
+- The validator REJECTS `element_settings` on disallowed element types or unknown keys.
+- Defaults exist when `element_settings` is omitted: counter `countTo`=100, pie-chart `percent`=75, rating `rating`=5.
+- Auto-fixes applied: counter `"500+"` extracts to `countTo: 500` with `suffix: "+"`. Pie-chart `"92%"` extracts to `percent: 92`. YouTube watch URLs convert to embed format (`ytId` extraction). Rating values are clamped to the scale range.
+
 ## Composite Key Format
 
 Bricks uses composite keys for responsive and pseudo-state styles:

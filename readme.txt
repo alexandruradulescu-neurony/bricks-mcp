@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.7.0
+Stable tag: 3.8.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -143,6 +143,16 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.8.0 =
+* New tool: propose_page_layout(intent, page_id, tone) — maps page intent (landing, services, about, product, contact) to a sequenced list of section types with recommended pattern IDs and ready-to-use design_plan skeletons. AI loops through sections instead of thinking section-by-section.
+* New action page:describe_section — rich human-readable styling description of a section. Returns rendered_description prose + element_breakdown structured data with key style values per element. AI can self-verify what was actually built without screenshots.
+* New action global_class:semantic_search — natural language class search (e.g. "card with white bg and shadow"). Heuristic scoring by name match, settings match, word stems. Returns ranked matches with score + match_reasons + settings_summary.
+* New action global_class:render_sample — generates structured description, equivalent CSS rules, and sample HTML snippet for any global class. AI can verify a class produces what it expects before applying.
+* New action element:copy_styling — copy style settings between elements. Modes: classes_only, inline_only, both. Filters to 27 style-relevant keys; preserves target content/label/tag.
+* New action media:smart_search — Unsplash search enriched with business_brief context. Extracts top context terms (proper nouns, services, location) and appends to query. Returns enrichment_applied so AI sees what was added.
+* Slim dry-run mode for build_from_schema: pass dry_run: "summary" (string, not boolean) to get intended_element_count + tree_summary + class_intents_resolved without the full element tree. Backward compatible — dry_run: true still returns full preview.
+* docs/knowledge/building.md updated with new "Element-Specific Settings via element_settings" section documenting the v3.7.0 escape hatch (whitelisted keys per element type, examples, defaults, auto-fixes), plus a "Color Object Format" section documenting that color values must be {raw} or {hex} objects (auto-fixed in v3.7.0 but preferred from start).
 
 = 3.7.0 =
 * StyleShapeValidator service: 7 auto-fix rules for Bricks settings shape mismatches that previously caused silent failures or "Array to string conversion" frontend errors. Wraps color strings in {raw|hex} objects (typography.color, background.color, _color, border.color), collapses per-side _border.style to string, expands flat _border.width to per-side, joins _cssCustom arrays. All fixes return warnings — never hard-error.

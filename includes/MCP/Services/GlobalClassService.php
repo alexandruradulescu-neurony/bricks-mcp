@@ -1456,6 +1456,406 @@ class GlobalClassService {
 	}
 
 	/**
+	 * Semantic search for global classes using heuristic keyword scoring.
+	 *
+	 * Scores classes by name matches, settings value matches, and word-part stems.
+	 *
+	 * @param string $query Free-text query (e.g. "card with white bg and shadow").
+	 * @param int    $limit Max results to return.
+	 * @return array{query: string, matches: array} Scored matches.
+	 */
+	public function semantic_search_classes( string $query, int $limit = 10 ): array {
+		$classes = $this->get_global_classes();
+
+		// Extract intent keywords from query.
+		$raw_words = preg_split( '/[\s,]+/', strtolower( $query ) );
+		$stopwords = [ 'a', 'an', 'the', 'with', 'and', 'or', 'for', 'in', 'on', 'to', 'of', 'is', 'has', 'that', 'this' ];
+		$keywords  = array_values( array_filter(
+			$raw_words,
+			static fn( string $w ) => strlen( $w ) > 1 && ! in_array( $w, $stopwords, true )
+		) );
+
+		if ( empty( $keywords ) ) {
+			return [ 'query' => $query, 'matches' => [] ];
+		}
+
+		$scored = [];
+
+		foreach ( $classes as $class ) {
+			$score   = 0;
+			$reasons = [];
+			$name    = strtolower( $class['name'] ?? '' );
+			$parts   = preg_split( '/[-_]/', $name );
+
+			$settings = $class['settings'] ?? [];
+
+			foreach ( $keywords as $kw ) {
+				// Name contains keyword (high weight).
+				if ( str_contains( $name, $kw ) ) {
+					$score    += 10;
+					$reasons[] = "name contains '{$kw}'";
+					continue;
+				}
+
+				// Name word parts match keyword stem.
+				foreach ( $parts as $part ) {
+					if ( '' !== $part && ( str_starts_with( $part, $kw ) || str_starts_with( $kw, $part ) ) ) {
+						$score    += 5;
+						$reasons[] = "name part '{$part}' matches '{$kw}'";
+						break;
+					}
+				}
+
+				// Settings-based matching (medium weight).
+				$settings_match = $this->match_keyword_in_settings( $kw, $settings );
+				if ( $settings_match ) {
+					$score    += 6;
+					$reasons[] = $settings_match;
+				}
+			}
+
+			if ( $score > 0 ) {
+				$scored[] = [
+					'id'              => $class['id'],
+					'name'            => $class['name'],
+					'score'           => $score,
+					'match_reasons'   => $reasons,
+					'settings_summary' => $this->build_settings_summary( $settings ),
+				];
+			}
+		}
+
+		// Sort by score descending.
+		usort( $scored, static fn( array $a, array $b ) => $b['score'] <=> $a['score'] );
+
+		return [
+			'query'   => $query,
+			'matches' => array_slice( $scored, 0, $limit ),
+		];
+	}
+
+	/**
+	 * Check if a keyword matches settings values.
+	 *
+	 * @param string               $keyword  Keyword to match.
+	 * @param array<string, mixed> $settings Class settings.
+	 * @return string|null Match reason or null.
+	 */
+	private function match_keyword_in_settings( string $keyword, array $settings ): ?string {
+		// Color keywords.
+		$color_map = [
+			'white'   => [ '#ffffff', '#fff', 'var(--white)' ],
+			'black'   => [ '#000000', '#000', 'var(--black)' ],
+			'dark'    => [ 'dark', '900', '800', '950' ],
+			'primary' => [ 'var(--primary)', 'primary' ],
+			'red'     => [ 'red', '#e', '#c', 'var(--accent)', 'var(--primary)' ],
+		];
+
+		$bg_raw = $settings['_background']['color']['raw'] ?? $settings['_background']['color']['hex'] ?? '';
+
+		if ( isset( $color_map[ $keyword ] ) && '' !== $bg_raw ) {
+			foreach ( $color_map[ $keyword ] as $candidate ) {
+				if ( str_contains( strtolower( $bg_raw ), $candidate ) ) {
+					return "_background.color matches '{$keyword}'";
+				}
+			}
+		}
+
+		// Shadow keyword.
+		if ( in_array( $keyword, [ 'shadow', 'elevation', 'raised' ], true ) && ! empty( $settings['_boxShadow'] ) ) {
+			return '_boxShadow is set';
+		}
+
+		// Rounded keywords.
+		if ( in_array( $keyword, [ 'rounded', 'round', 'circle', 'pill' ], true ) ) {
+			$radius = $settings['_border']['radius'] ?? '';
+			if ( ! empty( $radius ) ) {
+				return '_border.radius is set';
+			}
+		}
+
+		// Padding keywords.
+		if ( in_array( $keyword, [ 'padded', 'spacious', 'card' ], true ) && ! empty( $settings['_padding'] ) ) {
+			return '_padding is set';
+		}
+
+		// Flex / layout keywords.
+		if ( in_array( $keyword, [ 'row', 'horizontal', 'inline' ], true ) ) {
+			$dir = $settings['_direction'] ?? '';
+			if ( 'row' === $dir ) {
+				return '_direction is row';
+			}
+		}
+
+		if ( in_array( $keyword, [ 'grid', 'columns' ], true ) ) {
+			$display = $settings['_display'] ?? '';
+			if ( 'grid' === $display ) {
+				return '_display is grid';
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Build a concise settings summary for a class.
+	 *
+	 * @param array<string, mixed> $settings Class settings.
+	 * @return string Human-readable summary.
+	 */
+	private function build_settings_summary( array $settings ): string {
+		$parts = [];
+
+		$bg = $settings['_background']['color']['raw'] ?? $settings['_background']['color']['hex'] ?? '';
+		if ( $bg ) {
+			$parts[] = $bg . ' bg';
+		}
+
+		$radius = $settings['_border']['radius'] ?? '';
+		if ( ! empty( $radius ) ) {
+			$r_val = is_array( $radius ) ? ( $radius['top'] ?? reset( $radius ) ) : $radius;
+			$parts[] = $r_val . ' radius';
+		}
+
+		$border_style = $settings['_border']['style'] ?? '';
+		$border_color = $settings['_border']['color']['raw'] ?? '';
+		if ( $border_style || $border_color ) {
+			$parts[] = trim( ( is_string( $border_style ) ? $border_style : '' ) . ' ' . $border_color ) . ' border';
+		}
+
+		if ( ! empty( $settings['_boxShadow'] ) ) {
+			$parts[] = 'box-shadow';
+		}
+
+		$padding = $settings['_padding'] ?? [];
+		if ( ! empty( $padding ) ) {
+			$p_val = is_array( $padding ) ? ( $padding['top'] ?? reset( $padding ) ) : $padding;
+			$parts[] = $p_val . ' padding';
+		}
+
+		$dir = $settings['_direction'] ?? '';
+		if ( $dir ) {
+			$parts[] = 'flex-' . $dir;
+		}
+
+		$gap = $settings['_rowGap'] ?? $settings['_columnGap'] ?? '';
+		if ( $gap ) {
+			$parts[] = $gap . ' gap';
+		}
+
+		return implode( ', ', $parts ) ?: 'no inline styles';
+	}
+
+	/**
+	 * Render a sample description, CSS rules, and HTML snippet for a global class.
+	 *
+	 * @param string $class_name_or_id Class name or class ID.
+	 * @return array<string, mixed>|\WP_Error Render sample data or error.
+	 */
+	public function render_sample( string $class_name_or_id ): array|\WP_Error {
+		$classes = $this->get_global_classes();
+		$target  = null;
+
+		foreach ( $classes as $class ) {
+			if ( $class['name'] === $class_name_or_id || $class['id'] === $class_name_or_id ) {
+				$target = $class;
+				break;
+			}
+		}
+
+		if ( null === $target ) {
+			return new \WP_Error(
+				'class_not_found',
+				sprintf( __( "Global class '%s' not found.", 'bricks-mcp' ), $class_name_or_id )
+			);
+		}
+
+		$settings = $target['settings'] ?? [];
+		$name     = $target['name'];
+		$id       = $target['id'];
+
+		// Build structured styles.
+		$structured = [];
+		$css_rules  = [];
+
+		// Background.
+		$bg = $settings['_background']['color']['raw'] ?? $settings['_background']['color']['hex'] ?? '';
+		if ( $bg ) {
+			$structured['background'] = $bg;
+			$css_rules[] = 'background-color: ' . $bg;
+		}
+
+		// Border.
+		$b_style = $settings['_border']['style'] ?? '';
+		$b_color = $settings['_border']['color']['raw'] ?? $settings['_border']['color']['hex'] ?? '';
+		$b_width = $settings['_border']['width'] ?? '';
+		if ( $b_style || $b_color || $b_width ) {
+			$border_parts = [];
+			if ( $b_width ) {
+				$w = is_array( $b_width ) ? ( $b_width['top'] ?? '1px' ) : $b_width;
+				$border_parts[] = $w;
+			}
+			if ( $b_style ) {
+				$s = is_string( $b_style ) ? $b_style : 'solid';
+				$border_parts[] = $s;
+			}
+			if ( $b_color ) {
+				$border_parts[] = $b_color;
+			}
+			$border_str = implode( ' ', $border_parts );
+			$structured['border'] = $border_str;
+			$css_rules[] = 'border: ' . $border_str;
+		}
+
+		// Border radius.
+		$radius = $settings['_border']['radius'] ?? '';
+		if ( ! empty( $radius ) ) {
+			$r_val = is_array( $radius ) ? ( $radius['top'] ?? reset( $radius ) ) : $radius;
+			$structured['border_radius'] = (string) $r_val;
+			$css_rules[] = 'border-radius: ' . $r_val;
+		}
+
+		// Padding.
+		$padding = $settings['_padding'] ?? [];
+		if ( ! empty( $padding ) ) {
+			if ( is_string( $padding ) ) {
+				$structured['padding'] = $padding . ' all sides';
+				$css_rules[] = 'padding: ' . $padding;
+			} elseif ( is_array( $padding ) ) {
+				$top   = $padding['top'] ?? '';
+				$right = $padding['right'] ?? '';
+				$bot   = $padding['bottom'] ?? '';
+				$left  = $padding['left'] ?? '';
+				$all_same = ( $top === $right && $right === $bot && $bot === $left && '' !== $top );
+				if ( $all_same ) {
+					$structured['padding'] = $top . ' all sides';
+					$css_rules[] = 'padding: ' . $top;
+				} else {
+					$desc = trim( "{$top} {$right} {$bot} {$left}" );
+					$structured['padding'] = $desc;
+					$css_rules[] = 'padding: ' . $desc;
+				}
+			}
+		}
+
+		// Typography.
+		$typo = $settings['_typography'] ?? [];
+		$typo_parts = [];
+		$color = $typo['color']['raw'] ?? $typo['color']['hex'] ?? '';
+		if ( $color ) {
+			$typo_parts[] = $color . ' color';
+			$css_rules[] = 'color: ' . $color;
+		}
+		$weight = $typo['font-weight'] ?? '';
+		if ( $weight ) {
+			$typo_parts[] = $weight . ' weight';
+			$css_rules[] = 'font-weight: ' . $weight;
+		}
+		$font_size = $typo['font-size'] ?? '';
+		if ( $font_size ) {
+			$typo_parts[] = $font_size . ' size';
+			$css_rules[] = 'font-size: ' . $font_size;
+		}
+		if ( ! empty( $typo_parts ) ) {
+			$structured['typography'] = implode( ', ', $typo_parts );
+		}
+
+		// Layout.
+		$dir     = $settings['_direction'] ?? '';
+		$align   = $settings['_alignItems'] ?? '';
+		$justify = $settings['_justifyContent'] ?? '';
+		$row_gap = $settings['_rowGap'] ?? '';
+		$col_gap = $settings['_columnGap'] ?? '';
+
+		$layout_parts = [];
+		if ( $dir ) {
+			$layout_parts[] = 'flex ' . $dir;
+			$css_rules[] = 'display: flex';
+			$css_rules[] = 'flex-direction: ' . $dir;
+		}
+		if ( $align ) {
+			$layout_parts[] = $align . ' alignment';
+			$css_rules[] = 'align-items: ' . $align;
+		}
+		if ( $justify ) {
+			$layout_parts[] = $justify . ' justify';
+			$css_rules[] = 'justify-content: ' . $justify;
+		}
+		if ( $row_gap ) {
+			$layout_parts[] = $row_gap . ' row gap';
+			$css_rules[] = 'row-gap: ' . $row_gap;
+		}
+		if ( $col_gap ) {
+			$layout_parts[] = $col_gap . ' column gap';
+			$css_rules[] = 'column-gap: ' . $col_gap;
+		}
+		if ( ! empty( $layout_parts ) ) {
+			$structured['layout'] = implode( ', ', $layout_parts );
+		}
+
+		// Box shadow.
+		if ( ! empty( $settings['_boxShadow'] ) ) {
+			$structured['box_shadow'] = 'present';
+			$shadow = $settings['_boxShadow'];
+			if ( is_array( $shadow ) && isset( $shadow[0] ) ) {
+				$sv = $shadow[0]['values'] ?? [];
+				$sc = $shadow[0]['color']['raw'] ?? 'rgba(0,0,0,0.1)';
+				$css_rules[] = sprintf(
+					'box-shadow: %s %s %s %s %s',
+					$sv['offsetX'] ?? '0',
+					$sv['offsetY'] ?? '4px',
+					$sv['blur'] ?? '20px',
+					$sv['spread'] ?? '0',
+					$sc
+				);
+			}
+		}
+
+		// Build description prose.
+		$desc_parts = [];
+		if ( isset( $structured['background'] ) ) {
+			$desc_parts[] = $structured['background'] . ' background';
+		}
+		if ( isset( $structured['border'] ) ) {
+			$desc_parts[] = $structured['border'] . ' border';
+		}
+		if ( isset( $structured['border_radius'] ) ) {
+			$desc_parts[] = $structured['border_radius'] . ' corner radius';
+		}
+		if ( isset( $structured['padding'] ) ) {
+			$desc_parts[] = $structured['padding'] . ' padding';
+		}
+		if ( isset( $structured['typography'] ) ) {
+			$desc_parts[] = $structured['typography'];
+		}
+		if ( isset( $structured['layout'] ) ) {
+			$desc_parts[] = $structured['layout'];
+		}
+		if ( isset( $structured['box_shadow'] ) ) {
+			$desc_parts[] = 'box shadow';
+		}
+
+		$description = ! empty( $desc_parts )
+			? ucfirst( implode( ', ', $desc_parts ) ) . '.'
+			: 'No inline styles defined (styles may come from child classes or theme defaults).';
+
+		$css_string = ! empty( $css_rules )
+			? '.' . $name . ' { ' . implode( '; ', $css_rules ) . '; }'
+			: '.' . $name . ' { /* no inline styles */ }';
+
+		$html_sample = '<div class="' . esc_attr( $name ) . '" style="display:inline-block;width:300px;">[Sample content here]</div>';
+
+		return [
+			'class_name'       => $name,
+			'class_id'         => $id,
+			'description'      => $description,
+			'structured_styles' => $structured,
+			'css_rules'        => $css_string,
+			'html_sample'      => $html_sample,
+		];
+	}
+
+	/**
 	 * Build a Bricks composite key suffix.
 	 *
 	 * @param string $breakpoint Bricks breakpoint key.

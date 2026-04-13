@@ -4,6 +4,25 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.8.0] — 2026-04-14
+
+### Added — 7 new tool actions for AI self-verification + workflow
+
+- **`propose_page_layout`** (new top-level tool) — maps a page intent (`landing page`, `services page`, `about page`, `product page`, `contact page`) to a sequenced list of sections with recommended pattern IDs and ready-to-use `design_plan` skeletons. AI loops through sections instead of thinking section-by-section. Args: `intent`, `page_id` (optional), `tone` (optional).
+- **`page:describe_section`** action — rich per-section styling description. Returns `rendered_description` prose ("Dark section with radial red gradient...") plus structured `element_breakdown` array with key style values per element. AI self-verifies built output without needing screenshots.
+- **`global_class:semantic_search`** action — natural-language class search ("card with white bg and shadow"). Heuristic scoring: name keyword (10pts), settings match (6pts), word stems (5pts). Returns ranked `matches` with `score`, `match_reasons`, `settings_summary`.
+- **`global_class:render_sample`** action — generates structured description, equivalent CSS rules, and sample HTML snippet for any class. Lets AI verify class output before applying.
+- **`element:copy_styling`** action — copies style settings between elements. Modes: `classes_only` / `inline_only` / `both`. Filters to 27 style-relevant keys; preserves target content/label/tag.
+- **`media:smart_search`** action — Unsplash search enriched with business_brief context. Extracts top context terms (proper nouns, services, location) and appends to query. Returns `enrichment_applied` so AI sees what was added.
+- **Slim dry-run for `build_from_schema`** — pass `dry_run: "summary"` (string) to get `intended_element_count` + `tree_summary` + `class_intents_resolved` without the full element tree. `dry_run: true` (boolean) unchanged.
+
+### Documentation
+- `docs/knowledge/building.md` — new section "Element-Specific Settings via element_settings" documenting the v3.7.0 escape hatch (whitelisted keys per element type, examples, defaults, auto-fixes). New section "Color Object Format" reinforces the `{raw}`/`{hex}` requirement (auto-fixed in v3.7.0 but recommended from start).
+
+### Architecture
+- New `PageLayoutService` — intent-to-section-sequence mapping with pattern matching via `DesignPatternService`.
+- New `PageLayoutHandler` — wires `propose_page_layout` as a top-level Bricks-only tool.
+
 ## [3.7.0] — 2026-04-13
 
 ### Added

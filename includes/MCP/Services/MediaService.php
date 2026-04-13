@@ -377,6 +377,135 @@ class MediaService {
 	}
 
 	/**
+	 * Smart search: enrich an Unsplash query with business context from briefs.
+	 *
+	 * Reads the business_brief from plugin options, extracts context terms
+	 * (industry, location, services), and appends the top terms to the query
+	 * before calling Unsplash.
+	 *
+	 * @param string $query    Base search query.
+	 * @param int    $per_page Number of results.
+	 * @return array<string, mixed>|\WP_Error Enriched search results or error.
+	 */
+	public function smart_search( string $query, int $per_page = 5 ): array|\WP_Error {
+		$briefs = get_option( 'bricks_mcp_briefs', [] );
+		$business_brief = '';
+
+		if ( is_array( $briefs ) && ! empty( $briefs['business_brief'] ) ) {
+			$business_brief = (string) $briefs['business_brief'];
+		}
+
+		$enrichment_applied = [];
+
+		if ( '' !== $business_brief ) {
+			$context_terms = $this->extract_context_terms( $business_brief );
+			// Take top 3 context terms that are NOT already in the query.
+			$query_lower = strtolower( $query );
+			$added       = 0;
+			foreach ( $context_terms as $term ) {
+				if ( $added >= 3 ) {
+					break;
+				}
+				if ( ! str_contains( $query_lower, strtolower( $term ) ) ) {
+					$enrichment_applied[] = $term;
+					$added++;
+				}
+			}
+		}
+
+		$enriched_query = $query;
+		if ( ! empty( $enrichment_applied ) ) {
+			$enriched_query = $query . ' ' . implode( ' ', $enrichment_applied );
+		}
+
+		$results = $this->search_photos( $enriched_query, $per_page );
+
+		if ( is_wp_error( $results ) ) {
+			return $results;
+		}
+
+		$response = [
+			'query'              => $query,
+			'enriched_query'     => $enriched_query,
+			'enrichment_applied' => $enrichment_applied,
+		];
+
+		if ( empty( $enrichment_applied ) && '' === $business_brief ) {
+			$response['note'] = 'No business_brief configured. Set one in Bricks MCP settings for context-enriched image search.';
+		}
+
+		// Merge Unsplash results.
+		$response['photos'] = $results['results'] ?? [];
+		$response['total']  = $results['total'] ?? 0;
+
+		return $response;
+	}
+
+	/**
+	 * Extract context terms from a business brief.
+	 *
+	 * Simple heuristic: split on whitespace, filter stopwords, keep words >3 chars,
+	 * prioritize capitalized words (likely brand/location names).
+	 *
+	 * @param string $brief The business brief text.
+	 * @return array<int, string> Top context terms sorted by relevance.
+	 */
+	private function extract_context_terms( string $brief ): array {
+		$stopwords = [
+			'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had',
+			'her', 'was', 'one', 'our', 'out', 'has', 'have', 'been', 'some', 'them',
+			'than', 'its', 'over', 'such', 'that', 'this', 'with', 'will', 'each',
+			'make', 'like', 'from', 'when', 'what', 'they', 'been', 'said', 'more',
+			'which', 'their', 'about', 'would', 'there', 'could', 'other', 'into',
+			'just', 'these', 'also', 'after', 'your', 'very', 'most', 'then', 'were',
+			'only', 'many', 'those', 'does', 'being', 'where', 'here', 'through',
+			'both', 'between', 'should', 'because', 'while', 'offer', 'services',
+			'provide', 'based', 'company', 'business', 'clients', 'customers',
+		];
+
+		// Strip HTML and split.
+		$text  = wp_strip_all_tags( $brief );
+		$words = preg_split( '/[\s,.:;!?()\[\]{}]+/', $text );
+
+		if ( ! is_array( $words ) ) {
+			return [];
+		}
+
+		$capitalized = [];
+		$regular     = [];
+
+		foreach ( $words as $word ) {
+			$word = trim( $word, '"\'`' );
+			if ( strlen( $word ) <= 3 ) {
+				continue;
+			}
+			if ( in_array( strtolower( $word ), $stopwords, true ) ) {
+				continue;
+			}
+
+			// Prioritize capitalized words (likely proper nouns).
+			if ( ctype_upper( $word[0] ) && ! ctype_upper( $word ) ) {
+				$capitalized[] = $word;
+			} else {
+				$regular[] = $word;
+			}
+		}
+
+		// Deduplicate (case-insensitive).
+		$seen   = [];
+		$result = [];
+		foreach ( array_merge( $capitalized, $regular ) as $term ) {
+			$lower = strtolower( $term );
+			if ( ! isset( $seen[ $lower ] ) ) {
+				$seen[ $lower ] = true;
+				$result[]       = $term;
+			}
+		}
+
+		return array_slice( $result, 0, 10 );
+	}
+
+	/**
 	 * Get the Unsplash API key from Bricks global settings.
 	 *
 	 * @return string API key or empty string if not configured.

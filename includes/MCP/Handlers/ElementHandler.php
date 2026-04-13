@@ -75,11 +75,12 @@ final class ElementHandler {
 			'bulk_add'       => $this->tool_bulk_add_elements( $args ),
 			'duplicate'      => $this->tool_duplicate_element( $args ),
 			'find'           => $this->tool_find_elements( $args ),
+			'copy_styling'   => $this->tool_copy_styling( $args ),
 			default          => new \WP_Error(
 				'invalid_action',
 				sprintf(
 					/* translators: %s: Action name */
-					__( 'Invalid action "%s". Valid actions: add, update, remove, get_conditions, set_conditions, move, bulk_update, bulk_add, duplicate, find', 'bricks-mcp' ),
+					__( 'Invalid action "%s". Valid actions: add, update, remove, get_conditions, set_conditions, move, bulk_update, bulk_add, duplicate, find, copy_styling', 'bricks-mcp' ),
 					$action
 				)
 			),
@@ -623,6 +624,131 @@ final class ElementHandler {
 	}
 
 	/**
+	 * Style-relevant settings keys (excludes content, label, semantic tag).
+	 */
+	private const STYLE_KEYS = [
+		'_cssGlobalClasses', '_background', '_typography', '_color', '_border',
+		'_padding', '_margin', '_width', '_height', '_widthMax', '_heightMax',
+		'_widthMin', '_heightMin', '_minHeight', '_position', '_top', '_right',
+		'_bottom', '_left', '_zIndex', '_display', '_direction', '_alignItems',
+		'_justifyContent', '_flexWrap', '_columnGap', '_rowGap', '_gradient',
+		'_boxShadow', '_cssCustom',
+	];
+
+	/**
+	 * Tool: Copy styling from one element to another.
+	 *
+	 * Copies style-relevant settings (classes, inline styles, or both)
+	 * from a source element to a target element, preserving the target's
+	 * content, label, and semantic tag.
+	 *
+	 * @param array<string, mixed> $args Tool arguments.
+	 * @return array<string, mixed>|\WP_Error Result or error.
+	 */
+	private function tool_copy_styling( array $args ): array|\WP_Error {
+		if ( empty( $args['post_id'] ) ) {
+			return new \WP_Error( 'missing_post_id', __( 'post_id is required.', 'bricks-mcp' ) );
+		}
+		if ( empty( $args['source_id'] ) ) {
+			return new \WP_Error( 'missing_source_id', __( 'source_id is required. The element to copy styling FROM.', 'bricks-mcp' ) );
+		}
+		if ( empty( $args['target_id'] ) ) {
+			return new \WP_Error( 'missing_target_id', __( 'target_id is required. The element to copy styling TO.', 'bricks-mcp' ) );
+		}
+
+		$post_id   = (int) $args['post_id'];
+		$source_id = sanitize_text_field( $args['source_id'] );
+		$target_id = sanitize_text_field( $args['target_id'] );
+		$mode      = sanitize_text_field( $args['mode'] ?? 'both' );
+
+		if ( ! in_array( $mode, [ 'classes_only', 'inline_only', 'both' ], true ) ) {
+			return new \WP_Error(
+				'invalid_mode',
+				__( 'mode must be one of: classes_only, inline_only, both (default).', 'bricks-mcp' )
+			);
+		}
+
+		// Protected page check.
+		$protected = $this->bricks_service->check_protected_page( $post_id );
+		if ( $protected ) {
+			return $protected;
+		}
+
+		$elements = $this->bricks_service->get_elements( $post_id );
+		$source   = null;
+		$target   = null;
+		$target_index = null;
+
+		foreach ( $elements as $index => $el ) {
+			$eid = $el['id'] ?? '';
+			if ( $eid === $source_id ) {
+				$source = $el;
+			}
+			if ( $eid === $target_id ) {
+				$target = $el;
+				$target_index = $index;
+			}
+		}
+
+		if ( null === $source ) {
+			return new \WP_Error(
+				'source_not_found',
+				sprintf( __( 'Source element "%s" not found on post %d.', 'bricks-mcp' ), $source_id, $post_id )
+			);
+		}
+		if ( null === $target ) {
+			return new \WP_Error(
+				'target_not_found',
+				sprintf( __( 'Target element "%s" not found on post %d.', 'bricks-mcp' ), $target_id, $post_id )
+			);
+		}
+
+		$source_settings = $source['settings'] ?? [];
+		$copied_keys     = [];
+		$warnings        = [];
+
+		foreach ( self::STYLE_KEYS as $key ) {
+			// Mode filtering.
+			if ( 'classes_only' === $mode && '_cssGlobalClasses' !== $key ) {
+				continue;
+			}
+			if ( 'inline_only' === $mode && '_cssGlobalClasses' === $key ) {
+				continue;
+			}
+
+			if ( isset( $source_settings[ $key ] ) ) {
+				$elements[ $target_index ]['settings'][ $key ] = $source_settings[ $key ];
+				$copied_keys[] = $key;
+			}
+		}
+
+		if ( empty( $copied_keys ) ) {
+			$warnings[] = 'No style keys found on source element to copy.';
+			return [
+				'source_id'   => $source_id,
+				'target_id'   => $target_id,
+				'mode'        => $mode,
+				'copied_keys' => [],
+				'warnings'    => $warnings,
+			];
+		}
+
+		// Save elements.
+		$saved = $this->bricks_service->save_elements( $post_id, $elements );
+		if ( is_wp_error( $saved ) ) {
+			return $saved;
+		}
+
+		return [
+			'source_id'   => $source_id,
+			'target_id'   => $target_id,
+			'mode'        => $mode,
+			'copied_keys' => $copied_keys,
+			'warnings'    => $warnings,
+		];
+	}
+
+	/**
 	 * Register the element tool with the given registry.
 	 *
 	 * @param ToolRegistry $registry Tool registry instance.
@@ -631,13 +757,13 @@ final class ElementHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'element',
-			__( "Manage individual Bricks elements on a page.\n\nActions: add, update, remove (optional cascade), get_conditions, set_conditions, move, bulk_update, bulk_add (supports nested tree format), duplicate, find.", 'bricks-mcp' ),
+			__( "Manage individual Bricks elements on a page.\n\nActions: add, update, remove (optional cascade), get_conditions, set_conditions, move, bulk_update, bulk_add (supports nested tree format), duplicate, find, copy_styling.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
 					'action'           => array(
 						'type'        => 'string',
-						'enum'        => array( 'add', 'update', 'remove', 'get_conditions', 'set_conditions', 'move', 'bulk_update', 'bulk_add', 'duplicate', 'find' ),
+						'enum'        => array( 'add', 'update', 'remove', 'get_conditions', 'set_conditions', 'move', 'bulk_update', 'bulk_add', 'duplicate', 'find', 'copy_styling' ),
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					),
 					'post_id'          => array(
@@ -712,6 +838,19 @@ final class ElementHandler {
 					'has_setting'      => array(
 						'type'        => 'string',
 						'description' => __( 'Filter by setting key existence (find: optional, e.g. "_cssCustom", "_background")', 'bricks-mcp' ),
+					),
+					'source_id'        => array(
+						'type'        => 'string',
+						'description' => __( 'Element ID to copy styling FROM (copy_styling: required)', 'bricks-mcp' ),
+					),
+					'target_id'        => array(
+						'type'        => 'string',
+						'description' => __( 'Element ID to copy styling TO (copy_styling: required)', 'bricks-mcp' ),
+					),
+					'mode'             => array(
+						'type'        => 'string',
+						'enum'        => array( 'classes_only', 'inline_only', 'both' ),
+						'description' => __( 'What to copy: classes_only, inline_only, or both (copy_styling: optional, default both)', 'bricks-mcp' ),
 					),
 					'text_contains'    => array(
 						'type'        => 'string',
