@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.5.0
+Stable tag: 3.6.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -143,6 +143,11 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.6.0 =
+* PageHandler split: 1074 lines of handler monolith broken into 6 focused sub-handlers under includes/MCP/Handlers/Page/ (PageReadSubHandler, PageSnapshotSubHandler, PageSettingsSubHandler, PageSeoSubHandler, PageCrudSubHandler, PageContentSubHandler). PageHandler is now a 342-line dispatcher + tool schema.
+* No external behavior changes. The page tool schema and all 17 action names and argument shapes are byte-for-byte identical. Destructive confirm flow, auto-snapshot, content wipe protection, and design gate interactions all preserved.
+* Each sub-handler is now independently testable. Added PageHandlerDispatchTest covering dispatcher behavior, action completeness, and destructive confirm preservation.
 
 = 3.5.0 =
 * Refactor pass: Router collapsed 18 typed handler properties into a single $handlers array (1099 → 866 lines). SchemaHandler extracted 4 large reference arrays into dedicated catalog classes under includes/MCP/Reference/ (1615 → 787 lines).

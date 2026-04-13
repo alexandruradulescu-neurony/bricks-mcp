@@ -4,6 +4,27 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.6.0] — 2026-04-13
+
+### Changed
+- **PageHandler split** — 1074 lines of handler monolith broken into 6 focused sub-handlers under `includes/MCP/Handlers/Page/`:
+  - `PageReadSubHandler` — `list`, `search`, `get`
+  - `PageSnapshotSubHandler` — `snapshot`, `restore`, `list_snapshots`
+  - `PageSettingsSubHandler` — `get_settings`, `update_settings`
+  - `PageSeoSubHandler` — `get_seo`, `update_seo`
+  - `PageCrudSubHandler` — `create`, `update_meta`, `delete`, `duplicate`
+  - `PageContentSubHandler` — `update_content`, `append_content`, `import_clipboard`
+
+  PageHandler is now a 342-line dispatcher + tool schema. Each sub-handler is independently testable.
+
+### Preserved
+- The `page` MCP tool is unchanged externally — same schema, same action names, same argument shapes, same outputs.
+- Destructive confirm flow (`bricks_mcp_confirm_required` error code on `delete`) preserved exactly — Router still intercepts and issues confirmation tokens.
+- Auto-snapshot before content writes, element count / content wipe protection, and upstream design build gate interactions preserved verbatim.
+
+### Added
+- `PageHandlerDispatchTest` — structural tests for the dispatcher: all 17 actions present, all 6 sub-handlers wired, no leftover `tool_*` private methods, destructive confirm code still referenced.
+
 ## [3.5.0] — 2026-04-13
 
 ### Changed
