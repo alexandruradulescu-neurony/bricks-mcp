@@ -4,6 +4,12 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.14.1] — 2026-04-14
+
+### Fixed
+- **bulk_add parent key respected** — `ElementNormalizer::simplified_to_flat()` now uses explicit `parent` key from input elements instead of always assigning to root. Elements with `"parent": "abc123"` in bulk_add now land in the correct parent.
+- **data.* resolves in HTML content** — `SchemaExpander::replace_data_references()` now handles bare `data.key` references within HTML strings (e.g., `<h4>data.title</h4>`), not just exact matches and `{data.key}` interpolation. Fixes icon-box and other compound elements getting literal "data.feature_title" as content.
+
 ## [3.14.0] — 2026-04-14
 
 ### Changed — Code review cleanup (~1,200 LOC removed)
