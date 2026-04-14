@@ -219,3 +219,34 @@ The pipeline auto-converts these common mistakes:
 - `_gap` → `_columnGap` or `_rowGap` based on direction
 
 Unknown keys (e.g., `settings`, `styles`, `css`, raw Bricks keys like `_padding` on node level) are rejected with suggestions.
+
+## Design Pattern Library
+
+The plugin ships 21 curated section compositions across 7 categories (heroes, features, ctas, pricing, testimonials, splits, content). Custom patterns can be added in two ways:
+
+- **Via MCP:** `design_pattern:create(pattern)` saves to the database tier
+- **Via file:** Place JSON files in `wp-content/uploads/bricks-mcp/design-patterns/{category}.json`
+
+Override priority: database > user files > plugin-shipped. Custom patterns survive plugin updates.
+
+### Discovery
+
+- `design_pattern:list` — all patterns across all tiers, with `source` labels
+- `design_pattern:semantic_search(query)` — natural language search across name, description, tags, category
+- `propose_design` Phase 1 automatically shows the best-matching patterns for your description
+
+### Pattern metadata
+
+Each pattern has optional AI metadata:
+- `ai_description` — 1-2 sentence description of what the pattern looks like when built
+- `ai_usage_hints` — array of tips for when/how to use the pattern
+
+Use these to pick the right pattern for the task. All plugin-shipped patterns have this metadata pre-filled.
+
+### Managing patterns
+
+- `design_pattern:create(pattern)` — save a new pattern (required: id, name, category, tags)
+- `design_pattern:update(id, pattern)` — update a database pattern (plugin/user-file patterns are read-only)
+- `design_pattern:delete(id)` — remove a DB pattern, or hide a plugin/user-file pattern from all lists
+- `design_pattern:export(ids?)` — export patterns as JSON for cross-site sharing
+- `design_pattern:import(patterns)` — import a JSON array of patterns (auto-suffixes conflicting IDs)

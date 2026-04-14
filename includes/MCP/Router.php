@@ -186,7 +186,8 @@ final class Router {
 			),
 			'onboarding'    => new OnboardingHandler( new OnboardingService( $this->bricks_service ) ),
 			'verify'        => new Handlers\VerifyHandler( $this->bricks_service, $require_bricks ),
-			'page_layout'   => new Handlers\PageLayoutHandler( new PageLayoutService(), $require_bricks ),
+			'page_layout'      => new Handlers\PageLayoutHandler( new PageLayoutService(), $require_bricks ),
+			'design_pattern'   => new Handlers\DesignPatternHandler( $require_bricks ),
 		];
 
 		$this->pending_action_service = new PendingActionService();
@@ -844,6 +845,7 @@ final class Router {
 			'bricks_tool', 'page', 'element', 'template', 'global_class',
 			'design_system', 'media', 'menu', 'component', 'woocommerce',
 			'font', 'code', 'proposal', 'build', 'verify', 'page_layout',
+			'design_pattern',
 		];
 
 		foreach ( $bricks_handler_keys as $key ) {

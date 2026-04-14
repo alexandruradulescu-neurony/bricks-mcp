@@ -5,7 +5,13 @@
       "id": "split-login-form",
       "name": "Login Form Split",
       "description": "50/50 split. Left: centered form with logo, heading, fields, button, footer text. Right: full-height rounded image.",
-      "tags": ["light", "form", "login", "auth", "centered"],
+      "tags": [
+        "light",
+        "form",
+        "login",
+        "auth",
+        "centered"
+      ],
       "layout": "split-50-50",
       "background": "light",
       "section_overrides": {
@@ -17,29 +23,91 @@
           "alignment": "center-vertically",
           "max_width": "var(--max-width-s)",
           "gap": "var(--space-l)",
-          "padding": {"top": "var(--space-xxl)", "right": "var(--space-xxl)", "bottom": "var(--space-xxl)", "left": "var(--space-xxl)"},
+          "padding": {
+            "top": "var(--space-xxl)",
+            "right": "var(--space-xxl)",
+            "bottom": "var(--space-xxl)",
+            "left": "var(--space-xxl)"
+          },
           "elements": [
-            {"role": "logo", "type": "icon", "style": {"_typography": {"font-size": "28px"}, "_margin": {"bottom": "var(--space-l)"}}},
-            {"role": "heading", "type": "heading", "tag": "h2"},
-            {"role": "subtitle", "type": "text-basic"},
-            {"role": "form", "type": "form"},
-            {"role": "footer_text", "type": "text-basic", "note": "Use HTML for inline link: Nu ai cont? <a href='#'>Creeaza un cont</a>"}
+            {
+              "role": "logo",
+              "type": "icon",
+              "style": {
+                "_typography": {
+                  "font-size": "28px"
+                },
+                "_margin": {
+                  "bottom": "var(--space-l)"
+                }
+              }
+            },
+            {
+              "role": "heading",
+              "type": "heading",
+              "tag": "h2"
+            },
+            {
+              "role": "subtitle",
+              "type": "text-basic"
+            },
+            {
+              "role": "form",
+              "type": "form"
+            },
+            {
+              "role": "footer_text",
+              "type": "text-basic",
+              "note": "Use HTML for inline link: Nu ai cont? <a href='#'>Creeaza un cont</a>"
+            }
           ]
         },
         "right": {
           "fill": true,
-          "padding": {"top": "var(--space-m)", "right": "var(--space-m)", "bottom": "var(--space-m)", "left": "var(--space-m)"},
+          "padding": {
+            "top": "var(--space-m)",
+            "right": "var(--space-m)",
+            "bottom": "var(--space-m)",
+            "left": "var(--space-m)"
+          },
           "elements": [
-            {"role": "visual", "type": "image", "fill_column": true, "style": {"_border": {"radius": {"top": "var(--radius-xl)", "right": "var(--radius-xl)", "bottom": "var(--radius-xl)", "left": "var(--radius-xl)"}}, "_objectFit": "cover", "_height": "100%"}}
+            {
+              "role": "visual",
+              "type": "image",
+              "fill_column": true,
+              "style": {
+                "_border": {
+                  "radius": {
+                    "top": "var(--radius-xl)",
+                    "right": "var(--radius-xl)",
+                    "bottom": "var(--radius-xl)",
+                    "left": "var(--radius-xl)"
+                  }
+                },
+                "_objectFit": "cover",
+                "_height": "100%"
+              }
+            }
           ]
         }
-      }
+      },
+      "ai_description": "50/50 split with centered login form. Left: logo + heading + email/password fields + button + footer links. Right: dark or image panel.",
+      "ai_usage_hints": [
+        "Full-page login or signup layout",
+        "Right panel can be dark with brand messaging",
+        "Form auto-detects login type from content hints"
+      ]
     },
     {
       "id": "split-text-image",
       "name": "Text + Image Split",
       "description": "50/50 split. Left: tagline, heading, paragraph. Right: rounded image. Light background.",
-      "tags": ["light", "content", "about", "image"],
+      "tags": [
+        "light",
+        "content",
+        "about",
+        "image"
+      ],
       "layout": "split-50-50",
       "background": "light",
       "columns": {
@@ -47,44 +115,108 @@
           "alignment": "center-vertically",
           "gap": "var(--space-l)",
           "elements": [
-            {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
-            {"role": "heading", "type": "heading", "tag": "h2"},
-            {"role": "paragraph", "type": "text-basic"},
-            {"role": "cta", "type": "button", "class_role": "btn_primary"}
+            {
+              "role": "eyebrow",
+              "type": "text-basic",
+              "class_role": "eyebrow"
+            },
+            {
+              "role": "heading",
+              "type": "heading",
+              "tag": "h2"
+            },
+            {
+              "role": "paragraph",
+              "type": "text-basic"
+            },
+            {
+              "role": "cta",
+              "type": "button",
+              "class_role": "btn_primary"
+            }
           ]
         },
         "right": {
           "fill": true,
           "elements": [
-            {"role": "image", "type": "image", "style": {"_border": {"radius": {"top": "var(--radius-l)", "right": "var(--radius-l)", "bottom": "var(--radius-l)", "left": "var(--radius-l)"}}, "_objectFit": "cover"}}
+            {
+              "role": "image",
+              "type": "image",
+              "style": {
+                "_border": {
+                  "radius": {
+                    "top": "var(--radius-l)",
+                    "right": "var(--radius-l)",
+                    "bottom": "var(--radius-l)",
+                    "left": "var(--radius-l)"
+                  }
+                },
+                "_objectFit": "cover"
+              }
+            }
           ]
         }
-      }
+      },
+      "ai_description": "50/50 split light section. Left: tagline + heading + paragraph. Right: large rounded image. Clean and balanced.",
+      "ai_usage_hints": [
+        "Versatile content section for any topic",
+        "Swap left/right by reordering columns",
+        "Image should be relevant to the text content"
+      ]
     },
     {
       "id": "split-text-pills",
       "name": "Text + Tag Pills Split",
       "description": "50/50 split. Left: tagline, heading, paragraph. Right: wrapping grid of tag pills with icons.",
-      "tags": ["light", "services", "tags", "pills"],
+      "tags": [
+        "light",
+        "services",
+        "tags",
+        "pills"
+      ],
       "layout": "split-50-50",
       "background": "light",
       "columns": {
         "left": {
           "gap": "var(--space-l)",
           "elements": [
-            {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
-            {"role": "heading", "type": "heading", "tag": "h2"},
-            {"role": "paragraph", "type": "text-basic"}
+            {
+              "role": "eyebrow",
+              "type": "text-basic",
+              "class_role": "eyebrow"
+            },
+            {
+              "role": "heading",
+              "type": "heading",
+              "tag": "h2"
+            },
+            {
+              "role": "paragraph",
+              "type": "text-basic"
+            }
           ]
         },
         "right": {
           "alignment": "center-vertically",
           "gap": "var(--space-l)",
           "elements": [
-            {"role": "tag_grid", "type": "block", "class_role": "tag_grid", "children": [
-              {"role": "pills", "type": "pattern", "pattern_name": "tag-pill", "repeat": 8}
-            ]},
-            {"role": "view_all", "type": "text-link"}
+            {
+              "role": "tag_grid",
+              "type": "block",
+              "class_role": "tag_grid",
+              "children": [
+                {
+                  "role": "pills",
+                  "type": "pattern",
+                  "pattern_name": "tag-pill",
+                  "repeat": 8
+                }
+              ]
+            },
+            {
+              "role": "view_all",
+              "type": "text-link"
+            }
           ]
         }
       },
@@ -92,36 +224,79 @@
         "tag-pill": {
           "class_role": "tag_pill",
           "elements": [
-            {"role": "pill_icon", "type": "icon", "class_role": "tag_pill_icon", "icon": "data.icon"},
-            {"role": "pill_label", "type": "text-basic", "content": "data.label"}
+            {
+              "role": "pill_icon",
+              "type": "icon",
+              "class_role": "tag_pill_icon",
+              "icon": "data.icon"
+            },
+            {
+              "role": "pill_label",
+              "type": "text-basic",
+              "content": "data.label"
+            }
           ]
         }
-      }
+      },
+      "ai_description": "50/50 split light section. Left: tagline + heading + paragraph. Right: wrapping grid of tag pills with icons. Shows capabilities or features.",
+      "ai_usage_hints": [
+        "Good for listing many small features/capabilities",
+        "Pills auto-wrap and look good at any count",
+        "Each pill has an icon + short label"
+      ]
     },
     {
       "id": "split-contact-form",
       "name": "Contact Form Split",
       "description": "60/40 split. Left: heading, paragraph, contact info. Right: contact form.",
-      "tags": ["light", "form", "contact"],
+      "tags": [
+        "light",
+        "form",
+        "contact"
+      ],
       "layout": "split-60-40",
       "background": "light",
       "columns": {
         "left": {
           "gap": "var(--space-l)",
           "elements": [
-            {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
-            {"role": "heading", "type": "heading", "tag": "h2"},
-            {"role": "paragraph", "type": "text-basic"},
-            {"role": "contact_info", "type": "text-basic", "note": "Phone, email, address in HTML"}
+            {
+              "role": "eyebrow",
+              "type": "text-basic",
+              "class_role": "eyebrow"
+            },
+            {
+              "role": "heading",
+              "type": "heading",
+              "tag": "h2"
+            },
+            {
+              "role": "paragraph",
+              "type": "text-basic"
+            },
+            {
+              "role": "contact_info",
+              "type": "text-basic",
+              "note": "Phone, email, address in HTML"
+            }
           ]
         },
         "right": {
           "gap": "var(--space-l)",
           "elements": [
-            {"role": "form", "type": "form"}
+            {
+              "role": "form",
+              "type": "form"
+            }
           ]
         }
-      }
+      },
+      "ai_description": "60/40 split with contact form. Left: heading + paragraph + contact info (phone, email, address). Right: full contact form with name/email/message fields.",
+      "ai_usage_hints": [
+        "Standard contact section for any page",
+        "Left side should include real contact details",
+        "Form auto-detects contact type from content hints"
+      ]
     }
   ]
 }

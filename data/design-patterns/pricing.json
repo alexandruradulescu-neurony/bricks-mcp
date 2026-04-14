@@ -5,7 +5,12 @@
       "id": "pricing-3-tier",
       "name": "3-Tier Pricing Cards",
       "description": "Section header + 3 pricing cards in a grid. Each card: tier name, price, features list, CTA.",
-      "tags": ["light", "grid", "cards", "pricing"],
+      "tags": [
+        "light",
+        "grid",
+        "cards",
+        "pricing"
+      ],
       "layout": "centered",
       "background": "light",
       "container_overrides": {
@@ -13,22 +18,89 @@
         "_textAlign": "center"
       },
       "composition": [
-        {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
-        {"role": "heading", "type": "heading", "tag": "h2"},
-        {"role": "subtitle", "type": "text-basic"},
-        {"role": "pricing_grid", "type": "grid", "columns": 3, "pattern_name": "pricing-card", "repeat": 3}
+        {
+          "role": "eyebrow",
+          "type": "text-basic",
+          "class_role": "eyebrow"
+        },
+        {
+          "role": "heading",
+          "type": "heading",
+          "tag": "h2"
+        },
+        {
+          "role": "subtitle",
+          "type": "text-basic"
+        },
+        {
+          "role": "pricing_grid",
+          "type": "grid",
+          "columns": 3,
+          "pattern_name": "pricing-card",
+          "repeat": 3
+        }
       ],
       "patterns": {
         "pricing-card": {
-          "wrapper_style": {"_padding": {"top": "var(--space-xl)", "right": "var(--space-l)", "bottom": "var(--space-xl)", "left": "var(--space-l)"}, "_border": {"radius": {"top": "var(--radius)", "right": "var(--radius)", "bottom": "var(--radius)", "left": "var(--radius)"}, "width": {"top": "1px", "right": "1px", "bottom": "1px", "left": "1px"}, "color": {"raw": "var(--base-light)"}}, "_alignItems": "center"},
+          "wrapper_style": {
+            "_padding": {
+              "top": "var(--space-xl)",
+              "right": "var(--space-l)",
+              "bottom": "var(--space-xl)",
+              "left": "var(--space-l)"
+            },
+            "_border": {
+              "radius": {
+                "top": "var(--radius)",
+                "right": "var(--radius)",
+                "bottom": "var(--radius)",
+                "left": "var(--radius)"
+              },
+              "width": {
+                "top": "1px",
+                "right": "1px",
+                "bottom": "1px",
+                "left": "1px"
+              },
+              "color": {
+                "raw": "var(--base-light)"
+              }
+            },
+            "_alignItems": "center"
+          },
           "elements": [
-            {"role": "tier_name", "type": "text-basic", "content": "data.tier_name"},
-            {"role": "price", "type": "heading", "tag": "h3", "content": "data.price"},
-            {"role": "features", "type": "text-basic", "content": "data.features", "note": "Use HTML <ul> list for features"},
-            {"role": "cta", "type": "button", "class_role": "btn_primary", "content": "data.cta"}
+            {
+              "role": "tier_name",
+              "type": "text-basic",
+              "content": "data.tier_name"
+            },
+            {
+              "role": "price",
+              "type": "heading",
+              "tag": "h3",
+              "content": "data.price"
+            },
+            {
+              "role": "features",
+              "type": "text-basic",
+              "content": "data.features",
+              "note": "Use HTML <ul> list for features"
+            },
+            {
+              "role": "cta",
+              "type": "button",
+              "class_role": "btn_primary",
+              "content": "data.cta"
+            }
           ]
         }
-      }
+      },
+      "ai_description": "Centered section header + 3 pricing cards in a grid. Each card: tier name, price heading, feature list, CTA button. Middle tier is visually featured.",
+      "ai_usage_hints": [
+        "Classic SaaS/service pricing layout",
+        "Middle tier auto-gets featured variant with accent border",
+        "Feature list works best as HTML bullet points"
+      ]
     }
   ]
 }

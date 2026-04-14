@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.8.0
+Stable tag: 3.9.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -143,6 +143,16 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.9.0 =
+* New tool: design_pattern with 8 actions (list, get, semantic_search, create, update, delete, export, import) for managing a 3-tier design pattern library.
+* 3-tier pattern loading: plugin-shipped (data/design-patterns/, read-only) + user files (wp-content/uploads/bricks-mcp/design-patterns/, survives updates) + database (wp_options, full CRUD via MCP). Override priority: database > user files > plugin.
+* Semantic search for patterns: natural language queries scored by name match (10pts), ID stems (5pts), ai_description (6pts), tags (4pts), category (3pts), layout/background (2pts).
+* AI metadata backfilled on all 21 plugin-shipped patterns: ai_description (1-2 sentence visual description) + ai_usage_hints (2-3 actionable tips per pattern).
+* Pattern export/import for cross-site sharing: export selected or all DB patterns as JSON, import with auto-suffix on ID conflicts (-v2, -v3).
+* Hidden patterns: plugin/user-file patterns can be soft-deleted (hidden from all lists) without modifying source files.
+* propose_design Phase 1 discovery now automatically surfaces patterns from all 3 tiers with source labels.
+* Design Pattern Library section added to docs/knowledge/building.md.
 
 = 3.8.0 =
 * New tool: propose_page_layout(intent, page_id, tone) — maps page intent (landing, services, about, product, contact) to a sequenced list of section types with recommended pattern IDs and ready-to-use design_plan skeletons. AI loops through sections instead of thinking section-by-section.

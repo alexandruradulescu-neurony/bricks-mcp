@@ -39,6 +39,16 @@
           "enum": ["light", "dark"]
         },
         "background_image": { "type": "boolean" },
+        "ai_description": { "type": "string", "maxLength": 300 },
+        "ai_usage_hints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "maxItems": 5
+        },
+        "source": {
+          "type": "string",
+          "enum": ["plugin", "user_file", "database"]
+        },
         "section_overrides": { "type": "object", "additionalProperties": true },
         "container_overrides": { "type": "object", "additionalProperties": true },
         "gradient_overlay": { "type": "object", "additionalProperties": true },

@@ -4,6 +4,22 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.9.0] — 2026-04-14
+
+### Added
+- **`design_pattern` MCP tool** — new top-level tool with 8 actions: `list`, `get`, `semantic_search`, `create`, `update`, `delete`, `export`, `import`. Full CRUD for a 3-tier design pattern library.
+- **3-tier pattern loading** — `DesignPatternService::load_all()` now merges patterns from: (1) plugin-shipped `data/design-patterns/` (read-only), (2) user files in `wp-content/uploads/bricks-mcp/design-patterns/` (survives plugin updates), (3) database via `wp_options` (full CRUD). Override priority: database > user files > plugin-shipped.
+- **Semantic search for patterns** — `design_pattern:semantic_search(query)` with heuristic scoring: name (10pts), ID stems (5pts), ai_description (6pts), tags (4pts), category (3pts), layout/background (2pts). Mirrors `global_class:semantic_search` algorithm.
+- **AI metadata on all 21 patterns** — `ai_description` (1-2 sentence visual description) and `ai_usage_hints` (2-3 actionable tips) backfilled on every plugin-shipped pattern.
+- **Pattern export/import** — `design_pattern:export(ids?)` returns portable JSON array; `design_pattern:import(patterns)` saves with auto-suffix on ID conflicts (-v2, -v3).
+- **Hidden patterns** — `design_pattern:delete(id)` on plugin/user-file patterns sets a hidden flag (soft-delete) rather than modifying source files.
+- **Pattern schema extended** — `data/design-patterns/_schema.json` now includes `ai_description`, `ai_usage_hints`, and `source` fields.
+- **Documentation** — `docs/knowledge/building.md` gains a "Design Pattern Library" section documenting the 3-tier system, discovery workflow, and all MCP actions.
+
+### Changed
+- `DesignPatternService::list_all()` now returns `ai_description`, `ai_usage_hints`, and `source` per pattern.
+- `propose_design` Phase 1 discovery's `reference_patterns` now includes patterns from all 3 tiers with `source` labels.
+
 ## [3.8.0] — 2026-04-14
 
 ### Added — 7 new tool actions for AI self-verification + workflow

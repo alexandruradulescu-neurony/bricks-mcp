@@ -5,70 +5,219 @@
       "id": "features-icon-grid-3",
       "name": "Icon Feature Cards Grid (3 columns)",
       "description": "Section header + 3-column grid of icon cards. Each card: icon, heading, description.",
-      "tags": ["light", "grid", "cards", "services", "icons"],
+      "tags": [
+        "light",
+        "grid",
+        "cards",
+        "services",
+        "icons"
+      ],
       "layout": "centered",
       "background": "light",
       "composition": [
-        {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
-        {"role": "heading", "type": "heading", "tag": "h2"},
-        {"role": "subtitle", "type": "text-basic"},
-        {"role": "card_grid", "type": "grid", "columns": 3, "pattern_name": "feature-card", "repeat": 3}
+        {
+          "role": "eyebrow",
+          "type": "text-basic",
+          "class_role": "eyebrow"
+        },
+        {
+          "role": "heading",
+          "type": "heading",
+          "tag": "h2"
+        },
+        {
+          "role": "subtitle",
+          "type": "text-basic"
+        },
+        {
+          "role": "card_grid",
+          "type": "grid",
+          "columns": 3,
+          "pattern_name": "feature-card",
+          "repeat": 3
+        }
       ],
       "patterns": {
         "feature-card": {
           "class_role": "service_card",
-          "wrapper_style": {"_padding": {"top": "var(--space-l)", "right": "var(--space-l)", "bottom": "var(--space-l)", "left": "var(--space-l)"}, "_border": {"radius": {"top": "var(--radius)", "right": "var(--radius)", "bottom": "var(--radius)", "left": "var(--radius)"}}},
+          "wrapper_style": {
+            "_padding": {
+              "top": "var(--space-l)",
+              "right": "var(--space-l)",
+              "bottom": "var(--space-l)",
+              "left": "var(--space-l)"
+            },
+            "_border": {
+              "radius": {
+                "top": "var(--radius)",
+                "right": "var(--radius)",
+                "bottom": "var(--radius)",
+                "left": "var(--radius)"
+              }
+            }
+          },
           "elements": [
-            {"role": "card_icon", "type": "icon", "icon": "data.icon"},
-            {"role": "card_title", "type": "heading", "tag": "h3", "content": "data.title"},
-            {"role": "card_desc", "type": "text-basic", "content": "data.desc"}
+            {
+              "role": "card_icon",
+              "type": "icon",
+              "icon": "data.icon"
+            },
+            {
+              "role": "card_title",
+              "type": "heading",
+              "tag": "h3",
+              "content": "data.title"
+            },
+            {
+              "role": "card_desc",
+              "type": "text-basic",
+              "content": "data.desc"
+            }
           ]
         }
-      }
+      },
+      "ai_description": "Light section with centered header + 3-column grid of icon cards. Each card: icon circle + heading + description text.",
+      "ai_usage_hints": [
+        "Classic services/features overview",
+        "Cards collapse to 1-col on mobile",
+        "Use with 3 or 6 items (fills grid evenly)"
+      ]
     },
     {
       "id": "features-dark-icon-grid-4",
       "name": "Dark Feature Cards Grid (4 columns)",
       "description": "Dark section with 4 feature cards. Each card: icon circle + heading + text on dark glass background.",
-      "tags": ["dark", "grid", "cards", "services", "glass"],
+      "tags": [
+        "dark",
+        "grid",
+        "cards",
+        "services",
+        "glass"
+      ],
       "layout": "centered",
       "background": "dark",
       "composition": [
-        {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
-        {"role": "heading", "type": "heading", "tag": "h2"},
-        {"role": "subtitle", "type": "text-basic"},
-        {"role": "card_grid", "type": "grid", "columns": 4, "pattern_name": "feature-card-dark", "repeat": 4}
+        {
+          "role": "eyebrow",
+          "type": "text-basic",
+          "class_role": "eyebrow"
+        },
+        {
+          "role": "heading",
+          "type": "heading",
+          "tag": "h2"
+        },
+        {
+          "role": "subtitle",
+          "type": "text-basic"
+        },
+        {
+          "role": "card_grid",
+          "type": "grid",
+          "columns": 4,
+          "pattern_name": "feature-card-dark",
+          "repeat": 4
+        }
       ],
       "patterns": {
         "feature-card-dark": {
           "class_role": "stat_card",
-          "wrapper_style": {"_background": {"color": {"raw": "var(--white-trans-10)"}}, "_padding": {"top": "var(--space-l)", "right": "var(--space-l)", "bottom": "var(--space-l)", "left": "var(--space-l)"},"_border": {"radius": {"top": "var(--radius)", "right": "var(--radius)", "bottom": "var(--radius)", "left": "var(--radius)"}}},
+          "wrapper_style": {
+            "_background": {
+              "color": {
+                "raw": "var(--white-trans-10)"
+              }
+            },
+            "_padding": {
+              "top": "var(--space-l)",
+              "right": "var(--space-l)",
+              "bottom": "var(--space-l)",
+              "left": "var(--space-l)"
+            },
+            "_border": {
+              "radius": {
+                "top": "var(--radius)",
+                "right": "var(--radius)",
+                "bottom": "var(--radius)",
+                "left": "var(--radius)"
+              }
+            }
+          },
           "elements": [
-            {"role": "card_icon", "type": "icon", "icon": "data.icon", "style": {"_typography": {"font-size": "24px"}}},
-            {"role": "card_title", "type": "heading", "tag": "h4", "content": "data.title"},
-            {"role": "card_desc", "type": "text-basic", "content": "data.desc"}
+            {
+              "role": "card_icon",
+              "type": "icon",
+              "icon": "data.icon",
+              "style": {
+                "_typography": {
+                  "font-size": "24px"
+                }
+              }
+            },
+            {
+              "role": "card_title",
+              "type": "heading",
+              "tag": "h4",
+              "content": "data.title"
+            },
+            {
+              "role": "card_desc",
+              "type": "text-basic",
+              "content": "data.desc"
+            }
           ]
         }
-      }
+      },
+      "ai_description": "Dark section with 4 feature cards in a grid. Each card: icon circle with accent bg + heading + text on dark card background.",
+      "ai_usage_hints": [
+        "Good for differentiators or key benefits",
+        "Dark bg makes it stand out between light sections",
+        "4 items fill the grid; use 8 for 2 rows"
+      ]
     },
     {
       "id": "features-icon-box-grid",
       "name": "Icon Box Feature Grid",
       "description": "Using Bricks icon-box elements for compact feature display. 3-column grid.",
-      "tags": ["light", "grid", "icon-box", "compact"],
+      "tags": [
+        "light",
+        "grid",
+        "icon-box",
+        "compact"
+      ],
       "layout": "centered",
       "background": "light",
       "composition": [
-        {"role": "eyebrow", "type": "text-basic", "class_role": "eyebrow"},
-        {"role": "heading", "type": "heading", "tag": "h2"},
-        {"role": "card_grid", "type": "grid", "columns": 3, "pattern_name": "icon-box-card", "repeat": 6}
+        {
+          "role": "eyebrow",
+          "type": "text-basic",
+          "class_role": "eyebrow"
+        },
+        {
+          "role": "heading",
+          "type": "heading",
+          "tag": "h2"
+        },
+        {
+          "role": "card_grid",
+          "type": "grid",
+          "columns": 3,
+          "pattern_name": "icon-box-card",
+          "repeat": 6
+        }
       ],
       "patterns": {
         "icon-box-card": {
           "element_type": "icon-box",
           "note": "Uses Bricks native icon-box element with built-in icon + title + description"
         }
-      }
+      },
+      "ai_description": "Light section using Bricks native icon-box elements for a compact 3-column feature display. Built-in icon + title + text per box.",
+      "ai_usage_hints": [
+        "Fastest way to build features — uses native icon-box element",
+        "Less customizable than manual card patterns",
+        "Good for quick prototypes"
+      ]
     }
   ]
 }
