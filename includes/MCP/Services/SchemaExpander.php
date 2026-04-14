@@ -190,6 +190,16 @@ final class SchemaExpander {
 			$value
 		);
 
+		// Also replace bare data.key references within longer strings (e.g., HTML content).
+		$replaced = preg_replace_callback(
+			'/\bdata\.(\w+)\b/',
+			static function ( array $matches ) use ( $data ): string {
+				$key = $matches[1];
+				return array_key_exists( $key, $data ) ? (string) $data[ $key ] : $matches[0];
+			},
+			$replaced ?? $value
+		);
+
 		return $replaced ?? $value;
 	}
 }

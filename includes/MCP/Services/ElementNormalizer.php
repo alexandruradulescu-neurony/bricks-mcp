@@ -250,10 +250,14 @@ class ElementNormalizer {
 				)
 			);
 
+			// Use explicit parent from node if provided (flat-style input within tree format),
+			// otherwise use the recursive parent_id.
+			$effective_parent = isset( $node['parent'] ) ? $node['parent'] : $parent_id;
+
 			$element = [
 				'id'       => $element_id,
 				'name'     => sanitize_text_field( $name ),
-				'parent'   => $parent_id,
+				'parent'   => $effective_parent,
 				'children' => array_values( $children_ids ),
 				'settings' => $sanitized_settings,
 			];
