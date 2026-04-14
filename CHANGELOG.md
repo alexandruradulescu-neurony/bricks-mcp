@@ -4,6 +4,21 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.9.1] — 2026-04-14
+
+### Added
+- **Admin UI for Design Pattern Library** — new "Patterns" tab in Settings > Bricks MCP.
+  - Table listing all patterns across 3 tiers with source badges (Plugin = indigo, User File = amber, Database = green), category, layout, tags, AI description per row.
+  - Category and source dropdown filters.
+  - View JSON modal: read-only for plugin/user-file patterns, editable + saveable for database patterns.
+  - Create pattern modal: paste JSON to add a new DB pattern.
+  - Delete (DB patterns) / Hide (plugin/user patterns) per row.
+  - Export: download selected patterns or all DB patterns as JSON file.
+  - Import: upload a JSON file, auto-suffixes conflicting IDs.
+  - Select-all checkbox for bulk export.
+- `assets/js/admin-patterns.js` — AJAX handlers for all pattern admin operations.
+- Pattern-specific CSS in `assets/css/admin-settings.css` — source badges, tag pills, modal styles.
+
 ## [3.9.0] — 2026-04-14
 
 ### Added

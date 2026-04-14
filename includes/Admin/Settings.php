@@ -57,6 +57,11 @@ final class Settings {
 		add_action( 'wp_ajax_bricks_mcp_delete_note', [ $this, 'ajax_delete_note' ] );
 		add_action( 'wp_ajax_bricks_mcp_add_note', [ $this, 'ajax_add_note' ] );
 		add_action( 'wp_ajax_bricks_mcp_revoke_app_password', [ $this, 'ajax_revoke_app_password' ] );
+		add_action( 'wp_ajax_bricks_mcp_list_patterns', [ $this, 'ajax_list_patterns' ] );
+		add_action( 'wp_ajax_bricks_mcp_create_pattern', [ $this, 'ajax_create_pattern' ] );
+		add_action( 'wp_ajax_bricks_mcp_delete_pattern', [ $this, 'ajax_delete_pattern' ] );
+		add_action( 'wp_ajax_bricks_mcp_export_patterns', [ $this, 'ajax_export_patterns' ] );
+		add_action( 'wp_ajax_bricks_mcp_import_patterns', [ $this, 'ajax_import_patterns' ] );
 	}
 
 	/**
@@ -243,6 +248,9 @@ final class Settings {
 				<a href="?page=bricks-mcp&tab=notes" class="nav-tab <?php echo 'notes' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'AI Notes', 'bricks-mcp' ); ?>
 				</a>
+				<a href="?page=bricks-mcp&tab=patterns" class="nav-tab <?php echo 'patterns' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Patterns', 'bricks-mcp' ); ?>
+				</a>
 				<a href="?page=bricks-mcp&tab=diagnostics" class="nav-tab <?php echo 'diagnostics' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'System Health', 'bricks-mcp' ); ?>
 				</a>
@@ -262,6 +270,9 @@ final class Settings {
 					break;
 				case 'notes':
 					$this->render_tab_notes();
+					break;
+				case 'patterns':
+					$this->render_tab_patterns();
 					break;
 				case 'diagnostics':
 					$this->render_tab_diagnostics();
@@ -825,6 +836,15 @@ final class Settings {
 				'copiedText'       => __( 'Copied!', 'bricks-mcp' ),
 				'copyResultsText'  => __( 'Copy Results', 'bricks-mcp' ),
 			]
+		);
+
+		// Patterns script.
+		wp_enqueue_script(
+			'bricks-mcp-admin-patterns',
+			BRICKS_MCP_PLUGIN_URL . 'assets/js/admin-patterns.js',
+			[ 'jquery' ],
+			BRICKS_MCP_VERSION,
+			true
 		);
 	}
 
@@ -1688,6 +1708,228 @@ final class Settings {
 		}
 
 		wp_send_json_success( [ 'message' => __( 'Application Password revoked.', 'bricks-mcp' ) ] );
+	}
+
+	// ──────────────────────────────────────────────
+	// Patterns Tab
+	// ──────────────────────────────────────────────
+
+	/**
+	 * Render Patterns tab content.
+	 */
+	private function render_tab_patterns(): void {
+		$patterns = \BricksMCP\MCP\Services\DesignPatternService::list_all();
+		$categories = array_unique( array_filter( array_column( $patterns, 'category' ) ) );
+		sort( $categories );
+		?>
+		<div class="bricks-mcp-config-section">
+			<h3><?php esc_html_e( 'Design Pattern Library', 'bricks-mcp' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'Reusable section compositions for the build pipeline. Plugin patterns are read-only; database patterns can be edited and deleted.', 'bricks-mcp' ); ?></p>
+
+			<div class="bwm-patterns-toolbar" style="display:flex;gap:12px;margin:16px 0;align-items:center;flex-wrap:wrap;">
+				<select id="bricks-mcp-pattern-filter-category">
+					<option value=""><?php esc_html_e( 'All categories', 'bricks-mcp' ); ?></option>
+					<?php foreach ( $categories as $cat ) : ?>
+						<option value="<?php echo esc_attr( $cat ); ?>"><?php echo esc_html( ucfirst( $cat ) ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<select id="bricks-mcp-pattern-filter-source">
+					<option value=""><?php esc_html_e( 'All sources', 'bricks-mcp' ); ?></option>
+					<option value="plugin"><?php esc_html_e( 'Plugin', 'bricks-mcp' ); ?></option>
+					<option value="user_file"><?php esc_html_e( 'User File', 'bricks-mcp' ); ?></option>
+					<option value="database"><?php esc_html_e( 'Database', 'bricks-mcp' ); ?></option>
+				</select>
+				<button type="button" class="button button-secondary" id="bricks-mcp-export-patterns"><?php esc_html_e( 'Export DB Patterns', 'bricks-mcp' ); ?></button>
+				<button type="button" class="button button-secondary" id="bricks-mcp-import-patterns-btn"><?php esc_html_e( 'Import Patterns', 'bricks-mcp' ); ?></button>
+				<input type="file" id="bricks-mcp-import-file" accept=".json" style="display:none;">
+				<span class="bwm-patterns-count" style="margin-left:auto;color:#666;">
+					<?php printf( esc_html__( '%d patterns total', 'bricks-mcp' ), count( $patterns ) ); ?>
+				</span>
+			</div>
+
+			<table class="widefat striped" id="bricks-mcp-patterns-table">
+				<thead><tr>
+					<th style="width:30px;"><input type="checkbox" id="bricks-mcp-patterns-select-all"></th>
+					<th><?php esc_html_e( 'Name', 'bricks-mcp' ); ?></th>
+					<th style="width:100px;"><?php esc_html_e( 'Category', 'bricks-mcp' ); ?></th>
+					<th style="width:90px;"><?php esc_html_e( 'Layout', 'bricks-mcp' ); ?></th>
+					<th style="width:80px;"><?php esc_html_e( 'Source', 'bricks-mcp' ); ?></th>
+					<th><?php esc_html_e( 'AI Description', 'bricks-mcp' ); ?></th>
+					<th style="width:120px;"><?php esc_html_e( 'Actions', 'bricks-mcp' ); ?></th>
+				</tr></thead>
+				<tbody>
+				<?php if ( empty( $patterns ) ) : ?>
+					<tr class="bricks-mcp-no-patterns"><td colspan="7"><?php esc_html_e( 'No patterns found.', 'bricks-mcp' ); ?></td></tr>
+				<?php else : ?>
+					<?php foreach ( $patterns as $p ) :
+						$source = $p['source'] ?? 'plugin';
+						$is_db  = 'database' === $source;
+						$badge_class = match( $source ) {
+							'database'  => 'bwm-badge-db',
+							'user_file' => 'bwm-badge-user',
+							default     => 'bwm-badge-plugin',
+						};
+					?>
+					<tr data-pattern-id="<?php echo esc_attr( $p['id'] ); ?>" data-category="<?php echo esc_attr( $p['category'] ?? '' ); ?>" data-source="<?php echo esc_attr( $source ); ?>">
+						<td><input type="checkbox" class="bricks-mcp-pattern-select" value="<?php echo esc_attr( $p['id'] ); ?>"></td>
+						<td>
+							<strong><?php echo esc_html( $p['name'] ?? $p['id'] ); ?></strong>
+							<div class="bwm-pattern-tags" style="margin-top:4px;">
+								<?php foreach ( $p['tags'] ?? [] as $tag ) : ?>
+									<span class="bwm-tag"><?php echo esc_html( $tag ); ?></span>
+								<?php endforeach; ?>
+							</div>
+						</td>
+						<td><?php echo esc_html( ucfirst( $p['category'] ?? '' ) ); ?></td>
+						<td><?php echo esc_html( $p['layout'] ?? '—' ); ?></td>
+						<td><span class="bwm-source-badge <?php echo esc_attr( $badge_class ); ?>"><?php echo esc_html( $source ); ?></span></td>
+						<td style="font-size:12px;color:#666;"><?php echo esc_html( $p['ai_description'] ?? '—' ); ?></td>
+						<td>
+							<button type="button" class="button button-small bricks-mcp-view-pattern" data-id="<?php echo esc_attr( $p['id'] ); ?>"><?php esc_html_e( 'View', 'bricks-mcp' ); ?></button>
+							<?php if ( $is_db ) : ?>
+								<button type="button" class="button button-small bricks-mcp-delete-pattern" data-id="<?php echo esc_attr( $p['id'] ); ?>"><?php esc_html_e( 'Delete', 'bricks-mcp' ); ?></button>
+							<?php else : ?>
+								<button type="button" class="button button-small bricks-mcp-hide-pattern" data-id="<?php echo esc_attr( $p['id'] ); ?>"><?php esc_html_e( 'Hide', 'bricks-mcp' ); ?></button>
+							<?php endif; ?>
+						</td>
+					</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
+				</tbody>
+			</table>
+		</div>
+
+		<!-- View/Edit Pattern Modal -->
+		<div id="bricks-mcp-pattern-modal" style="display:none;">
+			<div class="bwm-modal-backdrop"></div>
+			<div class="bwm-modal-content">
+				<div class="bwm-modal-header">
+					<h3 id="bricks-mcp-modal-title"><?php esc_html_e( 'Pattern JSON', 'bricks-mcp' ); ?></h3>
+					<button type="button" class="bwm-modal-close">&times;</button>
+				</div>
+				<textarea id="bricks-mcp-pattern-json" rows="20" style="width:100%;font-family:monospace;font-size:12px;"></textarea>
+				<div class="bwm-modal-footer" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+					<button type="button" class="button button-secondary bwm-modal-close"><?php esc_html_e( 'Close', 'bricks-mcp' ); ?></button>
+					<button type="button" class="button button-primary" id="bricks-mcp-save-pattern" style="display:none;"><?php esc_html_e( 'Save Changes', 'bricks-mcp' ); ?></button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Add Pattern Modal -->
+		<div id="bricks-mcp-add-pattern-modal" style="display:none;">
+			<div class="bwm-modal-backdrop"></div>
+			<div class="bwm-modal-content">
+				<div class="bwm-modal-header">
+					<h3><?php esc_html_e( 'Add New Pattern', 'bricks-mcp' ); ?></h3>
+					<button type="button" class="bwm-modal-close">&times;</button>
+				</div>
+				<p class="description"><?php esc_html_e( 'Paste a pattern JSON object. Required fields: id, name, category, tags.', 'bricks-mcp' ); ?></p>
+				<textarea id="bricks-mcp-add-pattern-json" rows="15" style="width:100%;font-family:monospace;font-size:12px;" placeholder='{"id": "my-pattern", "name": "My Pattern", "category": "hero", "tags": ["dark"], "ai_description": "...", "composition": [...]}'></textarea>
+				<div class="bwm-modal-footer" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+					<button type="button" class="button button-secondary bwm-modal-close"><?php esc_html_e( 'Cancel', 'bricks-mcp' ); ?></button>
+					<button type="button" class="button button-primary" id="bricks-mcp-add-pattern-save"><?php esc_html_e( 'Create Pattern', 'bricks-mcp' ); ?></button>
+				</div>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * AJAX: List patterns (for refresh after mutations).
+	 */
+	public function ajax_list_patterns(): void {
+		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+		}
+		wp_send_json_success( \BricksMCP\MCP\Services\DesignPatternService::list_all() );
+	}
+
+	/**
+	 * AJAX: Create a new database pattern.
+	 */
+	public function ajax_create_pattern(): void {
+		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+		}
+
+		$json = isset( $_POST['pattern_json'] ) ? wp_unslash( $_POST['pattern_json'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$pattern = json_decode( $json, true );
+		if ( ! is_array( $pattern ) ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid JSON.', 'bricks-mcp' ) ] );
+		}
+
+		$result = \BricksMCP\MCP\Services\DesignPatternService::create( $pattern );
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX: Delete/hide a pattern.
+	 */
+	public function ajax_delete_pattern(): void {
+		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+		}
+
+		$id = isset( $_POST['pattern_id'] ) ? sanitize_text_field( wp_unslash( $_POST['pattern_id'] ) ) : '';
+		if ( '' === $id ) {
+			wp_send_json_error( [ 'message' => __( 'Missing pattern ID.', 'bricks-mcp' ) ] );
+		}
+
+		$result = \BricksMCP\MCP\Services\DesignPatternService::delete( $id );
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX: Export patterns as JSON download.
+	 */
+	public function ajax_export_patterns(): void {
+		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+		}
+
+		$ids = [];
+		if ( ! empty( $_POST['pattern_ids'] ) ) {
+			$raw = wp_unslash( $_POST['pattern_ids'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$ids = is_array( $raw ) ? array_map( 'sanitize_text_field', $raw ) : [];
+		}
+
+		$exported = \BricksMCP\MCP\Services\DesignPatternService::export( $ids );
+
+		wp_send_json_success( [
+			'count'    => count( $exported ),
+			'patterns' => $exported,
+		] );
+	}
+
+	/**
+	 * AJAX: Import patterns from JSON.
+	 */
+	public function ajax_import_patterns(): void {
+		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+		}
+
+		$json = isset( $_POST['patterns_json'] ) ? wp_unslash( $_POST['patterns_json'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$patterns = json_decode( $json, true );
+		if ( ! is_array( $patterns ) ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid JSON. Expected an array of pattern objects.', 'bricks-mcp' ) ] );
+		}
+
+		$result = \BricksMCP\MCP\Services\DesignPatternService::import( $patterns );
+		wp_send_json_success( $result );
 	}
 
 }

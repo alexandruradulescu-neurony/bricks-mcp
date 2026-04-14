@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.9.0
+Stable tag: 3.9.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -143,6 +143,17 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.9.1 =
+* Admin UI for Design Pattern Library: new "Patterns" tab in Settings > Bricks MCP.
+* Pattern table with source badges (Plugin/User File/Database), category, layout, tags, AI description per row.
+* Category and source dropdown filters for quick navigation.
+* View JSON modal (read-only for plugin/user patterns, editable for database patterns).
+* Create pattern via JSON paste in modal.
+* Delete database patterns / hide plugin patterns from admin.
+* Export selected or all DB patterns as downloadable JSON file.
+* Import patterns from JSON file upload with auto-suffix on ID conflicts.
+* Select-all checkbox for bulk export.
 
 = 3.9.0 =
 * New tool: design_pattern with 8 actions (list, get, semantic_search, create, update, delete, export, import) for managing a 3-tier design pattern library.
