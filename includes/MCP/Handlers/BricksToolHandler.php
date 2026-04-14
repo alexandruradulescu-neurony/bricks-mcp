@@ -137,7 +137,7 @@ final class BricksToolHandler {
 			);
 		}
 
-		$path = BRICKS_MCP_PLUGIN_DIR . "docs/knowledge/{$domain}.md";
+		$path = BRICKS_MCP_PLUGIN_DIR . "data/knowledge/{$domain}.md";
 		if ( ! file_exists( $path ) ) {
 			return new \WP_Error(
 				'knowledge_not_found',
