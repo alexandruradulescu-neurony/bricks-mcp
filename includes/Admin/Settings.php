@@ -44,11 +44,19 @@ final class Settings {
 	private const OPTION_GROUP = 'bricks_mcp_settings_group';
 
 	/**
+	 * Design System admin handler.
+	 */
+	private DesignSystemAdmin $design_system_admin;
+
+	/**
 	 * Initialize admin settings.
 	 *
 	 * @return void
 	 */
 	public function init(): void {
+		$this->design_system_admin = new DesignSystemAdmin();
+		$this->design_system_admin->init();
+
 		add_action( 'admin_menu', [ $this, 'add_settings_page' ], 99 );
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_scripts' ] );
@@ -253,6 +261,9 @@ final class Settings {
 				<a href="?page=bricks-mcp&tab=patterns" class="nav-tab <?php echo 'patterns' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Patterns', 'bricks-mcp' ); ?>
 				</a>
+				<a href="?page=bricks-mcp&tab=design-system" class="nav-tab <?php echo 'design-system' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Design System', 'bricks-mcp' ); ?>
+				</a>
 				<a href="?page=bricks-mcp&tab=diagnostics" class="nav-tab <?php echo 'diagnostics' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'System Health', 'bricks-mcp' ); ?>
 				</a>
@@ -275,6 +286,9 @@ final class Settings {
 					break;
 				case 'patterns':
 					$this->render_tab_patterns();
+					break;
+				case 'design-system':
+					$this->design_system_admin->render();
 					break;
 				case 'diagnostics':
 					$this->render_tab_diagnostics();
@@ -859,6 +873,12 @@ final class Settings {
 
 		// WP Media Library for pattern reference images (Patterns tab).
 		wp_enqueue_media();
+
+		// Design System tab assets.
+		$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'connection';
+		if ( 'design-system' === $active_tab ) {
+			$this->design_system_admin->enqueue_assets();
+		}
 	}
 
 	/**

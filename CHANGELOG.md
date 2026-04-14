@@ -4,6 +4,20 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.11.0] — 2026-04-14
+
+### Added — Design System Generator
+- **New "Design System" admin tab** — visual configurator for generating a complete Bricks design system from seed values (colors, spacing scale, typography scale, radius, container sizes).
+- **`DesignSystemGenerator` service** — PHP computation engine that generates ~106 CSS variables, a color palette (~31 colors), and framework CSS from minimal seed inputs. Uses Fancy Framework's exact algorithms: fluid `clamp()` values, RGB lighten/darken color shading, exponential scale ratios.
+- **`DesignSystemAdmin` class** — handles tab rendering with accordion sections (Colors, Spacing, Typography, Radius, Sizes) and 3 AJAX endpoints (save config, apply to site, reset to defaults).
+- **Direct apply to Bricks** — "Apply to Site" button writes generated variables to `bricks_global_variables`, color palette to `bricks_color_palette`, and framework CSS to `bricks_global_settings['customCss']` (between comment markers for clean re-apply).
+- **Namespaced replace** — generator owns 9 variable categories (Spacing, Texts, Headings, Gaps/Padding, Styles, Radius, Sizes, Colors, Grid). User-created categories are never touched.
+- **Client-side preview** — JavaScript mirrors PHP computation engine for instant preview of computed values as user adjusts inputs. Color shade strips, value tables, radius preview boxes.
+- **Default preset** — ships with sensible defaults (blue/amber/emerald palette, 1.5 spacing scale, 1.25 typography scale, 8px radius, 1280px container).
+- **Auto-save** — config persists via debounced AJAX on every input change.
+- **Framework CSS** — includes scroll behavior, accessibility focus styles, text normalization, container defaults, overflow fixes, and custom link styling.
+- **24 grid variables** — grid-1 through grid-12 plus 12 ratio grids (grid-1-2, grid-2-1, etc.).
+
 ## [3.10.1] — 2026-04-14
 
 ### Added

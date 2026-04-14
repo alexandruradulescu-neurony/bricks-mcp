@@ -1,0 +1,274 @@
+/* Design System Generator — Admin Styles */
+
+.bwm-design-system-wrap {
+    max-width: 900px;
+    margin: 20px 0;
+}
+
+/* Accordion sections */
+.bwm-ds-section {
+    border: 1px solid #ccd0d4;
+    margin-bottom: -1px;
+}
+
+.bwm-ds-section:first-child {
+    border-radius: 4px 4px 0 0;
+}
+
+.bwm-ds-section:last-of-type {
+    border-radius: 0 0 4px 4px;
+}
+
+.bwm-ds-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #f6f7f7;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+    user-select: none;
+}
+
+.bwm-ds-section-header:hover {
+    background: #eff0f1;
+}
+
+.bwm-ds-section-header.bwm-ds-section-open {
+    background: #2271b1;
+    color: #fff;
+}
+
+.bwm-ds-section-info {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+.bwm-ds-toggle {
+    font-size: 10px;
+    width: 16px;
+}
+
+.bwm-ds-section-body {
+    display: none;
+    padding: 20px;
+    background: #fff;
+}
+
+/* Inputs */
+.bwm-ds-inputs-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.bwm-ds-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bwm-ds-field label {
+    font-size: 12px;
+    color: #646970;
+    font-weight: 500;
+}
+
+.bwm-ds-field input[type="number"] {
+    width: 120px;
+    padding: 6px 8px;
+    border: 1px solid #ccd0d4;
+    border-radius: 3px;
+    font-size: 14px;
+}
+
+/* Color rows */
+.bwm-ds-color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.bwm-ds-color-row input[type="color"] {
+    width: 36px;
+    height: 36px;
+    padding: 2px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.bwm-ds-hex {
+    width: 90px;
+    padding: 6px 8px;
+    border: 1px solid #ccd0d4;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.bwm-ds-color-row > label {
+    font-size: 13px;
+    color: #1d2327;
+    min-width: 80px;
+}
+
+.bwm-ds-toggle-label {
+    margin-left: auto;
+    font-size: 12px;
+    color: #2271b1;
+}
+
+/* Divider */
+.bwm-ds-divider {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 16px 0;
+}
+
+/* Preview area */
+.bwm-ds-preview-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1d2327;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+/* Color shade strips */
+.bwm-ds-shade-row {
+    margin-bottom: 12px;
+}
+
+.bwm-ds-shade-label {
+    font-size: 11px;
+    color: #646970;
+    margin-bottom: 4px;
+}
+
+.bwm-ds-shade-strip {
+    display: flex;
+    gap: 3px;
+}
+
+.bwm-ds-shade {
+    flex: 1;
+    height: 32px;
+    border-radius: 3px;
+    cursor: help;
+}
+
+/* Preview tables */
+.bwm-ds-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.bwm-ds-table th {
+    text-align: left;
+    padding: 6px 8px;
+    background: #f6f7f7;
+    border-bottom: 1px solid #ddd;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #646970;
+}
+
+.bwm-ds-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.bwm-ds-table code {
+    font-size: 12px;
+    background: #f6f7f7;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.bwm-ds-clamp code {
+    font-size: 10px;
+    word-break: break-all;
+}
+
+/* Radius preview */
+.bwm-ds-radius-grid {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.bwm-ds-radius-item {
+    text-align: center;
+}
+
+.bwm-ds-radius-box {
+    width: 50px;
+    height: 50px;
+    background: #2271b1;
+    margin: 0 auto 4px;
+}
+
+.bwm-ds-radius-name code {
+    font-size: 10px;
+}
+
+.bwm-ds-radius-value {
+    font-size: 11px;
+    color: #646970;
+}
+
+/* Subsection title */
+.bwm-ds-subsection-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1d2327;
+    margin: 16px 0 8px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+}
+
+.bwm-ds-subsection-title:first-child {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+/* Actions */
+.bwm-ds-actions {
+    margin-top: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.bwm-ds-reset {
+    color: #b32d2e;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.bwm-ds-reset:hover {
+    color: #a00;
+    text-decoration: underline;
+}
+
+.bwm-ds-status {
+    font-size: 13px;
+    color: #646970;
+}
+
+.bwm-ds-status-success {
+    color: #00a32a;
+}
+
+.bwm-ds-status-error {
+    color: #d63638;
+}
