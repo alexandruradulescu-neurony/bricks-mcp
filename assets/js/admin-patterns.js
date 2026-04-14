@@ -6,8 +6,8 @@
 (function ($) {
   'use strict';
 
-  if (typeof bricksMcpAdmin === 'undefined') return;
-  var nonce = bricksMcpAdmin.nonce;
+  if (typeof bricksMcpPatterns === 'undefined') return;
+  var nonce = bricksMcpPatterns.nonce;
 
   // ── Filters ──────────────────────────────────────
 

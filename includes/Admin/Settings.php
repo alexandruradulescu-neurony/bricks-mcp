@@ -846,6 +846,14 @@ final class Settings {
 			BRICKS_MCP_VERSION,
 			true
 		);
+
+		wp_localize_script(
+			'bricks-mcp-admin-patterns',
+			'bricksMcpPatterns',
+			[
+				'nonce' => wp_create_nonce( 'bricks_mcp_settings_nonce' ),
+			]
+		);
 	}
 
 	/**
