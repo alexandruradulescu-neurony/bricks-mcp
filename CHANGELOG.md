@@ -4,6 +4,18 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.12.3] — 2026-04-14
+
+### Changed — Visual polish
+- **Unified table styling** — all `widefat` tables within config sections now have rounded corners, refined borders, hover states, and consistent spacing. Replaces raw WordPress table defaults.
+- **Branded inputs** — text inputs, number inputs, textareas, and selects within config sections get rounded borders, focus ring with brand color (`--bwm-brand`), and consistent sizing.
+- **Branded buttons** — primary buttons use indigo brand color, secondary buttons get hover accent. Consistent border-radius across all tabs.
+- **Modal polish** — pattern modals get header border, better heading styling.
+- **Creator form** — pattern creator fields get consistent label styling, full-width inputs, monospace textareas.
+- **Category inline edit** — inputs get brand focus ring.
+- **Toolbar styling** — pattern filter toolbar gets background, border, rounded corners.
+- **Notes add row** — flex layout with proper spacing.
+
 ## [3.12.2] — 2026-04-14
 
 ### Changed

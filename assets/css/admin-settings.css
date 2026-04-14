@@ -830,3 +830,235 @@
 
 #bricks-mcp-patterns-table td { vertical-align: middle; }
 #bricks-mcp-patterns-table .button-small { margin: 2px; }
+
+/* ==========================================================================
+   Shared Polish — Tables, Inputs, Buttons across all tabs
+   ========================================================================== */
+
+/* Tables within config sections: refined borders, spacing, hover */
+.bricks-mcp-config-section .widefat {
+	border: 1px solid var(--bwm-gray-200);
+	border-radius: var(--bwm-radius);
+	overflow: hidden;
+	border-spacing: 0;
+}
+
+.bricks-mcp-config-section .widefat thead th {
+	background: var(--bwm-gray-50);
+	color: var(--bwm-gray-700);
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--bwm-gray-200);
+}
+
+.bricks-mcp-config-section .widefat tbody td {
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--bwm-gray-100);
+	font-size: 13px;
+}
+
+.bricks-mcp-config-section .widefat tbody tr:last-child td {
+	border-bottom: none;
+}
+
+.bricks-mcp-config-section .widefat tbody tr:hover {
+	background: var(--bwm-gray-50);
+}
+
+.bricks-mcp-config-section .widefat.striped tbody tr:nth-child(odd) {
+	background: transparent;
+}
+
+.bricks-mcp-config-section .widefat.striped tbody tr:nth-child(odd):hover {
+	background: var(--bwm-gray-50);
+}
+
+/* Text inputs and textareas within config sections */
+.bricks-mcp-config-section input[type="text"],
+.bricks-mcp-config-section input[type="number"],
+.bricks-mcp-config-section input[type="url"],
+.bricks-mcp-config-section textarea,
+.bricks-mcp-config-section select {
+	border: 1px solid var(--bwm-gray-300);
+	border-radius: 6px;
+	padding: 8px 12px;
+	font-size: 14px;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.bricks-mcp-config-section input[type="text"]:focus,
+.bricks-mcp-config-section input[type="number"]:focus,
+.bricks-mcp-config-section input[type="url"]:focus,
+.bricks-mcp-config-section textarea:focus,
+.bricks-mcp-config-section select:focus {
+	border-color: var(--bwm-brand);
+	box-shadow: 0 0 0 2px var(--bwm-brand-light);
+	outline: none;
+}
+
+.bricks-mcp-config-section textarea {
+	border-radius: var(--bwm-radius);
+}
+
+/* Buttons within config sections */
+.bricks-mcp-config-section .button-primary {
+	background: var(--bwm-brand);
+	border-color: var(--bwm-brand-dark);
+	color: var(--bwm-white);
+	border-radius: 6px;
+	padding: 6px 16px;
+	font-weight: 500;
+	transition: background 0.15s;
+}
+
+.bricks-mcp-config-section .button-primary:hover,
+.bricks-mcp-config-section .button-primary:focus {
+	background: var(--bwm-brand-dark);
+	border-color: var(--bwm-brand-dark);
+	color: var(--bwm-white);
+}
+
+.bricks-mcp-config-section .button-secondary,
+.bricks-mcp-config-section .button:not(.button-primary):not(.button-link) {
+	border-radius: 6px;
+	border-color: var(--bwm-gray-300);
+	transition: border-color 0.15s;
+}
+
+.bricks-mcp-config-section .button-secondary:hover,
+.bricks-mcp-config-section .button:not(.button-primary):not(.button-link):hover {
+	border-color: var(--bwm-brand);
+	color: var(--bwm-brand);
+}
+
+.bricks-mcp-config-section .button-small {
+	border-radius: 4px;
+	padding: 2px 10px;
+}
+
+/* Section headings */
+.bricks-mcp-config-section h3 {
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--bwm-gray-900);
+	margin: 0 0 8px;
+	line-height: 1.4;
+}
+
+.bricks-mcp-config-section .description {
+	color: var(--bwm-gray-500);
+	font-size: 13px;
+	margin-bottom: 16px;
+}
+
+/* Toolbar rows (filters, actions) */
+.bwm-patterns-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-bottom: 14px;
+	padding: 10px 14px;
+	background: var(--bwm-gray-50);
+	border: 1px solid var(--bwm-gray-200);
+	border-radius: var(--bwm-radius);
+}
+
+.bwm-patterns-toolbar select {
+	min-width: 140px;
+}
+
+.bwm-patterns-count {
+	margin-left: auto;
+	font-size: 12px;
+	color: var(--bwm-gray-500);
+}
+
+/* Notes add row */
+.bwm-notes-add {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 16px;
+}
+
+.bwm-notes-add input {
+	flex: 1;
+}
+
+/* Modals — enhanced */
+.bwm-modal-content {
+	border: 1px solid var(--bwm-gray-200);
+}
+
+.bwm-modal-header {
+	padding-bottom: 14px;
+	border-bottom: 1px solid var(--bwm-gray-100);
+}
+
+.bwm-modal-header h3 {
+	font-size: 18px;
+	color: var(--bwm-gray-900);
+}
+
+/* Creator form fields */
+.bwm-creator-field {
+	margin-bottom: 16px;
+}
+
+.bwm-creator-field label {
+	display: block;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--bwm-gray-700);
+	margin-bottom: 4px;
+}
+
+.bwm-creator-field input,
+.bwm-creator-field textarea,
+.bwm-creator-field select {
+	width: 100%;
+	border: 1px solid var(--bwm-gray-300);
+	border-radius: 6px;
+	padding: 8px 12px;
+	font-size: 14px;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.bwm-creator-field input:focus,
+.bwm-creator-field textarea:focus,
+.bwm-creator-field select:focus {
+	border-color: var(--bwm-brand);
+	box-shadow: 0 0 0 2px var(--bwm-brand-light);
+	outline: none;
+}
+
+.bwm-creator-field textarea {
+	font-family: monospace;
+	font-size: 12px;
+}
+
+.bwm-creator-row {
+	display: flex;
+	gap: 14px;
+}
+
+.bwm-creator-row .bwm-creator-field {
+	flex: 1;
+}
+
+/* Category inline edit */
+.bwm-cat-edit input {
+	border: 1px solid var(--bwm-gray-300);
+	border-radius: 4px;
+	padding: 4px 8px;
+	font-size: 13px;
+}
+
+.bwm-cat-edit input:focus {
+	border-color: var(--bwm-brand);
+	box-shadow: 0 0 0 2px var(--bwm-brand-light);
+	outline: none;
+}
