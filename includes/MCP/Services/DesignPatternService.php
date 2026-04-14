@@ -581,6 +581,163 @@ final class DesignPatternService {
 	}
 
 	// ──────────────────────────────────────────────
+	// Pattern normalization + AI generation helpers
+	// ──────────────────────────────────────────────
+
+	/**
+	 * Normalize a pattern's class and variable references to match the current site.
+	 *
+	 * Walks composition/columns/patterns looking for class_role/class_intent
+	 * references and var(--*) CSS variable references. Maps each to the closest
+	 * matching site class/variable via semantic search. Returns the normalized
+	 * pattern + a mapping report.
+	 *
+	 * @param array $pattern Pattern to normalize.
+	 * @return array{pattern: array, class_mappings: array, variable_mappings: array, warnings: string[]}
+	 */
+	public static function normalize_pattern( array $pattern ): array {
+		$class_service = new GlobalClassService( new BricksCore() );
+		$all_classes   = $class_service->get_global_classes();
+		$class_names   = array_column( $all_classes, 'name' );
+
+		// Collect all class references from the pattern.
+		$json_str   = wp_json_encode( $pattern );
+		$class_refs = [];
+		// Match class_role, class_intent values.
+		if ( preg_match_all( '/"class_(?:role|intent)"\s*:\s*"([^"]+)"/', $json_str, $m ) ) {
+			$class_refs = array_unique( $m[1] );
+		}
+
+		// Collect variable references.
+		$var_refs = [];
+		if ( preg_match_all( '/var\(--([a-z0-9-]+)\)/', $json_str, $m ) ) {
+			$var_refs = array_unique( $m[1] );
+		}
+
+		$class_mappings    = [];
+		$variable_mappings = [];
+		$warnings          = [];
+
+		// Map class references.
+		foreach ( $class_refs as $ref ) {
+			// Normalize: underscores → hyphens for comparison.
+			$normalized = str_replace( '_', '-', strtolower( $ref ) );
+
+			if ( in_array( $normalized, $class_names, true ) ) {
+				$class_mappings[] = [ 'from' => $ref, 'to' => $normalized, 'action' => 'exact_match' ];
+				continue;
+			}
+
+			// Semantic search for closest match.
+			$search = $class_service->semantic_search_classes( $normalized, 1 );
+			if ( ! empty( $search['matches'] ) && $search['matches'][0]['score'] >= 10 ) {
+				$match            = $search['matches'][0];
+				$class_mappings[] = [ 'from' => $ref, 'to' => $match['name'], 'score' => $match['score'], 'action' => 'semantic_match' ];
+				// Replace in pattern JSON.
+				$json_str = str_replace( '"' . $ref . '"', '"' . $match['name'] . '"', $json_str );
+			} else {
+				$class_mappings[] = [ 'from' => $ref, 'to' => null, 'action' => 'no_match' ];
+				$warnings[]       = sprintf( 'Class "%s" has no match on this site. Will be created empty on build.', $ref );
+			}
+		}
+
+		// Map variable references.
+		$by_category = SiteVariableResolver::get_variables_by_category();
+		$site_vars   = [];
+		foreach ( $by_category as $vars ) {
+			foreach ( $vars as $v ) {
+				$site_vars[] = $v['name'] ?? '';
+			}
+		}
+		foreach ( $var_refs as $var ) {
+			if ( in_array( $var, $site_vars, true ) ) {
+				$variable_mappings[] = [ 'from' => $var, 'to' => $var, 'action' => 'exists' ];
+			} else {
+				$variable_mappings[] = [ 'from' => $var, 'to' => null, 'action' => 'missing' ];
+				$warnings[]          = sprintf( 'Variable var(--%s) not found on this site. Value may not render.', $var );
+			}
+		}
+
+		// Parse back the (possibly modified) pattern.
+		$normalized_pattern = json_decode( $json_str, true );
+		if ( ! is_array( $normalized_pattern ) ) {
+			$normalized_pattern = $pattern; // Fallback to original if parse fails.
+		}
+
+		return [
+			'pattern'            => $normalized_pattern,
+			'class_mappings'     => $class_mappings,
+			'variable_mappings'  => $variable_mappings,
+			'warnings'           => $warnings,
+		];
+	}
+
+	/**
+	 * Generate a prompt template for AI-assisted pattern creation.
+	 *
+	 * Returns a structured prompt using site context (element capabilities,
+	 * layouts, building rules, existing classes) that an AI client can use
+	 * to generate a pattern composition from a description or image analysis.
+	 *
+	 * @param string $description User's description of what the pattern should look like.
+	 * @param string $category    Target category.
+	 * @return array{prompt: string, context: array, output_schema: array}
+	 */
+	public static function generate_prompt_template( string $description, string $category = '' ): array {
+		// Reuse ProposalService's enums.
+		$layouts       = ProposalService::VALID_LAYOUTS ?? [ 'centered', 'split-60-40', 'split-50-50', 'grid-2', 'grid-3', 'grid-4' ];
+		$section_types = [ 'hero', 'features', 'pricing', 'cta', 'testimonials', 'split', 'generic' ];
+		$backgrounds   = ProposalService::VALID_BACKGROUNDS ?? [ 'dark', 'light' ];
+
+		// Get site classes for context.
+		$class_service = new GlobalClassService( new BricksCore() );
+		$all_classes   = $class_service->get_global_classes();
+		$class_names   = array_column( $all_classes, 'name' );
+
+		$prompt = "Generate a Bricks Builder design pattern JSON from this description:\n\n";
+		$prompt .= "DESCRIPTION: {$description}\n\n";
+		if ( '' !== $category ) {
+			$prompt .= "TARGET CATEGORY: {$category}\n\n";
+		}
+		$prompt .= "AVAILABLE LAYOUTS: " . implode( ', ', $layouts ) . "\n";
+		$prompt .= "BACKGROUNDS: " . implode( ', ', $backgrounds ) . "\n";
+		$prompt .= "SECTION TYPES: " . implode( ', ', $section_types ) . "\n";
+		$prompt .= "SITE CLASSES: " . implode( ', ', array_slice( $class_names, 0, 30 ) ) . "\n\n";
+		$prompt .= "OUTPUT FORMAT: Return a JSON object with these fields:\n";
+		$prompt .= "- id (string, lowercase-hyphenated)\n";
+		$prompt .= "- name (string)\n";
+		$prompt .= "- category (string from section types above)\n";
+		$prompt .= "- tags (array of strings)\n";
+		$prompt .= "- layout (string from available layouts)\n";
+		$prompt .= "- background (string: dark or light)\n";
+		$prompt .= "- ai_description (string, 1-2 sentences of what it looks like)\n";
+		$prompt .= "- ai_usage_hints (array of 2-3 strings)\n";
+		$prompt .= "- composition (array of element objects, each with: role, type, tag?, class_role?, content_example?)\n\n";
+		$prompt .= "Use class_role values from the site classes list when they match. Use standard Bricks element types: section, container, block, heading, text-basic, button, image, icon, form, counter, pie-chart, list, divider.\n";
+
+		return [
+			'prompt'        => $prompt,
+			'context'       => [
+				'layouts'        => $layouts,
+				'section_types'  => $section_types,
+				'backgrounds'    => $backgrounds,
+				'site_classes'   => array_slice( $class_names, 0, 30 ),
+			],
+			'output_schema' => [
+				'id'              => 'string (required)',
+				'name'            => 'string (required)',
+				'category'        => 'string (required)',
+				'tags'            => 'string[] (required)',
+				'layout'          => 'string (required)',
+				'background'      => 'string',
+				'ai_description'  => 'string',
+				'ai_usage_hints'  => 'string[]',
+				'composition'     => 'array of {role, type, tag?, class_role?, content_example?}',
+			],
+		];
+	}
+
+	// ──────────────────────────────────────────────
 	// Category registry
 	// ──────────────────────────────────────────────
 

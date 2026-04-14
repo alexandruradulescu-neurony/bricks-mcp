@@ -4,6 +4,16 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.10.1] — 2026-04-14
+
+### Added
+- **Pattern import normalization** — `DesignPatternService::normalize_pattern()` walks a pattern's class_role/class_intent references and `var(--*)` variable references, maps each to the closest site match via `semantic_search_classes()` and variable lookup. Returns normalized pattern + mapping report + warnings for unmatched references.
+- **AI prompt generation** — `DesignPatternService::generate_prompt_template()` builds a structured prompt using site context (element capabilities, layouts, building rules, existing classes) for AI-assisted pattern composition. Returns prompt string + context + output schema.
+- **2 new MCP actions** on `design_pattern`: `normalize` (map external pattern to site) and `generate_prompt` (get AI prompt for creating a pattern from description/image).
+- **Admin "Generate AI Prompt" button** in pattern creator form — copies the structured prompt to clipboard. User pastes into Claude Code or any AI, gets composition JSON back, pastes into the Composition field.
+- **Admin import normalization** — importing patterns via the admin UI now auto-normalizes before saving. Class references matched, variables checked, warnings displayed.
+- **2 new AJAX endpoints**: `bricks_mcp_generate_prompt`, `bricks_mcp_normalize_patterns`.
+
 ## [3.10.0] — 2026-04-14
 
 ### Changed — Database-first pattern architecture

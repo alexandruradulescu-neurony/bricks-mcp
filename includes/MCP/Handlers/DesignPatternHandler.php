@@ -67,9 +67,11 @@ final class DesignPatternHandler {
 			'create_category'   => $this->tool_create_category( $args ),
 			'update_category'   => $this->tool_update_category( $args ),
 			'delete_category'   => $this->tool_delete_category( $args ),
+			'normalize'         => $this->tool_normalize( $args ),
+			'generate_prompt'   => $this->tool_generate_prompt( $args ),
 			default             => new \WP_Error(
 				'invalid_action',
-				sprintf( 'Unknown action "%s". Valid: list, get, semantic_search, create, update, delete, export, import, list_categories, create_category, update_category, delete_category.', $action )
+				sprintf( 'Unknown action "%s". Valid: list, get, semantic_search, create, update, delete, export, import, list_categories, create_category, update_category, delete_category, normalize, generate_prompt.', $action )
 			),
 		};
 	}
@@ -250,6 +252,40 @@ final class DesignPatternHandler {
 	}
 
 	// ──────────────────────────────────────────────
+	// Normalization + AI generation
+	// ──────────────────────────────────────────────
+
+	/**
+	 * Normalize a pattern's class/variable references to match this site.
+	 */
+	private function tool_normalize( array $args ): array|\WP_Error {
+		$pattern = $args['pattern'] ?? null;
+		if ( ! is_array( $pattern ) ) {
+			return new \WP_Error( 'missing_pattern', 'pattern object is required.' );
+		}
+
+		return DesignPatternService::normalize_pattern( $pattern );
+	}
+
+	/**
+	 * Generate an AI prompt template for creating a pattern from a description.
+	 *
+	 * Returns structured prompt + site context so the AI client can generate
+	 * a complete pattern composition. The AI then calls design_pattern:create
+	 * with the result.
+	 */
+	private function tool_generate_prompt( array $args ): array|\WP_Error {
+		$description = $args['description'] ?? '';
+		if ( ! is_string( $description ) || '' === trim( $description ) ) {
+			return new \WP_Error( 'missing_description', 'description is required. Describe what the pattern should look like.' );
+		}
+
+		$category = sanitize_text_field( $args['category'] ?? '' );
+
+		return DesignPatternService::generate_prompt_template( trim( $description ), $category );
+	}
+
+	// ──────────────────────────────────────────────
 	// Category actions
 	// ──────────────────────────────────────────────
 
@@ -334,13 +370,13 @@ final class DesignPatternHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'design_pattern',
-			__( "Manage design patterns and categories \u2014 reusable section compositions for the build pipeline.\n\nPattern actions: list, get, semantic_search, create, update, delete, export, import.\nCategory actions: list_categories, create_category, update_category, delete_category.\n\nAll patterns live in the database (managed via admin UI or MCP). Categories are a separate registry. Use semantic_search to find patterns by natural language. Use export/import for cross-site sharing.", 'bricks-mcp' ),
+			__( "Manage design patterns and categories \u2014 reusable section compositions for the build pipeline.\n\nPattern actions: list, get, semantic_search, create, update, delete, export, import.\nCategory actions: list_categories, create_category, update_category, delete_category.\nAI helpers: normalize (map external classes/variables to site), generate_prompt (get AI prompt for pattern creation from description/image).\n\nAll patterns live in the database (managed via admin UI or MCP). Categories are a separate registry. Use semantic_search to find patterns by natural language. Use export/import for cross-site sharing.", 'bricks-mcp' ),
 			[
 				'type'       => 'object',
 				'properties' => [
 					'action'               => [
 						'type'        => 'string',
-						'enum'        => [ 'list', 'get', 'semantic_search', 'create', 'update', 'delete', 'export', 'import', 'list_categories', 'create_category', 'update_category', 'delete_category' ],
+						'enum'        => [ 'list', 'get', 'semantic_search', 'create', 'update', 'delete', 'export', 'import', 'list_categories', 'create_category', 'update_category', 'delete_category', 'normalize', 'generate_prompt' ],
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					],
 					'id'                   => [
@@ -386,6 +422,10 @@ final class DesignPatternHandler {
 					'category_description' => [
 						'type'        => 'string',
 						'description' => __( 'Category description (create_category, update_category: optional)', 'bricks-mcp' ),
+					],
+					'description'          => [
+						'type'        => 'string',
+						'description' => __( 'Free-text description of what to build (generate_prompt: required). Can describe a screenshot or a design concept.', 'bricks-mcp' ),
 					],
 				],
 				'required'   => [ 'action' ],

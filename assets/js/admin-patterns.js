@@ -152,10 +152,27 @@
       var json = e.target.result;
       try { var parsed = JSON.parse(json); if (!Array.isArray(parsed)) throw new Error('not array'); }
       catch (err) { return showNotice('Invalid JSON: must be an array of pattern objects.', 'error'); }
-      if (!confirm('Import ' + parsed.length + ' pattern(s)?')) return;
-      $.post(ajaxurl, { action: 'bricks_mcp_import_patterns', nonce: nonce, patterns_json: json }, function (res) {
-        if (res.success) { showNotice('Imported ' + (res.data.imported || []).length + ' pattern(s).', 'success'); location.reload(); }
-        else { showNotice('Import failed: ' + (res.data ? res.data.message : 'Unknown'), 'error'); }
+      if (!confirm('Import ' + parsed.length + ' pattern(s)? They will be normalized to match your site\'s classes and variables.')) return;
+
+      // Normalize each pattern before importing.
+      $.post(ajaxurl, { action: 'bricks_mcp_normalize_patterns', nonce: nonce, patterns_json: json }, function (normRes) {
+        if (!normRes.success) {
+          // Fallback: import without normalization.
+          showNotice('Normalization skipped — importing raw.', 'error');
+        }
+        var patternsToImport = normRes.success ? JSON.stringify(normRes.data.patterns) : json;
+        var warnings = normRes.success ? (normRes.data.warnings || []) : [];
+
+        $.post(ajaxurl, { action: 'bricks_mcp_import_patterns', nonce: nonce, patterns_json: patternsToImport }, function (res) {
+          if (res.success) {
+            var msg = 'Imported ' + (res.data.imported || []).length + ' pattern(s).';
+            if (warnings.length) msg += ' Warnings: ' + warnings.join('; ');
+            showNotice(msg, 'success');
+            location.reload();
+          } else {
+            showNotice('Import failed: ' + (res.data ? res.data.message : 'Unknown'), 'error');
+          }
+        });
       });
     };
     reader.readAsText(file);
@@ -193,6 +210,36 @@
   $(document).on('input', '#bricks-mcp-creator-ai-desc', function () {
     var len = $(this).val().length;
     $('#bricks-mcp-creator-char-count').text(len + '/300');
+  });
+
+  // Generate AI prompt — builds a prompt from the description field, copies to clipboard.
+  $(document).on('click', '#bricks-mcp-creator-generate-ai', function () {
+    var desc = $('#bricks-mcp-creator-ai-desc').val().trim() || $('#bricks-mcp-creator-name').val().trim();
+    if (!desc) return showNotice('Enter a name or AI description first.', 'error');
+    var cat = $('#bricks-mcp-creator-category').val() || '';
+
+    var btn = $(this);
+    btn.prop('disabled', true).text('Generating...');
+
+    $.post(ajaxurl, { action: 'bricks_mcp_generate_prompt', nonce: nonce, description: desc, category: cat }, function (res) {
+      btn.prop('disabled', false).text('Generate AI Prompt');
+      if (!res.success) return showNotice('Error: ' + (res.data ? res.data.message : 'Unknown'), 'error');
+
+      var prompt = res.data.prompt || '';
+      // Copy to clipboard.
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(prompt).then(function () {
+          showNotice('AI prompt copied to clipboard! Paste it into Claude Code or any AI assistant, then paste the generated JSON into the Composition field below.', 'success');
+        });
+      } else {
+        // Fallback: show in a temporary textarea.
+        var $ta = $('<textarea style="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;">').val(prompt).appendTo('body');
+        $ta[0].select();
+        document.execCommand('copy');
+        $ta.remove();
+        showNotice('AI prompt copied to clipboard!', 'success');
+      }
+    });
   });
 
   // WP Media Library for reference image.

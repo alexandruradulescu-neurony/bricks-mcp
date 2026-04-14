@@ -62,6 +62,8 @@ final class Settings {
 		add_action( 'wp_ajax_bricks_mcp_delete_pattern', [ $this, 'ajax_delete_pattern' ] );
 		add_action( 'wp_ajax_bricks_mcp_export_patterns', [ $this, 'ajax_export_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_import_patterns', [ $this, 'ajax_import_patterns' ] );
+		add_action( 'wp_ajax_bricks_mcp_generate_prompt', [ $this, 'ajax_generate_prompt' ] );
+		add_action( 'wp_ajax_bricks_mcp_normalize_patterns', [ $this, 'ajax_normalize_patterns' ] );
 	}
 
 	/**
@@ -1946,6 +1948,8 @@ final class Settings {
 						<textarea id="bricks-mcp-creator-ai-hints" rows="3" style="width:100%;" placeholder="<?php esc_attr_e( "Best as first section on homepage\nPair with features section below", 'bricks-mcp' ); ?>"></textarea></p>
 
 						<p><label><strong><?php esc_html_e( 'Composition / Structure JSON', 'bricks-mcp' ); ?></strong></label><br>
+						<button type="button" class="button button-small" id="bricks-mcp-creator-generate-ai" style="margin-bottom:8px;"><?php esc_html_e( 'Generate AI Prompt', 'bricks-mcp' ); ?></button>
+						<small style="color:#666;"><?php esc_html_e( 'Copies a prompt to clipboard — paste into Claude Code, get the JSON back, paste below.', 'bricks-mcp' ); ?></small><br>
 						<textarea id="bricks-mcp-creator-composition" rows="12" style="width:100%;font-family:monospace;font-size:12px;" placeholder='<?php echo esc_attr( "{\n  \"composition\": [...],\n  \"columns\": {...},\n  \"patterns\": {...}\n}" ); ?>'></textarea></p>
 					</div>
 				</div>
@@ -2132,6 +2136,58 @@ final class Settings {
 			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
 		}
 		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX: Generate AI prompt for pattern creation.
+	 */
+	public function ajax_generate_prompt(): void {
+		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+		}
+
+		$description = sanitize_text_field( wp_unslash( $_POST['description'] ?? '' ) );
+		$category    = sanitize_text_field( wp_unslash( $_POST['category'] ?? '' ) );
+
+		if ( '' === $description ) {
+			wp_send_json_error( [ 'message' => __( 'Description is required.', 'bricks-mcp' ) ] );
+		}
+
+		$result = \BricksMCP\MCP\Services\DesignPatternService::generate_prompt_template( $description, $category );
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX: Normalize patterns (map classes/variables to site).
+	 */
+	public function ajax_normalize_patterns(): void {
+		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+		}
+
+		$json     = isset( $_POST['patterns_json'] ) ? wp_unslash( $_POST['patterns_json'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$patterns = json_decode( $json, true );
+		if ( ! is_array( $patterns ) ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid JSON.', 'bricks-mcp' ) ] );
+		}
+
+		$normalized = [];
+		$all_warnings = [];
+		foreach ( $patterns as $pattern ) {
+			if ( ! is_array( $pattern ) ) {
+				continue;
+			}
+			$result       = \BricksMCP\MCP\Services\DesignPatternService::normalize_pattern( $pattern );
+			$normalized[] = $result['pattern'];
+			$all_warnings = array_merge( $all_warnings, $result['warnings'] );
+		}
+
+		wp_send_json_success( [
+			'patterns' => $normalized,
+			'warnings' => array_unique( $all_warnings ),
+		] );
 	}
 
 }

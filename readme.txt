@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.10.0
+Stable tag: 3.10.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -143,6 +143,12 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.10.1 =
+* Pattern import normalization: imported patterns auto-mapped to site's classes and variables. Class references matched via semantic search; unmatched references flagged with warnings. Both admin import and MCP import_normalized run through normalization.
+* AI prompt generation: "Generate AI Prompt" button in pattern creator copies a structured prompt (with site context, element capabilities, layouts, classes) to clipboard. Paste into Claude Code or any AI, get composition JSON back.
+* 2 new MCP actions on design_pattern: normalize (map external pattern to site), generate_prompt (get AI prompt for pattern creation from description).
+* Admin import now normalizes patterns before saving — classes auto-matched, variables checked, warnings shown.
 
 = 3.10.0 =
 * Database-first pattern library: all 21 plugin-shipped patterns auto-migrate to the database on first update. No more hardcoded patterns.
