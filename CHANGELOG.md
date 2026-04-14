@@ -4,6 +4,41 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.16.0] — 2026-04-15
+
+### Fixed — Fresh Site Portability
+- **Starter classes use CSS fallbacks** — all `var()` references in `StarterClassesService` now include fallback values (e.g., `var(--primary, #3f4fdf)`). Works on sites with zero configured variables.
+- **SiteVariableResolver returns hex on empty sites** — semantic methods (`dark_background()`, `primary_color()`, etc.) return raw hex values instead of broken `var()` references when no variables exist.
+- **BUILDING_RULES adapt to site state** — `ProposalService` detects whether a design system is present. Sites with <5 classes and no variables get permissive rules instead of "child theme handles it" restrictions.
+- **WooCommerce scaffolds portable** — all scaffold `var()` references include CSS fallback values. Empty cart "Return to Shop" uses `wc_get_page_permalink('shop')` instead of hardcoded `/shop`.
+- **Dark/light detection improved** — removed site-specific class name checks (`article-section`, `cta-section`). Uses regex segment matching to avoid false positives on names like `--sidebar-dark-border`.
+
+### Changed — Infrastructure
+- **GitHub repo URL centralized** — new `BRICKS_MCP_GITHUB_REPO` constant. UpdateChecker, Settings footer links derive from it.
+- **Meta key constant everywhere** — replaced 12 hardcoded `_bricks_page_content_2` strings with `BricksCore::META_KEY`.
+- **SSE keepalive filterable** — `apply_filters('bricks_mcp_keepalive_interval', 25)`, clamped 5–55s.
+- **Prerequisite TTL extended** — 30 min → 2 hours, filterable via `bricks_mcp_prerequisite_ttl`.
+- **GitHub API token support** — define `BRICKS_MCP_GITHUB_TOKEN` for authenticated update checks on shared hosting.
+- **UpdateChecker** — `requires_php` fallback uses `BRICKS_MCP_MIN_PHP_VERSION` constant. User-Agent reports actual plugin version.
+- **Documentation URL removed** from OAuth protected-resource response.
+
+### Changed — Code Quality
+- **Dead code removed** — `render_version_card()`, `$public_tools` empty array, unregistered cron hook cleanup.
+- **`confirm` parameter removed from schemas** — 10 handlers updated. Token-based confirmation works transparently.
+- **OnboardingHandler lazy loading** — section requests call specific methods instead of generating full payload.
+- **Migrations gated** — `migrate_settings()` and `migrate_plugin_patterns()` only run on version change.
+- **Unbounded queries fixed** — `posts_per_page => -1` replaced with `wp_count_posts()` in OnboardingService.
+- **Stronger randomness** — `bin2hex(random_bytes())` replaces `md5(time())` for note IDs. `random_int()` replaces `str_shuffle()` in DesignSystemGenerator.
+- **DesignPatternHandler description** — removed 6 advertised-but-unimplemented actions.
+- **Deprecated `rest_enabled` filter removed** from Activator.
+
+### Added — Extensibility
+- 7 new `apply_filters()` hooks: `bricks_mcp_known_hosting_providers`, `bricks_mcp_known_security_plugins`, `bricks_mcp_condition_schema`, `bricks_mcp_form_schema`, `bricks_mcp_interaction_schema`, `bricks_mcp_filter_schema`, `bricks_mcp_intent_map`.
+- Named constants: `Router::DESIGN_GATE_THRESHOLD`, `RateLimiter::DEFAULT_RPM`, `StreamableHttpHandler::MAX_BODY_HARD_LIMIT`.
+- `ThemeStyleService` — global variable replaced with class property.
+- `MetaBoxHandler` — null checks on `rwmb_get_registry()` return.
+- `RateLimiter` — `@header()` suppression replaced with `headers_sent()` check.
+
 ## [3.14.1] — 2026-04-14
 
 ### Fixed
