@@ -187,6 +187,7 @@ final class BriefResolver {
 			'content_gap'          => '20px',
 			'container_gap'        => '40px',
 			'hero_min_height'      => '80vh',
+			'icon_circle_size'     => '48px',
 		];
 	}
 

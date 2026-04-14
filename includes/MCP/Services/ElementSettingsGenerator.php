@@ -731,10 +731,18 @@ final class ElementSettingsGenerator {
 			return $icon;
 		}
 
-		$defaults = self::get_defaults();
-		$library  = $defaults['icon_defaults']['library'] ?? 'themify';
-		$prefix   = $defaults['icon_defaults']['prefix'] ?? 'ti-';
-		$fallback = $defaults['icon_defaults']['fallback'] ?? 'ti-star';
+		// Read icon library from structured brief, fall back to element defaults.
+		$brief_library = BriefResolver::get_instance()->get( 'icon_library' );
+		$library_map   = [
+			'themify'            => [ 'library' => 'themify', 'prefix' => 'ti-', 'fallback' => 'ti-star' ],
+			'fontawesomeSolid'   => [ 'library' => 'fontawesomeSolid', 'prefix' => 'fas fa-', 'fallback' => 'fas fa-star' ],
+			'fontawesomeRegular' => [ 'library' => 'fontawesomeRegular', 'prefix' => 'far fa-', 'fallback' => 'far fa-star' ],
+			'ionicons'           => [ 'library' => 'ionicons', 'prefix' => 'ion-', 'fallback' => 'ion-ios-star' ],
+		];
+		$lib_config = $library_map[ $brief_library ] ?? $library_map['themify'];
+		$library    = $lib_config['library'];
+		$prefix     = $lib_config['prefix'];
+		$fallback   = $lib_config['fallback'];
 
 		if ( is_string( $icon ) ) {
 			$icon_name = str_starts_with( $icon, $prefix ) ? $icon : $prefix . $icon;

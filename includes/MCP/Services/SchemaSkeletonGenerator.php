@@ -1004,9 +1004,9 @@ final class SchemaSkeletonGenerator {
 				$this->node( 'block', [
 					'label'           => 'Icon Circle',
 					'style_overrides' => [
-						'_width'          => '48px',
-						'_height'         => '48px',
-						'_minWidth'       => '48px',
+						'_width'          => BriefResolver::get_instance()->get( 'icon_circle_size' ),
+						'_height'         => BriefResolver::get_instance()->get( 'icon_circle_size' ),
+						'_minWidth'       => BriefResolver::get_instance()->get( 'icon_circle_size' ),
 						'_alignItems'     => 'center',
 						'_justifyContent' => 'center',
 						'_border'         => [
