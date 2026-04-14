@@ -1698,8 +1698,18 @@ final class Settings {
 		$global_classes = is_array( $global_classes ) ? $global_classes : [];
 		?>
 		<div class="bricks-mcp-config-section">
-			<h3><?php esc_html_e( 'Design Rules', 'bricks-mcp' ); ?></h3>
-			<p class="description"><?php esc_html_e( 'Machine-readable rules that control how AI builds sections. These feed directly into the build pipeline.', 'bricks-mcp' ); ?></p>
+			<h3><?php esc_html_e( 'Design Rules', 'bricks-mcp' ); ?>
+				<span style="font-size: 12px; font-weight: 400; color: var(--bwm-gray-500); margin-left: 8px;"><?php esc_html_e( 'Advanced', 'bricks-mcp' ); ?></span>
+			</h3>
+			<p class="description"><?php esc_html_e( 'Machine-readable rules that control how AI builds sections. Auto-filled when you apply the Design System. Override specific values below if needed.', 'bricks-mcp' ); ?></p>
+
+			<p style="margin-bottom: 12px;">
+				<button type="button" class="button button-secondary" id="bricks-mcp-toggle-design-rules" onclick="var c=document.getElementById('bricks-mcp-design-rules-body');var b=this;if(c.style.display==='none'){c.style.display='';b.textContent='<?php echo esc_js( __( 'Hide Design Rules', 'bricks-mcp' ) ); ?>';}else{c.style.display='none';b.textContent='<?php echo esc_js( __( 'Show Design Rules', 'bricks-mcp' ) ); ?>';}">
+					<?php esc_html_e( 'Show Design Rules', 'bricks-mcp' ); ?>
+				</button>
+			</p>
+
+			<div id="bricks-mcp-design-rules-body" style="display: none;">
 
 			<p style="margin-bottom: 20px;">
 				<button type="button" class="button button-secondary" id="bricks-mcp-parse-brief-btn">
@@ -1866,6 +1876,8 @@ final class Settings {
 
 				<?php submit_button( __( 'Save Design Rules', 'bricks-mcp' ) ); ?>
 			</form>
+
+			</div><!-- #bricks-mcp-design-rules-body -->
 		</div>
 
 		<script>
