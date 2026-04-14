@@ -805,13 +805,25 @@ class BricksService {
 			return $append_result;
 		}
 
-		return [
+		$result = [
 			'post_id'             => $post_id,
 			'flattened_classes'   => $flattened_count,
 			'appended_ids'        => $append_result['appended_ids'] ?? [],
 			'appended_count'      => $append_result['appended_count'] ?? 0,
 			'total_element_count' => $append_result['total_element_count'] ?? 0,
 		];
+
+		if ( $flattened_count > 0 ) {
+			$result['normalize_hint'] = sprintf(
+				'%d foreign global classes were flattened into inline styles. '
+				. 'Review the imported elements with page:get (view: detail, element_ids: appended_ids) '
+				. 'and replace inline styles with matching site global classes using global_class:apply + element:bulk_update. '
+				. 'Map foreign colors/spacing/radius to the site\'s CSS variables (from get_site_info).',
+				$flattened_count
+			);
+		}
+
+		return $result;
 	}
 
 	/**
