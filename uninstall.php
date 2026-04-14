@@ -77,29 +77,10 @@ function bricks_mcp_delete_user_meta(): void {
 	);
 }
 
-/**
- * Clear any scheduled cron events.
- *
- * @return void
- */
-function bricks_mcp_clear_cron(): void {
-	$cron_hooks = [
-		'bricks_mcp_cleanup',
-	];
-
-	foreach ( $cron_hooks as $hook ) {
-		$timestamp = wp_next_scheduled( $hook );
-		if ( $timestamp ) {
-			wp_unschedule_event( $timestamp, $hook );
-		}
-	}
-}
-
 // Run cleanup.
 bricks_mcp_delete_options();
 bricks_mcp_delete_transients();
 bricks_mcp_delete_user_meta();
-bricks_mcp_clear_cron();
 
 // Flush rewrite rules.
 flush_rewrite_rules();

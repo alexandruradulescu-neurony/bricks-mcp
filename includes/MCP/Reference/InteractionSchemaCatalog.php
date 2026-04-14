@@ -27,7 +27,7 @@ final class InteractionSchemaCatalog {
 	 * @return array<string, mixed>
 	 */
 	public static function data(): array {
-		return array(
+		$data = array(
 			'description'       => 'Bricks element interaction/animation settings reference. Interactions are stored in settings._interactions as a repeater array on any element. Use element:update or page:update_content to add interactions.',
 			'important'         => 'NEVER use deprecated _animation/_animationDuration/_animationDelay keys. Always use _interactions array. Each interaction needs a unique 6-char lowercase alphanumeric id field.',
 			'triggers'          => array(
@@ -207,5 +207,7 @@ final class InteractionSchemaCatalog {
 				'The deprecated _animation, _animationDuration, _animationDelay keys still work but show converter warnings. Never generate them.',
 			),
 		);
+
+		return apply_filters( 'bricks_mcp_interaction_schema', $data );
 	}
 }

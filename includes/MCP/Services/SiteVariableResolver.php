@@ -113,6 +113,14 @@ final class SiteVariableResolver {
 	}
 
 	/**
+	 * Whether the site has any CSS variables configured.
+	 */
+	public static function has_variables(): bool {
+		self::load();
+		return ! empty( self::$by_name );
+	}
+
+	/**
 	 * Find the darkest background color variable.
 	 */
 	public static function dark_background(): string {
@@ -126,7 +134,7 @@ final class SiteVariableResolver {
 		if ( '' !== $result ) {
 			return $result;
 		}
-		return 'var(--base-ultra-dark)';
+		return self::has_variables() ? 'var(--base-ultra-dark)' : '#18181b';
 	}
 
 	/**
@@ -141,7 +149,7 @@ final class SiteVariableResolver {
 		if ( '' !== $result ) {
 			return $result;
 		}
-		return 'var(--base-ultra-light)';
+		return self::has_variables() ? 'var(--base-ultra-light)' : '#f4f4f5';
 	}
 
 	/**
@@ -154,7 +162,11 @@ final class SiteVariableResolver {
 			return $exact;
 		}
 		// Search in Colors for "white" without "trans".
-		return self::find( 'Colors', 'white', 'trans', 'var(--white)' );
+		$found = self::find( 'Colors', 'white', 'trans', '' );
+		if ( '' !== $found ) {
+			return $found;
+		}
+		return self::has_variables() ? 'var(--white)' : '#ffffff';
 	}
 
 	/**
@@ -166,7 +178,11 @@ final class SiteVariableResolver {
 		if ( '' !== $exact ) {
 			return $exact;
 		}
-		return self::find( 'Colors', 'primary', 'dark', 'var(--primary)' );
+		$found = self::find( 'Colors', 'primary', 'dark', '' );
+		if ( '' !== $found ) {
+			return $found;
+		}
+		return self::has_variables() ? 'var(--primary)' : '#3f4fdf';
 	}
 
 	/**
@@ -177,7 +193,11 @@ final class SiteVariableResolver {
 		if ( '' !== $exact ) {
 			return $exact;
 		}
-		return self::find( 'Colors', 'primary-dark', '', 'var(--primary-dark)' );
+		$found = self::find( 'Colors', 'primary-dark', '', '' );
+		if ( '' !== $found ) {
+			return $found;
+		}
+		return self::has_variables() ? 'var(--primary-dark)' : '#2d3ab8';
 	}
 
 	/**
@@ -226,7 +246,11 @@ final class SiteVariableResolver {
 			return $result;
 		}
 		// Fallback to Spacing category.
-		return self::find( 'Spacing', $contains, '', "var(--space-m)" );
+		$spacing = self::find( 'Spacing', $contains, '', '' );
+		if ( '' !== $spacing ) {
+			return $spacing;
+		}
+		return self::has_variables() ? 'var(--space-m)' : '16px';
 	}
 
 	/**
@@ -237,7 +261,19 @@ final class SiteVariableResolver {
 		if ( '' !== $exact ) {
 			return $exact;
 		}
-		return "var(--{$name})";
+		if ( self::has_variables() ) {
+			return "var(--{$name})";
+		}
+		// Raw fallbacks when no variables configured.
+		return match ( $name ) {
+			'space-xs' => '8px',
+			'space-s'  => '12px',
+			'space-m'  => '16px',
+			'space-l'  => '24px',
+			'space-xl' => '48px',
+			'space-section' => '64px',
+			default    => '16px',
+		};
 	}
 
 	/**

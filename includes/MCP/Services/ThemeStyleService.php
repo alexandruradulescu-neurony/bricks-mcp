@@ -30,6 +30,13 @@ class ThemeStyleService {
 	private BricksCore $core;
 
 	/**
+	 * Normalization warnings collected during the last update operation.
+	 *
+	 * @var array<string>
+	 */
+	private array $normalization_warnings = [];
+
+	/**
 	 * Constructor.
 	 *
 	 * @param BricksCore $core Shared infrastructure.
@@ -326,8 +333,7 @@ class ThemeStyleService {
 	 * @return array<string> Array of warning messages.
 	 */
 	public function get_normalization_warnings(): array {
-		global $bricks_mcp_normalization_warnings;
-		return is_array( $bricks_mcp_normalization_warnings ) ? $bricks_mcp_normalization_warnings : [];
+		return $this->normalization_warnings;
 	}
 
 	/**
@@ -337,8 +343,7 @@ class ThemeStyleService {
 	 * @return void
 	 */
 	private function store_normalization_warnings( array $warnings ): void {
-		global $bricks_mcp_normalization_warnings;
-		$bricks_mcp_normalization_warnings = $warnings;
+		$this->normalization_warnings = $warnings;
 	}
 
 	/**

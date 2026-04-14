@@ -130,7 +130,9 @@ class SecurityPluginCheck implements DiagnosticCheck {
 		$detected_high     = array();
 		$detected_other    = array();
 
-		foreach ( self::KNOWN_PLUGINS as $slug => $info ) {
+		$plugins = apply_filters( 'bricks_mcp_known_security_plugins', self::KNOWN_PLUGINS );
+
+		foreach ( $plugins as $slug => $info ) {
 			if ( ! is_plugin_active( $slug ) ) {
 				continue;
 			}

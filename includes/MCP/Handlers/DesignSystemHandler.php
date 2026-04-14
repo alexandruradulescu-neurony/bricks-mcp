@@ -1065,10 +1065,6 @@ final class DesignSystemHandler {
 						'type'        => 'boolean',
 						'description' => __( 'If true, permanently delete the style; if false (default), only remove conditions to deactivate (delete: optional)', 'bricks-mcp' ),
 					),
-					'confirm'         => array(
-						'type'        => 'boolean',
-						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
-					),
 				),
 				'required'   => array( 'action' ),
 			),
@@ -1111,10 +1107,6 @@ final class DesignSystemHandler {
 						'type'        => 'array',
 						'description' => __( 'Utility class definitions (create, update: optional)', 'bricks-mcp' ),
 					),
-					'confirm'         => array(
-						'type'        => 'boolean',
-						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
-					),
 				),
 				'required'   => array( 'action' ),
 			),
@@ -1156,10 +1148,6 @@ final class DesignSystemHandler {
 					'position'   => array(
 						'type'        => 'integer',
 						'description' => __( 'Position in palette (add_color: optional)', 'bricks-mcp' ),
-					),
-					'confirm'    => array(
-						'type'        => 'boolean',
-						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),
@@ -1219,10 +1207,6 @@ final class DesignSystemHandler {
 					'value_query'   => array(
 						'type'        => 'string',
 						'description' => __( 'Value substring to search for (search: optional, case-insensitive)', 'bricks-mcp' ),
-					),
-					'confirm'       => array(
-						'type'        => 'boolean',
-						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),

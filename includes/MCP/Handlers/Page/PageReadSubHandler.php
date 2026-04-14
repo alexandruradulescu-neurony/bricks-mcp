@@ -664,7 +664,7 @@ final class PageReadSubHandler {
 		$has_bricks = $this->bricks_service->is_bricks_page( $post->ID );
 
 		// Read raw meta directly to avoid full BricksService deserialization per post (N+1).
-		$raw_elements  = get_post_meta( $post->ID, '_bricks_page_content_2', true );
+		$raw_elements  = get_post_meta( $post->ID, BricksService::META_KEY, true );
 		$element_count = is_array( $raw_elements ) ? count( $raw_elements ) : 0;
 
 		return array(

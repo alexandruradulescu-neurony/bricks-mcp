@@ -326,10 +326,6 @@ final class PageHandler {
 						'type'        => 'string',
 						'description' => __( 'Human-readable label for the snapshot (snapshot: optional)', 'bricks-mcp' ),
 					),
-					'confirm'             => array(
-						'type'        => 'boolean',
-						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
-					),
 					'force'               => array(
 						'type'        => 'boolean',
 						'description' => __( 'When true, permanently delete instead of moving to trash (delete action only).', 'bricks-mcp' ),

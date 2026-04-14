@@ -492,7 +492,7 @@ class GlobalClassService {
 	 */
 	public function find_class_references( string $class_id ): array {
 		$meta_keys = [
-			'_bricks_page_content_2',
+			BricksCore::META_KEY,
 			'_bricks_page_header_2',
 			'_bricks_page_footer_2',
 		];
@@ -505,7 +505,7 @@ class GlobalClassService {
 				'meta_query'     => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 					'relation' => 'OR',
 					[
-						'key'     => '_bricks_page_content_2',
+						'key'     => BricksCore::META_KEY,
 						'compare' => 'EXISTS',
 					],
 					[

@@ -27,7 +27,7 @@ final class FormSchemaCatalog {
 	 * @return array<string, mixed>
 	 */
 	public static function data(): array {
-		return array(
+		$data = array(
 			'description'              => 'Bricks form element settings reference. Forms are standard elements (name: "form") added via element:add or page:update_content.',
 			'field_types'              => array(
 				'text'       => array(
@@ -279,5 +279,7 @@ final class FormSchemaCatalog {
 				'Use {{field_id}} in emailContent/dataTemplate to reference field values. Use {{all_fields}} to include all fields.',
 			),
 		);
+
+		return apply_filters( 'bricks_mcp_form_schema', $data );
 	}
 }

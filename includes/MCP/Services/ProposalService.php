@@ -247,12 +247,12 @@ final class ProposalService {
 	];
 
 	/**
-	 * Building rules extracted from building.md — included in every discovery response.
+	 * Building rules — included in every discovery response.
+	 * The no_override rule is adjusted at runtime based on site state.
 	 */
-	private const BUILDING_RULES = [
+	private const BUILDING_RULES_BASE = [
 		'structure'   => 'Every page follows: section > container > block/div > content elements. Multiple visual rows = multiple containers inside a section.',
 		'centering'   => 'Use flex alignment (_alignItems: center, _justifyContent: center) — NOT text-align. text-align only affects text inside an element.',
-		'no_override' => 'DO NOT set these inline — the child theme handles them globally: section _padding, container _gap, heading font-size/color/line-height/font-weight, body text font-size/color/line-height.',
 		'classes'     => 'Use class_intent on every element when possible. The pipeline creates reusable classes WITH styles. Inline style_overrides only for instance-specific overrides.',
 		'labels'      => 'Add label to sections ("Hero"), containers (row description), and blocks ("CTA Buttons", "Cards Grid").',
 		'variables'   => 'Always use var(--name) — never hardcode colors, spacing, radius, or font sizes. Examples: var(--space-m), var(--primary), var(--radius), var(--h2).',
@@ -262,6 +262,41 @@ final class ProposalService {
 		'buttons'     => 'Buttons support native icons (icon + iconPosition settings). Do NOT use emoji in button text. Use class_intent for styling (btn-hero-primary, btn-hero-ghost).',
 		'gaps'        => 'On flex blocks: use _columnGap for horizontal spacing (row direction), _rowGap for vertical spacing (column direction). Plain _gap does NOT generate CSS on flex layout blocks. The pipeline auto-converts _gap to the correct key based on _direction.',
 	];
+
+	/**
+	 * Get building rules, adjusted based on whether the site has a design system.
+	 *
+	 * @param bool $has_design_system True if site has meaningful classes/theme styles.
+	 */
+	private static function get_building_rules( bool $has_design_system ): array {
+		$rules = self::BUILDING_RULES_BASE;
+
+		if ( $has_design_system ) {
+			$rules['no_override'] = 'DO NOT set these inline — the design system handles them globally: section _padding, container _gap, heading font-size/color/line-height/font-weight, body text font-size/color/line-height.';
+		} else {
+			$rules['no_override'] = 'No design system detected. Set explicit values for section _padding, container _gap, heading typography, and body text styles. Use the starter classes or var(--name, fallback) pattern.';
+		}
+
+		return $rules;
+	}
+
+	/**
+	 * Get element capabilities, adjusted based on site state.
+	 *
+	 * @param bool $has_design_system True if site has meaningful classes/theme styles.
+	 */
+	private static function get_element_capabilities( bool $has_design_system ): array {
+		$caps = self::ELEMENT_CAPABILITIES;
+
+		if ( ! $has_design_system ) {
+			$caps['section']['rules']    = [ 'Set explicit _padding or use starter classes' ];
+			$caps['container']['rules']  = [ 'Set explicit _gap or use starter classes' ];
+			$caps['heading']['rules']    = [ 'Set explicit font-size, color, and font-weight or use class_intent' ];
+			$caps['text-basic']['rules'] = [ 'Set explicit font-size and color or use class_intent' ];
+		}
+
+		return $caps;
+	}
 
 	private GlobalClassService $class_service;
 	private SchemaGenerator $schema_generator;
@@ -416,10 +451,12 @@ final class ProposalService {
 		// First discovery or site data changed — return full response and persist the hash.
 		self::persist_discovery_hash( $context_hash );
 
-		$response['available_elements']   = self::ELEMENT_CAPABILITIES;
+		$has_design_system = count( $all_classes ) >= 5 || SiteVariableResolver::has_variables();
+
+		$response['available_elements']   = self::get_element_capabilities( $has_design_system );
 		$response['available_layouts']    = self::VALID_LAYOUTS;
 		$response['section_types']        = self::VALID_SECTION_TYPES;
-		$response['building_rules']       = self::BUILDING_RULES;
+		$response['building_rules']       = self::get_building_rules( $has_design_system );
 		$response['site_context']         = $site_context;
 		$response['site_context_hash']    = $context_hash;
 		$response['site_context_changed'] = true;

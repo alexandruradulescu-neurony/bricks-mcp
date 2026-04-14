@@ -99,7 +99,13 @@ class DesignSystemGenerator {
      * Generate a random 6-character alphanumeric ID (Bricks format).
      */
     private function random_id(): string {
-        return substr( str_shuffle( 'abcdefghijklmnopqrstuvwxyz0123456789' ), 0, 6 );
+        $alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        $alpha_len = strlen( $alphabet );
+        $id = '';
+        for ( $i = 0; $i < 6; $i++ ) {
+            $id .= $alphabet[ random_int( 0, $alpha_len - 1 ) ];
+        }
+        return $id;
     }
 
     /**

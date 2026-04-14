@@ -220,7 +220,7 @@ final class DesignPatternHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'design_pattern',
-			__( "Manage design patterns \u2014 reusable section compositions for the build pipeline.\n\nPattern actions: list, get, create, update, delete, export, import.\nCategory actions: list_categories, create_category, update_category, delete_category.\nAI helpers: normalize (map external classes/variables to site), generate_prompt (get AI prompt for pattern creation from description/image).\n\nAll patterns live in the database (managed via admin UI or MCP). Use export/import for cross-site sharing.", 'bricks-mcp' ),
+			__( "Manage design patterns \u2014 reusable section compositions for the build pipeline.\n\nActions: list, get, create, update, delete, export, import.\n\nAll patterns live in the database (managed via admin UI or MCP). Use export/import for cross-site sharing.", 'bricks-mcp' ),
 			[
 				'type'       => 'object',
 				'properties' => [

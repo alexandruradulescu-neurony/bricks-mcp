@@ -156,7 +156,6 @@ final class Server {
 			'resource'                 => $resource_url,
 			'authorization_servers'    => [],
 			'bearer_methods_supported' => [ 'header' ],
-			'resource_documentation'   => 'https://aiforbricks.com/docs/authentication',
 			'bricks_mcp_auth_method'   => 'application_password',
 			'bricks_mcp_auth_hint'     => $auth_hint,
 		] );

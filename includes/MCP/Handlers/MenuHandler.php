@@ -335,10 +335,6 @@ final class MenuHandler {
 						'type'        => 'string',
 						'description' => __( 'Theme menu location slug (assign: required; unassign: required)', 'bricks-mcp' ),
 					),
-					'confirm'  => array(
-						'type'        => 'boolean',
-						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
-					),
 				),
 				'required'   => array( 'action' ),
 			),

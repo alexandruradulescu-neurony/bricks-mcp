@@ -93,11 +93,13 @@ final class Plugin {
 	 * @return void
 	 */
 	private function init(): void {
-		// Migrate stored settings (strip orphaned keys from previous versions).
-		$this->migrate_settings();
-
-		// One-time migration: move plugin-shipped patterns to database tier.
-		MCP\Services\DesignPatternService::migrate_plugin_patterns();
+		// Run migrations only when plugin version changes.
+		$stored_version = get_option( 'bricks_mcp_db_version', '' );
+		if ( $stored_version !== BRICKS_MCP_VERSION ) {
+			$this->migrate_settings();
+			MCP\Services\DesignPatternService::migrate_plugin_patterns();
+			update_option( 'bricks_mcp_db_version', BRICKS_MCP_VERSION, true );
+		}
 
 		// Initialize internationalization.
 		$this->init_i18n();

@@ -27,7 +27,7 @@ final class FilterSchemaCatalog {
 	 * @return array<string, mixed>
 	 */
 	public static function data(): array {
-		return array(
+		$data = array(
 			'filters_enabled'     => null,
 			'enable_filters_hint' => 'Query filters must be enabled in Bricks > Settings > Performance > "Enable query sort / filter / live search". Without this, filter elements render as empty.',
 			'filter_elements'     => array(
@@ -142,5 +142,7 @@ final class FilterSchemaCatalog {
 				'5. Rebuild index'               => 'Bricks automatically indexes on post save. May need manual reindex after enabling.',
 			),
 		);
+
+		return apply_filters( 'bricks_mcp_filter_schema', $data );
 	}
 }

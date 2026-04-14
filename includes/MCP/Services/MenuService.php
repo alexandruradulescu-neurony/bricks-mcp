@@ -324,7 +324,7 @@ class MenuService {
 				'post_type'      => $post_types,
 				'post_status'    => array( 'publish', 'draft', 'private' ),
 				'posts_per_page' => -1,
-				'meta_key'       => '_bricks_page_content_2', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'       => BricksCore::META_KEY, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_compare'   => 'EXISTS',
 				'fields'         => 'ids',
 			)
@@ -337,7 +337,7 @@ class MenuService {
 		$matches = array();
 
 		foreach ( $posts as $post_id ) {
-			$content = get_post_meta( $post_id, '_bricks_page_content_2', true );
+			$content = get_post_meta( $post_id, BricksCore::META_KEY, true );
 
 			if ( ! is_array( $content ) ) {
 				continue;

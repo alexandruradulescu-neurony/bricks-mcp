@@ -297,9 +297,9 @@ final class Settings {
 			<div class="bwm-footer">
 				<span><?php echo esc_html( 'Bricks WP MCP v' . BRICKS_MCP_VERSION ); ?></span>
 				<span class="bwm-footer__sep">&middot;</span>
-				<a href="https://github.com/alexandruradulescu-neurony/bricks-mcp" target="_blank" rel="noopener"><?php esc_html_e( 'GitHub', 'bricks-mcp' ); ?></a>
+				<a href="<?php echo esc_url( 'https://github.com/' . BRICKS_MCP_GITHUB_REPO ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'GitHub', 'bricks-mcp' ); ?></a>
 				<span class="bwm-footer__sep">&middot;</span>
-				<a href="https://github.com/alexandruradulescu-neurony/bricks-mcp/issues" target="_blank" rel="noopener"><?php esc_html_e( 'Report an Issue', 'bricks-mcp' ); ?></a>
+				<a href="<?php echo esc_url( 'https://github.com/' . BRICKS_MCP_GITHUB_REPO . '/issues' ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Report an Issue', 'bricks-mcp' ); ?></a>
 			</div>
 		</div>
 		<?php
@@ -875,46 +875,6 @@ final class Settings {
 		}
 
 		return $configs;
-	}
-
-	/**
-	 * Shows current version, update availability, and a "Check Now" button.
-	 *
-	 * @return void
-	 */
-	private function render_version_card(): void {
-		$current_version = BRICKS_MCP_VERSION;
-		$update_checker  = \BricksMCP\Plugin::get_instance()->get_update_checker();
-		$update_data     = null !== $update_checker ? $update_checker->get_cached_update_data() : [];
-		$has_update      = ! empty( $update_data['version'] )
-			&& version_compare( $current_version, $update_data['version'], '<' );
-
-		?>
-		<div class="bricks-mcp-version-card<?php echo $has_update ? ' bricks-mcp-version-card--has-update' : ''; ?>">
-			<h2><?php esc_html_e( 'Version', 'bricks-mcp' ); ?></h2>
-			<p id="bricks-mcp-version-text">
-				<strong>v<?php echo esc_html( $current_version ); ?></strong>
-				<?php if ( $has_update ) : ?>
-					&mdash;
-					<span class="bricks-mcp-update-available">
-						v<?php echo esc_html( $update_data['version'] ); ?>
-						<?php esc_html_e( 'available', 'bricks-mcp' ); ?>
-					</span>
-					<a href="<?php echo esc_url( admin_url( 'update-core.php' ) ); ?>">
-						<?php esc_html_e( 'Update', 'bricks-mcp' ); ?>
-					</a>
-				<?php else : ?>
-					&mdash; <span class="bricks-mcp-up-to-date"><?php esc_html_e( 'up to date', 'bricks-mcp' ); ?></span>
-				<?php endif; ?>
-			</p>
-			<p>
-				<button type="button" id="bricks-mcp-check-update-btn" class="button">
-					<?php esc_html_e( 'Check Now', 'bricks-mcp' ); ?>
-				</button>
-				<span id="bricks-mcp-check-update-spinner" class="spinner"></span>
-			</p>
-		</div>
-		<?php
 	}
 
 	/**
@@ -1610,7 +1570,7 @@ final class Settings {
 			$notes = [];
 		}
 
-		$id   = 'note_' . substr( md5( (string) time() . wp_generate_password( 4, false ) ), 0, 8 );
+		$id   = 'note_' . bin2hex( random_bytes( 4 ) );
 		$note = [
 			'id'         => $id,
 			'text'       => $text,

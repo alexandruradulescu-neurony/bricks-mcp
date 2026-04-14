@@ -165,7 +165,7 @@ final class OnboardingService {
 
         // Invalidate when any Bricks content post is saved.
         add_action( 'save_post', function ( int $post_id ): void {
-            $meta = get_post_meta( $post_id, '_bricks_page_content_2', true );
+            $meta = get_post_meta( $post_id, BricksCore::META_KEY, true );
             if ( ! empty( $meta ) ) {
                 self::bump_cache_version();
             }
@@ -203,7 +203,7 @@ final class OnboardingService {
      *
      * @return array<string, mixed> Site context data.
      */
-    private function get_site_context(): array {
+    public function get_site_context(): array {
         self::register_cache_invalidation();
 
         if ( null !== self::$site_context_cache ) {
@@ -216,17 +216,18 @@ final class OnboardingService {
             return $cached;
         }
 
-        $pages = get_posts( [
-            'post_type'      => 'any',
-            'posts_per_page' => -1,
-            'fields'         => 'ids',
-        ] );
+        // Count posts across all public post types efficiently.
+        $page_count = 0;
+        $public_types = get_post_types( [ 'public' => true ] );
+        foreach ( $public_types as $pt ) {
+            $counts = wp_count_posts( $pt );
+            if ( isset( $counts->publish ) ) {
+                $page_count += (int) $counts->publish;
+            }
+        }
 
-        $templates = get_posts( [
-            'post_type'      => 'bricks_template',
-            'posts_per_page' => -1,
-            'fields'         => 'ids',
-        ] );
+        $template_counts = wp_count_posts( 'bricks_template' );
+        $template_count  = isset( $template_counts->publish ) ? (int) $template_counts->publish : 0;
 
         $global_classes   = get_option( 'bricks_global_classes', [] );
         $global_variables = get_option( 'bricks_global_variables', [] );
@@ -236,9 +237,9 @@ final class OnboardingService {
             'url'                   => home_url(),
             'has_bricks'            => defined( 'BRICKS_VERSION' ),
             'has_woocommerce'       => class_exists( 'WooCommerce' ),
-            'page_count'            => count( $pages ),
+            'page_count'            => $page_count,
             'element_count'         => $this->count_total_elements(),
-            'template_count'        => count( $templates ),
+            'template_count'        => $template_count,
             'global_class_count'    => is_array( $global_classes ) ? count( $global_classes ) : 0,
             'global_variable_count' => is_array( $global_variables ) ? count( $global_variables ) : 0,
         ];
@@ -255,15 +256,23 @@ final class OnboardingService {
      * @return int Total element count.
      */
     private function count_total_elements(): int {
-        $pages = get_posts( [
-            'post_type'      => 'page',
-            'posts_per_page' => -1,
-            'fields'         => 'ids',
-        ] );
+        global $wpdb;
+
+        // Single DB query to sum element counts across all pages with Bricks content.
+        // Each meta value is a serialized array; we count top-level entries via LENGTH heuristic.
+        $results = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT pm.meta_value FROM {$wpdb->postmeta} pm
+                 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+                 WHERE pm.meta_key = %s
+                 AND p.post_status = 'publish'",
+                BricksCore::META_KEY
+            )
+        );
 
         $total = 0;
-        foreach ( $pages as $page_id ) {
-            $elements = get_post_meta( $page_id, '_bricks_page_content_2', true );
+        foreach ( $results as $row ) {
+            $elements = maybe_unserialize( $row->meta_value );
             if ( is_array( $elements ) ) {
                 $total += count( $elements );
             }
@@ -294,7 +303,7 @@ final class OnboardingService {
      *
      * @return array<string, array> Workflow guide.
      */
-    private function get_workflow_guide(): array {
+    public function get_workflow_guide(): array {
         return [
             'direct_operations' => [
                 'description' => __( 'Quick edits to existing content (text, moves, swaps)', 'bricks-mcp' ),
@@ -333,7 +342,7 @@ final class OnboardingService {
      *
      * @return array<int, array> Quick-start examples.
      */
-    private function get_quick_start_examples(): array {
+    public function get_quick_start_examples(): array {
         return [
             [
                 'title'       => __( 'Get Site Info', 'bricks-mcp' ),
@@ -407,7 +416,14 @@ final class OnboardingService {
      * @param array<string, mixed> $briefs Pre-loaded briefs option.
      * @return string Design brief summary.
      */
-    private function get_design_brief_summary( array $briefs ): string {
+    public function get_design_brief_summary( array $briefs = [] ): string {
+        if ( empty( $briefs ) ) {
+            $briefs = get_option( BricksCore::OPTION_BRIEFS, [] );
+            if ( ! is_array( $briefs ) ) {
+                $briefs = [];
+            }
+        }
+
         $design_brief = $briefs['design_brief'] ?? '';
 
         if ( empty( $design_brief ) ) {
@@ -420,10 +436,17 @@ final class OnboardingService {
     /**
      * Get business brief summary.
      *
-     * @param array<string, mixed> $briefs Pre-loaded briefs option.
+     * @param array<string, mixed> $briefs Pre-loaded briefs option. Loaded from DB if empty.
      * @return string Business brief summary.
      */
-    private function get_business_brief_summary( array $briefs ): string {
+    public function get_business_brief_summary( array $briefs = [] ): string {
+        if ( empty( $briefs ) ) {
+            $briefs = get_option( BricksCore::OPTION_BRIEFS, [] );
+            if ( ! is_array( $briefs ) ) {
+                $briefs = [];
+            }
+        }
+
         $business_brief = $briefs['business_brief'] ?? '';
 
         if ( empty( $business_brief ) ) {

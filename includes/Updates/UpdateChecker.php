@@ -31,6 +31,15 @@ final class UpdateChecker {
 	 *
 	 * @var string
 	 */
+	/**
+	 * Get the GitHub Releases API URL.
+	 */
+	private static function github_api_url(): string {
+		$repo = defined( 'BRICKS_MCP_GITHUB_REPO' ) ? BRICKS_MCP_GITHUB_REPO : 'alexandruradulescu-neurony/bricks-mcp';
+		return 'https://api.github.com/repos/' . $repo . '/releases/latest';
+	}
+
+	/** @deprecated Use github_api_url() instead. */
 	private const GITHUB_API_URL = 'https://api.github.com/repos/alexandruradulescu-neurony/bricks-mcp/releases/latest';
 
 	/**
@@ -126,7 +135,7 @@ final class UpdateChecker {
 			'url'          => $remote['url'] ?? '',
 			'package'      => $remote['package'] ?? '',
 			'tested'       => $remote['tested'] ?? '',
-			'requires_php' => $remote['requires_php'] ?? '8.2',
+			'requires_php' => $remote['requires_php'] ?? BRICKS_MCP_MIN_PHP_VERSION,
 			'autoupdate'   => true,
 		];
 	}
@@ -147,14 +156,19 @@ final class UpdateChecker {
 			return $cached;
 		}
 
+		$headers = [
+			'Accept'     => 'application/vnd.github+json',
+			'User-Agent' => 'Bricks-MCP-UpdateChecker/' . BRICKS_MCP_VERSION,
+		];
+		if ( defined( 'BRICKS_MCP_GITHUB_TOKEN' ) && BRICKS_MCP_GITHUB_TOKEN ) {
+			$headers['Authorization'] = 'Bearer ' . BRICKS_MCP_GITHUB_TOKEN;
+		}
+
 		$response = wp_remote_get(
-			self::GITHUB_API_URL,
+			self::github_api_url(),
 			[
 				'timeout' => 10,
-				'headers' => [
-					'Accept'     => 'application/vnd.github+json',
-					'User-Agent' => 'Bricks-MCP-UpdateChecker/1.0',
-				],
+				'headers' => $headers,
 			]
 		);
 
@@ -190,7 +204,7 @@ final class UpdateChecker {
 							[
 								'timeout' => 10,
 								'headers' => [
-									'User-Agent' => 'Bricks-MCP-UpdateChecker/1.0',
+									'User-Agent' => 'Bricks-MCP-UpdateChecker/' . BRICKS_MCP_VERSION,
 								],
 							]
 						);

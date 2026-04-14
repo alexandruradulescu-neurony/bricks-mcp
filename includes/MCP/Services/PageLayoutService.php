@@ -216,7 +216,7 @@ final class PageLayoutService {
 		$lower = strtolower( $intent );
 
 		// Check each intent keyword (longest match first for specificity).
-		$candidates = self::INTENT_MAP;
+		$candidates = apply_filters( 'bricks_mcp_intent_map', self::INTENT_MAP );
 		uksort( $candidates, static fn( string $a, string $b ) => strlen( $b ) <=> strlen( $a ) );
 
 		foreach ( $candidates as $keyword => $sequence ) {

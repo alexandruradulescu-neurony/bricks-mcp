@@ -804,13 +804,8 @@ class PageOperationsService {
 		// Check inline background color.
 		$bg_color = $element['settings']['_background']['color']['raw'] ?? '';
 
-		if ( $bg_color ) {
-			if ( str_contains( $bg_color, '900' ) || str_contains( $bg_color, '800' ) || str_contains( $bg_color, '950' ) || str_contains( $bg_color, 'dark' ) ) {
-				return 'dark';
-			}
-			if ( str_contains( $bg_color, 'overlay' ) ) {
-				return 'dark';
-			}
+		if ( $bg_color && self::is_dark_color_hint( $bg_color ) ) {
+			return 'dark';
 		}
 
 		// Check classes for background hints.
@@ -823,17 +818,40 @@ class PageOperationsService {
 
 			$class_bg = $class['settings']['_background']['color']['raw'] ?? '';
 
-			if ( $class_bg && ( str_contains( $class_bg, '900' ) || str_contains( $class_bg, '800' ) || str_contains( $class_bg, '950' ) || str_contains( $class_bg, 'dark' ) ) ) {
+			if ( $class_bg && self::is_dark_color_hint( $class_bg ) ) {
 				return 'dark';
 			}
 
-			// Check class name for hints.
-			if ( str_contains( $class['name'], 'article-section' ) || str_contains( $class['name'], 'cta-section' ) ) {
+			// Check class name for dark-related patterns.
+			if ( preg_match( '/(?:^|-)dark(?:-|$)/', $class['name'] ?? '' ) ) {
 				return 'dark';
 			}
 		}
 
 		return 'light';
+	}
+
+	/**
+	 * Check if a CSS color value hints at a dark background.
+	 *
+	 * Matches variable names ending in dark segments (e.g., --base-dark, --ultra-dark)
+	 * and high-weight color tokens (800, 900, 950). Avoids false positives from
+	 * names like --sidebar-dark-border by requiring segment boundaries.
+	 */
+	private static function is_dark_color_hint( string $value ): bool {
+		// Match var names with dark as a standalone segment: --base-dark, --ultra-dark, --dark.
+		if ( preg_match( '/(?:^|-)(?:ultra-)?dark(?:-|$|\))/', $value ) ) {
+			return true;
+		}
+		// Match high-weight color tokens (800, 900, 950) as standalone segments.
+		if ( preg_match( '/(?:^|-)(?:800|900|950)(?:-|$|\))/', $value ) ) {
+			return true;
+		}
+		// Overlay is always dark.
+		if ( str_contains( $value, 'overlay' ) ) {
+			return true;
+		}
+		return false;
 	}
 
 	/**

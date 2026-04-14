@@ -64,10 +64,9 @@ final class OnboardingHandler {
      * @return array<string, array> Workflow guide.
      */
     private function get_workflows(): array {
-        $all = $this->onboarding_service->generate_onboarding( get_current_user_id() );
         return [
             'section' => 'workflows',
-            'data' => $all['workflow_guide'],
+            'data' => $this->onboarding_service->get_workflow_guide(),
         ];
     }
 
@@ -77,10 +76,9 @@ final class OnboardingHandler {
      * @return array<int, array> Quick-start examples.
      */
     private function get_examples(): array {
-        $all = $this->onboarding_service->generate_onboarding( get_current_user_id() );
         return [
             'section' => 'examples',
-            'data' => $all['quick_start_examples'],
+            'data' => $this->onboarding_service->get_quick_start_examples(),
         ];
     }
 
@@ -90,10 +88,9 @@ final class OnboardingHandler {
      * @return array<string, mixed> Site context.
      */
     private function get_site_context(): array {
-        $all = $this->onboarding_service->generate_onboarding( get_current_user_id() );
         return [
             'section' => 'site_context',
-            'data' => $all['site_context'],
+            'data' => $this->onboarding_service->get_site_context(),
         ];
     }
 
@@ -103,12 +100,11 @@ final class OnboardingHandler {
      * @return array<string, string> Design and business briefs.
      */
     private function get_briefs(): array {
-        $all = $this->onboarding_service->generate_onboarding( get_current_user_id() );
         return [
             'section' => 'briefs',
             'data' => [
-                'design_brief' => $all['design_brief_summary'],
-                'business_brief' => $all['business_brief_summary'],
+                'design_brief' => $this->onboarding_service->get_design_brief_summary(),
+                'business_brief' => $this->onboarding_service->get_business_brief_summary(),
             ],
         ];
     }

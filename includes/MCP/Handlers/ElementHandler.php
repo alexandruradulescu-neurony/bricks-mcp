@@ -856,10 +856,6 @@ final class ElementHandler {
 						'type'        => 'string',
 						'description' => __( 'Filter by text content containing string (find: optional, case-insensitive)', 'bricks-mcp' ),
 					),
-					'confirm'          => array(
-						'type'        => 'boolean',
-						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
-					),
 					'bypass_design_gate' => array(
 						'type'        => 'boolean',
 						'description' => __( 'Set true to bypass the design build gate. By default, bulk_add with >8 elements will be rejected and redirected to build_from_schema.', 'bricks-mcp' ),

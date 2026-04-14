@@ -462,7 +462,7 @@ class SchemaGenerator {
 			],
 			'video'      => [
 				'videoType'                       => 'youtube',
-				'youTubeId'                       => 'dQw4w9WgXcQ',
+				'youTubeId'                       => 'VIDEO_ID_HERE',
 				'youtubeControls'                 => true,
 				'youtubeDisableFullscreenButton'  => false,
 				'youtubeHideAnnotationsByDefault' => false,

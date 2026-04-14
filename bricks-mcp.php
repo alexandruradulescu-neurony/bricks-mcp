@@ -42,6 +42,9 @@ define( 'BRICKS_MCP_MIN_WP_VERSION', '6.4' );
 // Minimum Bricks Builder version.
 define( 'BRICKS_MCP_MIN_BRICKS_VERSION', '1.6' );
 
+// GitHub repository slug (org/repo).
+define( 'BRICKS_MCP_GITHUB_REPO', 'alexandruradulescu-neurony/bricks-mcp' );
+
 // Plugin directory path.
 define( 'BRICKS_MCP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 

@@ -27,7 +27,7 @@ final class ConditionSchemaCatalog {
 	 * @return array<string, mixed>
 	 */
 	public static function data(): array {
-		return array(
+		$data = array(
 			'description'    => 'Element visibility conditions — show/hide elements based on runtime context. Stored in element settings[\'_conditions\']. Distinct from template conditions (which control page targeting).',
 			'data_structure' => array(
 				'description' => '_conditions is an array of condition SETS. Outer array = OR logic (any set passing renders element). Inner arrays = AND logic (all conditions in a set must pass).',
@@ -318,5 +318,7 @@ final class ConditionSchemaCatalog {
 				'Conditions are evaluated server-side at render time by Bricks Conditions::check(). The MCP only configures conditions — it does not evaluate them.',
 			),
 		);
+
+		return apply_filters( 'bricks_mcp_condition_schema', $data );
 	}
 }

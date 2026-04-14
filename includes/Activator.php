@@ -59,26 +59,7 @@ final class Activator {
 	private static function run_activation_checks(): void {
 		$results = [];
 
-		// Check 1: REST API not disabled.
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
-		$rest_enabled = apply_filters( 'rest_enabled', true ); // deprecated but still used by some plugins.
-		if ( ! $rest_enabled ) {
-			$results[] = [
-				'id'      => 'rest_enabled',
-				'label'   => __( 'REST API', 'bricks-mcp' ),
-				'status'  => 'fail',
-				'message' => __( 'The REST API is disabled. Bricks MCP requires the WordPress REST API.', 'bricks-mcp' ),
-			];
-		} else {
-			$results[] = [
-				'id'      => 'rest_enabled',
-				'label'   => __( 'REST API', 'bricks-mcp' ),
-				'status'  => 'pass',
-				'message' => __( 'REST API is enabled.', 'bricks-mcp' ),
-			];
-		}
-
-		// Check 2: Application Passwords available.
+		// Check 1: Application Passwords available.
 		if ( function_exists( 'wp_is_application_passwords_available' ) ) {
 			$app_pw_available = wp_is_application_passwords_available();
 			$results[]        = [
@@ -91,7 +72,7 @@ final class Activator {
 			];
 		}
 
-		// Check 3: Bricks Builder active.
+		// Check 2: Bricks Builder active.
 		$bricks_active = class_exists( '\Bricks\Elements' );
 		$results[]     = [
 			'id'      => 'bricks_active',

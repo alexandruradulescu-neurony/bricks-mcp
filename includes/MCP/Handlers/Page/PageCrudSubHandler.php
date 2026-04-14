@@ -149,7 +149,7 @@ final class PageCrudSubHandler {
 
 		// Confirm check.
 		if ( empty( $args['confirm'] ) ) {
-			$raw_elements  = get_post_meta( $post_id, '_bricks_page_content_2', true );
+			$raw_elements  = get_post_meta( $post_id, BricksService::META_KEY, true );
 			$element_count = is_array( $raw_elements ) ? count( $raw_elements ) : 0;
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',

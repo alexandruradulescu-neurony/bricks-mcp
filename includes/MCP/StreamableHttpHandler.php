@@ -83,6 +83,13 @@ final class StreamableHttpHandler {
 	public const MAX_BODY_SIZE = 1048576;
 
 	/**
+	 * Absolute maximum allowed request body size in bytes (10 MB).
+	 *
+	 * @var int
+	 */
+	private const MAX_BODY_HARD_LIMIT = 10 * 1024 * 1024;
+
+	/**
 	 * Router instance.
 	 *
 	 * @var Router
@@ -124,7 +131,7 @@ final class StreamableHttpHandler {
 
 		// Check body size before parsing.
 		$body     = $request->get_body();
-		$max_body = min( (int) apply_filters( 'bricks_mcp_max_body_size', self::MAX_BODY_SIZE ), 10 * 1024 * 1024 );
+		$max_body = min( (int) apply_filters( 'bricks_mcp_max_body_size', self::MAX_BODY_SIZE ), self::MAX_BODY_HARD_LIMIT );
 		if ( strlen( $body ) > $max_body ) {
 			status_header( 413 );
 			header( 'Content-Type: application/json' );
@@ -151,7 +158,7 @@ final class StreamableHttpHandler {
 			if ( count( $decoded ) > self::MAX_BATCH_SIZE ) {
 				$this->emit_sse_headers();
 				$this->emit_sse_event(
-					$this->jsonrpc_error( null, self::INVALID_REQUEST, 'Batch too large (max 20 messages)' )
+					$this->jsonrpc_error( null, self::INVALID_REQUEST, sprintf( 'Batch too large (max %d messages)', self::MAX_BATCH_SIZE ) )
 				);
 				exit;
 			}
@@ -217,7 +224,8 @@ final class StreamableHttpHandler {
 				ob_flush();
 			}
 			flush();
-			sleep( 25 );
+			$keepalive = (int) apply_filters( 'bricks_mcp_keepalive_interval', 25 );
+			sleep( max( 5, min( $keepalive, 55 ) ) );
 			if ( connection_aborted() ) {
 				break;
 			}
@@ -510,7 +518,7 @@ final class StreamableHttpHandler {
 			'post_status'    => 'publish',
 			'posts_per_page' => 100,
 			'meta_query'     => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				[ 'key' => '_bricks_page_content_2', 'compare' => 'EXISTS' ],
+				[ 'key' => BricksService::META_KEY, 'compare' => 'EXISTS' ],
 			],
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
@@ -535,7 +543,7 @@ final class StreamableHttpHandler {
 		// Detect recurring patterns.
 		$patterns = [];
 		foreach ( $pages_query->posts as $pid ) {
-			$raw = get_post_meta( (int) $pid, '_bricks_page_content_2', true );
+			$raw = get_post_meta( (int) $pid, BricksService::META_KEY, true );
 			if ( ! is_array( $raw ) ) {
 				continue;
 			}

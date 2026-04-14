@@ -254,7 +254,7 @@ final class ElementSettingsGenerator {
 		$child_is_dark = $is_dark_context;
 		if ( is_array( $settings ) ) {
 			$bg_raw = $settings['_background']['color']['raw'] ?? '';
-			if ( str_contains( $bg_raw, 'dark' ) || str_contains( $bg_raw, 'ultra-dark' ) ) {
+			if ( $bg_raw && preg_match( '/(?:^|-)(?:ultra-)?dark(?:-|$|\))/', $bg_raw ) ) {
 				$child_is_dark = true;
 			}
 		}

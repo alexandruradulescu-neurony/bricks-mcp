@@ -50,6 +50,13 @@ final class RateLimiter {
 	private const WINDOW = 60;
 
 	/**
+	 * Default requests per minute when not configured.
+	 *
+	 * @var int
+	 */
+	private const DEFAULT_RPM = 120;
+
+	/**
 	 * Check whether the given identifier is within the rate limit.
 	 *
 	 * Selects between the persistent object cache path and the transient
@@ -60,7 +67,7 @@ final class RateLimiter {
 	 */
 	public static function check( string $identifier ): true|\WP_Error {
 		$settings = get_option( 'bricks_mcp_settings', [] );
-		$limit    = (int) ( $settings['rate_limit_rpm'] ?? 120 );
+		$limit    = (int) ( $settings['rate_limit_rpm'] ?? self::DEFAULT_RPM );
 
 		if ( wp_using_ext_object_cache() ) {
 			$count = self::increment_via_object_cache( $identifier );
@@ -69,8 +76,9 @@ final class RateLimiter {
 		}
 
 		if ( false === $count || (int) $count > $limit ) {
-			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- suppress "headers already sent" in test environments.
-			@header( 'Retry-After: ' . self::WINDOW );
+			if ( ! headers_sent() ) {
+				header( 'Retry-After: ' . self::WINDOW );
+			}
 
 			return new \WP_Error(
 				'bricks_mcp_rate_limit',

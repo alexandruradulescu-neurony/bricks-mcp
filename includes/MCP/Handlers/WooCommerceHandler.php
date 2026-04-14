@@ -714,9 +714,9 @@ final class WooCommerceHandler {
 									array(
 										'name'     => 'container',
 										'settings' => array(
-											'_padding'    => array( 'top' => 'var(--space-m)', 'right' => 'var(--space-m)', 'bottom' => 'var(--space-m)', 'left' => 'var(--space-m)' ),
-											'_background' => array( 'color' => array( 'raw' => 'var(--base-ultra-light)' ) ),
-											'_border'     => array( 'radius' => array( 'top' => 'var(--radius)', 'right' => 'var(--radius)', 'bottom' => 'var(--radius)', 'left' => 'var(--radius)' ) ),
+											'_padding'    => array( 'top' => 'var(--space-m, 16px)', 'right' => 'var(--space-m, 16px)', 'bottom' => 'var(--space-m, 16px)', 'left' => 'var(--space-m, 16px)' ),
+											'_background' => array( 'color' => array( 'raw' => 'var(--base-ultra-light, #f4f4f5)' ) ),
+											'_border'     => array( 'radius' => array( 'top' => 'var(--radius, 8px)', 'right' => 'var(--radius, 8px)', 'bottom' => 'var(--radius, 8px)', 'left' => 'var(--radius, 8px)' ) ),
 											'_direction'  => 'column',
 											'_alignItems' => 'center',
 										),
@@ -762,7 +762,7 @@ final class WooCommerceHandler {
 						'settings' => array(
 							'_direction'  => 'column',
 							'_alignItems' => 'center',
-							'_padding'    => array( 'top' => 'var(--space-3xl)', 'bottom' => 'var(--space-3xl)' ),
+							'_padding'    => array( 'top' => 'var(--space-3xl, 96px)', 'bottom' => 'var(--space-3xl, 96px)' ),
 						),
 						'children' => array(
 		array(
@@ -777,7 +777,7 @@ final class WooCommerceHandler {
 								'name'     => 'button',
 								'settings' => array(
 									'text' => 'Return to Shop',
-									'link' => array( 'type' => 'external', 'url' => '/shop' ),
+									'link' => array( 'type' => 'external', 'url' => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : '/shop' ),
 								),
 							),
 						),
@@ -841,9 +841,9 @@ final class WooCommerceHandler {
 									array(
 										'name'     => 'container',
 										'settings' => array(
-											'_padding'    => array( 'top' => 'var(--space-m)', 'right' => 'var(--space-m)', 'bottom' => 'var(--space-m)', 'left' => 'var(--space-m)' ),
-											'_background' => array( 'color' => array( 'raw' => 'var(--base-ultra-light)' ) ),
-											'_border'     => array( 'radius' => array( 'top' => 'var(--radius)', 'right' => 'var(--radius)', 'bottom' => 'var(--radius)', 'left' => 'var(--radius)' ) ),
+											'_padding'    => array( 'top' => 'var(--space-m, 16px)', 'right' => 'var(--space-m, 16px)', 'bottom' => 'var(--space-m, 16px)', 'left' => 'var(--space-m, 16px)' ),
+											'_background' => array( 'color' => array( 'raw' => 'var(--base-ultra-light, #f4f4f5)' ) ),
+											'_border'     => array( 'radius' => array( 'top' => 'var(--radius, 8px)', 'right' => 'var(--radius, 8px)', 'bottom' => 'var(--radius, 8px)', 'left' => 'var(--radius, 8px)' ) ),
 											'_direction'  => 'column',
 											'_alignItems' => 'center',
 										),
@@ -985,7 +985,7 @@ final class WooCommerceHandler {
 								'name'     => 'text-basic',
 								'settings' => array(
 									'text'        => 'Your order has been placed successfully.',
-									'_typography' => array( 'color' => array( 'raw' => 'var(--base-dark)' ) ),
+									'_typography' => array( 'color' => array( 'raw' => 'var(--base-dark, #27272a)' ) ),
 								),
 							),
 							array(
@@ -999,48 +999,48 @@ final class WooCommerceHandler {
 										'name'     => 'woocommerce-checkout-thankyou',
 										'settings' => array(
 											// Message section — success notice styling.
-											'messageMargin'     => array( 'top' => 'var(--space-l)', 'right' => '0', 'bottom' => 'var(--space-l)', 'left' => '0' ),
-											'messagePadding'    => array( 'top' => 'var(--space-m)', 'right' => 'var(--space-m)', 'bottom' => 'var(--space-m)', 'left' => 'var(--space-m)' ),
+											'messageMargin'     => array( 'top' => 'var(--space-l, 24px)', 'right' => '0', 'bottom' => 'var(--space-l, 24px)', 'left' => '0' ),
+											'messagePadding'    => array( 'top' => 'var(--space-m, 16px)', 'right' => 'var(--space-m, 16px)', 'bottom' => 'var(--space-m, 16px)', 'left' => 'var(--space-m, 16px)' ),
 											'messageBackground' => array( 'raw' => 'var(--success-light, #DFF0D8)' ),
 											'messageBorder'     => array(
-												'radius' => array( 'top' => 'var(--radius)', 'right' => 'var(--radius)', 'bottom' => 'var(--radius)', 'left' => 'var(--radius)' ),
+												'radius' => array( 'top' => 'var(--radius, 8px)', 'right' => 'var(--radius, 8px)', 'bottom' => 'var(--radius, 8px)', 'left' => 'var(--radius, 8px)' ),
 											),
 											'messageTypography' => array( 'color' => array( 'raw' => 'var(--success-dark, #3C763D)' ) ),
 
 											// Order details section.
-											'detailsMargin'  => array( 'top' => 'var(--space-l)', 'right' => '0', 'bottom' => 'var(--space-l)', 'left' => '0' ),
-											'detailsPadding' => array( 'top' => 'var(--space-s)', 'right' => 'var(--space-m)', 'bottom' => 'var(--space-s)', 'left' => 'var(--space-m)' ),
+											'detailsMargin'  => array( 'top' => 'var(--space-l, 24px)', 'right' => '0', 'bottom' => 'var(--space-l, 24px)', 'left' => '0' ),
+											'detailsPadding' => array( 'top' => 'var(--space-s, 12px)', 'right' => 'var(--space-m, 16px)', 'bottom' => 'var(--space-s, 12px)', 'left' => 'var(--space-m, 16px)' ),
 											'detailsBorder'  => array(
-												'radius' => array( 'top' => 'var(--radius)', 'right' => 'var(--radius)', 'bottom' => 'var(--radius)', 'left' => 'var(--radius)' ),
+												'radius' => array( 'top' => 'var(--radius, 8px)', 'right' => 'var(--radius, 8px)', 'bottom' => 'var(--radius, 8px)', 'left' => 'var(--radius, 8px)' ),
 											),
 
 											// Action buttons in order details table (Bricks 2.3).
-											'detailsActionButtonGap'        => 'var(--space-xs)',
-											'detailsActionButtonPadding'    => array( 'top' => 'var(--space-xs)', 'right' => 'var(--space-s)', 'bottom' => 'var(--space-xs)', 'left' => 'var(--space-s)' ),
-											'detailsActionButtonBackground' => array( 'raw' => 'var(--base-ultra-dark)' ),
+											'detailsActionButtonGap'        => 'var(--space-xs, 8px)',
+											'detailsActionButtonPadding'    => array( 'top' => 'var(--space-xs, 8px)', 'right' => 'var(--space-s, 12px)', 'bottom' => 'var(--space-xs, 8px)', 'left' => 'var(--space-s, 12px)' ),
+											'detailsActionButtonBackground' => array( 'raw' => 'var(--base-ultra-dark, #18181b)' ),
 											'detailsActionButtonBorder'     => array(
-												'radius' => array( 'top' => 'var(--radius)', 'right' => 'var(--radius)', 'bottom' => 'var(--radius)', 'left' => 'var(--radius)' ),
+												'radius' => array( 'top' => 'var(--radius, 8px)', 'right' => 'var(--radius, 8px)', 'bottom' => 'var(--radius, 8px)', 'left' => 'var(--radius, 8px)' ),
 											),
-											'detailsActionButtonTypography' => array( 'color' => array( 'raw' => 'var(--white)' ) ),
+											'detailsActionButtonTypography' => array( 'color' => array( 'raw' => 'var(--white, #ffffff)' ) ),
 
 											// Order again button (Bricks 2.3).
-											'orderAgainButtonPadding'    => array( 'top' => 'var(--space-s)', 'right' => 'var(--space-m)', 'bottom' => 'var(--space-s)', 'left' => 'var(--space-m)' ),
-											'orderAgainButtonBackground' => array( 'raw' => 'var(--base-ultra-dark)' ),
+											'orderAgainButtonPadding'    => array( 'top' => 'var(--space-s, 12px)', 'right' => 'var(--space-m, 16px)', 'bottom' => 'var(--space-s, 12px)', 'left' => 'var(--space-m, 16px)' ),
+											'orderAgainButtonBackground' => array( 'raw' => 'var(--base-ultra-dark, #18181b)' ),
 											'orderAgainButtonBorder'     => array(
-												'radius' => array( 'top' => 'var(--radius)', 'right' => 'var(--radius)', 'bottom' => 'var(--radius)', 'left' => 'var(--radius)' ),
+												'radius' => array( 'top' => 'var(--radius, 8px)', 'right' => 'var(--radius, 8px)', 'bottom' => 'var(--radius, 8px)', 'left' => 'var(--radius, 8px)' ),
 											),
-											'orderAgainButtonTypography' => array( 'color' => array( 'raw' => 'var(--white)' ) ),
+											'orderAgainButtonTypography' => array( 'color' => array( 'raw' => 'var(--white, #ffffff)' ) ),
 
 											// Failed order buttons (Bricks 2.3).
-											'failedOrderButtonPadding'    => array( 'top' => 'var(--space-s)', 'right' => 'var(--space-m)', 'bottom' => 'var(--space-s)', 'left' => 'var(--space-m)' ),
+											'failedOrderButtonPadding'    => array( 'top' => 'var(--space-s, 12px)', 'right' => 'var(--space-m, 16px)', 'bottom' => 'var(--space-s, 12px)', 'left' => 'var(--space-m, 16px)' ),
 											'failedOrderButtonBackground' => array( 'raw' => 'var(--danger, #D9534F)' ),
 											'failedOrderButtonBorder'     => array(
-												'radius' => array( 'top' => 'var(--radius)', 'right' => 'var(--radius)', 'bottom' => 'var(--radius)', 'left' => 'var(--radius)' ),
+												'radius' => array( 'top' => 'var(--radius, 8px)', 'right' => 'var(--radius, 8px)', 'bottom' => 'var(--radius, 8px)', 'left' => 'var(--radius, 8px)' ),
 											),
-											'failedOrderButtonTypography' => array( 'color' => array( 'raw' => 'var(--white)' ) ),
+											'failedOrderButtonTypography' => array( 'color' => array( 'raw' => 'var(--white, #ffffff)' ) ),
 
 											// Billing address section.
-											'addressMargin' => array( 'top' => 'var(--space-l)', 'right' => '0', 'bottom' => 'var(--space-l)', 'left' => '0' ),
+											'addressMargin' => array( 'top' => 'var(--space-l, 24px)', 'right' => '0', 'bottom' => 'var(--space-l, 24px)', 'left' => '0' ),
 										),
 									),
 								),

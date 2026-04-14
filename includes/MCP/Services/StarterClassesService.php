@@ -36,9 +36,9 @@ final class StarterClassesService {
 				'category' => 'layout',
 				'settings' => [
 					'_display'                             => 'grid',
-					'_gridTemplateColumns'                 => 'var(--grid-2)',
-					'_gridGap'                             => 'var(--grid-gap)',
-					'_gridTemplateColumns:tablet_portrait' => 'var(--grid-1)',
+					'_gridTemplateColumns'                 => 'var(--grid-2, repeat(2, 1fr))',
+					'_gridGap'                             => 'var(--grid-gap, 24px)',
+					'_gridTemplateColumns:tablet_portrait' => 'var(--grid-1, 1fr)',
 				],
 			],
 			[
@@ -46,10 +46,10 @@ final class StarterClassesService {
 				'category' => 'layout',
 				'settings' => [
 					'_display'                             => 'grid',
-					'_gridTemplateColumns'                 => 'var(--grid-3)',
-					'_gridGap'                             => 'var(--grid-gap)',
-					'_gridTemplateColumns:tablet_portrait' => 'var(--grid-2)',
-					'_gridTemplateColumns:mobile'          => 'var(--grid-1)',
+					'_gridTemplateColumns'                 => 'var(--grid-3, repeat(3, 1fr))',
+					'_gridGap'                             => 'var(--grid-gap, 24px)',
+					'_gridTemplateColumns:tablet_portrait' => 'var(--grid-2, repeat(2, 1fr))',
+					'_gridTemplateColumns:mobile'          => 'var(--grid-1, 1fr)',
 				],
 			],
 			[
@@ -57,10 +57,10 @@ final class StarterClassesService {
 				'category' => 'layout',
 				'settings' => [
 					'_display'                             => 'grid',
-					'_gridTemplateColumns'                 => 'var(--grid-4)',
-					'_gridGap'                             => 'var(--grid-gap)',
-					'_gridTemplateColumns:tablet_portrait' => 'var(--grid-2)',
-					'_gridTemplateColumns:mobile'          => 'var(--grid-1)',
+					'_gridTemplateColumns'                 => 'var(--grid-4, repeat(4, 1fr))',
+					'_gridGap'                             => 'var(--grid-gap, 24px)',
+					'_gridTemplateColumns:tablet_portrait' => 'var(--grid-2, repeat(2, 1fr))',
+					'_gridTemplateColumns:mobile'          => 'var(--grid-1, 1fr)',
 				],
 			],
 
@@ -70,8 +70,8 @@ final class StarterClassesService {
 				'category' => 'typography',
 				'settings' => [
 					'_typography' => [
-						'color'           => [ 'raw' => 'var(--primary)' ],
-						'font-size'       => 'var(--text-s)',
+						'color'           => [ 'raw' => 'var(--primary, #3f4fdf)' ],
+						'font-size'       => 'var(--text-s, 0.875rem)',
 						'font-weight'     => '600',
 						'letter-spacing'  => '0.15em',
 						'text-transform'  => 'uppercase',
@@ -83,8 +83,8 @@ final class StarterClassesService {
 				'category' => 'typography',
 				'settings' => [
 					'_typography' => [
-						'color'       => [ 'raw' => 'var(--primary)' ],
-						'font-size'   => 'var(--text-s)',
+						'color'       => [ 'raw' => 'var(--primary, #3f4fdf)' ],
+						'font-size'   => 'var(--text-s, 0.875rem)',
 						'font-weight' => '500',
 					],
 				],
@@ -94,7 +94,7 @@ final class StarterClassesService {
 				'category' => 'typography',
 				'settings' => [
 					'_typography' => [
-						'font-size'   => 'var(--text-l)',
+						'font-size'   => 'var(--text-l, 1.125rem)',
 						'font-weight' => '300',
 					],
 				],
@@ -105,9 +105,9 @@ final class StarterClassesService {
 				'name'     => 'btn-primary',
 				'category' => 'buttons',
 				'settings' => [
-					'_background' => [ 'color' => [ 'raw' => 'var(--primary)' ] ],
+					'_background' => [ 'color' => [ 'raw' => 'var(--primary, #3f4fdf)' ] ],
 					'_typography' => [
-						'color'       => [ 'raw' => 'var(--white)' ],
+						'color'       => [ 'raw' => 'var(--white, #ffffff)' ],
 						'font-weight' => '600',
 					],
 					'_padding' => [
@@ -115,8 +115,8 @@ final class StarterClassesService {
 					],
 					'_border' => [
 						'radius' => [
-							'top' => 'var(--radius-btn)', 'right' => 'var(--radius-btn)',
-							'bottom' => 'var(--radius-btn)', 'left' => 'var(--radius-btn)',
+							'top' => 'var(--radius-btn, 6px)', 'right' => 'var(--radius-btn, 6px)',
+							'bottom' => 'var(--radius-btn, 6px)', 'left' => 'var(--radius-btn, 6px)',
 						],
 					],
 				],
@@ -127,14 +127,14 @@ final class StarterClassesService {
 				'settings' => [
 					'_border' => [
 						'radius' => [
-							'top' => 'var(--radius-btn)', 'right' => 'var(--radius-btn)',
-							'bottom' => 'var(--radius-btn)', 'left' => 'var(--radius-btn)',
+							'top' => 'var(--radius-btn, 6px)', 'right' => 'var(--radius-btn, 6px)',
+							'bottom' => 'var(--radius-btn, 6px)', 'left' => 'var(--radius-btn, 6px)',
 						],
 						'width' => [ 'top' => '1px', 'right' => '1px', 'bottom' => '1px', 'left' => '1px' ],
-						'color' => [ 'raw' => 'var(--base-light)' ],
+						'color' => [ 'raw' => 'var(--base-light, #e4e4e7)' ],
 					],
 					'_typography' => [
-						'color'       => [ 'raw' => 'var(--base-ultra-dark)' ],
+						'color'       => [ 'raw' => 'var(--base-ultra-dark, #18181b)' ],
 						'font-weight' => '600',
 					],
 					'_padding' => [
@@ -148,18 +148,18 @@ final class StarterClassesService {
 				'name'     => 'card',
 				'category' => 'cards',
 				'settings' => [
-					'_background' => [ 'color' => [ 'raw' => 'var(--white)' ] ],
+					'_background' => [ 'color' => [ 'raw' => 'var(--white, #ffffff)' ] ],
 					'_padding' => [
-						'top' => 'var(--space-l)', 'right' => 'var(--space-l)',
-						'bottom' => 'var(--space-l)', 'left' => 'var(--space-l)',
+						'top' => 'var(--space-l, 24px)', 'right' => 'var(--space-l, 24px)',
+						'bottom' => 'var(--space-l, 24px)', 'left' => 'var(--space-l, 24px)',
 					],
 					'_border' => [
 						'radius' => [
-							'top' => 'var(--radius)', 'right' => 'var(--radius)',
-							'bottom' => 'var(--radius)', 'left' => 'var(--radius)',
+							'top' => 'var(--radius, 8px)', 'right' => 'var(--radius, 8px)',
+							'bottom' => 'var(--radius, 8px)', 'left' => 'var(--radius, 8px)',
 						],
 						'width' => [ 'top' => '1px', 'right' => '1px', 'bottom' => '1px', 'left' => '1px' ],
-						'color' => [ 'raw' => 'var(--base-light)' ],
+						'color' => [ 'raw' => 'var(--base-light, #e4e4e7)' ],
 					],
 				],
 			],
@@ -167,15 +167,15 @@ final class StarterClassesService {
 				'name'     => 'card-dark',
 				'category' => 'cards',
 				'settings' => [
-					'_background' => [ 'color' => [ 'raw' => 'var(--base-ultra-dark)' ] ],
+					'_background' => [ 'color' => [ 'raw' => 'var(--base-ultra-dark, #18181b)' ] ],
 					'_padding' => [
-						'top' => 'var(--space-l)', 'right' => 'var(--space-l)',
-						'bottom' => 'var(--space-l)', 'left' => 'var(--space-l)',
+						'top' => 'var(--space-l, 24px)', 'right' => 'var(--space-l, 24px)',
+						'bottom' => 'var(--space-l, 24px)', 'left' => 'var(--space-l, 24px)',
 					],
 					'_border' => [
 						'radius' => [
-							'top' => 'var(--radius)', 'right' => 'var(--radius)',
-							'bottom' => 'var(--radius)', 'left' => 'var(--radius)',
+							'top' => 'var(--radius, 8px)', 'right' => 'var(--radius, 8px)',
+							'bottom' => 'var(--radius, 8px)', 'left' => 'var(--radius, 8px)',
 						],
 					],
 				],
@@ -184,15 +184,15 @@ final class StarterClassesService {
 				'name'     => 'card-glass',
 				'category' => 'cards',
 				'settings' => [
-					'_background' => [ 'color' => [ 'raw' => 'var(--white-trans-10)' ] ],
+					'_background' => [ 'color' => [ 'raw' => 'var(--white-trans-10, rgba(255,255,255,0.1))' ] ],
 					'_padding' => [
-						'top' => 'var(--space-m)', 'right' => 'var(--space-m)',
-						'bottom' => 'var(--space-m)', 'left' => 'var(--space-m)',
+						'top' => 'var(--space-m, 16px)', 'right' => 'var(--space-m, 16px)',
+						'bottom' => 'var(--space-m, 16px)', 'left' => 'var(--space-m, 16px)',
 					],
 					'_border' => [
 						'radius' => [
-							'top' => 'var(--radius)', 'right' => 'var(--radius)',
-							'bottom' => 'var(--radius)', 'left' => 'var(--radius)',
+							'top' => 'var(--radius, 8px)', 'right' => 'var(--radius, 8px)',
+							'bottom' => 'var(--radius, 8px)', 'left' => 'var(--radius, 8px)',
 						],
 					],
 				],
@@ -205,20 +205,20 @@ final class StarterClassesService {
 				'settings' => [
 					'_direction'  => 'row',
 					'_alignItems' => 'center',
-					'_columnGap'  => 'var(--space-s)',
+					'_columnGap'  => 'var(--space-s, 12px)',
 					'_padding'    => [
-						'top' => 'var(--space-xs)', 'right' => 'var(--space-m)',
-						'bottom' => 'var(--space-xs)', 'left' => 'var(--space-m)',
+						'top' => 'var(--space-xs, 8px)', 'right' => 'var(--space-m, 16px)',
+						'bottom' => 'var(--space-xs, 8px)', 'left' => 'var(--space-m, 16px)',
 					],
 					'_border' => [
 						'radius' => [
-							'top' => 'var(--radius-pill)', 'right' => 'var(--radius-pill)',
-							'bottom' => 'var(--radius-pill)', 'left' => 'var(--radius-pill)',
+							'top' => 'var(--radius-pill, 999px)', 'right' => 'var(--radius-pill, 999px)',
+							'bottom' => 'var(--radius-pill, 999px)', 'left' => 'var(--radius-pill, 999px)',
 						],
 						'width' => [ 'top' => '1px', 'right' => '1px', 'bottom' => '1px', 'left' => '1px' ],
-						'color' => [ 'raw' => 'var(--base-light)' ],
+						'color' => [ 'raw' => 'var(--base-light, #e4e4e7)' ],
 					],
-					'_background' => [ 'color' => [ 'raw' => 'var(--base-ultra-light)' ] ],
+					'_background' => [ 'color' => [ 'raw' => 'var(--base-ultra-light, #f4f4f5)' ] ],
 				],
 			],
 			[
@@ -227,8 +227,8 @@ final class StarterClassesService {
 				'settings' => [
 					'_direction' => 'row',
 					'_flexWrap'  => 'wrap',
-					'_rowGap'    => 'var(--space-m)',
-					'_columnGap' => 'var(--space-m)',
+					'_rowGap'    => 'var(--space-m, 16px)',
+					'_columnGap' => 'var(--space-m, 16px)',
 				],
 			],
 		];

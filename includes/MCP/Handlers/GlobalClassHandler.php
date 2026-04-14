@@ -696,10 +696,6 @@ final class GlobalClassHandler {
 						'type'        => 'object',
 						'description' => __( 'Global classes JSON data to import (import_json: required). Array of class objects with "name" key, or {classes: [...], categories: [...]}.', 'bricks-mcp' ),
 					),
-					'confirm'        => array(
-						'type'        => 'boolean',
-						'description' => __( 'Deprecated. Destructive actions now require token-based confirmation via the confirm_destructive_action tool.', 'bricks-mcp' ),
-					),
 				),
 				'required'   => array( 'action' ),
 			),

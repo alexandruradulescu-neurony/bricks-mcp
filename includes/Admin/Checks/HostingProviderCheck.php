@@ -148,7 +148,9 @@ class HostingProviderCheck implements DiagnosticCheck {
 	 * @return array<string, mixed>
 	 */
 	public function run(): array {
-		foreach ( self::KNOWN_PROVIDERS as $provider_key => $provider ) {
+		$providers = apply_filters( 'bricks_mcp_known_hosting_providers', self::KNOWN_PROVIDERS );
+
+		foreach ( $providers as $provider_key => $provider ) {
 			if ( ! $this->detect_provider( $provider_key, $provider ) ) {
 				continue;
 			}

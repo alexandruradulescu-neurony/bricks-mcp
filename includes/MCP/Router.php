@@ -54,6 +54,13 @@ final class Router {
 	 *
 	 * @var array<string, array<string, string>>
 	 */
+	/**
+	 * Element count threshold for the design build gate.
+	 *
+	 * @var int
+	 */
+	private const DESIGN_GATE_THRESHOLD = 8;
+
 	private const GATED_OPERATIONS = [
 		'page'      => [
 			'update_content'   => 'direct',
@@ -526,7 +533,7 @@ final class Router {
 
 		// Check 2: Total element count exceeds threshold.
 		$count = $this->count_elements_recursive( $elements );
-		if ( $count > 8 ) {
+		if ( $count > self::DESIGN_GATE_THRESHOLD ) {
 			return Response::error(
 				'bricks_mcp_use_build_from_schema',
 				sprintf(
@@ -612,14 +619,6 @@ final class Router {
 	 * @return string|null The required capability, or null if no capability is required.
 	 */
 	private function get_tool_capability( string $tool_name ): ?string {
-		// No public tools remaining after get_builder_guide removal.
-		// Kept as extension point for future public tools.
-		$public_tools = array();
-
-		if ( in_array( $tool_name, $public_tools, true ) ) {
-			return null;
-		}
-
 		$read_tools = array(
 			'get_site_info',
 			'metabox',
@@ -753,7 +752,7 @@ final class Router {
 			'posts_per_page' => 50,
 			'meta_query'     => [
 				[
-					'key'     => '_bricks_page_content_2',
+					'key'     => BricksService::META_KEY,
 					'compare' => 'EXISTS',
 				],
 			],
@@ -763,7 +762,7 @@ final class Router {
 
 		$pages_summary = [];
 		foreach ( $pages_query->posts as $pid ) {
-			$elements = get_post_meta( (int) $pid, '_bricks_page_content_2', true );
+			$elements = get_post_meta( (int) $pid, BricksService::META_KEY, true );
 			$elements = is_array( $elements ) ? $elements : [];
 			$section_count = 0;
 			$section_types = [];
@@ -871,7 +870,8 @@ final class Router {
 			$flags['site_context'] = true;
 		}
 
-		set_transient( $transient_key, $flags, 1800 );
+		$ttl = (int) apply_filters( 'bricks_mcp_prerequisite_ttl', 7200 );
+		set_transient( $transient_key, $flags, $ttl );
 	}
 
 	/**

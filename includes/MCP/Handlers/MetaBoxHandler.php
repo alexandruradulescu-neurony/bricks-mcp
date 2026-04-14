@@ -68,11 +68,23 @@ final class MetaBoxHandler {
 		}
 
 		$registry = rwmb_get_registry( 'meta_box' );
+		if ( null === $registry ) {
+			return array( 'field_groups' => array(), 'message' => 'Meta Box registry returned null.' );
+		}
 		$all      = $registry->all();
 		$groups   = array();
 
 		foreach ( $all as $meta_box ) {
 			$fields = array();
+			if ( empty( $meta_box->fields ) || ! is_array( $meta_box->fields ) ) {
+				$groups[] = array(
+					'id'         => $meta_box->id,
+					'title'      => $meta_box->title,
+					'post_types' => $meta_box->post_types ?? array(),
+					'fields'     => array(),
+				);
+				continue;
+			}
 			foreach ( $meta_box->fields as $field ) {
 				$field_info = array(
 					'id'   => $field['id'] ?? '',
@@ -119,12 +131,18 @@ final class MetaBoxHandler {
 		}
 
 		$registry = rwmb_get_registry( 'meta_box' );
+		if ( null === $registry ) {
+			return array( 'fields' => array() );
+		}
 		$all      = $registry->all();
 		$fields   = array();
 
 		foreach ( $all as $meta_box ) {
 			$box_post_types = $meta_box->post_types ?? array();
 			if ( ! in_array( $post_type, $box_post_types, true ) ) {
+				continue;
+			}
+			if ( empty( $meta_box->fields ) || ! is_array( $meta_box->fields ) ) {
 				continue;
 			}
 			foreach ( $meta_box->fields as $field ) {
@@ -198,6 +216,9 @@ final class MetaBoxHandler {
 		}
 
 		$registry = rwmb_get_registry( 'meta_box' );
+		if ( null === $registry ) {
+			return array( 'tags' => array(), 'message' => 'Meta Box registry returned null.' );
+		}
 		$all      = $registry->all();
 		$tags     = array();
 
@@ -207,6 +228,9 @@ final class MetaBoxHandler {
 				if ( ! in_array( $post_type, $box_post_types, true ) ) {
 					continue;
 				}
+			}
+			if ( empty( $meta_box->fields ) || ! is_array( $meta_box->fields ) ) {
+				continue;
 			}
 			foreach ( $meta_box->fields as $field ) {
 				$fid  = $field['id'] ?? '';
