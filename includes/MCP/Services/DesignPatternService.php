@@ -2,8 +2,8 @@
 /**
  * Design pattern service.
  *
- * 3-tier pattern library: plugin-shipped → user files → database.
- * Provides CRUD, semantic search, export/import for reusable section compositions.
+ * Database-backed pattern library for reusable section compositions.
+ * Provides CRUD, export/import.
  *
  * @package BricksMCP
  * @license GPL-2.0-or-later
@@ -19,42 +19,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class DesignPatternService {
 
-	/** @var array<int, array>|null Cached merged patterns from all 3 tiers. */
+	/** @var array<int, array>|null Cached patterns. */
 	private static ?array $all_patterns = null;
 
 	/** WP option key for database-tier patterns. */
 	private const DB_OPTION = 'bricks_mcp_custom_patterns';
 
-	/** WP option key for hidden pattern IDs. */
-	private const HIDDEN_OPTION = 'bricks_mcp_hidden_patterns';
-
-	/** WP option key for the category registry. */
-	private const CATEGORY_OPTION = 'bricks_mcp_pattern_categories';
-
 	/** WP option key for the one-time migration flag. */
 	private const MIGRATION_FLAG = 'bricks_mcp_patterns_migrated';
 
-	/** Default categories seeded on first migration. */
-	private const DEFAULT_CATEGORIES = [
-		[ 'id' => 'hero',         'name' => 'Hero',         'description' => 'Full-height homepage hero sections' ],
-		[ 'id' => 'features',     'name' => 'Features',     'description' => 'Feature grids and benefit sections' ],
-		[ 'id' => 'cta',          'name' => 'CTA',          'description' => 'Call-to-action sections' ],
-		[ 'id' => 'pricing',      'name' => 'Pricing',      'description' => 'Pricing tables and plan comparisons' ],
-		[ 'id' => 'testimonials', 'name' => 'Testimonials', 'description' => 'Social proof and review sections' ],
-		[ 'id' => 'splits',       'name' => 'Splits',       'description' => 'Split-layout content sections' ],
-		[ 'id' => 'content',      'name' => 'Content',      'description' => 'General content sections (FAQ, stats, team)' ],
-		[ 'id' => 'generic',      'name' => 'Generic',      'description' => 'Catch-all section type' ],
-	];
-
 	// ──────────────────────────────────────────────
-	// Loading — database-first with file fallback
+	// Loading — database only
 	// ──────────────────────────────────────────────
 
 	/**
-	 * Load all patterns from plugin files, user files, and database.
-	 *
-	 * Merge order: database overrides user-file overrides plugin-shipped (same ID).
-	 * Hidden patterns (soft-deleted plugin/user-file) are filtered out.
+	 * Load all patterns from database.
 	 *
 	 * @return array<int, array>
 	 */
@@ -63,24 +42,9 @@ final class DesignPatternService {
 			return self::$all_patterns;
 		}
 
-		$by_id = [];
-
-		// Tier 1: Plugin-shipped patterns — only loaded as fallback before migration.
-		// After migration runs, all plugin patterns live in the database tier.
-		if ( ! get_option( self::MIGRATION_FLAG, false ) ) {
-			$plugin_dir = dirname( __DIR__, 3 ) . '/data/design-patterns/';
-			self::load_from_directory( $plugin_dir, 'plugin', $by_id );
-		}
-
-		// Tier 2: User custom patterns from uploads directory (always active).
-		if ( function_exists( 'wp_upload_dir' ) ) {
-			$upload = wp_upload_dir();
-			$user_dir = $upload['basedir'] . '/bricks-mcp/design-patterns/';
-			self::load_from_directory( $user_dir, 'user_file', $by_id );
-		}
-
-		// Tier 3: Database patterns (highest priority).
 		$db_patterns = get_option( self::DB_OPTION, [] );
+		$by_id       = [];
+
 		if ( is_array( $db_patterns ) ) {
 			foreach ( $db_patterns as $pattern ) {
 				if ( ! is_array( $pattern ) || empty( $pattern['id'] ) ) {
@@ -91,60 +55,8 @@ final class DesignPatternService {
 			}
 		}
 
-		// Filter out hidden patterns.
-		$hidden = get_option( self::HIDDEN_OPTION, [] );
-		if ( is_array( $hidden ) ) {
-			foreach ( $hidden as $hid ) {
-				unset( $by_id[ $hid ] );
-			}
-		}
-
 		self::$all_patterns = array_values( $by_id );
 		return self::$all_patterns;
-	}
-
-	/**
-	 * Load patterns from a directory of category JSON files.
-	 *
-	 * @param string $dir    Directory path.
-	 * @param string $source Source label ('plugin' or 'user_file').
-	 * @param array  &$by_id Accumulator keyed by pattern ID (later tiers override earlier).
-	 */
-	private static function load_from_directory( string $dir, string $source, array &$by_id ): void {
-		if ( ! is_dir( $dir ) ) {
-			return;
-		}
-
-		$files = glob( $dir . '*.json' );
-		if ( ! is_array( $files ) ) {
-			return;
-		}
-
-		foreach ( $files as $file ) {
-			if ( basename( $file ) === '_schema.json' ) {
-				continue;
-			}
-
-			$json = file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-			if ( ! is_string( $json ) ) {
-				continue;
-			}
-
-			$data = json_decode( $json, true );
-			if ( ! is_array( $data ) || empty( $data['patterns'] ) ) {
-				continue;
-			}
-
-			$category = $data['category'] ?? 'generic';
-			foreach ( $data['patterns'] as $pattern ) {
-				if ( empty( $pattern['id'] ) ) {
-					continue;
-				}
-				$pattern['category'] = $category;
-				$pattern['source']   = $source;
-				$by_id[ $pattern['id'] ] = $pattern;
-			}
-		}
 	}
 
 	/**
@@ -239,20 +151,20 @@ final class DesignPatternService {
 				'ai_usage_hints'  => $pattern['ai_usage_hints'] ?? [],
 				'tags'            => $pattern['tags'] ?? [],
 				'layout'          => $pattern['layout'] ?? '',
-				'source'          => $pattern['source'] ?? 'plugin',
+				'source'          => $pattern['source'] ?? 'database',
 			];
 		}
 		return $summaries;
 	}
 
 	// ──────────────────────────────────────────────
-	// Write operations (database tier only)
+	// Write operations
 	// ──────────────────────────────────────────────
 
 	/**
-	 * Create a new pattern in the database tier.
+	 * Create a new pattern in the database.
 	 *
-	 * If a pattern with the same ID already exists in any tier, auto-suffixes (-v2, -v3, ...).
+	 * If a pattern with the same ID already exists, auto-suffixes (-v2, -v3, ...).
 	 *
 	 * @param array $pattern Pattern data. Required: id, name, category, tags.
 	 * @return array|\WP_Error The saved pattern (with final ID) or error.
@@ -272,16 +184,6 @@ final class DesignPatternService {
 		// Validate ID format.
 		if ( ! preg_match( '/^[a-z0-9-]+$/', $pattern['id'] ) ) {
 			return new \WP_Error( 'invalid_id', 'Pattern ID must be lowercase alphanumeric with hyphens only.' );
-		}
-
-		// Validate category against registry.
-		$categories = self::get_categories();
-		$cat_ids    = array_column( $categories, 'id' );
-		if ( ! in_array( $pattern['category'], $cat_ids, true ) ) {
-			return new \WP_Error(
-				'invalid_category',
-				sprintf( 'Category "%s" is not registered. Available: %s. Create it first via category management.', $pattern['category'], implode( ', ', $cat_ids ) )
-			);
 		}
 
 		// Auto-suffix on conflict.
@@ -311,9 +213,7 @@ final class DesignPatternService {
 	}
 
 	/**
-	 * Update an existing database-tier pattern.
-	 *
-	 * Plugin and user-file patterns are read-only.
+	 * Update an existing pattern.
 	 *
 	 * @param string $id      Pattern ID.
 	 * @param array  $updates Fields to merge into the pattern.
@@ -323,26 +223,6 @@ final class DesignPatternService {
 		$existing = self::get( $id );
 		if ( null === $existing ) {
 			return new \WP_Error( 'not_found', sprintf( 'Pattern "%s" not found.', $id ) );
-		}
-
-		$source = $existing['source'] ?? 'plugin';
-		if ( 'database' !== $source ) {
-			return new \WP_Error(
-				'read_only_source',
-				sprintf( 'Pattern "%s" is from a read-only source (%s). Only database patterns can be updated via MCP.', $id, $source )
-			);
-		}
-
-		// Validate category if being changed.
-		if ( isset( $updates['category'] ) ) {
-			$categories = self::get_categories();
-			$cat_ids    = array_column( $categories, 'id' );
-			if ( ! in_array( $updates['category'], $cat_ids, true ) ) {
-				return new \WP_Error(
-					'invalid_category',
-					sprintf( 'Category "%s" is not registered. Available: %s.', $updates['category'], implode( ', ', $cat_ids ) )
-				);
-			}
 		}
 
 		// Merge updates, preserving id and source.
@@ -374,9 +254,7 @@ final class DesignPatternService {
 	}
 
 	/**
-	 * Delete a pattern.
-	 *
-	 * Database patterns are removed. Plugin/user-file patterns are hidden.
+	 * Delete a pattern from the database.
 	 *
 	 * @param string $id Pattern ID.
 	 * @return array|\WP_Error Result with action taken.
@@ -387,138 +265,16 @@ final class DesignPatternService {
 			return new \WP_Error( 'not_found', sprintf( 'Pattern "%s" not found.', $id ) );
 		}
 
-		$source = $existing['source'] ?? 'plugin';
-
-		if ( 'database' === $source ) {
-			// Remove from DB.
-			$db_patterns = get_option( self::DB_OPTION, [] );
-			$db_patterns = is_array( $db_patterns ) ? $db_patterns : [];
-			$db_patterns = array_values( array_filter(
-				$db_patterns,
-				fn( $p ) => ( $p['id'] ?? '' ) !== $id
-			) );
-			update_option( self::DB_OPTION, $db_patterns, false );
-			self::clear_cache();
-
-			return [ 'id' => $id, 'action' => 'deleted', 'source' => 'database' ];
-		}
-
-		// Plugin or user-file: hide instead of delete.
-		$hidden   = get_option( self::HIDDEN_OPTION, [] );
-		$hidden   = is_array( $hidden ) ? $hidden : [];
-		$hidden[] = $id;
-		$hidden   = array_unique( $hidden );
-		update_option( self::HIDDEN_OPTION, $hidden, false );
+		$db_patterns = get_option( self::DB_OPTION, [] );
+		$db_patterns = is_array( $db_patterns ) ? $db_patterns : [];
+		$db_patterns = array_values( array_filter(
+			$db_patterns,
+			fn( $p ) => ( $p['id'] ?? '' ) !== $id
+		) );
+		update_option( self::DB_OPTION, $db_patterns, false );
 		self::clear_cache();
 
-		return [
-			'id'     => $id,
-			'action' => 'hidden',
-			'source' => $source,
-			'note'   => 'Plugin/user-file patterns cannot be deleted, only hidden from all lists. Remove from hidden list via design_pattern:update if needed.',
-		];
-	}
-
-	// ──────────────────────────────────────────────
-	// Semantic search
-	// ──────────────────────────────────────────────
-
-	/**
-	 * Search patterns by natural language query.
-	 *
-	 * Heuristic scoring mirrors global_class:semantic_search.
-	 *
-	 * @param string $query Natural language query.
-	 * @param int    $limit Max results (default 10).
-	 * @return array{query: string, matches: array}
-	 */
-	public static function semantic_search( string $query, int $limit = 10 ): array {
-		$raw_words = preg_split( '/[\s,]+/', strtolower( $query ) );
-		$stopwords = [ 'a', 'an', 'the', 'with', 'and', 'or', 'for', 'in', 'on', 'to', 'of', 'is', 'has', 'that', 'this' ];
-		$keywords  = array_values( array_filter(
-			is_array( $raw_words ) ? $raw_words : [],
-			fn( $w ) => strlen( $w ) > 1 && ! in_array( $w, $stopwords, true )
-		) );
-
-		if ( empty( $keywords ) ) {
-			return [ 'query' => $query, 'matches' => [] ];
-		}
-
-		$all    = self::load_all();
-		$scored = [];
-
-		foreach ( $all as $pattern ) {
-			$score   = 0;
-			$reasons = [];
-			$name_lc = strtolower( $pattern['name'] ?? '' );
-			$id_lc   = strtolower( $pattern['id'] ?? '' );
-			$desc_lc = strtolower( $pattern['ai_description'] ?? $pattern['description'] ?? '' );
-
-			foreach ( $keywords as $kw ) {
-				// Name contains keyword (10 pts).
-				if ( str_contains( $name_lc, $kw ) ) {
-					$score    += 10;
-					$reasons[] = "name contains '{$kw}'";
-				}
-
-				// ID word-part stem match (5 pts).
-				$id_parts = explode( '-', $id_lc );
-				foreach ( $id_parts as $part ) {
-					if ( strlen( $part ) > 2 && ( str_starts_with( $part, $kw ) || str_starts_with( $kw, $part ) ) ) {
-						$score    += 5;
-						$reasons[] = "id part '{$part}' matches '{$kw}'";
-						break;
-					}
-				}
-
-				// ai_description contains keyword (6 pts).
-				if ( '' !== $desc_lc && str_contains( $desc_lc, $kw ) ) {
-					$score    += 6;
-					$reasons[] = "description contains '{$kw}'";
-				}
-
-				// Tags match (4 pts).
-				foreach ( $pattern['tags'] ?? [] as $tag ) {
-					if ( strtolower( $tag ) === $kw ) {
-						$score    += 4;
-						$reasons[] = "tags match '{$kw}'";
-						break;
-					}
-				}
-
-				// Category match (3 pts).
-				if ( strtolower( $pattern['category'] ?? '' ) === $kw ) {
-					$score    += 3;
-					$reasons[] = "category matches '{$kw}'";
-				}
-
-				// Layout or background match (2 pts).
-				if ( strtolower( $pattern['layout'] ?? '' ) === $kw || strtolower( $pattern['background'] ?? '' ) === $kw ) {
-					$score    += 2;
-					$reasons[] = "layout/background matches '{$kw}'";
-				}
-			}
-
-			if ( $score > 0 ) {
-				$scored[] = [
-					'id'              => $pattern['id'] ?? '',
-					'name'            => $pattern['name'] ?? '',
-					'score'           => $score,
-					'match_reasons'   => array_unique( $reasons ),
-					'category'        => $pattern['category'] ?? '',
-					'layout'          => $pattern['layout'] ?? '',
-					'source'          => $pattern['source'] ?? 'plugin',
-					'ai_description'  => $pattern['ai_description'] ?? null,
-				];
-			}
-		}
-
-		usort( $scored, fn( $a, $b ) => $b['score'] <=> $a['score'] );
-
-		return [
-			'query'   => $query,
-			'matches' => array_slice( $scored, 0, $limit ),
-		];
+		return [ 'id' => $id, 'action' => 'deleted', 'source' => 'database' ];
 	}
 
 	// ──────────────────────────────────────────────
@@ -528,7 +284,7 @@ final class DesignPatternService {
 	/**
 	 * Export patterns as a portable JSON array.
 	 *
-	 * @param array<string> $ids Pattern IDs to export. Empty = all DB patterns.
+	 * @param array<string> $ids Pattern IDs to export. Empty = all patterns.
 	 * @return array<int, array> Portable pattern objects (source stripped).
 	 */
 	public static function export( array $ids = [] ): array {
@@ -538,10 +294,6 @@ final class DesignPatternService {
 		foreach ( $all as $pattern ) {
 			$pid = $pattern['id'] ?? '';
 			if ( ! empty( $ids ) && ! in_array( $pid, $ids, true ) ) {
-				continue;
-			}
-			// If no specific IDs, export DB patterns only.
-			if ( empty( $ids ) && ( $pattern['source'] ?? '' ) !== 'database' ) {
 				continue;
 			}
 			$export = $pattern;
@@ -581,387 +333,17 @@ final class DesignPatternService {
 	}
 
 	// ──────────────────────────────────────────────
-	// Pattern normalization + AI generation helpers
+	// Migration (no-op, already ran)
 	// ──────────────────────────────────────────────
 
 	/**
-	 * Normalize a pattern's class and variable references to match the current site.
+	 * One-time migration stub.
 	 *
-	 * Walks composition/columns/patterns looking for class_role/class_intent
-	 * references and var(--*) CSS variable references. Maps each to the closest
-	 * matching site class/variable via semantic search. Returns the normalized
-	 * pattern + a mapping report.
-	 *
-	 * @param array $pattern Pattern to normalize.
-	 * @return array{pattern: array, class_mappings: array, variable_mappings: array, warnings: string[]}
-	 */
-	public static function normalize_pattern( array $pattern ): array {
-		$class_service = new GlobalClassService( new BricksCore() );
-		$all_classes   = $class_service->get_global_classes();
-		$class_names   = array_column( $all_classes, 'name' );
-
-		// Collect all class references from the pattern.
-		$json_str   = wp_json_encode( $pattern );
-		$class_refs = [];
-		// Match class_role, class_intent values.
-		if ( preg_match_all( '/"class_(?:role|intent)"\s*:\s*"([^"]+)"/', $json_str, $m ) ) {
-			$class_refs = array_unique( $m[1] );
-		}
-
-		// Collect variable references.
-		$var_refs = [];
-		if ( preg_match_all( '/var\(--([a-z0-9-]+)\)/', $json_str, $m ) ) {
-			$var_refs = array_unique( $m[1] );
-		}
-
-		$class_mappings    = [];
-		$variable_mappings = [];
-		$warnings          = [];
-
-		// Map class references.
-		foreach ( $class_refs as $ref ) {
-			// Normalize: underscores → hyphens for comparison.
-			$normalized = str_replace( '_', '-', strtolower( $ref ) );
-
-			if ( in_array( $normalized, $class_names, true ) ) {
-				$class_mappings[] = [ 'from' => $ref, 'to' => $normalized, 'action' => 'exact_match' ];
-				continue;
-			}
-
-			// Semantic search for closest match.
-			$search = $class_service->semantic_search_classes( $normalized, 1 );
-			if ( ! empty( $search['matches'] ) && $search['matches'][0]['score'] >= 10 ) {
-				$match            = $search['matches'][0];
-				$class_mappings[] = [ 'from' => $ref, 'to' => $match['name'], 'score' => $match['score'], 'action' => 'semantic_match' ];
-				// Replace in pattern JSON.
-				$json_str = str_replace( '"' . $ref . '"', '"' . $match['name'] . '"', $json_str );
-			} else {
-				$class_mappings[] = [ 'from' => $ref, 'to' => null, 'action' => 'no_match' ];
-				$warnings[]       = sprintf( 'Class "%s" has no match on this site. Will be created empty on build.', $ref );
-			}
-		}
-
-		// Map variable references.
-		$by_category = SiteVariableResolver::get_variables_by_category();
-		$site_vars   = [];
-		foreach ( $by_category as $vars ) {
-			foreach ( $vars as $v ) {
-				$site_vars[] = $v['name'] ?? '';
-			}
-		}
-		foreach ( $var_refs as $var ) {
-			if ( in_array( $var, $site_vars, true ) ) {
-				$variable_mappings[] = [ 'from' => $var, 'to' => $var, 'action' => 'exists' ];
-			} else {
-				$variable_mappings[] = [ 'from' => $var, 'to' => null, 'action' => 'missing' ];
-				$warnings[]          = sprintf( 'Variable var(--%s) not found on this site. Value may not render.', $var );
-			}
-		}
-
-		// Parse back the (possibly modified) pattern.
-		$normalized_pattern = json_decode( $json_str, true );
-		if ( ! is_array( $normalized_pattern ) ) {
-			$normalized_pattern = $pattern; // Fallback to original if parse fails.
-		}
-
-		return [
-			'pattern'            => $normalized_pattern,
-			'class_mappings'     => $class_mappings,
-			'variable_mappings'  => $variable_mappings,
-			'warnings'           => $warnings,
-		];
-	}
-
-	/**
-	 * Generate a prompt template for AI-assisted pattern creation.
-	 *
-	 * Returns a structured prompt using site context (element capabilities,
-	 * layouts, building rules, existing classes) that an AI client can use
-	 * to generate a pattern composition from a description or image analysis.
-	 *
-	 * @param string $description User's description of what the pattern should look like.
-	 * @param string $category    Target category.
-	 * @return array{prompt: string, context: array, output_schema: array}
-	 */
-	public static function generate_prompt_template( string $description, string $category = '' ): array {
-		// Reuse ProposalService's enums.
-		$layouts       = ProposalService::VALID_LAYOUTS ?? [ 'centered', 'split-60-40', 'split-50-50', 'grid-2', 'grid-3', 'grid-4' ];
-		$section_types = [ 'hero', 'features', 'pricing', 'cta', 'testimonials', 'split', 'generic' ];
-		$backgrounds   = ProposalService::VALID_BACKGROUNDS ?? [ 'dark', 'light' ];
-
-		// Get site classes for context.
-		$class_service = new GlobalClassService( new BricksCore() );
-		$all_classes   = $class_service->get_global_classes();
-		$class_names   = array_column( $all_classes, 'name' );
-
-		$prompt = "Generate a Bricks Builder design pattern JSON from this description:\n\n";
-		$prompt .= "DESCRIPTION: {$description}\n\n";
-		if ( '' !== $category ) {
-			$prompt .= "TARGET CATEGORY: {$category}\n\n";
-		}
-		$prompt .= "AVAILABLE LAYOUTS: " . implode( ', ', $layouts ) . "\n";
-		$prompt .= "BACKGROUNDS: " . implode( ', ', $backgrounds ) . "\n";
-		$prompt .= "SECTION TYPES: " . implode( ', ', $section_types ) . "\n";
-		$prompt .= "SITE CLASSES: " . implode( ', ', array_slice( $class_names, 0, 30 ) ) . "\n\n";
-		$prompt .= "OUTPUT FORMAT: Return a JSON object with these fields:\n";
-		$prompt .= "- id (string, lowercase-hyphenated)\n";
-		$prompt .= "- name (string)\n";
-		$prompt .= "- category (string from section types above)\n";
-		$prompt .= "- tags (array of strings)\n";
-		$prompt .= "- layout (string from available layouts)\n";
-		$prompt .= "- background (string: dark or light)\n";
-		$prompt .= "- ai_description (string, 1-2 sentences of what it looks like)\n";
-		$prompt .= "- ai_usage_hints (array of 2-3 strings)\n";
-		$prompt .= "- composition (array of element objects, each with: role, type, tag?, class_role?, content_example?)\n\n";
-		$prompt .= "Use class_role values from the site classes list when they match. Use standard Bricks element types: section, container, block, heading, text-basic, button, image, icon, form, counter, pie-chart, list, divider.\n";
-
-		return [
-			'prompt'        => $prompt,
-			'context'       => [
-				'layouts'        => $layouts,
-				'section_types'  => $section_types,
-				'backgrounds'    => $backgrounds,
-				'site_classes'   => array_slice( $class_names, 0, 30 ),
-			],
-			'output_schema' => [
-				'id'              => 'string (required)',
-				'name'            => 'string (required)',
-				'category'        => 'string (required)',
-				'tags'            => 'string[] (required)',
-				'layout'          => 'string (required)',
-				'background'      => 'string',
-				'ai_description'  => 'string',
-				'ai_usage_hints'  => 'string[]',
-				'composition'     => 'array of {role, type, tag?, class_role?, content_example?}',
-			],
-		];
-	}
-
-	// ──────────────────────────────────────────────
-	// Category registry
-	// ──────────────────────────────────────────────
-
-	/**
-	 * Get all registered categories.
-	 *
-	 * Returns the registry from wp_options. Falls back to DEFAULT_CATEGORIES
-	 * if the option doesn't exist (pre-migration state).
-	 *
-	 * @return array<int, array{id: string, name: string, description: string}>
-	 */
-	public static function get_categories(): array {
-		$cats = get_option( self::CATEGORY_OPTION, null );
-		if ( is_array( $cats ) && ! empty( $cats ) ) {
-			return $cats;
-		}
-		return self::DEFAULT_CATEGORIES;
-	}
-
-	/**
-	 * Create a new category.
-	 *
-	 * @param array{id?: string, name: string, description?: string} $category Category data.
-	 * @return array|\WP_Error The created category or error.
-	 */
-	public static function create_category( array $category ): array|\WP_Error {
-		if ( empty( $category['name'] ) ) {
-			return new \WP_Error( 'missing_name', 'Category name is required.' );
-		}
-
-		// Auto-generate ID from name if not provided.
-		if ( empty( $category['id'] ) ) {
-			$category['id'] = sanitize_title( $category['name'] );
-		}
-
-		if ( ! preg_match( '/^[a-z0-9-]+$/', $category['id'] ) ) {
-			return new \WP_Error( 'invalid_id', 'Category ID must be lowercase alphanumeric with hyphens only.' );
-		}
-
-		$existing = self::get_categories();
-		$ids      = array_column( $existing, 'id' );
-
-		if ( in_array( $category['id'], $ids, true ) ) {
-			return new \WP_Error( 'duplicate_id', sprintf( 'Category "%s" already exists.', $category['id'] ) );
-		}
-
-		$new_cat = [
-			'id'          => $category['id'],
-			'name'        => sanitize_text_field( $category['name'] ),
-			'description' => sanitize_text_field( $category['description'] ?? '' ),
-		];
-
-		$existing[] = $new_cat;
-		update_option( self::CATEGORY_OPTION, $existing, false );
-
-		return $new_cat;
-	}
-
-	/**
-	 * Update an existing category.
-	 *
-	 * @param string $id      Category ID.
-	 * @param array  $updates Fields to update (name, description).
-	 * @return array|\WP_Error Updated category or error.
-	 */
-	public static function update_category( string $id, array $updates ): array|\WP_Error {
-		$categories = self::get_categories();
-		$found      = false;
-
-		foreach ( $categories as &$cat ) {
-			if ( ( $cat['id'] ?? '' ) === $id ) {
-				if ( isset( $updates['name'] ) ) {
-					$cat['name'] = sanitize_text_field( $updates['name'] );
-				}
-				if ( isset( $updates['description'] ) ) {
-					$cat['description'] = sanitize_text_field( $updates['description'] );
-				}
-				$found = true;
-				$updated_cat = $cat;
-				break;
-			}
-		}
-		unset( $cat );
-
-		if ( ! $found ) {
-			return new \WP_Error( 'not_found', sprintf( 'Category "%s" not found.', $id ) );
-		}
-
-		update_option( self::CATEGORY_OPTION, $categories, false );
-
-		return $updated_cat;
-	}
-
-	/**
-	 * Delete a category from the registry.
-	 *
-	 * Patterns using this category keep their category string but it becomes
-	 * unregistered. The category can be re-created to re-associate them.
-	 *
-	 * @param string $id Category ID.
-	 * @return array|\WP_Error Result with pattern count warning.
-	 */
-	public static function delete_category( string $id ): array|\WP_Error {
-		$categories = self::get_categories();
-		$new_cats   = [];
-		$found      = false;
-
-		foreach ( $categories as $cat ) {
-			if ( ( $cat['id'] ?? '' ) === $id ) {
-				$found = true;
-				continue;
-			}
-			$new_cats[] = $cat;
-		}
-
-		if ( ! $found ) {
-			return new \WP_Error( 'not_found', sprintf( 'Category "%s" not found.', $id ) );
-		}
-
-		// Count patterns using this category.
-		$all            = self::load_all();
-		$affected_count = 0;
-		foreach ( $all as $pattern ) {
-			if ( ( $pattern['category'] ?? '' ) === $id ) {
-				$affected_count++;
-			}
-		}
-
-		update_option( self::CATEGORY_OPTION, $new_cats, false );
-
-		$result = [ 'id' => $id, 'action' => 'deleted' ];
-		if ( $affected_count > 0 ) {
-			$result['warning'] = sprintf(
-				'%d pattern(s) still use category "%s". They will appear as uncategorized until the category is re-created or patterns are re-categorized.',
-				$affected_count,
-				$id
-			);
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Seed the category registry with defaults (idempotent).
-	 *
-	 * Called during migration. Skips if the option already exists.
-	 */
-	public static function seed_categories(): void {
-		if ( false !== get_option( self::CATEGORY_OPTION, false ) ) {
-			return;
-		}
-		update_option( self::CATEGORY_OPTION, self::DEFAULT_CATEGORIES, false );
-	}
-
-	/**
-	 * Run the one-time migration of plugin-shipped patterns to the database.
-	 *
-	 * Reads all patterns from data/design-patterns/*.json, inserts any that
-	 * don't already exist in the DB tier, seeds the category registry, and
-	 * sets the migration flag.
+	 * The migration has already been executed. This method is kept as a no-op
+	 * so existing call sites in Plugin::init() do not break.
 	 */
 	public static function migrate_plugin_patterns(): void {
-		if ( get_option( self::MIGRATION_FLAG, false ) ) {
-			return;
-		}
-
-		// Read plugin-shipped patterns.
-		$plugin_patterns = [];
-		$plugin_dir      = dirname( __DIR__, 3 ) . '/data/design-patterns/';
-		if ( is_dir( $plugin_dir ) ) {
-			$files = glob( $plugin_dir . '*.json' );
-			if ( is_array( $files ) ) {
-				foreach ( $files as $file ) {
-					if ( basename( $file ) === '_schema.json' ) {
-						continue;
-					}
-					$json = file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-					if ( ! is_string( $json ) ) {
-						continue;
-					}
-					$data = json_decode( $json, true );
-					if ( ! is_array( $data ) || empty( $data['patterns'] ) ) {
-						continue;
-					}
-					$category = $data['category'] ?? 'generic';
-					foreach ( $data['patterns'] as $pattern ) {
-						if ( empty( $pattern['id'] ) ) {
-							continue;
-						}
-						$pattern['category'] = $category;
-						$pattern['source']   = 'database';
-						$plugin_patterns[]   = $pattern;
-					}
-				}
-			}
-		}
-
-		// Merge into existing DB patterns (skip duplicates by ID).
-		$db_patterns = get_option( self::DB_OPTION, [] );
-		$db_patterns = is_array( $db_patterns ) ? $db_patterns : [];
-		$existing_ids = [];
-		foreach ( $db_patterns as $p ) {
-			$existing_ids[ $p['id'] ?? '' ] = true;
-		}
-
-		$added = 0;
-		foreach ( $plugin_patterns as $pp ) {
-			if ( ! isset( $existing_ids[ $pp['id'] ] ) ) {
-				$db_patterns[] = $pp;
-				$added++;
-			}
-		}
-
-		if ( $added > 0 ) {
-			update_option( self::DB_OPTION, $db_patterns, false );
-		}
-
-		// Seed categories.
-		self::seed_categories();
-
-		// Set migration flag.
-		update_option( self::MIGRATION_FLAG, defined( 'BRICKS_MCP_VERSION' ) ? BRICKS_MCP_VERSION : '3.10.0', false );
-
-		// Clear cache so new patterns are visible.
-		self::clear_cache();
+		// Migration already ran; flag check prevents re-execution.
+		// Kept as empty method so Plugin.php call site doesn't need to change.
 	}
 }

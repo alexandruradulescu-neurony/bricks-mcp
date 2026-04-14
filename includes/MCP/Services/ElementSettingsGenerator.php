@@ -612,15 +612,8 @@ final class ElementSettingsGenerator {
 			$settings = $this->apply_background( $settings, $node['background'], $design_context );
 		}
 
-		// 14. Validate and auto-fix style shapes (color objects, border formats, etc.).
-		$shape_result = StyleShapeValidator::validate_and_fix( $settings );
-		$settings     = $shape_result['styles'];
-		if ( ! empty( $shape_result['warnings'] ) ) {
-			$settings['_pipeline_warnings'] = array_merge(
-				$settings['_pipeline_warnings'] ?? [],
-				$shape_result['warnings']
-			);
-		}
+		// 14. Normalize style shapes inline (color objects, border formats, etc.).
+		$settings = self::normalize_style_shapes( $settings );
 
 		return $settings;
 	}
@@ -909,5 +902,83 @@ final class ElementSettingsGenerator {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Normalize style shapes so Bricks never receives malformed settings.
+	 *
+	 * Fixes the 7 known shape mismatches that AI-generated style_overrides can
+	 * introduce. Each rule matches what StyleShapeValidator previously corrected
+	 * as a post-hoc band-aid; now the shapes are produced correctly at the source.
+	 *
+	 * @param array<string, mixed> $settings Element settings to normalize.
+	 * @return array<string, mixed> Settings with correct shapes.
+	 */
+	private static function normalize_style_shapes( array $settings ): array {
+		// Rule 1: _border.style — per-side object → string.
+		if ( isset( $settings['_border']['style'] ) && is_array( $settings['_border']['style'] ) ) {
+			$arr   = $settings['_border']['style'];
+			$first = '';
+			if ( is_string( $arr['top'] ?? null ) && '' !== $arr['top'] ) {
+				$first = $arr['top'];
+			} else {
+				foreach ( $arr as $v ) {
+					if ( is_string( $v ) && '' !== $v ) {
+						$first = $v;
+						break;
+					}
+				}
+			}
+			$settings['_border']['style'] = '' !== $first ? $first : 'solid';
+		}
+
+		// Rule 2: _border.color — string → {raw|hex} object.
+		if ( isset( $settings['_border']['color'] ) && is_string( $settings['_border']['color'] ) ) {
+			$settings['_border']['color'] = self::wrap_color_value( $settings['_border']['color'] );
+		}
+
+		// Rule 3: _border.width — flat string → per-side object.
+		if ( isset( $settings['_border']['width'] ) && is_string( $settings['_border']['width'] ) ) {
+			$w = $settings['_border']['width'];
+			$settings['_border']['width'] = [ 'top' => $w, 'right' => $w, 'bottom' => $w, 'left' => $w ];
+		}
+
+		// Rule 4: _cssCustom — array → string.
+		if ( isset( $settings['_cssCustom'] ) && is_array( $settings['_cssCustom'] ) ) {
+			$settings['_cssCustom'] = implode( "\n", array_filter( $settings['_cssCustom'], 'is_string' ) );
+		}
+
+		// Rule 5: _typography.color — string → {raw|hex} object.
+		if ( isset( $settings['_typography']['color'] ) && is_string( $settings['_typography']['color'] ) ) {
+			$settings['_typography']['color'] = self::wrap_color_value( $settings['_typography']['color'] );
+		}
+
+		// Rule 6: _background.color — string → {raw|hex} object.
+		if ( isset( $settings['_background']['color'] ) && is_string( $settings['_background']['color'] ) ) {
+			$settings['_background']['color'] = self::wrap_color_value( $settings['_background']['color'] );
+		}
+
+		// Rule 7: top-level _color — string → {raw|hex} object.
+		if ( isset( $settings['_color'] ) && is_string( $settings['_color'] ) ) {
+			$settings['_color'] = self::wrap_color_value( $settings['_color'] );
+		}
+
+		return $settings;
+	}
+
+	/**
+	 * Wrap a color string in Bricks' expected {raw|hex} object format.
+	 *
+	 * Hex codes (#fff, #a1b2c3) use the 'hex' key; everything else (CSS
+	 * variables, rgb(), named colors) uses the 'raw' key.
+	 *
+	 * @param string $value Raw color string.
+	 * @return array<string, string> Bricks color object.
+	 */
+	private static function wrap_color_value( string $value ): array {
+		if ( preg_match( '/^#[0-9a-fA-F]{3,8}$/', $value ) ) {
+			return [ 'hex' => $value ];
+		}
+		return [ 'raw' => $value ];
 	}
 }

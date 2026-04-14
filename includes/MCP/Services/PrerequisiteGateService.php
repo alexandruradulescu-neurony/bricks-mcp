@@ -23,24 +23,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Uses a WP transient keyed by user ID to track which prerequisite
  * calls have been made. Flags expire after 30 minutes of inactivity.
  *
- * ## Tier inclusion hierarchy
+ * ## Two-flag system
  *
- * Tiers are strict supersets — each tier includes all flags from the tier above:
+ * | Flag           | Set when                                            |
+ * |----------------|-----------------------------------------------------|
+ * | site_context   | BOTH get_site_info AND global_class:list called     |
+ * | design_ready   | propose_design Phase 2 succeeds (has design_plan)   |
  *
- *     direct      ⊂ instructed ⊂ full ⊂ design
- *     site_info   + classes    + variables + (design_discovery, design_plan)
+ * ## Tiers
  *
- * | Tier         | Required flags                                                                | Used by                                          |
- * |--------------|-------------------------------------------------------------------------------|--------------------------------------------------|
- * | `direct`     | site_info                                                                      | element:update, element:bulk_update              |
- * | `instructed` | direct + classes                                                               | element:add, element:bulk_add, page:append, etc. |
- * | `full`       | instructed + variables                                                         | propose_design (Phase 1 + Phase 2)               |
- * | `design`     | full + design_discovery + design_plan                                          | build_from_schema                                |
- *
- * The two design flags are set automatically by ProposalService when the AI
- * completes Phase 1 (discovery) and Phase 2 (proposal) of `propose_design`.
- * This means `build_from_schema` is unreachable without first running both
- * phases, enforcing the 4-step pipeline server-side.
+ * | Tier     | Required flags                   | Used by                                                         |
+ * |----------|----------------------------------|-----------------------------------------------------------------|
+ * | direct   | site_context                     | element:update, element:bulk_update, element:add, page:append…  |
+ * | design   | site_context + design_ready      | build_from_schema                                               |
  */
 final class PrerequisiteGateService {
 
@@ -50,39 +45,36 @@ final class PrerequisiteGateService {
 	private const TTL = 1800;
 
 	/**
+	 * Flag constants.
+	 */
+	public const FLAG_SITE_CONTEXT = 'site_context';
+	public const FLAG_DESIGN_READY = 'design_ready';
+
+	/**
 	 * Valid flag names.
 	 */
-	private const VALID_FLAGS = [ 'site_info', 'classes', 'variables', 'design_discovery', 'design_plan' ];
+	private const VALID_FLAGS = [ self::FLAG_SITE_CONTEXT, self::FLAG_DESIGN_READY ];
 
 	/**
 	 * Tier definitions: which flags are required for each tier.
-	 *
-	 * Defined as strict supersets so the inclusion chain is provable at a glance.
 	 */
-	public const TIER_DIRECT     = [ 'site_info' ];
-	public const TIER_INSTRUCTED = [ ...self::TIER_DIRECT, 'classes' ];
-	public const TIER_FULL       = [ ...self::TIER_INSTRUCTED, 'variables' ];
-	public const TIER_DESIGN     = [ ...self::TIER_FULL, 'design_discovery', 'design_plan' ];
+	public const TIER_DIRECT = [ self::FLAG_SITE_CONTEXT ];
+	public const TIER_DESIGN = [ self::FLAG_SITE_CONTEXT, self::FLAG_DESIGN_READY ];
 
 	/**
 	 * Map tier names to their required flags.
 	 */
 	private const TIER_MAP = [
-		'direct'     => self::TIER_DIRECT,
-		'instructed' => self::TIER_INSTRUCTED,
-		'full'       => self::TIER_FULL,
-		'design'     => self::TIER_DESIGN,
+		'direct' => self::TIER_DIRECT,
+		'design' => self::TIER_DESIGN,
 	];
 
 	/**
 	 * Human-readable tool names for each flag (used in error messages).
 	 */
 	private const FLAG_TOOL_NAMES = [
-		'site_info'        => 'get_site_info',
-		'classes'          => 'global_class:list',
-		'variables'        => 'global_variable:list',
-		'design_discovery' => 'propose_design (Phase 1 — call without design_plan)',
-		'design_plan'      => 'propose_design (Phase 2 — call WITH design_plan)',
+		self::FLAG_SITE_CONTEXT => 'get_site_info + global_class:list',
+		self::FLAG_DESIGN_READY => 'propose_design (Phase 2 — call WITH design_plan)',
 	];
 
 	/**
@@ -97,7 +89,7 @@ final class PrerequisiteGateService {
 	/**
 	 * Set a prerequisite flag.
 	 *
-	 * @param string $flag One of: site_info, classes, variables.
+	 * @param string $flag One of: site_context, design_ready.
 	 */
 	public static function set_flag( string $flag ): void {
 		if ( ! in_array( $flag, self::VALID_FLAGS, true ) ) {
@@ -116,12 +108,12 @@ final class PrerequisiteGateService {
 	/**
 	 * Check if prerequisites are met for a given tier.
 	 *
-	 * @param string $tier One of 'direct', 'instructed', 'full'. Defaults to 'full' for backward compatibility.
+	 * @param string $tier One of 'direct', 'design'.
 	 * @return true|array{missing: string[], satisfied: string[], missing_tools: string[]}
 	 *               True if all required flags set, or array with missing/satisfied details.
 	 */
-	public static function check( string $tier = 'full' ): true|array {
-		$required_flags = self::TIER_MAP[ $tier ] ?? self::TIER_FULL;
+	public static function check( string $tier = 'direct' ): true|array {
+		$required_flags = self::TIER_MAP[ $tier ] ?? self::TIER_DIRECT;
 
 		$flags = get_transient( self::transient_key() );
 		if ( ! is_array( $flags ) ) {
@@ -159,7 +151,7 @@ final class PrerequisiteGateService {
 	 * (e.g. for documentation, error messages, or testing) without depending
 	 * on the private TIER_MAP constant.
 	 *
-	 * @param string $tier One of 'direct', 'instructed', 'full', 'design'.
+	 * @param string $tier One of 'direct', 'design'.
 	 * @return string[] Required flag names for that tier (empty array on unknown tier).
 	 */
 	public static function get_required_flags( string $tier ): array {

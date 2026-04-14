@@ -322,7 +322,7 @@ final class SchemaSkeletonGenerator {
 
 		// Hero default overrides (if no pattern matched).
 		if ( 'hero' === $section_type && empty( $section_overrides ) ) {
-			$section_overrides['_minHeight']     = '80vh';
+			$section_overrides['_minHeight']     = BriefResolver::get_instance()->get( 'hero_min_height' );
 			$section_overrides['_justifyContent'] = 'center';
 		}
 

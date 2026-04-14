@@ -4,6 +4,20 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.14.0] — 2026-04-14
+
+### Changed — Code review cleanup (~1,200 LOC removed)
+- **PrerequisiteGateService simplified** — 5 flags → 2 (`site_context` + `design_ready`). 4 tiers → 2 (`direct` + `design`). Same protection, fewer moving parts.
+- **StyleShapeValidator deleted** — 7 auto-fix rules moved to source (ElementSettingsGenerator + GlobalClassService). Band-aid removed; shapes generated correctly from the start.
+- **DesignPatternService stripped to essentials** — removed semantic_search, normalize_pattern, generate_prompt_template, category registry (5 CRUD methods), Tier 1/2 loading, migration method. Kept: list, get, create, update, delete, export, import.
+- **DesignPatternHandler** — removed 8 MCP actions (semantic_search, normalize, generate_prompt, 4 category actions). Kept: list, get, create, update, delete, export, import.
+- **PatternsAdmin** — removed 6 AJAX handlers, category management UI, source filter, Generate AI Prompt button. Category is now free-text input.
+- **admin-patterns.js** — removed category CRUD handlers, normalize import step, prompt generation, source filter. Cleaner JS.
+- **data/design-patterns/ directory deleted** — 7 JSON files dead after DB migration.
+- **Deprecated BACKGROUND_COLOR_MAP constant removed** from ProposalService.
+- **Romanian hardcoded text removed** from OnboardingService default notes.
+- **hero_min_height** added to BriefResolver — no longer hardcoded 80vh in SchemaSkeletonGenerator.
+
 ## [3.13.0] — 2026-04-14
 
 ### Added — Structured Design Brief + BriefResolver

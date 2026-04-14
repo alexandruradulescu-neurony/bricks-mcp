@@ -393,9 +393,8 @@ final class OnboardingService {
 
         if ( empty( $notes ) ) {
             $notes = [
-                __( 'Always use Romanian content for the homepage and service pages', 'bricks-mcp' ),
-                __( 'For horizontal rows, use block with _direction: row — NOT div', 'bricks-mcp' ),
-                __( 'Background overlays in Bricks use _gradient with applyTo: overlay', 'bricks-mcp' ),
+                __( 'For horizontal rows, use block with _direction: row — NOT div. Div elements ignore _direction.', 'bricks-mcp' ),
+                __( 'Background overlays in Bricks use _gradient with applyTo: overlay — NOT _background.overlay.', 'bricks-mcp' ),
             ];
         }
 

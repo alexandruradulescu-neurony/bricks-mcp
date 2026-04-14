@@ -1,8 +1,7 @@
 /**
  * Bricks MCP — Patterns admin tab.
  *
- * Full CRUD for patterns + categories. Structured creator form,
- * inline category editing, export/import, WP Media integration.
+ * Pattern CRUD, structured creator form, export/import, WP Media integration.
  */
 (function () {
   'use strict';
@@ -54,16 +53,13 @@
 
   function applyFilters() {
     var catEl = qs('#bricks-mcp-pattern-filter-category');
-    var srcEl = qs('#bricks-mcp-pattern-filter-source');
     var cat = catEl ? catEl.value : '';
-    var src = srcEl ? srcEl.value : '';
     var visible = 0;
 
     qsa('#bricks-mcp-patterns-table tbody tr').forEach(function (row) {
       var matchCat = !cat || row.dataset.category === cat;
-      var matchSrc = !src || row.dataset.source === src;
-      row.style.display = (matchCat && matchSrc) ? '' : 'none';
-      if (matchCat && matchSrc) visible++;
+      row.style.display = matchCat ? '' : 'none';
+      if (matchCat) visible++;
     });
 
     var countEl = qs('.bwm-patterns-count');
@@ -71,7 +67,7 @@
   }
 
   document.addEventListener('change', function (e) {
-    if (e.target.matches('#bricks-mcp-pattern-filter-category, #bricks-mcp-pattern-filter-source')) {
+    if (e.target.matches('#bricks-mcp-pattern-filter-category')) {
       applyFilters();
     }
   });
@@ -98,14 +94,13 @@
     }
   });
 
-  // -- View pattern (JSON modal, read-only for plugin/user) ----
+  // -- View pattern (JSON modal) -------------------------------
 
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.bricks-mcp-view-pattern');
     if (!btn) return;
 
     var id = btn.dataset.id;
-    var source = btn.closest('tr').dataset.source;
 
     post({ action: 'bricks_mcp_list_patterns', nonce: nonce }).then(function (res) {
       if (!res.success) return;
@@ -116,18 +111,14 @@
       var jsonEl = qs('#bricks-mcp-pattern-json');
       var saveBtn = qs('#bricks-mcp-save-pattern');
 
-      if (titleEl) titleEl.textContent = pattern.name + ' (' + (pattern.source || 'plugin') + ')';
-      if (jsonEl) jsonEl.value = JSON.stringify(pattern, null, 2);
-
-      if (source === 'database') {
-        if (jsonEl) jsonEl.readOnly = false;
-        if (saveBtn) {
-          saveBtn.style.display = '';
-          saveBtn.dataset.id = id;
-        }
-      } else {
-        if (jsonEl) jsonEl.readOnly = true;
-        if (saveBtn) saveBtn.style.display = 'none';
+      if (titleEl) titleEl.textContent = pattern.name;
+      if (jsonEl) {
+        jsonEl.value = JSON.stringify(pattern, null, 2);
+        jsonEl.readOnly = false;
+      }
+      if (saveBtn) {
+        saveBtn.style.display = '';
+        saveBtn.dataset.id = id;
       }
 
       var modal = qs('#bricks-mcp-pattern-modal');
@@ -159,18 +150,14 @@
     });
   });
 
-  // -- Delete / Hide pattern -----------------------------------
+  // -- Delete pattern ------------------------------------------
 
   document.addEventListener('click', function (e) {
-    var btn = e.target.closest('.bricks-mcp-delete-pattern, .bricks-mcp-hide-pattern');
+    var btn = e.target.closest('.bricks-mcp-delete-pattern');
     if (!btn) return;
 
     var id = btn.dataset.id;
-    var isHide = btn.classList.contains('bricks-mcp-hide-pattern');
-    var msg = isHide
-      ? 'Hide pattern "' + id + '" from all lists?'
-      : 'Delete pattern "' + id + '"? This cannot be undone.';
-    if (!confirm(msg)) return;
+    if (!confirm('Delete pattern "' + id + '"? This cannot be undone.')) return;
 
     post({ action: 'bricks_mcp_delete_pattern', nonce: nonce, pattern_id: id }).then(function (res) {
       if (res.success) {
@@ -179,7 +166,7 @@
           row.style.display = 'none';
           row.remove();
         }
-        showNotice('Pattern ' + (isHide ? 'hidden' : 'deleted') + '.', 'success');
+        showNotice('Pattern deleted.', 'success');
       } else {
         showNotice('Error: ' + (res.data ? res.data.message : 'Unknown'), 'error');
       }
@@ -229,27 +216,16 @@
       var json = ev.target.result;
       try { var parsed = JSON.parse(json); if (!Array.isArray(parsed)) throw new Error('not array'); }
       catch (err) { return showNotice('Invalid JSON: must be an array of pattern objects.', 'error'); }
-      if (!confirm('Import ' + parsed.length + ' pattern(s)? They will be normalized to match your site\'s classes and variables.')) return;
+      if (!confirm('Import ' + parsed.length + ' pattern(s)?')) return;
 
-      // Normalize each pattern before importing.
-      post({ action: 'bricks_mcp_normalize_patterns', nonce: nonce, patterns_json: json }).then(function (normRes) {
-        if (!normRes.success) {
-          // Fallback: import without normalization.
-          showNotice('Normalization skipped — importing raw.', 'error');
+      post({ action: 'bricks_mcp_import_patterns', nonce: nonce, patterns_json: json }).then(function (res) {
+        if (res.success) {
+          var msg = 'Imported ' + (res.data.imported || []).length + ' pattern(s).';
+          showNotice(msg, 'success');
+          location.reload();
+        } else {
+          showNotice('Import failed: ' + (res.data ? res.data.message : 'Unknown'), 'error');
         }
-        var patternsToImport = normRes.success ? JSON.stringify(normRes.data.patterns) : json;
-        var warnings = normRes.success ? (normRes.data.warnings || []) : [];
-
-        post({ action: 'bricks_mcp_import_patterns', nonce: nonce, patterns_json: patternsToImport }).then(function (res) {
-          if (res.success) {
-            var msg = 'Imported ' + (res.data.imported || []).length + ' pattern(s).';
-            if (warnings.length) msg += ' Warnings: ' + warnings.join('; ');
-            showNotice(msg, 'success');
-            location.reload();
-          } else {
-            showNotice('Import failed: ' + (res.data ? res.data.message : 'Unknown'), 'error');
-          }
-        });
       });
     };
     reader.readAsText(file);
@@ -266,13 +242,14 @@
 
     // Reset form.
     ['#bricks-mcp-creator-id', '#bricks-mcp-creator-name', '#bricks-mcp-creator-tags',
-     '#bricks-mcp-creator-ai-desc', '#bricks-mcp-creator-ai-hints', '#bricks-mcp-creator-composition'
+     '#bricks-mcp-creator-ai-desc', '#bricks-mcp-creator-ai-hints', '#bricks-mcp-creator-composition',
+     '#bricks-mcp-creator-category'
     ].forEach(function (sel) {
       var el = qs(sel);
       if (el) el.value = '';
     });
 
-    ['#bricks-mcp-creator-category', '#bricks-mcp-creator-layout', '#bricks-mcp-creator-bg'].forEach(function (sel) {
+    ['#bricks-mcp-creator-layout', '#bricks-mcp-creator-bg'].forEach(function (sel) {
       var el = qs(sel);
       if (el) el.selectedIndex = 0;
     });
@@ -321,47 +298,6 @@
     }
   });
 
-  // Generate AI prompt -- builds a prompt from the description field, copies to clipboard.
-  document.addEventListener('click', function (e) {
-    if (!e.target.matches('#bricks-mcp-creator-generate-ai')) return;
-
-    var descEl = qs('#bricks-mcp-creator-ai-desc');
-    var nameEl = qs('#bricks-mcp-creator-name');
-    var desc = (descEl ? descEl.value.trim() : '') || (nameEl ? nameEl.value.trim() : '');
-    if (!desc) return showNotice('Enter a name or AI description first.', 'error');
-
-    var catEl = qs('#bricks-mcp-creator-category');
-    var cat = catEl ? catEl.value : '';
-
-    var btn = e.target;
-    btn.disabled = true;
-    btn.textContent = 'Generating...';
-
-    post({ action: 'bricks_mcp_generate_prompt', nonce: nonce, description: desc, category: cat }).then(function (res) {
-      btn.disabled = false;
-      btn.textContent = 'Generate AI Prompt';
-      if (!res.success) return showNotice('Error: ' + (res.data ? res.data.message : 'Unknown'), 'error');
-
-      var prompt = res.data.prompt || '';
-      // Copy to clipboard.
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(prompt).then(function () {
-          showNotice('AI prompt copied to clipboard! Paste it into Claude Code or any AI assistant, then paste the generated JSON into the Composition field below.', 'success');
-        });
-      } else {
-        // Fallback: temporary textarea.
-        var ta = document.createElement('textarea');
-        ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
-        ta.value = prompt;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        ta.remove();
-        showNotice('AI prompt copied to clipboard!', 'success');
-      }
-    });
-  });
-
   // WP Media Library for reference image.
   document.addEventListener('click', function (e) {
     if (!e.target.matches('#bricks-mcp-creator-upload-image')) return;
@@ -402,7 +338,7 @@
     var pattern = {
       id: idEl ? idEl.value.trim() : '',
       name: nameEl ? nameEl.value.trim() : '',
-      category: catEl ? catEl.value : '',
+      category: catEl ? catEl.value.trim() : '',
       tags: (tagsEl ? tagsEl.value : '').split(',').map(function (t) { return t.trim(); }).filter(Boolean),
       layout: layoutEl ? layoutEl.value : '',
       background: (bgEl ? bgEl.value : '') || 'light',
@@ -508,92 +444,6 @@
 
       var modal = qs('#bricks-mcp-creator-modal');
       if (modal) modal.style.display = 'block';
-    });
-  });
-
-  // =============================================================
-  // CATEGORY MANAGEMENT
-  // =============================================================
-
-  // Add category.
-  document.addEventListener('click', function (e) {
-    if (!e.target.matches('#bricks-mcp-add-category-btn')) return;
-
-    var nameEl = qs('#bricks-mcp-new-category-name');
-    var descEl = qs('#bricks-mcp-new-category-desc');
-    var name = nameEl ? nameEl.value.trim() : '';
-    var desc = descEl ? descEl.value.trim() : '';
-    if (!name) return showNotice('Category name is required.', 'error');
-
-    post({ action: 'bricks_mcp_create_category', nonce: nonce, name: name, description: desc }).then(function (res) {
-      if (res.success) { showNotice('Category created.', 'success'); location.reload(); }
-      else { showNotice('Error: ' + (res.data ? res.data.message : 'Unknown'), 'error'); }
-    });
-  });
-
-  // Delete category.
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('.bricks-mcp-delete-category');
-    if (!btn) return;
-
-    var id = btn.dataset.id;
-    var count = btn.dataset.count || 0;
-    var msg = 'Delete category "' + id + '"?';
-    if (count > 0) msg += ' (' + count + ' pattern(s) will become uncategorized)';
-    if (!confirm(msg)) return;
-
-    post({ action: 'bricks_mcp_delete_category', nonce: nonce, category_id: id }).then(function (res) {
-      if (res.success) {
-        var row = qs('tr[data-category-id="' + id + '"]');
-        if (row) {
-          row.style.display = 'none';
-          row.remove();
-        }
-        showNotice('Category deleted.', 'success');
-      } else {
-        showNotice('Error: ' + (res.data ? res.data.message : 'Unknown'), 'error');
-      }
-    });
-  });
-
-  // Inline edit category.
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('.bricks-mcp-edit-category');
-    if (!btn) return;
-
-    var row = btn.closest('tr');
-    row.querySelectorAll('.bwm-cat-display').forEach(function (el) { el.style.display = 'none'; });
-    row.querySelectorAll('.bwm-cat-edit').forEach(function (el) { el.style.display = ''; });
-    btn.style.display = 'none';
-    row.querySelectorAll('.bricks-mcp-save-category, .bricks-mcp-cancel-edit-category').forEach(function (el) { el.style.display = ''; });
-  });
-
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('.bricks-mcp-cancel-edit-category');
-    if (!btn) return;
-
-    var row = btn.closest('tr');
-    row.querySelectorAll('.bwm-cat-display').forEach(function (el) { el.style.display = ''; });
-    row.querySelectorAll('.bwm-cat-edit').forEach(function (el) { el.style.display = 'none'; });
-    var editBtn = row.querySelector('.bricks-mcp-edit-category');
-    if (editBtn) editBtn.style.display = '';
-    row.querySelectorAll('.bricks-mcp-save-category, .bricks-mcp-cancel-edit-category').forEach(function (el) { el.style.display = 'none'; });
-  });
-
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('.bricks-mcp-save-category');
-    if (!btn) return;
-
-    var row = btn.closest('tr');
-    var id = row.dataset.categoryId;
-    var nameEl = row.querySelector('.bwm-cat-edit-name');
-    var descEl = row.querySelector('.bwm-cat-edit-desc');
-    var name = nameEl ? nameEl.value.trim() : '';
-    var desc = descEl ? descEl.value.trim() : '';
-
-    post({ action: 'bricks_mcp_update_category', nonce: nonce, category_id: id, name: name, description: desc }).then(function (res) {
-      if (res.success) { location.reload(); }
-      else { showNotice('Error: ' + (res.data ? res.data.message : 'Unknown'), 'error'); }
     });
   });
 

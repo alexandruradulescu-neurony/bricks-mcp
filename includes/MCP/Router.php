@@ -50,37 +50,37 @@ final class Router {
 	/**
 	 * Operations that require prerequisites, with tier level per action.
 	 *
-	 * Tiers: 'direct' (site_info only), 'instructed' (+ classes), 'full' (+ variables).
+	 * Tiers: 'direct' (site_context), 'design' (site_context + design_ready).
 	 *
 	 * @var array<string, array<string, string>>
 	 */
 	private const GATED_OPERATIONS = [
 		'page'      => [
-			'update_content'   => 'instructed',
-			'append_content'   => 'instructed',
-			'create'           => 'instructed',
-			'import_clipboard' => 'instructed',
+			'update_content'   => 'direct',
+			'append_content'   => 'direct',
+			'create'           => 'direct',
+			'import_clipboard' => 'direct',
 		],
 		'element'   => [
-			'add'         => 'instructed',
-			'bulk_add'    => 'instructed',
+			'add'         => 'direct',
+			'bulk_add'    => 'direct',
 			'update'      => 'direct',
 			'bulk_update' => 'direct',
 		],
 		'template'  => [
-			'create' => 'instructed',
+			'create' => 'direct',
 		],
 		'component' => [
-			'create'      => 'instructed',
-			'update'      => 'instructed',
-			'instantiate' => 'instructed',
-			'fill_slot'   => 'instructed',
+			'create'      => 'direct',
+			'update'      => 'direct',
+			'instantiate' => 'direct',
+			'fill_slot'   => 'direct',
 		],
 		'build_from_schema' => [
 			'_always' => 'design',
 		],
 		'propose_design' => [
-			'_always' => 'full',
+			'_always' => 'direct',
 		],
 	];
 
@@ -398,21 +398,14 @@ final class Router {
 			}
 
 			// Set prerequisite flags for gate tracking.
+			// site_context requires BOTH get_site_info and global_class:list.
 			if ( 'global_class' === $name && ( $arguments['action'] ?? '' ) === 'list' ) {
-				PrerequisiteGateService::set_flag( 'classes' );
-			} elseif ( 'global_variable' === $name && ( $arguments['action'] ?? '' ) === 'list' ) {
-				PrerequisiteGateService::set_flag( 'variables' );
+				$this->maybe_set_site_context( 'classes_done' );
 			} elseif ( 'propose_design' === $name && is_array( $result ) ) {
 				$phase = $result['phase'] ?? '';
-				if ( 'discovery' === $phase ) {
-					PrerequisiteGateService::set_flag( 'design_discovery' );
-				} elseif ( 'proposal' === $phase ) {
-					// Phase 2 implicitly subsumes Phase 1 — successfully producing a
-					// validated design_plan proves the AI has enough context. This
-					// unblocks the documented "skip Phase 1 for subsequent sections"
-					// flow after session flags reset (e.g. plugin reload).
-					PrerequisiteGateService::set_flag( 'design_discovery' );
-					PrerequisiteGateService::set_flag( 'design_plan' );
+				if ( 'proposal' === $phase ) {
+					// Phase 2 success means design_ready.
+					PrerequisiteGateService::set_flag( 'design_ready' );
 				}
 			}
 
@@ -440,7 +433,7 @@ final class Router {
 	 *
 	 * @param string               $name      Tool name.
 	 * @param array<string, mixed> $arguments Tool arguments.
-	 * @return string|null Tier name ('direct', 'instructed', 'full') or null if not gated.
+	 * @return string|null Tier name ('direct', 'design') or null if not gated.
 	 */
 	private function get_operation_tier( string $name, array $arguments ): ?string {
 		if ( ! isset( self::GATED_OPERATIONS[ $name ] ) ) {
@@ -821,7 +814,7 @@ final class Router {
 			}
 		}
 
-		PrerequisiteGateService::set_flag( 'site_info' );
+		$this->maybe_set_site_context( 'site_info_done' );
 
 		return $info;
 	}
@@ -853,6 +846,32 @@ final class Router {
 				$this->handlers[ $key ]->register( $this->registry );
 			}
 		}
+	}
+
+	/**
+	 * Track sub-conditions for site_context and set the flag when both are met.
+	 *
+	 * site_context requires BOTH get_site_info and global_class:list to have been
+	 * called. This method tracks each sub-condition in the same transient and sets
+	 * the composite flag once both are satisfied.
+	 *
+	 * @param string $sub_key One of 'site_info_done', 'classes_done'.
+	 */
+	private function maybe_set_site_context( string $sub_key ): void {
+		$transient_key = 'bricks_mcp_prereqs_' . get_current_user_id();
+		$flags         = get_transient( $transient_key );
+		if ( ! is_array( $flags ) ) {
+			$flags = [];
+		}
+
+		$flags[ $sub_key ] = true;
+
+		// Set the composite flag when both sub-conditions are met.
+		if ( ! empty( $flags['site_info_done'] ) && ! empty( $flags['classes_done'] ) ) {
+			$flags['site_context'] = true;
+		}
+
+		set_transient( $transient_key, $flags, 1800 );
 	}
 
 	/**

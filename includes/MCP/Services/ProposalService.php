@@ -107,16 +107,6 @@ final class ProposalService {
 	 * the vocabulary that defines it.
 	 */
 	/**
-	 * @deprecated Use get_background_color_map() instead.
-	 */
-	public const BACKGROUND_COLOR_MAP = [
-		'tinted-neutral' => 'var(--base-ultra-light)',
-		'tinted-accent'  => 'var(--accent-ultra-light)',
-		'tinted-warning' => 'var(--secondary-ultra-light)',
-		'tinted-danger'  => 'var(--primary-ultra-light)',
-	];
-
-	/**
 	 * Get dynamic background color map using BriefResolver.
 	 *
 	 * @return array<string, string> Map of background type to CSS color value.

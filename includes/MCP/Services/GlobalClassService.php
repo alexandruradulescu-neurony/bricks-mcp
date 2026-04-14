@@ -151,9 +151,6 @@ class GlobalClassService {
 		// the frontend with "Array to string conversion" during render.
 		$sanitized_styles = $this->core->sanitize_styles_array( $args['styles'] ?? [] );
 		$normalized       = $this->normalize_bricks_styles( $sanitized_styles );
-		$shape_result     = StyleShapeValidator::validate_and_fix( $normalized['styles'] );
-		$normalized['styles']   = $shape_result['styles'];
-		$normalized['warnings'] = array_merge( $normalized['warnings'], $shape_result['warnings'] );
 		$new_class = [
 			'id'       => $new_id,
 			'name'     => $name,
@@ -228,7 +225,7 @@ class GlobalClassService {
 	private function normalize_bricks_styles( array $styles ): array {
 		$warnings = [];
 
-		// Normalize border style - must be a string, not an array with per-side values.
+		// Rule 1: _border.style — per-side object → string.
 		if ( isset( $styles['_border']['style'] ) && is_array( $styles['_border']['style'] ) ) {
 			$style_array = $styles['_border']['style'];
 			$first_value = is_string( $style_array['top'] ?? '' ) && '' !== $style_array['top']
@@ -239,10 +236,47 @@ class GlobalClassService {
 			$warnings[] = 'Border style must be a string (e.g., "solid", "dashed"). Array value was converted to "' . esc_attr( $first_value ) . '". Use a string format in future requests.';
 		}
 
+		// Rule 2: _border.color — string → {raw|hex} object.
+		if ( isset( $styles['_border']['color'] ) && is_string( $styles['_border']['color'] ) ) {
+			$styles['_border']['color'] = self::wrap_color_value( $styles['_border']['color'] );
+			$warnings[] = '_border.color was a string; wrapped in color object.';
+		}
+
+		// Rule 3: _border.width — flat string → per-side object.
+		if ( isset( $styles['_border']['width'] ) && is_string( $styles['_border']['width'] ) ) {
+			$w = $styles['_border']['width'];
+			$styles['_border']['width'] = [ 'top' => $w, 'right' => $w, 'bottom' => $w, 'left' => $w ];
+			$warnings[] = '_border.width was a flat string; expanded to per-side object.';
+		}
+
+		// Rule 4: _cssCustom — array → string.
+		if ( isset( $styles['_cssCustom'] ) && is_array( $styles['_cssCustom'] ) ) {
+			$styles['_cssCustom'] = implode( "\n", array_filter( $styles['_cssCustom'], 'is_string' ) );
+			$warnings[] = '_cssCustom was an array; joined to string with newlines.';
+		}
+
+		// Rule 5: _typography.color — string → {raw|hex} object.
+		if ( isset( $styles['_typography']['color'] ) && is_string( $styles['_typography']['color'] ) ) {
+			$styles['_typography']['color'] = self::wrap_color_value( $styles['_typography']['color'] );
+			$warnings[] = '_typography.color was a string; wrapped in color object.';
+		}
+
+		// Rule 6: _background.color — string → {raw|hex} object.
+		if ( isset( $styles['_background']['color'] ) && is_string( $styles['_background']['color'] ) ) {
+			$styles['_background']['color'] = self::wrap_color_value( $styles['_background']['color'] );
+			$warnings[] = '_background.color was a string; wrapped in color object.';
+		}
+
+		// Rule 7: top-level _color — string → {raw|hex} object.
+		if ( isset( $styles['_color'] ) && is_string( $styles['_color'] ) ) {
+			$styles['_color'] = self::wrap_color_value( $styles['_color'] );
+			$warnings[] = '_color was a string; wrapped in color object.';
+		}
+
 		// Recursively normalize nested style groups (for theme styles).
 		foreach ( $styles as $key => $value ) {
-			// Skip if this looks like a border object (has width/style/color/radius keys).
-			if ( is_array( $value ) && ! isset( $value['width'] ) && ! isset( $value['style'] ) && ! isset( $value['color'] ) && ! isset( $value['radius'] ) ) {
+			// Skip known shape-sensitive keys and color objects to avoid false recursion.
+			if ( is_array( $value ) && ! isset( $value['width'] ) && ! isset( $value['style'] ) && ! isset( $value['color'] ) && ! isset( $value['radius'] ) && ! isset( $value['raw'] ) && ! isset( $value['hex'] ) ) {
 				$nested = $this->normalize_bricks_styles( $value );
 				$styles[ $key ] = $nested['styles'];
 				$warnings = array_merge( $warnings, $nested['warnings'] );
@@ -253,6 +287,19 @@ class GlobalClassService {
 			'styles'   => $styles,
 			'warnings' => $warnings,
 		);
+	}
+
+	/**
+	 * Wrap a color string in Bricks' expected {raw|hex} object format.
+	 *
+	 * @param string $value Raw color string.
+	 * @return array<string, string> Bricks color object.
+	 */
+	private static function wrap_color_value( string $value ): array {
+		if ( preg_match( '/^#[0-9a-fA-F]{3,8}$/', $value ) ) {
+			return [ 'hex' => $value ];
+		}
+		return [ 'raw' => $value ];
 	}
 
 	/**
@@ -308,16 +355,10 @@ class GlobalClassService {
 
 				if ( ! empty( $args['replace_styles'] ) ) {
 					$normalized       = $this->normalize_bricks_styles( $sanitized_styles );
-					$shape_result     = StyleShapeValidator::validate_and_fix( $normalized['styles'] );
-					$normalized['styles']   = $shape_result['styles'];
-					$normalized['warnings'] = array_merge( $normalized['warnings'], $shape_result['warnings'] );
 					$class['settings'] = $normalized['styles'];
 				} else {
 					$merged           = $this->deep_merge_styles( $existing_styles, $sanitized_styles );
 					$normalized       = $this->normalize_bricks_styles( $merged );
-					$shape_result     = StyleShapeValidator::validate_and_fix( $normalized['styles'] );
-					$normalized['styles']   = $shape_result['styles'];
-					$normalized['warnings'] = array_merge( $normalized['warnings'], $shape_result['warnings'] );
 					$class['settings'] = $normalized['styles'];
 				}
 				unset( $class['styles'] );
