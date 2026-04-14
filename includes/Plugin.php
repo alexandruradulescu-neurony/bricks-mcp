@@ -96,6 +96,9 @@ final class Plugin {
 		// Migrate stored settings (strip orphaned keys from previous versions).
 		$this->migrate_settings();
 
+		// One-time migration: move plugin-shipped patterns to database tier.
+		MCP\Services\DesignPatternService::migrate_plugin_patterns();
+
 		// Initialize internationalization.
 		$this->init_i18n();
 

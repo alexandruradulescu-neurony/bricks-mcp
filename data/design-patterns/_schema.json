@@ -9,7 +9,8 @@
   "properties": {
     "category": {
       "type": "string",
-      "enum": ["hero", "features", "cta", "pricing", "testimonials", "splits", "content", "generic"]
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Category ID from the dynamic category registry (no longer a fixed enum)"
     },
     "patterns": {
       "type": "array",

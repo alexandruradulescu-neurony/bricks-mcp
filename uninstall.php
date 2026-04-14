@@ -26,6 +26,12 @@ function bricks_mcp_delete_options(): void {
 		'bricks_mcp_settings',
 		'bricks_mcp_version',
 		'bricks_mcp_activated_at',
+		'bricks_mcp_custom_patterns',
+		'bricks_mcp_hidden_patterns',
+		'bricks_mcp_pattern_categories',
+		'bricks_mcp_patterns_migrated',
+		'bricks_mcp_briefs',
+		'bricks_mcp_notes',
 	];
 
 	foreach ( $options as $option ) {

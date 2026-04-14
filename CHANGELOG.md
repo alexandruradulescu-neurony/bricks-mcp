@@ -4,6 +4,33 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.10.0] — 2026-04-14
+
+### Changed — Database-first pattern architecture
+- **No more hardcoded patterns.** All 21 plugin-shipped patterns auto-migrate to the database tier (`bricks_mcp_custom_patterns` wp_option) on first plugin update. The `data/design-patterns/` directory is kept as an inert archive but no longer loaded after migration.
+- **`DesignPatternService::load_all()`** gates Tier 1 (plugin files) behind the `bricks_mcp_patterns_migrated` flag. After migration, only Tier 2 (user files) and Tier 3 (database) are loaded.
+- **Pattern `create()` and `update()`** now validate category against the registry. Unregistered categories are rejected with a clear error listing available options.
+
+### Added — Category registry
+- **`bricks_mcp_pattern_categories`** wp_option — standalone array of `{id, name, description}`. Categories persist independently of patterns.
+- **Service methods:** `get_categories()`, `create_category()`, `update_category()`, `delete_category()`, `seed_categories()`, `migrate_plugin_patterns()`.
+- **4 new MCP tool actions** on `design_pattern`: `list_categories` (with pattern count per category), `create_category`, `update_category`, `delete_category`.
+- **8 default categories** seeded on migration: hero, features, cta, pricing, testimonials, splits, content, generic.
+
+### Added — Admin UI rewrite
+- **Categories section** in Settings > Bricks MCP > Patterns: table with name/ID/description/pattern count, inline edit, delete with in-use warning, "Add Category" form.
+- **Pattern creator/editor form** (modal): structured fields for name, auto-slug ID, category dropdown, tags, layout, background, AI description with character counter, AI usage hints, composition JSON editor, reference image via WP Media Library.
+- **Edit mode**: click Edit on any DB pattern → opens the creator form pre-populated. Save replaces the pattern.
+- **5 new AJAX endpoints**: `list_categories`, `create_category`, `update_category`, `delete_category`, plus existing pattern endpoints.
+- **`wp_enqueue_media()`** loaded for pattern reference image uploads.
+
+### Added — Migration system
+- **`Plugin::init()` → `DesignPatternService::migrate_plugin_patterns()`** — reads all JSON files from `data/design-patterns/`, bulk-inserts into wp_options (skips IDs already present), seeds category registry, sets version flag. Idempotent.
+
+### Cleanup
+- `uninstall.php` expanded with `bricks_mcp_custom_patterns`, `bricks_mcp_hidden_patterns`, `bricks_mcp_pattern_categories`, `bricks_mcp_patterns_migrated`, `bricks_mcp_briefs`, `bricks_mcp_notes`.
+- `data/design-patterns/_schema.json` category field changed from fixed enum to dynamic string pattern.
+
 ## [3.9.1] — 2026-04-14
 
 ### Added

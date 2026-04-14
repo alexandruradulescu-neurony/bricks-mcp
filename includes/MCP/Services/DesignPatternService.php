@@ -28,8 +28,26 @@ final class DesignPatternService {
 	/** WP option key for hidden pattern IDs. */
 	private const HIDDEN_OPTION = 'bricks_mcp_hidden_patterns';
 
+	/** WP option key for the category registry. */
+	private const CATEGORY_OPTION = 'bricks_mcp_pattern_categories';
+
+	/** WP option key for the one-time migration flag. */
+	private const MIGRATION_FLAG = 'bricks_mcp_patterns_migrated';
+
+	/** Default categories seeded on first migration. */
+	private const DEFAULT_CATEGORIES = [
+		[ 'id' => 'hero',         'name' => 'Hero',         'description' => 'Full-height homepage hero sections' ],
+		[ 'id' => 'features',     'name' => 'Features',     'description' => 'Feature grids and benefit sections' ],
+		[ 'id' => 'cta',          'name' => 'CTA',          'description' => 'Call-to-action sections' ],
+		[ 'id' => 'pricing',      'name' => 'Pricing',      'description' => 'Pricing tables and plan comparisons' ],
+		[ 'id' => 'testimonials', 'name' => 'Testimonials', 'description' => 'Social proof and review sections' ],
+		[ 'id' => 'splits',       'name' => 'Splits',       'description' => 'Split-layout content sections' ],
+		[ 'id' => 'content',      'name' => 'Content',      'description' => 'General content sections (FAQ, stats, team)' ],
+		[ 'id' => 'generic',      'name' => 'Generic',      'description' => 'Catch-all section type' ],
+	];
+
 	// ──────────────────────────────────────────────
-	// Loading — 3-tier merge
+	// Loading — database-first with file fallback
 	// ──────────────────────────────────────────────
 
 	/**
@@ -47,11 +65,14 @@ final class DesignPatternService {
 
 		$by_id = [];
 
-		// Tier 1: Plugin-shipped patterns.
-		$plugin_dir = dirname( __DIR__, 3 ) . '/data/design-patterns/';
-		self::load_from_directory( $plugin_dir, 'plugin', $by_id );
+		// Tier 1: Plugin-shipped patterns — only loaded as fallback before migration.
+		// After migration runs, all plugin patterns live in the database tier.
+		if ( ! get_option( self::MIGRATION_FLAG, false ) ) {
+			$plugin_dir = dirname( __DIR__, 3 ) . '/data/design-patterns/';
+			self::load_from_directory( $plugin_dir, 'plugin', $by_id );
+		}
 
-		// Tier 2: User custom patterns from uploads directory.
+		// Tier 2: User custom patterns from uploads directory (always active).
 		if ( function_exists( 'wp_upload_dir' ) ) {
 			$upload = wp_upload_dir();
 			$user_dir = $upload['basedir'] . '/bricks-mcp/design-patterns/';
@@ -253,6 +274,16 @@ final class DesignPatternService {
 			return new \WP_Error( 'invalid_id', 'Pattern ID must be lowercase alphanumeric with hyphens only.' );
 		}
 
+		// Validate category against registry.
+		$categories = self::get_categories();
+		$cat_ids    = array_column( $categories, 'id' );
+		if ( ! in_array( $pattern['category'], $cat_ids, true ) ) {
+			return new \WP_Error(
+				'invalid_category',
+				sprintf( 'Category "%s" is not registered. Available: %s. Create it first via category management.', $pattern['category'], implode( ', ', $cat_ids ) )
+			);
+		}
+
 		// Auto-suffix on conflict.
 		$base_id  = $pattern['id'];
 		$suffix   = 2;
@@ -300,6 +331,18 @@ final class DesignPatternService {
 				'read_only_source',
 				sprintf( 'Pattern "%s" is from a read-only source (%s). Only database patterns can be updated via MCP.', $id, $source )
 			);
+		}
+
+		// Validate category if being changed.
+		if ( isset( $updates['category'] ) ) {
+			$categories = self::get_categories();
+			$cat_ids    = array_column( $categories, 'id' );
+			if ( ! in_array( $updates['category'], $cat_ids, true ) ) {
+				return new \WP_Error(
+					'invalid_category',
+					sprintf( 'Category "%s" is not registered. Available: %s.', $updates['category'], implode( ', ', $cat_ids ) )
+				);
+			}
 		}
 
 		// Merge updates, preserving id and source.
@@ -535,5 +578,233 @@ final class DesignPatternService {
 		}
 
 		return [ 'imported' => $imported, 'errors' => $errors ];
+	}
+
+	// ──────────────────────────────────────────────
+	// Category registry
+	// ──────────────────────────────────────────────
+
+	/**
+	 * Get all registered categories.
+	 *
+	 * Returns the registry from wp_options. Falls back to DEFAULT_CATEGORIES
+	 * if the option doesn't exist (pre-migration state).
+	 *
+	 * @return array<int, array{id: string, name: string, description: string}>
+	 */
+	public static function get_categories(): array {
+		$cats = get_option( self::CATEGORY_OPTION, null );
+		if ( is_array( $cats ) && ! empty( $cats ) ) {
+			return $cats;
+		}
+		return self::DEFAULT_CATEGORIES;
+	}
+
+	/**
+	 * Create a new category.
+	 *
+	 * @param array{id?: string, name: string, description?: string} $category Category data.
+	 * @return array|\WP_Error The created category or error.
+	 */
+	public static function create_category( array $category ): array|\WP_Error {
+		if ( empty( $category['name'] ) ) {
+			return new \WP_Error( 'missing_name', 'Category name is required.' );
+		}
+
+		// Auto-generate ID from name if not provided.
+		if ( empty( $category['id'] ) ) {
+			$category['id'] = sanitize_title( $category['name'] );
+		}
+
+		if ( ! preg_match( '/^[a-z0-9-]+$/', $category['id'] ) ) {
+			return new \WP_Error( 'invalid_id', 'Category ID must be lowercase alphanumeric with hyphens only.' );
+		}
+
+		$existing = self::get_categories();
+		$ids      = array_column( $existing, 'id' );
+
+		if ( in_array( $category['id'], $ids, true ) ) {
+			return new \WP_Error( 'duplicate_id', sprintf( 'Category "%s" already exists.', $category['id'] ) );
+		}
+
+		$new_cat = [
+			'id'          => $category['id'],
+			'name'        => sanitize_text_field( $category['name'] ),
+			'description' => sanitize_text_field( $category['description'] ?? '' ),
+		];
+
+		$existing[] = $new_cat;
+		update_option( self::CATEGORY_OPTION, $existing, false );
+
+		return $new_cat;
+	}
+
+	/**
+	 * Update an existing category.
+	 *
+	 * @param string $id      Category ID.
+	 * @param array  $updates Fields to update (name, description).
+	 * @return array|\WP_Error Updated category or error.
+	 */
+	public static function update_category( string $id, array $updates ): array|\WP_Error {
+		$categories = self::get_categories();
+		$found      = false;
+
+		foreach ( $categories as &$cat ) {
+			if ( ( $cat['id'] ?? '' ) === $id ) {
+				if ( isset( $updates['name'] ) ) {
+					$cat['name'] = sanitize_text_field( $updates['name'] );
+				}
+				if ( isset( $updates['description'] ) ) {
+					$cat['description'] = sanitize_text_field( $updates['description'] );
+				}
+				$found = true;
+				$updated_cat = $cat;
+				break;
+			}
+		}
+		unset( $cat );
+
+		if ( ! $found ) {
+			return new \WP_Error( 'not_found', sprintf( 'Category "%s" not found.', $id ) );
+		}
+
+		update_option( self::CATEGORY_OPTION, $categories, false );
+
+		return $updated_cat;
+	}
+
+	/**
+	 * Delete a category from the registry.
+	 *
+	 * Patterns using this category keep their category string but it becomes
+	 * unregistered. The category can be re-created to re-associate them.
+	 *
+	 * @param string $id Category ID.
+	 * @return array|\WP_Error Result with pattern count warning.
+	 */
+	public static function delete_category( string $id ): array|\WP_Error {
+		$categories = self::get_categories();
+		$new_cats   = [];
+		$found      = false;
+
+		foreach ( $categories as $cat ) {
+			if ( ( $cat['id'] ?? '' ) === $id ) {
+				$found = true;
+				continue;
+			}
+			$new_cats[] = $cat;
+		}
+
+		if ( ! $found ) {
+			return new \WP_Error( 'not_found', sprintf( 'Category "%s" not found.', $id ) );
+		}
+
+		// Count patterns using this category.
+		$all            = self::load_all();
+		$affected_count = 0;
+		foreach ( $all as $pattern ) {
+			if ( ( $pattern['category'] ?? '' ) === $id ) {
+				$affected_count++;
+			}
+		}
+
+		update_option( self::CATEGORY_OPTION, $new_cats, false );
+
+		$result = [ 'id' => $id, 'action' => 'deleted' ];
+		if ( $affected_count > 0 ) {
+			$result['warning'] = sprintf(
+				'%d pattern(s) still use category "%s". They will appear as uncategorized until the category is re-created or patterns are re-categorized.',
+				$affected_count,
+				$id
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Seed the category registry with defaults (idempotent).
+	 *
+	 * Called during migration. Skips if the option already exists.
+	 */
+	public static function seed_categories(): void {
+		if ( false !== get_option( self::CATEGORY_OPTION, false ) ) {
+			return;
+		}
+		update_option( self::CATEGORY_OPTION, self::DEFAULT_CATEGORIES, false );
+	}
+
+	/**
+	 * Run the one-time migration of plugin-shipped patterns to the database.
+	 *
+	 * Reads all patterns from data/design-patterns/*.json, inserts any that
+	 * don't already exist in the DB tier, seeds the category registry, and
+	 * sets the migration flag.
+	 */
+	public static function migrate_plugin_patterns(): void {
+		if ( get_option( self::MIGRATION_FLAG, false ) ) {
+			return;
+		}
+
+		// Read plugin-shipped patterns.
+		$plugin_patterns = [];
+		$plugin_dir      = dirname( __DIR__, 3 ) . '/data/design-patterns/';
+		if ( is_dir( $plugin_dir ) ) {
+			$files = glob( $plugin_dir . '*.json' );
+			if ( is_array( $files ) ) {
+				foreach ( $files as $file ) {
+					if ( basename( $file ) === '_schema.json' ) {
+						continue;
+					}
+					$json = file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+					if ( ! is_string( $json ) ) {
+						continue;
+					}
+					$data = json_decode( $json, true );
+					if ( ! is_array( $data ) || empty( $data['patterns'] ) ) {
+						continue;
+					}
+					$category = $data['category'] ?? 'generic';
+					foreach ( $data['patterns'] as $pattern ) {
+						if ( empty( $pattern['id'] ) ) {
+							continue;
+						}
+						$pattern['category'] = $category;
+						$pattern['source']   = 'database';
+						$plugin_patterns[]   = $pattern;
+					}
+				}
+			}
+		}
+
+		// Merge into existing DB patterns (skip duplicates by ID).
+		$db_patterns = get_option( self::DB_OPTION, [] );
+		$db_patterns = is_array( $db_patterns ) ? $db_patterns : [];
+		$existing_ids = [];
+		foreach ( $db_patterns as $p ) {
+			$existing_ids[ $p['id'] ?? '' ] = true;
+		}
+
+		$added = 0;
+		foreach ( $plugin_patterns as $pp ) {
+			if ( ! isset( $existing_ids[ $pp['id'] ] ) ) {
+				$db_patterns[] = $pp;
+				$added++;
+			}
+		}
+
+		if ( $added > 0 ) {
+			update_option( self::DB_OPTION, $db_patterns, false );
+		}
+
+		// Seed categories.
+		self::seed_categories();
+
+		// Set migration flag.
+		update_option( self::MIGRATION_FLAG, defined( 'BRICKS_MCP_VERSION' ) ? BRICKS_MCP_VERSION : '3.10.0', false );
+
+		// Clear cache so new patterns are visible.
+		self::clear_cache();
 	}
 }

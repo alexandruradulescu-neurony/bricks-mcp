@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.9.2
+Stable tag: 3.10.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -143,6 +143,16 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.10.0 =
+* Database-first pattern library: all 21 plugin-shipped patterns auto-migrate to the database on first update. No more hardcoded patterns.
+* Category registry: categories stored as standalone wp_option. Create, rename, delete categories independently of patterns.
+* Full admin UI rewrite for Patterns tab: categories section with inline edit/delete, pattern creator form with structured fields (name, ID, category, tags, layout, background, AI description, composition JSON, reference image via WP Media Library), edit mode for existing DB patterns.
+* 4 new MCP actions: list_categories, create_category, update_category, delete_category.
+* Pattern create/update validates category against registry.
+* Plugin-file tier skipped after migration. User-file tier still active.
+* Migration idempotent (version-flagged, skips already-imported IDs).
+* uninstall.php cleanup expanded with all new option keys.
 
 = 3.9.1 =
 * Admin UI for Design Pattern Library: new "Patterns" tab in Settings > Bricks MCP.
