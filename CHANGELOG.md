@@ -4,12 +4,18 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.11.2] — 2026-04-14
+
+### Changed
+- **Side-by-side layout** — Design System tab now uses a two-column layout: accordion config panels on the left, live preview always visible on the right. Preview panel is sticky and scrolls with the page.
+- Preview is no longer an accordion section — it's a persistent panel that updates as you edit any section.
+- Responsive: stacks vertically below 1200px.
+
 ## [3.11.1] — 2026-04-14
 
 ### Added
-- **Live preview mockup** — new "Preview" accordion section in the Design System tab showing a mini-website (hero + content/sidebar + stats + footer) rendered with the actual computed design token values. Updates instantly on every input change.
+- **Live preview mockup** — mini-website (hero + content/sidebar + stats + footer) rendered with actual computed design token values. Updates instantly on every input change.
 - **Token labels** — each element in the preview shows a semi-transparent tag indicating which CSS variable it uses (e.g., `--h1`, `--primary`, `--radius`).
-- Preview is now the default-open section (Colors starts collapsed).
 
 ## [3.11.0] — 2026-04-14
 

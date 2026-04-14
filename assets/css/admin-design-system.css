@@ -1,8 +1,57 @@
 /* Design System Generator — Admin Styles */
 
 .bwm-design-system-wrap {
-    max-width: 900px;
     margin: 20px 0;
+}
+
+/* Two-column layout: accordions left, preview right */
+.bwm-ds-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.bwm-ds-left {
+    flex: 1;
+    min-width: 0;
+    max-width: 560px;
+}
+
+.bwm-ds-right {
+    flex: 1;
+    min-width: 0;
+    max-width: 520px;
+    position: sticky;
+    top: 32px;
+}
+
+.bwm-ds-preview-panel {
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    background: #f6f7f7;
+    overflow: hidden;
+}
+
+.bwm-ds-preview-panel-header {
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1d2327;
+    background: #f0f0f1;
+    border-bottom: 1px solid #ccd0d4;
+}
+
+@media (max-width: 1200px) {
+    .bwm-ds-layout {
+        flex-direction: column;
+    }
+    .bwm-ds-left,
+    .bwm-ds-right {
+        max-width: 100%;
+    }
+    .bwm-ds-right {
+        position: static;
+    }
 }
 
 /* Accordion sections */
@@ -275,13 +324,11 @@
 
 /* Live Preview Mockup */
 .bwm-ds-mockup {
-    max-width: 720px;
-    border: 1px solid #ccd0d4;
-    border-radius: 6px;
+    border-radius: 4px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     line-height: 1.5;
+    margin: 12px;
 }
 
 /* Token labels */
