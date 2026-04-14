@@ -254,23 +254,17 @@ final class Settings {
 			<?php $this->render_page_header(); ?>
 
 			<nav class="bwm-nav">
-				<!-- Build -->
 				<a href="?page=bricks-mcp&tab=design-system" class="nav-tab <?php echo 'design-system' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Design System', 'bricks-mcp' ); ?>
 				</a>
 				<a href="?page=bricks-mcp&tab=patterns" class="nav-tab <?php echo 'patterns' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Patterns', 'bricks-mcp' ); ?>
 				</a>
-				<!-- Configure -->
+				<a href="?page=bricks-mcp&tab=ai-context" class="nav-tab <?php echo 'ai-context' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'AI Context', 'bricks-mcp' ); ?>
+				</a>
 				<a href="?page=bricks-mcp&tab=connection" class="nav-tab <?php echo 'connection' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Connection & Settings', 'bricks-mcp' ); ?>
-				</a>
-				<!-- Monitor -->
-				<a href="?page=bricks-mcp&tab=notes" class="nav-tab <?php echo 'notes' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'AI Notes', 'bricks-mcp' ); ?>
-				</a>
-				<a href="?page=bricks-mcp&tab=briefs" class="nav-tab <?php echo 'briefs' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Briefs', 'bricks-mcp' ); ?>
 				</a>
 				<a href="?page=bricks-mcp&tab=diagnostics" class="nav-tab <?php echo 'diagnostics' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'System Health', 'bricks-mcp' ); ?>
@@ -286,14 +280,11 @@ final class Settings {
 				case 'patterns':
 					$this->patterns_admin->render();
 					break;
+				case 'ai-context':
+					$this->render_tab_ai_context();
+					break;
 				case 'connection':
 					$this->render_tab_connection();
-					break;
-				case 'notes':
-					$this->render_tab_notes();
-					break;
-				case 'briefs':
-					$this->render_tab_briefs();
 					break;
 				case 'diagnostics':
 					$this->diagnostics_admin->render();
@@ -548,6 +539,12 @@ final class Settings {
 	 *
 	 * @return void
 	 */
+	private function render_tab_ai_context(): void {
+		$this->render_tab_notes();
+		echo '<hr style="margin: 30px 0;">';
+		$this->render_tab_briefs();
+	}
+
 	private function render_tab_notes(): void {
 		$notes       = get_option( 'bricks_mcp_notes', [] );
 		$notes       = is_array( $notes ) ? $notes : [];

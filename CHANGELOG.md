@@ -4,6 +4,12 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.12.2] — 2026-04-14
+
+### Changed
+- **Merged AI Notes + Briefs** into single "AI Context" tab. Notes on top, Briefs below.
+- **Tab order** finalized: Design System → Patterns → AI Context → Connection & Settings → System Health (5 tabs, was 6).
+
 ## [3.12.1] — 2026-04-14
 
 ### Changed — Admin polish (Phase 2)
