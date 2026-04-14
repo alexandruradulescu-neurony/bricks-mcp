@@ -207,6 +207,14 @@ final class BuildHandler {
 		}
 		unset( $tree );
 
+		// Step 8d: Post-build class extraction — deduplicate shared inline styles.
+		// Scan elements for identical inline style fingerprints. When 2+ elements share
+		// the same styles and have no class_intent, extract those styles into a new global class.
+		if ( ! $dry_run ) {
+			$extracted = $this->extract_shared_styles_to_classes( $all_elements );
+			$class_result['classes_created'] = array_merge( $class_result['classes_created'], $extracted['classes_created'] );
+		}
+
 		// Initialize pipeline warnings collector (populated by steps below + element-level warnings).
 		$pipeline_warnings = [];
 
@@ -491,6 +499,126 @@ final class BuildHandler {
 			$this->fix_block_widths_in_rows( $child );
 		}
 		unset( $child );
+	}
+
+	/**
+	 * Extract shared inline styles into new global classes.
+	 *
+	 * Walks the element tree, fingerprints style-relevant settings on each element,
+	 * and when 2+ elements share the same fingerprint (and have no class already),
+	 * creates a global class with those styles and assigns it to all matching elements.
+	 *
+	 * @param array<int, array<string, mixed>> $elements Element trees (modified in place).
+	 * @return array{classes_created: string[]} Created class names.
+	 */
+	private function extract_shared_styles_to_classes( array &$elements ): array {
+		// Style keys worth extracting into classes.
+		$style_keys = [
+			'_background', '_typography', '_padding', '_margin', '_border',
+			'_boxShadow', '_gradient',
+		];
+
+		// Collect: fingerprint → [element references, element type, styles].
+		$fingerprints = [];
+		$this->collect_style_fingerprints( $elements, $style_keys, $fingerprints );
+
+		// Filter to fingerprints shared by 2+ elements with no existing class.
+		$shared = array_filter( $fingerprints, fn( $group ) => count( $group['refs'] ) >= 2 );
+
+		if ( empty( $shared ) ) {
+			return [ 'classes_created' => [] ];
+		}
+
+		$created = [];
+
+		foreach ( $shared as $fp => $group ) {
+			// Generate a class name from the element type and a short hash.
+			$base_name  = $group['type'] . '-style-' . substr( $fp, 0, 6 );
+			$class_args = [
+				'name'   => $base_name,
+				'styles' => $group['styles'],
+			];
+
+			$result = $this->class_resolver->clear_cache();
+			$result = $this->bricks_service->get_global_class_service()->create_global_class( $class_args );
+
+			if ( is_wp_error( $result ) ) {
+				continue;
+			}
+
+			$class_id  = $result['id'] ?? '';
+			if ( '' === $class_id ) {
+				continue;
+			}
+
+			$created[] = $base_name;
+
+			// Apply class to all matching elements and remove the inline styles.
+			foreach ( $group['refs'] as &$el_ref ) {
+				$el_ref['settings']['_cssGlobalClasses'] = array_merge(
+					$el_ref['settings']['_cssGlobalClasses'] ?? [],
+					[ $class_id ]
+				);
+				// Remove extracted style keys from inline settings.
+				foreach ( $style_keys as $key ) {
+					unset( $el_ref['settings'][ $key ] );
+				}
+			}
+			unset( $el_ref );
+		}
+
+		return [ 'classes_created' => $created ];
+	}
+
+	/**
+	 * Recursively collect style fingerprints from element trees.
+	 *
+	 * @param array      $elements    Element trees (by reference for later modification).
+	 * @param array      $style_keys  Style keys to fingerprint.
+	 * @param array      $fingerprints Collected fingerprints (by reference).
+	 */
+	private function collect_style_fingerprints( array &$elements, array $style_keys, array &$fingerprints ): void {
+		foreach ( $elements as &$el ) {
+			$settings = $el['settings'] ?? [];
+
+			// Skip elements that already have a global class.
+			if ( ! empty( $settings['_cssGlobalClasses'] ) ) {
+				if ( ! empty( $el['children'] ) ) {
+					$this->collect_style_fingerprints( $el['children'], $style_keys, $fingerprints );
+				}
+				continue;
+			}
+
+			// Extract style-relevant keys.
+			$style_data = [];
+			foreach ( $style_keys as $key ) {
+				if ( isset( $settings[ $key ] ) ) {
+					$style_data[ $key ] = $settings[ $key ];
+				}
+			}
+
+			// Only fingerprint elements with meaningful styles (2+ style keys).
+			if ( count( $style_data ) >= 2 ) {
+				$fp = md5( wp_json_encode( $style_data ) );
+				$type = $el['name'] ?? 'element';
+
+				if ( ! isset( $fingerprints[ $fp ] ) ) {
+					$fingerprints[ $fp ] = [
+						'type'   => $type,
+						'styles' => $style_data,
+						'refs'   => [],
+					];
+				}
+
+				$fingerprints[ $fp ]['refs'][] = &$el;
+			}
+
+			// Recurse into children.
+			if ( ! empty( $el['children'] ) ) {
+				$this->collect_style_fingerprints( $el['children'], $style_keys, $fingerprints );
+			}
+		}
+		unset( $el );
 	}
 
 	public function register( ToolRegistry $registry ): void {

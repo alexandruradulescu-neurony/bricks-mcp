@@ -251,16 +251,17 @@ final class ProposalService {
 	 * The no_override rule is adjusted at runtime based on site state.
 	 */
 	private const BUILDING_RULES_BASE = [
-		'structure'   => 'Every page follows: section > container > block/div > content elements. Multiple visual rows = multiple containers inside a section.',
-		'centering'   => 'Use flex alignment (_alignItems: center, _justifyContent: center) — NOT text-align. text-align only affects text inside an element.',
-		'classes'     => 'Use class_intent on every element when possible. The pipeline creates reusable classes WITH styles. Inline style_overrides only for instance-specific overrides.',
-		'labels'      => 'Add label to sections ("Hero"), containers (row description), and blocks ("CTA Buttons", "Cards Grid").',
-		'variables'   => 'Always use var(--name) — never hardcode colors, spacing, radius, or font sizes. Examples: var(--space-m), var(--primary), var(--radius), var(--h2).',
-		'rows'        => 'For horizontal rows, use block with _direction: row. NOT div — div ignores _direction.',
-		'responsive'  => 'Composite keys for responsive: _property:tablet_portrait, _property:mobile. Grids should collapse: 3-col → 2-col at tablet → 1-col at mobile.',
-		'backgrounds' => 'Background overlays use _gradient with applyTo: "overlay". Background images need actual URLs (sideload from Unsplash first). Section background: "dark" auto-sets dark bg + white text on children.',
-		'buttons'     => 'Buttons support native icons (icon + iconPosition settings). Do NOT use emoji in button text. Use class_intent for styling (btn-hero-primary, btn-hero-ghost).',
-		'gaps'        => 'On flex blocks: use _columnGap for horizontal spacing (row direction), _rowGap for vertical spacing (column direction). Plain _gap does NOT generate CSS on flex layout blocks. The pipeline auto-converts _gap to the correct key based on _direction.',
+		'structure'       => 'Every page follows: section > container > block/div > content elements. Multiple visual rows = multiple containers inside a section.',
+		'centering'       => 'Use flex alignment (_alignItems: center, _justifyContent: center) — NOT text-align. text-align only affects text inside an element.',
+		'classes'         => 'Use class_intent on every element when possible. The pipeline creates reusable classes WITH styles. Inline style_overrides only for instance-specific overrides.',
+		'style_overrides' => 'ONLY use style_overrides for truly one-off values (e.g., a specific width, margin-top:auto, a unique color on one element). If 2+ elements share the same styles, that MUST be a class_intent instead. Colors, typography, padding, radius, backgrounds — all belong in class_intent, not style_overrides.',
+		'labels'          => 'Add label to sections ("Hero"), containers (row description), and blocks ("CTA Buttons", "Cards Grid").',
+		'variables'       => 'Always use var(--name) — never hardcode colors, spacing, radius, or font sizes. Examples: var(--space-m), var(--primary), var(--radius), var(--h2).',
+		'rows'            => 'For horizontal rows, use block with _direction: row. NOT div — div ignores _direction.',
+		'responsive'      => 'Composite keys for responsive: _property:tablet_portrait, _property:mobile. Grids should collapse: 3-col → 2-col at tablet → 1-col at mobile.',
+		'backgrounds'     => 'Background overlays use _gradient with applyTo: "overlay". Background images need actual URLs (sideload from Unsplash first). Section background: "dark" auto-sets dark bg + white text on children.',
+		'buttons'         => 'Buttons support native icons (icon + iconPosition settings). Do NOT use emoji in button text. Use class_intent for styling (btn-hero-primary, btn-hero-ghost).',
+		'gaps'            => 'On flex blocks: use _columnGap for horizontal spacing (row direction), _rowGap for vertical spacing (column direction). Plain _gap does NOT generate CSS on flex layout blocks. The pipeline auto-converts _gap to the correct key based on _direction.',
 	];
 
 	/**
