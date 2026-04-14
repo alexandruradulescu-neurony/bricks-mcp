@@ -199,6 +199,14 @@ final class BuildHandler {
 			);
 		}
 
+		// Step 8c: Post-process — fix block width inside flex-row parents.
+		// Bricks blocks default to width:100%. Inside a flex-row parent, child blocks
+		// should be width:auto to prevent stretching the full row.
+		foreach ( $all_elements as &$tree ) {
+			$this->fix_block_widths_in_rows( $tree );
+		}
+		unset( $tree );
+
 		// Initialize pipeline warnings collector (populated by steps below + element-level warnings).
 		$pipeline_warnings = [];
 
@@ -449,6 +457,42 @@ final class BuildHandler {
 	 * @param ToolRegistry $registry Tool registry instance.
 	 * @return void
 	 */
+	/**
+	 * Fix block widths inside flex-row parents.
+	 *
+	 * Bricks blocks default to width:100%. Inside a flex-row parent, child blocks
+	 * should be width:auto to prevent stretching. Walks the tree recursively.
+	 *
+	 * @param array $node Element tree node (modified in place).
+	 */
+	private function fix_block_widths_in_rows( array &$node ): void {
+		$settings = $node['settings'] ?? [];
+		$is_row   = ( $settings['_direction'] ?? '' ) === 'row';
+		$children = &$node['children'];
+
+		if ( ! is_array( $children ?? null ) ) {
+			return;
+		}
+
+		foreach ( $children as &$child ) {
+			if ( ! is_array( $child ) ) {
+				continue;
+			}
+			$child_name = $child['name'] ?? '';
+
+			// If parent is row-direction and child is a block without explicit width, set auto.
+			if ( $is_row && 'block' === $child_name ) {
+				if ( ! isset( $child['settings']['_width'] ) ) {
+					$child['settings']['_width'] = 'auto';
+				}
+			}
+
+			// Recurse.
+			$this->fix_block_widths_in_rows( $child );
+		}
+		unset( $child );
+	}
+
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'build_from_schema',
