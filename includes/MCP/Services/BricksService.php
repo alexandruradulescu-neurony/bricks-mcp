@@ -952,6 +952,11 @@ class BricksService {
 				$corrected = $normalizer->apply_key_corrections( $settings, $element_name );
 				$sanitized = $normalizer->sanitize_settings( $corrected, $element_name );
 
+				// Replace %root% shorthand with actual element selector.
+				if ( isset( $sanitized['_cssCustom'] ) && is_string( $sanitized['_cssCustom'] ) && str_contains( $sanitized['_cssCustom'], '%root%' ) ) {
+					$sanitized['_cssCustom'] = str_replace( '%root%', '#brxe-' . $element_id, $sanitized['_cssCustom'] );
+				}
+
 				$elements[ $index ]['settings'] = array_merge( $existing_settings, $sanitized );
 				$found                          = true;
 				break;
@@ -1701,6 +1706,11 @@ class BricksService {
 			// Apply key corrections and sanitization (same as add/append paths).
 			$corrected = $normalizer->apply_key_corrections( $upd_settings, $element_name );
 			$sanitized = $normalizer->sanitize_settings( $corrected, $element_name );
+
+			// Replace %root% shorthand with actual element selector.
+			if ( isset( $sanitized['_cssCustom'] ) && is_string( $sanitized['_cssCustom'] ) && str_contains( $sanitized['_cssCustom'], '%root%' ) ) {
+				$sanitized['_cssCustom'] = str_replace( '%root%', '#brxe-' . $upd_element_id, $sanitized['_cssCustom'] );
+			}
 
 			$elements[ $idx ]['settings'] = array_merge( $existing, $sanitized );
 
