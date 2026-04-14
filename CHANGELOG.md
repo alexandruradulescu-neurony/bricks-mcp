@@ -4,6 +4,13 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.12.1] — 2026-04-14
+
+### Changed — Admin polish (Phase 2)
+- **Patterns JS modernized** — `admin-patterns.js` rewritten from jQuery to vanilla JavaScript. Zero jQuery dependency. Uses `fetch`/`FormData`, event delegation, `querySelector`. Matches `admin-design-system.js` coding style.
+- **Settings tab merged into Connection** — Settings form now appears at the bottom of the Connection tab under a "Settings" heading. One fewer tab. Tab renamed to "Connection & Settings".
+- **jQuery dependency removed** from PatternsAdmin asset enqueue.
+
 ## [3.12.0] — 2026-04-14
 
 ### Changed — Admin restructure

@@ -36,7 +36,7 @@ class PatternsAdmin {
 		wp_enqueue_script(
 			'bricks-mcp-admin-patterns',
 			BRICKS_MCP_PLUGIN_URL . 'assets/js/admin-patterns.js',
-			[ 'jquery' ],
+			[],
 			BRICKS_MCP_VERSION,
 			true
 		);

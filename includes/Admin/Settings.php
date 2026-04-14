@@ -263,10 +263,7 @@ final class Settings {
 				</a>
 				<!-- Configure -->
 				<a href="?page=bricks-mcp&tab=connection" class="nav-tab <?php echo 'connection' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Connection', 'bricks-mcp' ); ?>
-				</a>
-				<a href="?page=bricks-mcp&tab=settings" class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Settings', 'bricks-mcp' ); ?>
+					<?php esc_html_e( 'Connection & Settings', 'bricks-mcp' ); ?>
 				</a>
 				<!-- Monitor -->
 				<a href="?page=bricks-mcp&tab=notes" class="nav-tab <?php echo 'notes' === $active_tab ? 'nav-tab-active' : ''; ?>">
@@ -291,9 +288,6 @@ final class Settings {
 					break;
 				case 'connection':
 					$this->render_tab_connection();
-					break;
-				case 'settings':
-					$this->render_tab_settings();
 					break;
 				case 'notes':
 					$this->render_tab_notes();
@@ -439,6 +433,23 @@ final class Settings {
 		<?php
 		$this->render_mcp_config();
 		$this->render_active_connections();
+		?>
+		<hr style="margin: 2em 0;">
+		<h2 id="settings"><?php esc_html_e( 'Settings', 'bricks-mcp' ); ?></h2>
+		<form action="options.php" method="post">
+			<?php settings_fields( self::OPTION_GROUP ); ?>
+
+			<div class="bricks-mcp-config-section">
+				<?php do_settings_sections( self::PAGE_SLUG . '_server' ); ?>
+			</div>
+
+			<div class="bricks-mcp-config-section">
+				<?php do_settings_sections( self::PAGE_SLUG . '_advanced' ); ?>
+			</div>
+
+			<?php submit_button(); ?>
+		</form>
+		<?php
 	}
 
 	/**
@@ -478,9 +489,9 @@ final class Settings {
 							esc_html_e( 'Server is enabled.', 'bricks-mcp' );
 						} else {
 							printf(
-								/* translators: %s: link to settings tab */
-								esc_html__( 'Go to %s and enable the server.', 'bricks-mcp' ),
-								'<a href="?page=bricks-mcp&tab=settings">' . esc_html__( 'Settings', 'bricks-mcp' ) . '</a>'
+								/* translators: %s: link to settings section */
+								esc_html__( 'Go to %s below and enable the server.', 'bricks-mcp' ),
+								'<a href="#settings">' . esc_html__( 'Settings', 'bricks-mcp' ) . '</a>'
 							);
 						}
 						?></p>
@@ -528,32 +539,6 @@ final class Settings {
 			$all_passwords,
 			fn( $pw ) => str_starts_with( $pw['name'] ?? '', 'Bricks MCP' )
 		);
-	}
-
-	/**
-	 * Render Settings tab content.
-	 *
-	 * Shows the settings form with enable, auth, URL, rate limit,
-	 * dangerous actions, and protected pages fields.
-	 *
-	 * @return void
-	 */
-	private function render_tab_settings(): void {
-		?>
-		<form action="options.php" method="post">
-			<?php settings_fields( self::OPTION_GROUP ); ?>
-
-			<div class="bricks-mcp-config-section">
-				<?php do_settings_sections( self::PAGE_SLUG . '_server' ); ?>
-			</div>
-
-			<div class="bricks-mcp-config-section">
-				<?php do_settings_sections( self::PAGE_SLUG . '_advanced' ); ?>
-			</div>
-
-			<?php submit_button(); ?>
-		</form>
-		<?php
 	}
 
 	/**
