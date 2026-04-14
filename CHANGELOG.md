@@ -4,6 +4,16 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.12.0] — 2026-04-14
+
+### Changed — Admin restructure
+- **Extracted PatternsAdmin class** — all pattern/category CRUD, AJAX handlers (11 methods), tab rendering, and asset enqueue moved from Settings.php to `includes/Admin/PatternsAdmin.php` (460+ lines).
+- **Extracted DiagnosticsAdmin class** — diagnostic panel rendering, AJAX handler, and asset enqueue moved to `includes/Admin/DiagnosticsAdmin.php`.
+- **Settings.php reduced** from 2,213 lines to 1,665 lines. Now contains only Connection, Settings, Briefs, and AI Notes tabs.
+- **Tab reorder** — logical grouping: Build (Design System, Patterns) → Configure (Connection, Settings) → Monitor (AI Notes, Briefs, System Health).
+- **CSS theme alignment** — Design System tab now uses `--bwm-*` CSS variables from admin-settings.css instead of hardcoded WordPress grays.
+- **Selective asset loading** — each tab's JS/CSS is only enqueued when that tab is active (via delegated `enqueue_assets()` methods).
+
 ## [3.11.3] — 2026-04-14
 
 ### Fixed
