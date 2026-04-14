@@ -12,15 +12,13 @@
 }
 
 .bwm-ds-left {
-    flex: 1;
+    flex: 0 0 480px;
     min-width: 0;
-    max-width: 560px;
 }
 
 .bwm-ds-right {
     flex: 1;
     min-width: 0;
-    max-width: 520px;
     position: sticky;
     top: 32px;
 }
@@ -324,11 +322,9 @@
 
 /* Live Preview Mockup */
 .bwm-ds-mockup {
-    border-radius: 4px;
     overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     line-height: 1.5;
-    margin: 12px;
 }
 
 /* Token labels */

@@ -4,6 +4,11 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.11.3] — 2026-04-14
+
+### Fixed
+- **Preview panel too small** — removed max-width constraints from right panel, let it fill available space. Left accordion column fixed at 480px, preview expands to fill remaining width. Removed inner mockup margin.
+
 ## [3.11.2] — 2026-04-14
 
 ### Changed
