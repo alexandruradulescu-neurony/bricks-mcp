@@ -69,6 +69,7 @@ class DesignSystemAdmin {
             <?php $this->render_section_typography( $config ); ?>
             <?php $this->render_section_radius( $config ); ?>
             <?php $this->render_section_sizes( $config ); ?>
+            <?php $this->render_section_preview(); ?>
 
             <div class="bwm-ds-actions">
                 <button type="button" class="button button-primary button-hero" id="bwm-ds-apply">
@@ -90,12 +91,12 @@ class DesignSystemAdmin {
         $colors = $config['colors'] ?? [];
         ?>
         <div class="bwm-ds-section" data-section="colors">
-            <div class="bwm-ds-section-header bwm-ds-section-open">
-                <span class="bwm-ds-toggle">&#9660;</span>
+            <div class="bwm-ds-section-header">
+                <span class="bwm-ds-toggle">&#9654;</span>
                 <?php esc_html_e( 'Colors', 'bricks-mcp' ); ?>
                 <span class="bwm-ds-section-info"><?php esc_html_e( '4 base colors', 'bricks-mcp' ); ?></span>
             </div>
-            <div class="bwm-ds-section-body" style="display:block;">
+            <div class="bwm-ds-section-body">
                 <div class="bwm-ds-inputs">
                     <div class="bwm-ds-color-row">
                         <input type="color" id="bwm-ds-primary" value="<?php echo esc_attr( $colors['primary'] ?? '#3b82f6' ); ?>" data-field="colors.primary">
@@ -276,6 +277,24 @@ class DesignSystemAdmin {
                     <div class="bwm-ds-preview-label"><?php esc_html_e( 'Computed Sizes', 'bricks-mcp' ); ?></div>
                     <!-- JS populates table here -->
                 </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render Preview accordion section (live mockup).
+     */
+    private function render_section_preview(): void {
+        ?>
+        <div class="bwm-ds-section" data-section="preview">
+            <div class="bwm-ds-section-header bwm-ds-section-open">
+                <span class="bwm-ds-toggle">&#9660;</span>
+                <?php esc_html_e( 'Preview', 'bricks-mcp' ); ?>
+                <span class="bwm-ds-section-info"><?php esc_html_e( 'Live mockup', 'bricks-mcp' ); ?></span>
+            </div>
+            <div class="bwm-ds-section-body" style="display:block;">
+                <div id="bwm-ds-live-preview"></div>
             </div>
         </div>
         <?php

@@ -223,6 +223,141 @@
         container.innerHTML = html;
     }
 
+    function renderLivePreview() {
+        const container = document.getElementById('bwm-ds-live-preview');
+        if (!container) return;
+
+        // Colors
+        const colors = config.colors || {};
+        const primary = colors.primary || '#3b82f6';
+        const secondaryObj = colors.secondary || {};
+        const secondary = secondaryObj.enabled !== false ? (secondaryObj.hex || '#f59e0b') : primary;
+        const accentObj = colors.accent || {};
+        const accent = accentObj.enabled !== false ? (accentObj.hex || '#10b981') : primary;
+        const base = colors.base || '#374151';
+
+        const primaryShades = getColorShades(primary, false);
+        const accentShades = getColorShades(accent, false);
+        const baseShades = getColorShades(base, true);
+
+        // Typography headings (desktop values)
+        const h = config.typography_headings || {};
+        const hBd = parseFloat(h.base_desktop) || 35;
+        const hSc = parseFloat(h.scale) || 1.25;
+        const headings = computeScale(0, hBd, hSc, [['h1', 2], ['h2', 1], ['h3', 0], ['h4', -1]]);
+
+        // Typography text (desktop values)
+        const t = config.typography_text || {};
+        const tBd = parseFloat(t.base_desktop) || 18;
+        const tSc = parseFloat(t.scale) || 1.25;
+        const text = computeScale(0, tBd, tSc, [['text-xs', -2], ['text-s', -1], ['text-m', 0], ['text-l', 1]]);
+
+        // Spacing (desktop values)
+        const sp = config.spacing || {};
+        const sBd = parseFloat(sp.base_desktop) || 24;
+        const sSc = parseFloat(sp.scale) || 1.5;
+        const space = computeScale(0, sBd, sSc, [['xs', -2], ['s', -1], ['m', 0], ['l', 1], ['xl', 2]]);
+
+        const radius = parseInt(config.radius) || 8;
+
+        // Shorthand desktop values
+        const h1 = headings.h1.desktop;
+        const h2 = headings.h2.desktop;
+        const h4 = headings.h4.desktop;
+        const tm = text['text-m'].desktop;
+        const ts = text['text-s'].desktop;
+        const txs = text['text-xs'].desktop;
+        const tl = text['text-l'].desktop;
+        const sxs = space.xs.desktop;
+        const ss = space.s.desktop;
+        const sm = space.m.desktop;
+        const sl = space.l.desktop;
+        const sxl = space.xl.desktop;
+
+        function tag(v) {
+            return `<span class="bwm-ds-token-label">${v}</span>`;
+        }
+
+        const html = `
+        <div class="bwm-ds-mockup">
+            <div class="bwm-ds-mockup-hero" style="background:linear-gradient(135deg,${primary},${primaryShades.dark});padding:${sxl}px ${sl}px;">
+                ${tag('--primary')}
+                <div style="font-size:${h1}px;font-weight:700;color:#fff;line-height:calc(7px + 2ex);margin-bottom:${ss}px;">
+                    ${tag('--h1')}Design System Preview
+                </div>
+                <div style="font-size:${tl}px;color:rgba(255,255,255,0.8);margin-bottom:${sm}px;max-width:480px;line-height:calc(10px + 2ex);">
+                    ${tag('--text-l')}This mockup uses your actual configuration values applied in real time.
+                </div>
+                <div style="display:flex;gap:${ss}px;flex-wrap:wrap;">
+                    <div class="bwm-ds-mockup-btn" style="background:${secondary};color:#fff;padding:${sxs}px ${sm}px;border-radius:${radius}px;font-size:${ts}px;font-weight:600;">
+                        ${tag('--secondary')}Get Started
+                    </div>
+                    <div class="bwm-ds-mockup-btn" style="background:rgba(255,255,255,0.2);color:#fff;padding:${sxs}px ${sm}px;border-radius:${radius}px;border:1px solid rgba(255,255,255,0.3);font-size:${ts}px;">
+                        ${tag('--white-trans-20')}Learn More
+                    </div>
+                </div>
+            </div>
+
+            <div class="bwm-ds-mockup-body" style="display:flex;gap:${sl}px;padding:${sxl}px ${sl}px;background:#fff;">
+                <div style="flex:2;min-width:0;">
+                    <div style="font-size:${h2}px;font-weight:600;color:${baseShades['ultra-dark']};line-height:calc(7px + 2ex);margin-bottom:${ss}px;">
+                        ${tag('--h2')}Features &amp; Benefits
+                    </div>
+                    <div style="font-size:${tm}px;color:${base};line-height:calc(10px + 2ex);margin-bottom:${sm}px;">
+                        ${tag('--text-m')}Your design system generates consistent spacing, typography, and colors.
+                        <span style="color:${primary};text-decoration:underline;cursor:pointer;">${tag('--primary')}Explore the docs</span>
+                        to see how every token connects.
+                    </div>
+
+                    <div style="display:flex;gap:${ss}px;">
+                        <div class="bwm-ds-mockup-stat" style="flex:1;background:${primaryShades['ultra-light']};padding:${sm}px;border-radius:${radius}px;text-align:center;">
+                            ${tag('--primary-ultra-light')}
+                            <div style="font-size:${h2}px;font-weight:700;color:${primary};">${tag('--primary')}106</div>
+                            <div style="font-size:${ts}px;color:${base};margin-top:4px;">${tag('--text-s')}Variables</div>
+                        </div>
+                        <div class="bwm-ds-mockup-stat" style="flex:1;background:${accentShades['ultra-light']};padding:${sm}px;border-radius:${radius}px;text-align:center;">
+                            ${tag('--accent-ultra-light')}
+                            <div style="font-size:${h2}px;font-weight:700;color:${accent};">${tag('--accent')}9</div>
+                            <div style="font-size:${ts}px;color:${base};margin-top:4px;">Categories</div>
+                        </div>
+                        <div class="bwm-ds-mockup-stat" style="flex:1;background:${baseShades['ultra-light']};padding:${sm}px;border-radius:${radius}px;text-align:center;">
+                            ${tag('--base-ultra-light')}
+                            <div style="font-size:${h2}px;font-weight:700;color:${baseShades['ultra-dark']};">31</div>
+                            <div style="font-size:${ts}px;color:${base};margin-top:4px;">Palette Colors</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="flex:1;min-width:0;">
+                    <div class="bwm-ds-mockup-card" style="background:#fff;border:1px solid ${baseShades.light};border-radius:${radius}px;padding:${sm}px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+                        ${tag('--radius')}
+                        <div style="font-size:${h4}px;font-weight:600;color:${baseShades['ultra-dark']};line-height:calc(7px + 2ex);margin-bottom:${sxs}px;">
+                            ${tag('--h4')}Quick Start
+                        </div>
+                        <div style="font-size:${ts}px;color:${base};line-height:calc(10px + 2ex);margin-bottom:${ss}px;">
+                            ${tag('--text-s')}Adjust the seed values above, then click Apply to write all variables to your Bricks site.
+                        </div>
+                        <div class="bwm-ds-mockup-btn" style="display:inline-block;background:${primary};color:#fff;padding:${sxs}px ${sm}px;border-radius:${radius}px;font-size:${ts}px;font-weight:600;">
+                            ${tag('--primary')}Apply Now
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bwm-ds-mockup-footer" style="background:${baseShades['ultra-dark']};padding:${sm}px ${sl}px;display:flex;justify-content:space-between;align-items:center;">
+                ${tag('--base-ultra-dark')}
+                <div style="font-size:${txs}px;color:${baseShades.light};">
+                    ${tag('--text-xs')}Design System v1 &mdash; Built with BricksCore
+                </div>
+                <div style="font-size:${txs}px;color:${primary};">
+                    ${tag('--primary')}Documentation &rarr;
+                </div>
+            </div>
+        </div>`;
+
+        container.innerHTML = html;
+    }
+
     function renderAllPreviews() {
         renderColorPreview();
         renderSpacingPreview();
@@ -230,6 +365,7 @@
         renderHeadingsPreview();
         renderRadiusPreview();
         renderSizesPreview();
+        renderLivePreview();
     }
 
     // --- Config Management ---
