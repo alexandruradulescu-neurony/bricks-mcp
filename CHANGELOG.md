@@ -4,6 +4,16 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.13.0] — 2026-04-14
+
+### Added — Structured Design Brief + BriefResolver
+- **`BriefResolver` service** — new singleton that resolves design brief fields through a 3-tier fallback chain: structured brief (wp_option) → auto-detect from site variables/classes → hardcoded defaults. Single source of truth for all design values consumed by the build pipeline.
+- **Structured brief admin UI** — new "Design Rules" section in AI Context tab with 16 configurable fields organized in 7 groups (Dark Sections, Light Sections, Cards, Section Headers, Buttons & Classes, Icons, Spacing). Dropdowns for class fields populated from global classes. "Parse from Text" button placeholder for future AI-powered extraction.
+- **Zero hardcoded values in build pipeline** — replaced all hardcoded CSS values in ProposalService, SchemaSkeletonGenerator, and ElementSettingsGenerator with `BriefResolver::get()` calls. Dark section backgrounds, text colors, card padding/radius, button class intents, gradient overlays — all now read from the structured brief.
+- **Design System auto-fill** — clicking "Apply to Site" in the Design System tab now auto-populates empty structured brief fields with the generated variable references (e.g., `var(--base-ultra-dark)` for dark bg, `var(--radius)` for card radius).
+- **Dynamic background color map** — `ProposalService::get_background_color_map()` replaces the static `BACKGROUND_COLOR_MAP` constant, reading tinted background colors from BriefResolver.
+- **Role-to-class mapping** — SchemaSkeletonGenerator now reads eyebrow, primary button, and secondary button class names from structured brief instead of hardcoded role map.
+
 ## [3.12.3] — 2026-04-14
 
 ### Changed — Visual polish

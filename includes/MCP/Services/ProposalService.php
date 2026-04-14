@@ -106,12 +106,30 @@ final class ProposalService {
 	 * source of truth for "what does tinted-neutral look like" lives with
 	 * the vocabulary that defines it.
 	 */
+	/**
+	 * @deprecated Use get_background_color_map() instead.
+	 */
 	public const BACKGROUND_COLOR_MAP = [
 		'tinted-neutral' => 'var(--base-ultra-light)',
 		'tinted-accent'  => 'var(--accent-ultra-light)',
 		'tinted-warning' => 'var(--secondary-ultra-light)',
 		'tinted-danger'  => 'var(--primary-ultra-light)',
 	];
+
+	/**
+	 * Get dynamic background color map using BriefResolver.
+	 *
+	 * @return array<string, string> Map of background type to CSS color value.
+	 */
+	public static function get_background_color_map(): array {
+		$brief = BriefResolver::get_instance();
+		return [
+			'tinted-neutral' => $brief->get( 'light_alt_bg_color' ),
+			'tinted-accent'  => SiteVariableResolver::find( 'Colors', 'accent-ultra-light', '', 'var(--accent-ultra-light)' ),
+			'tinted-warning' => SiteVariableResolver::find( 'Colors', 'secondary-ultra-light', '', 'var(--secondary-ultra-light)' ),
+			'tinted-danger'  => SiteVariableResolver::find( 'Colors', 'primary-ultra-light', '', 'var(--primary-ultra-light)' ),
+		];
+	}
 
 	/**
 	 * Element capabilities for discovery phase.

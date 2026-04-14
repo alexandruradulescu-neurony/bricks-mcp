@@ -777,13 +777,14 @@ final class ElementSettingsGenerator {
 		// Preserve any existing _background settings (e.g., image from style_overrides/Unsplash resolution).
 		$existing_bg = $settings['_background'] ?? [];
 
+		$brief = BriefResolver::get_instance();
 		switch ( $background ) {
 			case 'dark':
-				$settings['_background'] = array_merge( $existing_bg, [ 'color' => [ 'raw' => SiteVariableResolver::dark_background() ] ] );
-				$settings['_color']      = [ 'raw' => SiteVariableResolver::white_color() ];
+				$settings['_background'] = array_merge( $existing_bg, [ 'color' => [ 'raw' => $brief->get( 'dark_bg_color' ) ] ] );
+				$settings['_color']      = [ 'raw' => $brief->get( 'dark_text_color' ) ];
 				break;
 			case 'light':
-				$settings['_background'] = array_merge( $existing_bg, [ 'color' => [ 'raw' => SiteVariableResolver::light_background() ] ] );
+				$settings['_background'] = array_merge( $existing_bg, [ 'color' => [ 'raw' => $brief->get( 'light_alt_bg_color' ) ] ] );
 				break;
 			case 'gradient':
 				$settings['_gradient'] = [

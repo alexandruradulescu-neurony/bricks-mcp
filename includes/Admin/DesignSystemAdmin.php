@@ -294,6 +294,39 @@ class DesignSystemAdmin {
     // --- AJAX Handlers ---
 
     /**
+     * Auto-fill structured brief fields from the design system config.
+     *
+     * Only fills fields that are currently empty — never overwrites user customizations.
+     */
+    private function auto_fill_structured_brief( array $config ): void {
+        $existing = get_option( 'bricks_mcp_structured_brief', [] );
+        if ( ! is_array( $existing ) ) {
+            $existing = [];
+        }
+
+        $auto = [
+            'dark_bg_color'       => 'var(--base-ultra-dark)',
+            'dark_text_color'     => 'var(--white)',
+            'dark_subtitle_color' => 'var(--white-trans-70)',
+            'light_alt_bg_color'  => 'var(--base-ultra-light)',
+            'card_radius'         => 'var(--radius)',
+            'card_border_color'   => 'var(--border-color)',
+            'card_padding'        => 'var(--space-l)',
+            'grid_gap'            => 'var(--grid-gap)',
+            'content_gap'         => 'var(--content-gap)',
+            'container_gap'       => 'var(--container-gap)',
+        ];
+
+        foreach ( $auto as $key => $value ) {
+            if ( empty( $existing[ $key ] ) ) {
+                $existing[ $key ] = $value;
+            }
+        }
+
+        update_option( 'bricks_mcp_structured_brief', $existing );
+    }
+
+    /**
      * Save config via debounced AJAX.
      */
     public function ajax_save_config(): void {
@@ -332,6 +365,9 @@ class DesignSystemAdmin {
 
         $generator = new DesignSystemGenerator();
         $summary   = $generator->apply( $config );
+
+        // Auto-fill structured brief from design system config.
+        $this->auto_fill_structured_brief( $config );
 
         // Store last-applied timestamp.
         $timestamp = current_time( 'mysql' );

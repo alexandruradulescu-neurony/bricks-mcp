@@ -338,10 +338,12 @@ final class SchemaSkeletonGenerator {
 				]
 			);
 			if ( 'dark' === $background ) {
+				$brief   = BriefResolver::get_instance();
+				$dark_bg = $brief->get( 'dark_bg_color' );
 				$gradient = $matched_pattern['gradient_overlay'] ?? [
 					'colors'  => [
-						[ 'color' => [ 'raw' => 'rgba(46, 46, 61, 0.8)' ], 'stop' => '0' ],
-						[ 'color' => [ 'raw' => 'rgba(142, 47, 34, 0.6)' ], 'stop' => '100' ],
+						[ 'color' => [ 'raw' => $dark_bg ], 'stop' => '0' ],
+						[ 'color' => [ 'raw' => $dark_bg ], 'stop' => '100' ],
 					],
 					'applyTo' => 'overlay',
 				];
@@ -357,9 +359,10 @@ final class SchemaSkeletonGenerator {
 		// Apply tinted background via style_overrides. Pipeline's own 'background'
 		// key still handles dark mode (text coloring, overlay merging), so tinted
 		// backgrounds flow in separately as an explicit _background.color.
-		if ( isset( ProposalService::BACKGROUND_COLOR_MAP[ $background ] ) ) {
+		$bg_color_map = ProposalService::get_background_color_map();
+		if ( isset( $bg_color_map[ $background ] ) ) {
 			$section_overrides['_background'] = [
-				'color' => [ 'raw' => ProposalService::BACKGROUND_COLOR_MAP[ $background ] ],
+				'color' => [ 'raw' => $bg_color_map[ $background ] ],
 			];
 		}
 
@@ -641,15 +644,20 @@ final class SchemaSkeletonGenerator {
 	private function role_to_class( string $role, array $roles ): ?string {
 		$role_lower = strtolower( $role );
 
-		// Direct role matches.
+		// Direct role matches — class roles resolved from structured brief when available.
+		$brief         = BriefResolver::get_instance();
+		$eyebrow_role  = $brief->get( 'eyebrow_class' ) ?: 'eyebrow';
+		$btn_pri_role  = $brief->get( 'btn_primary_class' ) ?: 'btn_primary';
+		$btn_sec_role  = $brief->get( 'btn_secondary_class' ) ?: 'btn_ghost';
+
 		$role_map = [
-			'tagline'       => 'eyebrow',
-			'eyebrow'       => 'eyebrow',
+			'tagline'       => $eyebrow_role,
+			'eyebrow'       => $eyebrow_role,
 			'main_heading'  => null, // Headings don't usually need a class.
 			'subtitle'      => 'hero_description',
 			'description'   => 'hero_description',
-			'primary_cta'   => 'btn_primary',
-			'secondary_cta' => 'btn_ghost',
+			'primary_cta'   => $btn_pri_role,
+			'secondary_cta' => $btn_sec_role,
 		];
 
 		foreach ( $role_map as $key => $mapped_role ) {

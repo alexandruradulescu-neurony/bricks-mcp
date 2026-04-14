@@ -80,6 +80,7 @@ final class Settings {
 		add_action( 'wp_ajax_bricks_mcp_delete_note', [ $this, 'ajax_delete_note' ] );
 		add_action( 'wp_ajax_bricks_mcp_add_note', [ $this, 'ajax_add_note' ] );
 		add_action( 'wp_ajax_bricks_mcp_revoke_app_password', [ $this, 'ajax_revoke_app_password' ] );
+		add_action( 'wp_ajax_bricks_mcp_parse_brief', [ $this, 'ajax_parse_brief' ] );
 	}
 
 	/**
@@ -541,6 +542,8 @@ final class Settings {
 	 */
 	private function render_tab_ai_context(): void {
 		$this->render_tab_notes();
+		echo '<hr style="margin: 30px 0;">';
+		$this->render_structured_brief();
 		echo '<hr style="margin: 30px 0;">';
 		$this->render_tab_briefs();
 	}
@@ -1642,6 +1645,297 @@ final class Settings {
 		}
 
 		wp_send_json_success( [ 'message' => __( 'Application Password revoked.', 'bricks-mcp' ) ] );
+	}
+
+	/**
+	 * Render the structured Design Rules brief form.
+	 *
+	 * Machine-readable fields that feed directly into the build pipeline.
+	 * Saved as wp_option 'bricks_mcp_structured_brief'.
+	 *
+	 * @return void
+	 */
+	private function render_structured_brief(): void {
+		// Handle save.
+		if (
+			isset( $_POST['bricks_mcp_structured_brief_nonce'] )
+			&& wp_verify_nonce(
+				sanitize_text_field( wp_unslash( $_POST['bricks_mcp_structured_brief_nonce'] ) ),
+				'bricks_mcp_structured_brief'
+			)
+		) {
+			$fields = [
+				'dark_bg_color',
+				'dark_text_color',
+				'dark_subtitle_color',
+				'light_bg_color',
+				'light_alt_bg_color',
+				'card_radius',
+				'card_border_color',
+				'card_padding',
+				'section_header_align',
+				'btn_primary_class',
+				'btn_secondary_class',
+				'eyebrow_class',
+				'icon_library',
+				'grid_gap',
+				'content_gap',
+				'container_gap',
+			];
+
+			$data = [];
+			foreach ( $fields as $field ) {
+				$data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+			}
+
+			update_option( 'bricks_mcp_structured_brief', $data );
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Design Rules saved.', 'bricks-mcp' ) . '</p></div>';
+		}
+
+		$values        = get_option( 'bricks_mcp_structured_brief', [] );
+		$values        = is_array( $values ) ? $values : [];
+		$global_classes = get_option( 'bricks_global_classes', [] );
+		$global_classes = is_array( $global_classes ) ? $global_classes : [];
+		?>
+		<div class="bricks-mcp-config-section">
+			<h3><?php esc_html_e( 'Design Rules', 'bricks-mcp' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'Machine-readable rules that control how AI builds sections. These feed directly into the build pipeline.', 'bricks-mcp' ); ?></p>
+
+			<p style="margin-bottom: 20px;">
+				<button type="button" class="button button-secondary" id="bricks-mcp-parse-brief-btn">
+					<?php esc_html_e( 'Parse from Text', 'bricks-mcp' ); ?>
+				</button>
+			</p>
+
+			<!-- Parse from Text modal -->
+			<div id="bricks-mcp-parse-brief-modal" style="display:none;">
+				<div class="bwm-modal-backdrop" id="bricks-mcp-parse-brief-backdrop"></div>
+				<div class="bwm-modal-content">
+					<div class="bwm-modal-header">
+						<h3><?php esc_html_e( 'Parse Design Brief from Text', 'bricks-mcp' ); ?></h3>
+						<button type="button" class="bwm-modal-close" id="bricks-mcp-parse-brief-close">&times;</button>
+					</div>
+					<p class="description"><?php esc_html_e( 'Paste your free-text design brief below. An AI assistant will parse it into structured fields.', 'bricks-mcp' ); ?></p>
+					<textarea id="bricks-mcp-parse-brief-text" rows="10" class="large-text" placeholder="<?php esc_attr_e( "Paste your design brief text here...", 'bricks-mcp' ); ?>"></textarea>
+					<p style="margin-top: 12px;">
+						<button type="button" class="button button-primary" id="bricks-mcp-parse-brief-submit">
+							<?php esc_html_e( 'Parse Brief', 'bricks-mcp' ); ?>
+						</button>
+						<span class="spinner" id="bricks-mcp-parse-brief-spinner" style="float:none;"></span>
+					</p>
+					<div id="bricks-mcp-parse-brief-result" style="margin-top: 12px;"></div>
+				</div>
+			</div>
+
+			<form method="post">
+				<?php wp_nonce_field( 'bricks_mcp_structured_brief', 'bricks_mcp_structured_brief_nonce' ); ?>
+
+				<h4><?php esc_html_e( 'Dark Sections', 'bricks-mcp' ); ?></h4>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="dark_bg_color"><?php esc_html_e( 'Background Color', 'bricks-mcp' ); ?></label></th>
+						<td><input type="text" id="dark_bg_color" name="dark_bg_color" value="<?php echo esc_attr( $values['dark_bg_color'] ?? '' ); ?>" class="regular-text" placeholder="var(--base-ultra-dark)"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dark_text_color"><?php esc_html_e( 'Text Color', 'bricks-mcp' ); ?></label></th>
+						<td><input type="text" id="dark_text_color" name="dark_text_color" value="<?php echo esc_attr( $values['dark_text_color'] ?? '' ); ?>" class="regular-text" placeholder="var(--white)"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dark_subtitle_color"><?php esc_html_e( 'Subtitle Color', 'bricks-mcp' ); ?></label></th>
+						<td><input type="text" id="dark_subtitle_color" name="dark_subtitle_color" value="<?php echo esc_attr( $values['dark_subtitle_color'] ?? '' ); ?>" class="regular-text" placeholder="var(--white-trans-70)"></td>
+					</tr>
+				</table>
+
+				<h4><?php esc_html_e( 'Light Sections', 'bricks-mcp' ); ?></h4>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="light_bg_color"><?php esc_html_e( 'Background Color', 'bricks-mcp' ); ?></label></th>
+						<td><input type="text" id="light_bg_color" name="light_bg_color" value="<?php echo esc_attr( $values['light_bg_color'] ?? '' ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'Leave empty for white', 'bricks-mcp' ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="light_alt_bg_color"><?php esc_html_e( 'Alternating BG', 'bricks-mcp' ); ?></label></th>
+						<td><input type="text" id="light_alt_bg_color" name="light_alt_bg_color" value="<?php echo esc_attr( $values['light_alt_bg_color'] ?? '' ); ?>" class="regular-text" placeholder="var(--base-ultra-light)"></td>
+					</tr>
+				</table>
+
+				<h4><?php esc_html_e( 'Cards', 'bricks-mcp' ); ?></h4>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="card_radius"><?php esc_html_e( 'Border Radius', 'bricks-mcp' ); ?></label></th>
+						<td><input type="text" id="card_radius" name="card_radius" value="<?php echo esc_attr( $values['card_radius'] ?? '' ); ?>" class="regular-text" placeholder="var(--radius)"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="card_border_color"><?php esc_html_e( 'Border Color', 'bricks-mcp' ); ?></label></th>
+						<td><input type="text" id="card_border_color" name="card_border_color" value="<?php echo esc_attr( $values['card_border_color'] ?? '' ); ?>" class="regular-text" placeholder="var(--border-color)"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="card_padding"><?php esc_html_e( 'Padding', 'bricks-mcp' ); ?></label></th>
+						<td><input type="text" id="card_padding" name="card_padding" value="<?php echo esc_attr( $values['card_padding'] ?? '' ); ?>" class="regular-text" placeholder="var(--space-l)"></td>
+					</tr>
+				</table>
+
+				<h4><?php esc_html_e( 'Section Headers', 'bricks-mcp' ); ?></h4>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="section_header_align"><?php esc_html_e( 'Alignment', 'bricks-mcp' ); ?></label></th>
+						<td>
+							<select id="section_header_align" name="section_header_align">
+								<option value="center" <?php selected( $values['section_header_align'] ?? '', 'center' ); ?>><?php esc_html_e( 'center', 'bricks-mcp' ); ?></option>
+								<option value="left" <?php selected( $values['section_header_align'] ?? '', 'left' ); ?>><?php esc_html_e( 'left', 'bricks-mcp' ); ?></option>
+							</select>
+						</td>
+					</tr>
+				</table>
+
+				<h4><?php esc_html_e( 'Buttons & Classes', 'bricks-mcp' ); ?></h4>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="btn_primary_class"><?php esc_html_e( 'Primary Button Class', 'bricks-mcp' ); ?></label></th>
+						<td>
+							<select id="btn_primary_class" name="btn_primary_class">
+								<option value=""><?php esc_html_e( '— Auto-detect —', 'bricks-mcp' ); ?></option>
+								<?php foreach ( $global_classes as $gc ) :
+									$class_name = $gc['name'] ?? '';
+									if ( '' === $class_name ) { continue; }
+								?>
+									<option value="<?php echo esc_attr( $class_name ); ?>" <?php selected( $values['btn_primary_class'] ?? '', $class_name ); ?>><?php echo esc_html( $class_name ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="btn_secondary_class"><?php esc_html_e( 'Secondary Button Class', 'bricks-mcp' ); ?></label></th>
+						<td>
+							<select id="btn_secondary_class" name="btn_secondary_class">
+								<option value=""><?php esc_html_e( '— Auto-detect —', 'bricks-mcp' ); ?></option>
+								<?php foreach ( $global_classes as $gc ) :
+									$class_name = $gc['name'] ?? '';
+									if ( '' === $class_name ) { continue; }
+								?>
+									<option value="<?php echo esc_attr( $class_name ); ?>" <?php selected( $values['btn_secondary_class'] ?? '', $class_name ); ?>><?php echo esc_html( $class_name ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="eyebrow_class"><?php esc_html_e( 'Eyebrow/Tagline Class', 'bricks-mcp' ); ?></label></th>
+						<td>
+							<select id="eyebrow_class" name="eyebrow_class">
+								<option value=""><?php esc_html_e( '— Auto-detect —', 'bricks-mcp' ); ?></option>
+								<?php foreach ( $global_classes as $gc ) :
+									$class_name = $gc['name'] ?? '';
+									if ( '' === $class_name ) { continue; }
+								?>
+									<option value="<?php echo esc_attr( $class_name ); ?>" <?php selected( $values['eyebrow_class'] ?? '', $class_name ); ?>><?php echo esc_html( $class_name ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</td>
+					</tr>
+				</table>
+
+				<h4><?php esc_html_e( 'Icons', 'bricks-mcp' ); ?></h4>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="icon_library"><?php esc_html_e( 'Icon Library', 'bricks-mcp' ); ?></label></th>
+						<td>
+							<select id="icon_library" name="icon_library">
+								<option value="themify" <?php selected( $values['icon_library'] ?? '', 'themify' ); ?>><?php esc_html_e( 'themify', 'bricks-mcp' ); ?></option>
+								<option value="fontawesomeSolid" <?php selected( $values['icon_library'] ?? '', 'fontawesomeSolid' ); ?>><?php esc_html_e( 'fontawesomeSolid', 'bricks-mcp' ); ?></option>
+								<option value="fontawesomeRegular" <?php selected( $values['icon_library'] ?? '', 'fontawesomeRegular' ); ?>><?php esc_html_e( 'fontawesomeRegular', 'bricks-mcp' ); ?></option>
+								<option value="ionicons" <?php selected( $values['icon_library'] ?? '', 'ionicons' ); ?>><?php esc_html_e( 'ionicons', 'bricks-mcp' ); ?></option>
+							</select>
+						</td>
+					</tr>
+				</table>
+
+				<h4><?php esc_html_e( 'Spacing', 'bricks-mcp' ); ?></h4>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="grid_gap"><?php esc_html_e( 'Grid Gap', 'bricks-mcp' ); ?></label></th>
+						<td><input type="text" id="grid_gap" name="grid_gap" value="<?php echo esc_attr( $values['grid_gap'] ?? '' ); ?>" class="regular-text" placeholder="var(--grid-gap)"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="content_gap"><?php esc_html_e( 'Content Gap', 'bricks-mcp' ); ?></label></th>
+						<td><input type="text" id="content_gap" name="content_gap" value="<?php echo esc_attr( $values['content_gap'] ?? '' ); ?>" class="regular-text" placeholder="var(--content-gap)"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="container_gap"><?php esc_html_e( 'Container Gap', 'bricks-mcp' ); ?></label></th>
+						<td><input type="text" id="container_gap" name="container_gap" value="<?php echo esc_attr( $values['container_gap'] ?? '' ); ?>" class="regular-text" placeholder="var(--container-gap)"></td>
+					</tr>
+				</table>
+
+				<?php submit_button( __( 'Save Design Rules', 'bricks-mcp' ) ); ?>
+			</form>
+		</div>
+
+		<script>
+		(function() {
+			var btn   = document.getElementById('bricks-mcp-parse-brief-btn');
+			var modal = document.getElementById('bricks-mcp-parse-brief-modal');
+			var close = document.getElementById('bricks-mcp-parse-brief-close');
+			var back  = document.getElementById('bricks-mcp-parse-brief-backdrop');
+			var submit = document.getElementById('bricks-mcp-parse-brief-submit');
+			var spinner = document.getElementById('bricks-mcp-parse-brief-spinner');
+			var result  = document.getElementById('bricks-mcp-parse-brief-result');
+
+			if (!btn || !modal) return;
+
+			function openModal()  { modal.style.display = ''; }
+			function closeModal() { modal.style.display = 'none'; result.innerHTML = ''; }
+
+			btn.addEventListener('click', openModal);
+			close.addEventListener('click', closeModal);
+			back.addEventListener('click', closeModal);
+
+			submit.addEventListener('click', function() {
+				var text = document.getElementById('bricks-mcp-parse-brief-text').value.trim();
+				if (!text) return;
+
+				spinner.classList.add('is-active');
+				result.innerHTML = '';
+
+				var fd = new FormData();
+				fd.append('action', 'bricks_mcp_parse_brief');
+				fd.append('nonce', typeof bricksMcpNotes !== 'undefined' ? bricksMcpNotes.nonce : '');
+				fd.append('text', text);
+
+				fetch(ajaxurl, { method: 'POST', body: fd })
+					.then(function(r) { return r.json(); })
+					.then(function(resp) {
+						spinner.classList.remove('is-active');
+						if (resp.success) {
+							result.innerHTML = '<div class="notice notice-success"><p>' + resp.data.message + '</p></div>';
+						} else {
+							result.innerHTML = '<div class="notice notice-error"><p>' + (resp.data && resp.data.message ? resp.data.message : 'Unknown error.') + '</p></div>';
+						}
+					})
+					.catch(function() {
+						spinner.classList.remove('is-active');
+						result.innerHTML = '<div class="notice notice-error"><p>Request failed.</p></div>';
+					});
+			});
+		})();
+		</script>
+		<?php
+	}
+
+	/**
+	 * AJAX handler: Parse a free-text brief into structured fields.
+	 *
+	 * Placeholder — returns an error directing user to connect an AI assistant.
+	 *
+	 * @return void
+	 */
+	public function ajax_parse_brief(): void {
+		check_ajax_referer( 'bricks_mcp_notes', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+		}
+
+		wp_send_json_error( [
+			'message' => __( 'Connect an AI assistant and use the MCP design_brief:parse action.', 'bricks-mcp' ),
+		] );
 	}
 
 }
