@@ -254,17 +254,17 @@ final class Settings {
 			<?php $this->render_page_header(); ?>
 
 			<nav class="bwm-nav">
-				<a href="?page=bricks-mcp&tab=design-system" class="nav-tab <?php echo 'design-system' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Design System', 'bricks-mcp' ); ?>
-				</a>
-				<a href="?page=bricks-mcp&tab=patterns" class="nav-tab <?php echo 'patterns' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Patterns', 'bricks-mcp' ); ?>
+				<a href="?page=bricks-mcp&tab=connection" class="nav-tab <?php echo 'connection' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Connection & Settings', 'bricks-mcp' ); ?>
 				</a>
 				<a href="?page=bricks-mcp&tab=ai-context" class="nav-tab <?php echo 'ai-context' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'AI Context', 'bricks-mcp' ); ?>
 				</a>
-				<a href="?page=bricks-mcp&tab=connection" class="nav-tab <?php echo 'connection' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Connection & Settings', 'bricks-mcp' ); ?>
+				<a href="?page=bricks-mcp&tab=patterns" class="nav-tab <?php echo 'patterns' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Patterns', 'bricks-mcp' ); ?>
+				</a>
+				<a href="?page=bricks-mcp&tab=design-system" class="nav-tab <?php echo 'design-system' === $active_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Design System', 'bricks-mcp' ); ?>
 				</a>
 				<a href="?page=bricks-mcp&tab=diagnostics" class="nav-tab <?php echo 'diagnostics' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'System Health', 'bricks-mcp' ); ?>
