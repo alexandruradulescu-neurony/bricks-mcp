@@ -1396,6 +1396,7 @@ class SchemaGenerator {
 		try {
 			return new $element_class( [] );
 		} catch ( \Throwable $e ) {
+			error_log( 'BricksMCP: Element schema generation failed: ' . $e->getMessage() );
 			return null;
 		}
 	}

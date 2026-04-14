@@ -380,6 +380,7 @@ class ValidationService {
 			return $errors;
 		} catch ( \Throwable $e ) {
 			// If Opis validation itself throws, log and skip — don't block saves.
+			error_log( 'BricksMCP: Opis validation error: ' . $e->getMessage() );
 			return [];
 		}
 	}

@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP;
 
+use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\ClassIntentResolver;
 use BricksMCP\MCP\Services\DesignSchemaValidator;
@@ -698,8 +699,8 @@ final class Router {
 		);
 
 		// Append design tokens: variable names grouped by category (no values).
-		$categories = get_option( 'bricks_global_variables_categories', [] );
-		$variables  = get_option( 'bricks_global_variables', [] );
+		$categories = get_option( BricksCore::OPTION_VARIABLE_CATEGORIES, [] );
+		$variables  = get_option( BricksCore::OPTION_GLOBAL_VARIABLES, [] );
 
 		if ( is_array( $categories ) && is_array( $variables ) ) {
 			$tokens = [];
@@ -798,7 +799,7 @@ final class Router {
 		}
 
 		// Include design and business briefs if set.
-		$briefs = get_option( 'bricks_mcp_briefs', [] );
+		$briefs = get_option( BricksCore::OPTION_BRIEFS, [] );
 		if ( is_array( $briefs ) ) {
 			$design_brief   = trim( $briefs['design_brief'] ?? '' );
 			$business_brief = trim( $briefs['business_brief'] ?? '' );

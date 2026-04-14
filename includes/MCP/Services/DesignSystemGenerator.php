@@ -231,7 +231,7 @@ class DesignSystemGenerator {
         update_option( 'bricks_color_palette', $kept_palettes );
 
         // --- Framework CSS: write between markers ---
-        $settings     = get_option( 'bricks_global_settings', [] );
+        $settings     = get_option( BricksCore::OPTION_GLOBAL_SETTINGS, [] );
         $existing_css = $settings['customCss'] ?? '';
         $new_css      = $generated['css'];
 
@@ -251,7 +251,7 @@ class DesignSystemGenerator {
             $settings['customCss'] = $existing_css . "\n\n" . $new_css;
         }
 
-        update_option( 'bricks_global_settings', $settings );
+        update_option( BricksCore::OPTION_GLOBAL_SETTINGS, $settings );
         $summary['css_applied'] = true;
 
         return $summary;

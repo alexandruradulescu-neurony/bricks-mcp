@@ -373,7 +373,7 @@ final class ProposalService {
 		$scoped_variables = $this->get_scoped_variables( $description );
 
 		// Load briefs.
-		$briefs         = get_option( 'bricks_mcp_briefs', [] );
+		$briefs         = get_option( BricksCore::OPTION_BRIEFS, [] );
 		$design_brief   = is_array( $briefs ) ? trim( $briefs['design_brief'] ?? '' ) : '';
 		$business_brief = is_array( $briefs ) ? trim( $briefs['business_brief'] ?? '' ) : '';
 

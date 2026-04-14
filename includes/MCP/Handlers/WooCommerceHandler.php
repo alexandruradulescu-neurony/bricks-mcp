@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP\Handlers;
 
+use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\SchemaGenerator;
 use BricksMCP\MCP\ToolRegistry;
@@ -109,7 +110,7 @@ final class WooCommerceHandler {
 	 * @return array<string, mixed> WooCommerce status data.
 	 */
 	private function tool_woocommerce_status(): array {
-		$global_settings = get_option( 'bricks_global_settings', array() );
+		$global_settings = get_option( BricksCore::OPTION_GLOBAL_SETTINGS, array() );
 		$woo_settings    = array();
 		$woo_keys        = array(
 			'woocommerceEnableAjaxAddToCart',

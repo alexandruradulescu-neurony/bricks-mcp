@@ -388,7 +388,7 @@ class MediaService {
 	 * @return array<string, mixed>|\WP_Error Enriched search results or error.
 	 */
 	public function smart_search( string $query, int $per_page = 5 ): array|\WP_Error {
-		$briefs = get_option( 'bricks_mcp_briefs', [] );
+		$briefs = get_option( BricksCore::OPTION_BRIEFS, [] );
 		$business_brief = '';
 
 		if ( is_array( $briefs ) && ! empty( $briefs['business_brief'] ) ) {
@@ -511,7 +511,7 @@ class MediaService {
 	 * @return string API key or empty string if not configured.
 	 */
 	private function get_unsplash_api_key(): string {
-		$settings = get_option( 'bricks_global_settings', array() );
+		$settings = get_option( BricksCore::OPTION_GLOBAL_SETTINGS, array() );
 		if ( ! is_array( $settings ) ) {
 			return '';
 		}

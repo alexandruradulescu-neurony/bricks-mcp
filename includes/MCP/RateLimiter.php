@@ -10,6 +10,8 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP;
 
+use BricksMCP\MCP\Services\BricksCore;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -66,7 +68,7 @@ final class RateLimiter {
 	 * @return true|\WP_Error True if within limit, WP_Error with status 429 if exceeded.
 	 */
 	public static function check( string $identifier ): true|\WP_Error {
-		$settings = get_option( 'bricks_mcp_settings', [] );
+		$settings = get_option( BricksCore::OPTION_SETTINGS, [] );
 		$limit    = (int) ( $settings['rate_limit_rpm'] ?? self::DEFAULT_RPM );
 
 		if ( wp_using_ext_object_cache() ) {

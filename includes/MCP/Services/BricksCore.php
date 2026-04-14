@@ -46,6 +46,14 @@ class BricksCore {
 	public const OPTION_GLOBAL_VARIABLES     = 'bricks_global_variables';
 	public const OPTION_VARIABLE_CATEGORIES  = 'bricks_global_variables_categories';
 	public const OPTION_BRIEFS               = 'bricks_mcp_briefs';
+	public const OPTION_SETTINGS             = 'bricks_mcp_settings';
+	public const OPTION_NOTES                = 'bricks_mcp_notes';
+	public const OPTION_GLOBAL_SETTINGS      = 'bricks_global_settings';
+
+	/**
+	 * Required WordPress capability for MCP operations.
+	 */
+	public const REQUIRED_CAPABILITY = 'manage_options';
 
 	/**
 	 * Element normalizer instance.
@@ -650,7 +658,7 @@ class BricksCore {
 	 * @return bool True if dangerous actions mode is enabled.
 	 */
 	public function is_dangerous_actions_enabled(): bool {
-		$settings = get_option( 'bricks_mcp_settings', [] );
+		$settings = get_option( self::OPTION_SETTINGS, [] );
 		return ! empty( $settings['dangerous_actions'] );
 	}
 }

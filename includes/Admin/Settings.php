@@ -10,6 +10,8 @@ declare(strict_types=1);
 
 namespace BricksMCP\Admin;
 
+use BricksMCP\MCP\Services\BricksCore;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -226,7 +228,7 @@ final class Settings {
 	 * @return void
 	 */
 	public function render_settings_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'bricks-mcp' ) );
 		}
 
@@ -549,7 +551,7 @@ final class Settings {
 	}
 
 	private function render_tab_notes(): void {
-		$notes       = get_option( 'bricks_mcp_notes', [] );
+		$notes       = get_option( BricksCore::OPTION_NOTES, [] );
 		$notes       = is_array( $notes ) ? $notes : [];
 		?>
 		<div class="bricks-mcp-config-section">
@@ -1329,7 +1331,7 @@ final class Settings {
 	public function ajax_generate_app_password(): void {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
 		}
 
@@ -1528,7 +1530,7 @@ final class Settings {
 	public function ajax_delete_note(): void {
 		check_ajax_referer( 'bricks_mcp_notes', '_wpnonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ), 403 );
 		}
 
@@ -1537,14 +1539,14 @@ final class Settings {
 			wp_send_json_error( array( 'message' => __( 'Missing note ID.', 'bricks-mcp' ) ) );
 		}
 
-		$notes    = get_option( 'bricks_mcp_notes', [] );
+		$notes    = get_option( BricksCore::OPTION_NOTES, [] );
 		$filtered = array_values( array_filter( $notes, static fn( $n ) => ( $n['id'] ?? '' ) !== $note_id ) );
 
 		if ( count( $filtered ) === count( $notes ) ) {
 			wp_send_json_error( __( 'Note not found.', 'bricks-mcp' ) );
 		}
 
-		update_option( 'bricks_mcp_notes', $filtered, false );
+		update_option( BricksCore::OPTION_NOTES, $filtered, false );
 		wp_send_json_success( true );
 	}
 
@@ -1556,7 +1558,7 @@ final class Settings {
 	public function ajax_add_note(): void {
 		check_ajax_referer( 'bricks_mcp_notes', '_wpnonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ), 403 );
 		}
 
@@ -1565,7 +1567,7 @@ final class Settings {
 			wp_send_json_error( array( 'message' => __( 'Note text is required.', 'bricks-mcp' ) ) );
 		}
 
-		$notes = get_option( 'bricks_mcp_notes', [] );
+		$notes = get_option( BricksCore::OPTION_NOTES, [] );
 		if ( ! is_array( $notes ) ) {
 			$notes = [];
 		}
@@ -1578,7 +1580,7 @@ final class Settings {
 		];
 
 		$notes[] = $note;
-		update_option( 'bricks_mcp_notes', $notes, false );
+		update_option( BricksCore::OPTION_NOTES, $notes, false );
 		wp_send_json_success( $note );
 	}
 
@@ -1590,7 +1592,7 @@ final class Settings {
 	public function ajax_revoke_app_password(): void {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
 		}
 
@@ -1654,7 +1656,7 @@ final class Settings {
 
 		$values        = get_option( 'bricks_mcp_structured_brief', [] );
 		$values        = is_array( $values ) ? $values : [];
-		$global_classes = get_option( 'bricks_global_classes', [] );
+		$global_classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		$global_classes = is_array( $global_classes ) ? $global_classes : [];
 		?>
 		<div class="bricks-mcp-config-section">
@@ -1901,7 +1903,7 @@ final class Settings {
 	public function ajax_parse_brief(): void {
 		check_ajax_referer( 'bricks_mcp_notes', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
 		}
 

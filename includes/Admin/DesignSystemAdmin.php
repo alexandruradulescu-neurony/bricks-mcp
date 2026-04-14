@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace BricksMCP\Admin;
 
+use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\DesignSystemGenerator;
 
 class DesignSystemAdmin {
@@ -332,7 +333,7 @@ class DesignSystemAdmin {
     public function ajax_save_config(): void {
         check_ajax_referer( 'bricks_mcp_design_system', 'nonce' );
 
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( 'Unauthorized', 403 );
         }
 
@@ -351,7 +352,7 @@ class DesignSystemAdmin {
     public function ajax_apply(): void {
         check_ajax_referer( 'bricks_mcp_design_system', 'nonce' );
 
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( 'Unauthorized', 403 );
         }
 
@@ -384,7 +385,7 @@ class DesignSystemAdmin {
     public function ajax_reset(): void {
         check_ajax_referer( 'bricks_mcp_design_system', 'nonce' );
 
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( 'Unauthorized', 403 );
         }
 

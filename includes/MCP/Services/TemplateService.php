@@ -336,7 +336,7 @@ class TemplateService {
 		$template_type = get_post_meta( $template_id, '_bricks_template_type', true );
 		$settings      = get_post_meta( $template_id, '_bricks_template_settings', true );
 
-		$global_classes = get_option( 'bricks_global_classes', [] );
+		$global_classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		$class_map      = [];
 		if ( is_array( $global_classes ) ) {
 			foreach ( $global_classes as $class ) {
@@ -706,7 +706,7 @@ class TemplateService {
 
 			$referenced_ids = array_unique( $referenced_ids );
 			if ( ! empty( $referenced_ids ) ) {
-				$all_classes = get_option( 'bricks_global_classes', array() );
+				$all_classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, array() );
 				$used_classes = array_filter( $all_classes, fn( $class ) => in_array( $class['id'] ?? '', $referenced_ids, true ) );
 				$export['globalClasses'] = array_values( $used_classes );
 			}

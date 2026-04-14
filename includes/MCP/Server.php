@@ -10,6 +10,8 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP;
 
+use BricksMCP\MCP\Services\BricksCore;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -248,7 +250,7 @@ final class Server {
 	 * @return bool|\WP_Error True if allowed, WP_Error otherwise.
 	 */
 	public function check_permissions( \WP_REST_Request $request ): bool|\WP_Error { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		$settings = get_option( 'bricks_mcp_settings', [] );
+		$settings = get_option( BricksCore::OPTION_SETTINGS, [] );
 
 		if ( ! is_array( $settings ) ) {
 			$settings = [];
@@ -274,7 +276,7 @@ final class Server {
 			}
 
 			// Check user capabilities.
-			if ( ! current_user_can( 'manage_options' ) ) {
+			if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 				return new \WP_Error(
 					'bricks_mcp_forbidden',
 					__( 'You do not have permission to access the MCP server.', 'bricks-mcp' ),
@@ -291,7 +293,7 @@ final class Server {
 				);
 			}
 
-			if ( is_user_logged_in() && ! current_user_can( 'manage_options' ) ) {
+			if ( is_user_logged_in() && ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 				return new \WP_Error(
 					'bricks_mcp_forbidden',
 					__( 'You do not have permission to access the MCP server.', 'bricks-mcp' ),

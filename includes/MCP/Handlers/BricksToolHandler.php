@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP\Handlers;
 
+use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\ElementIdGenerator;
 use BricksMCP\MCP\ToolRegistry;
@@ -263,7 +264,7 @@ final class BricksToolHandler {
 		if ( class_exists( '\Bricks\Database' ) && method_exists( '\Bricks\Database', 'get_setting' ) ) {
 			$is_custom = ! empty( \Bricks\Database::get_setting( 'customBreakpoints' ) );
 		} else {
-			$global_settings = get_option( 'bricks_global_settings', array() );
+			$global_settings = get_option( BricksCore::OPTION_GLOBAL_SETTINGS, array() );
 			$is_custom       = ! empty( $global_settings['customBreakpoints'] );
 		}
 

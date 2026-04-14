@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace BricksMCP\Admin;
 
+use BricksMCP\MCP\Services\BricksCore;
+
 /**
  * Diagnostics tab admin — extracted from Settings.
  *
@@ -81,7 +83,7 @@ class DiagnosticsAdmin {
     public function ajax_run_diagnostics(): void {
         check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
 
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
         }
 

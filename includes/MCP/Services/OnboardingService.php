@@ -172,7 +172,7 @@ final class OnboardingService {
         }, 10, 1 );
 
         // Invalidate when the underlying options change.
-        foreach ( [ 'bricks_global_classes', 'bricks_global_variables' ] as $option ) {
+        foreach ( [ BricksCore::OPTION_GLOBAL_CLASSES, BricksCore::OPTION_GLOBAL_VARIABLES ] as $option ) {
             add_action( "update_option_{$option}", fn() => self::bump_cache_version() );
             add_action( "add_option_{$option}", fn() => self::bump_cache_version() );
         }
@@ -229,8 +229,8 @@ final class OnboardingService {
         $template_counts = wp_count_posts( 'bricks_template' );
         $template_count  = isset( $template_counts->publish ) ? (int) $template_counts->publish : 0;
 
-        $global_classes   = get_option( 'bricks_global_classes', [] );
-        $global_variables = get_option( 'bricks_global_variables', [] );
+        $global_classes   = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
+        $global_variables = get_option( BricksCore::OPTION_GLOBAL_VARIABLES, [] );
 
         $context = [
             'name'                  => get_bloginfo( 'name' ),

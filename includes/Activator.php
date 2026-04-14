@@ -10,6 +10,8 @@ declare(strict_types=1);
 
 namespace BricksMCP;
 
+use BricksMCP\MCP\Services\BricksCore;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -108,7 +110,7 @@ final class Activator {
 			'require_auth' => true,
 		];
 
-		$existing = get_option( 'bricks_mcp_settings', [] );
+		$existing = get_option( BricksCore::OPTION_SETTINGS, [] );
 
 		if ( ! is_array( $existing ) ) {
 			$existing = [];
@@ -117,6 +119,6 @@ final class Activator {
 		// Merge defaults with existing settings.
 		$settings = array_merge( $defaults, $existing );
 
-		update_option( 'bricks_mcp_settings', $settings );
+		update_option( BricksCore::OPTION_SETTINGS, $settings );
 	}
 }

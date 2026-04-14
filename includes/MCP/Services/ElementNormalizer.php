@@ -380,7 +380,7 @@ class ElementNormalizer {
 
 			// Raw code blocks (Code element, SVG element): require dangerous_actions toggle.
 			if ( in_array( $base_key, self::RAW_CODE_KEYS, true ) && in_array( $element_name, [ 'code', 'svg' ], true ) ) {
-				$settings_option = get_option( 'bricks_mcp_settings', [] );
+				$settings_option = get_option( BricksCore::OPTION_SETTINGS, [] );
 				if ( ! empty( $settings_option['dangerous_actions'] ) ) {
 					$sanitized[ $key ] = $value;
 				} else {

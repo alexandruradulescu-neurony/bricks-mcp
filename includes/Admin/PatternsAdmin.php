@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace BricksMCP\Admin;
 
+use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\DesignPatternService;
 
 /**
@@ -218,7 +219,7 @@ class PatternsAdmin {
 	 */
 	public function ajax_list_patterns(): void {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
 		}
 		wp_send_json_success( DesignPatternService::list_all() );
@@ -229,7 +230,7 @@ class PatternsAdmin {
 	 */
 	public function ajax_create_pattern(): void {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
 		}
 
@@ -252,7 +253,7 @@ class PatternsAdmin {
 	 */
 	public function ajax_delete_pattern(): void {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
 		}
 
@@ -274,7 +275,7 @@ class PatternsAdmin {
 	 */
 	public function ajax_export_patterns(): void {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
 		}
 
@@ -297,7 +298,7 @@ class PatternsAdmin {
 	 */
 	public function ajax_import_patterns(): void {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
 		}
 

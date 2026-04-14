@@ -61,7 +61,7 @@ class SettingsService {
 			);
 		}
 
-		$raw_settings = get_option( 'bricks_global_settings', [] );
+		$raw_settings = get_option( BricksCore::OPTION_GLOBAL_SETTINGS, [] );
 		if ( ! is_array( $raw_settings ) ) {
 			$raw_settings = [];
 		}
@@ -851,7 +851,7 @@ class SettingsService {
 	 * @return array<string, mixed> Font status data.
 	 */
 	public function get_font_status(): array {
-		$settings    = get_option( 'bricks_global_settings', array() );
+		$settings    = get_option( BricksCore::OPTION_GLOBAL_SETTINGS, array() );
 		$adobe_fonts = get_option( 'bricks_adobe_fonts', array() );
 
 		return array(
@@ -878,7 +878,7 @@ class SettingsService {
 	 * @return array<string, mixed> Adobe Fonts data.
 	 */
 	public function get_adobe_fonts(): array {
-		$settings    = get_option( 'bricks_global_settings', array() );
+		$settings    = get_option( BricksCore::OPTION_GLOBAL_SETTINGS, array() );
 		$adobe_fonts = get_option( 'bricks_adobe_fonts', array() );
 
 		if ( empty( $settings['adobeFontsProjectId'] ) ) {
@@ -914,7 +914,7 @@ class SettingsService {
 		$allowed_keys = array( 'disableGoogleFonts', 'webfontLoading', 'customFontsPreload' );
 		$valid_loading = array( 'swap', 'block', 'fallback', 'optional', 'auto', '' );
 
-		$settings     = get_option( 'bricks_global_settings', array() );
+		$settings     = get_option( BricksCore::OPTION_GLOBAL_SETTINGS, array() );
 		$updated      = array();
 		$rejected     = array();
 
@@ -943,7 +943,7 @@ class SettingsService {
 		}
 
 		if ( ! empty( $updated ) ) {
-			update_option( 'bricks_global_settings', $settings );
+			update_option( BricksCore::OPTION_GLOBAL_SETTINGS, $settings );
 		}
 
 		return array(

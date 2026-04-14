@@ -162,7 +162,7 @@ final class Plugin {
 	 * @return void
 	 */
 	private function migrate_settings(): void {
-		$settings = get_option( 'bricks_mcp_settings', [] );
+		$settings = get_option( MCP\Services\BricksCore::OPTION_SETTINGS, [] );
 
 		if ( ! is_array( $settings ) ) {
 			return;
@@ -178,7 +178,7 @@ final class Plugin {
 		}
 
 		if ( $dirty ) {
-			update_option( 'bricks_mcp_settings', $settings );
+			update_option( MCP\Services\BricksCore::OPTION_SETTINGS, $settings );
 		}
 	}
 

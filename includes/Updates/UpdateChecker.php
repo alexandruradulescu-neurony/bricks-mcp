@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace BricksMCP\Updates;
 
+use BricksMCP\MCP\Services\BricksCore;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -324,7 +326,7 @@ final class UpdateChecker {
 	public function ajax_check_update(): void {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
 		}
 

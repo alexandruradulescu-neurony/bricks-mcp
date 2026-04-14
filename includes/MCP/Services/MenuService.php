@@ -312,7 +312,7 @@ class MenuService {
 		$post_types = array( 'bricks_template' );
 
 		// Include pages if Bricks is enabled for them.
-		$bricks_settings = get_option( 'bricks_global_settings', array() );
+		$bricks_settings = get_option( BricksCore::OPTION_GLOBAL_SETTINGS, array() );
 		if ( is_array( $bricks_settings ) && ! empty( $bricks_settings['postTypes'] ) && is_array( $bricks_settings['postTypes'] ) ) {
 			if ( in_array( 'page', $bricks_settings['postTypes'], true ) ) {
 				$post_types[] = 'page';

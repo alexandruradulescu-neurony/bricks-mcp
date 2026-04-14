@@ -581,7 +581,7 @@ class PageOperationsService {
 	 * @return \WP_Error|null WP_Error if protected, null if allowed.
 	 */
 	public function check_protected_page( int $post_id ): ?\WP_Error {
-		$settings      = get_option( 'bricks_mcp_settings', [] );
+		$settings      = get_option( BricksCore::OPTION_SETTINGS, [] );
 		$protected_raw = $settings['protected_pages'] ?? '';
 
 		if ( empty( $protected_raw ) ) {
@@ -636,7 +636,7 @@ class PageOperationsService {
 		}
 
 		// Load global classes for reference.
-		$global_classes = get_option( 'bricks_global_classes', [] );
+		$global_classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		$class_map      = [];
 
 		if ( is_array( $global_classes ) ) {

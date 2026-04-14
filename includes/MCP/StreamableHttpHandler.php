@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP;
 
+use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\OnboardingService;
 
@@ -525,7 +526,7 @@ final class StreamableHttpHandler {
 		] );
 		$page_count = count( $pages_query->posts );
 
-		$global_classes = get_option( 'bricks_global_classes', [] );
+		$global_classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		$class_count    = is_array( $global_classes ) ? count( $global_classes ) : 0;
 
 		// Detect design system from class naming.
@@ -573,7 +574,7 @@ final class StreamableHttpHandler {
 		}
 
 		// Load AI notes to embed directly in instructions.
-		$notes      = get_option( 'bricks_mcp_notes', [] );
+		$notes      = get_option( BricksCore::OPTION_NOTES, [] );
 		$notes_text = '';
 		if ( is_array( $notes ) && ! empty( $notes ) ) {
 			$notes_text = "\n\n🚨 AI NOTES (persistent corrections from the site owner — MUST follow):\n";

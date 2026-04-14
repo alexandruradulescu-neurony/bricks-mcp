@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP\Handlers\Page;
 
+use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\BricksService;
 
 // Prevent direct access.
@@ -302,7 +303,7 @@ final class PageReadSubHandler {
 		$section = $by_id[ $section_id ];
 
 		// Load global classes for context.
-		$global_classes = get_option( 'bricks_global_classes', [] );
+		$global_classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		$class_map      = [];
 		if ( is_array( $global_classes ) ) {
 			foreach ( $global_classes as $gc ) {
