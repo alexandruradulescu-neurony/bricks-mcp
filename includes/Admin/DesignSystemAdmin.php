@@ -353,6 +353,145 @@ class DesignSystemAdmin {
         <?php
     }
 
+    private function render_panel_gaps( array $config ): void {
+        $g = $config['gaps'];
+        $map = [
+            'grid_gap'        => __( '--grid-gap',        'bricks-mcp' ),
+            'grid_gap_s'      => __( '--grid-gap-s',      'bricks-mcp' ),
+            'card_gap'        => __( '--card-gap',        'bricks-mcp' ),
+            'content_gap'     => __( '--content-gap',     'bricks-mcp' ),
+            'container_gap'   => __( '--container-gap',   'bricks-mcp' ),
+            'padding_section' => __( '--padding-section', 'bricks-mcp' ),
+            'offset'          => __( '--offset',          'bricks-mcp' ),
+        ];
+        ?>
+        <section class="bwm-ds-panel" data-step="gaps">
+            <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Gaps / Padding', 'bricks-mcp' ); ?></h2>
+            <p class="bwm-ds-panel-help">
+                <?php esc_html_e( '--offset is the height of your site header, used for fixed positioning and scroll anchors.', 'bricks-mcp' ); ?>
+            </p>
+            <div class="bwm-ds-text-fields">
+                <?php foreach ( $map as $key => $label ) : ?>
+                    <div class="bwm-ds-field">
+                        <label><?php echo esc_html( $label ); ?></label>
+                        <input type="text" value="<?php echo esc_attr( $g[ $key ] ?? '' ); ?>" data-field="gaps.<?php echo esc_attr( $key ); ?>">
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+    }
+
+    private function render_panel_radius( array $config ): void {
+        $r      = $config['radius'];
+        $values = $r['values'];
+        $ts     = $config['text_styles'];
+        $rows = [
+            'radius'         => '--radius',
+            'radius_inside'  => '--radius-inside',
+            'radius_outside' => '--radius-outside',
+            'radius_btn'     => '--radius-btn',
+            'radius_pill'    => '--radius-pill',
+            'radius_circle'  => '--radius-circle',
+            'radius_s'       => '--radius-s',
+            'radius_m'       => '--radius-m',
+            'radius_l'       => '--radius-l',
+            'radius_xl'      => '--radius-xl',
+        ];
+        ?>
+        <section class="bwm-ds-panel" data-step="radius">
+            <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Radius', 'bricks-mcp' ); ?></h2>
+            <p class="bwm-ds-panel-help">
+                <?php esc_html_e( 'Set your border radius and border color.', 'bricks-mcp' ); ?>
+            </p>
+
+            <div class="bwm-ds-seed">
+                <div class="bwm-ds-field">
+                    <label><?php esc_html_e( 'Base Radius (px)', 'bricks-mcp' ); ?></label>
+                    <input type="number" value="<?php echo esc_attr( $r['base'] ); ?>" data-field="radius.base" data-recompute="radius" min="0" max="50" step="1">
+                </div>
+            </div>
+
+            <div class="bwm-ds-text-fields">
+                <?php foreach ( $rows as $key => $label ) : ?>
+                    <div class="bwm-ds-field">
+                        <label><?php echo esc_html( $label ); ?></label>
+                        <input type="text" value="<?php echo esc_attr( $values[ $key ] ?? '' ); ?>" data-field="radius.values.<?php echo esc_attr( $key ); ?>">
+                    </div>
+                <?php endforeach; ?>
+
+                <div class="bwm-ds-field">
+                    <label>--border-color</label>
+                    <input type="text" value="<?php echo esc_attr( $ts['border_color'] ?? '' ); ?>" data-field="text_styles.border_color">
+                </div>
+                <div class="bwm-ds-field">
+                    <label>--border-color-dark</label>
+                    <input type="text" value="<?php echo esc_attr( $ts['border_color_dark'] ?? '' ); ?>" data-field="text_styles.border_color_dark">
+                </div>
+            </div>
+        </section>
+        <?php
+    }
+
+    private function render_panel_sizes( array $config ): void {
+        $s = $config['sizes'];
+        $rows = [
+            'container_width'    => [ __( 'Container Width (px)',     'bricks-mcp' ), 'number' ],
+            'container_min'      => [ __( 'Container Min Width (px)', 'bricks-mcp' ), 'number' ],
+            'max_width'          => [ __( 'Max Width (px)',           'bricks-mcp' ), 'number' ],
+            'max_width_m'        => [ __( 'Max Width M (px)',         'bricks-mcp' ), 'number' ],
+            'max_width_s'        => [ __( 'Max Width S (px)',         'bricks-mcp' ), 'number' ],
+            'min_height'         => [ __( 'Min Height (px)',          'bricks-mcp' ), 'number' ],
+            'min_height_section' => [ __( 'Min Height Section (px)',  'bricks-mcp' ), 'number' ],
+            'logo_width_mobile'  => [ __( 'Logo Width Mobile (px)',   'bricks-mcp' ), 'number' ],
+            'logo_width_desktop' => [ __( 'Logo Width Desktop (px)',  'bricks-mcp' ), 'number' ],
+        ];
+        ?>
+        <section class="bwm-ds-panel" data-step="sizes">
+            <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Sizes', 'bricks-mcp' ); ?></h2>
+            <p class="bwm-ds-panel-help">
+                <?php esc_html_e( '--container-width and --container-min-width are used for clamp calculations.', 'bricks-mcp' ); ?>
+            </p>
+            <div class="bwm-ds-text-fields">
+                <?php foreach ( $rows as $key => [ $label, $type ] ) : ?>
+                    <div class="bwm-ds-field">
+                        <label><?php echo esc_html( $label ); ?></label>
+                        <input type="<?php echo esc_attr( $type ); ?>" value="<?php echo esc_attr( $s[ $key ] ?? '' ); ?>" data-field="sizes.<?php echo esc_attr( $key ); ?>">
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+    }
+
+    private function render_panel_text_styles( array $config ): void {
+        $ts = $config['text_styles'];
+        $rows = [
+            'text_color'          => [ '--text-color',          'text' ],
+            'heading_color'       => [ '--heading-color',       'text' ],
+            'text_font_weight'    => [ '--text-font-weight',    'number' ],
+            'heading_font_weight' => [ '--heading-font-weight', 'number' ],
+            'text_line_height'    => [ '--text-line-height',    'text' ],
+            'heading_line_height' => [ '--heading-line-height', 'text' ],
+        ];
+        ?>
+        <section class="bwm-ds-panel" data-step="text-styles">
+            <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Text Styles', 'bricks-mcp' ); ?></h2>
+            <p class="bwm-ds-panel-help">
+                <?php esc_html_e( 'Colors, weights, and line-heights for text and headings. Accept CSS variables.', 'bricks-mcp' ); ?>
+            </p>
+            <div class="bwm-ds-text-fields">
+                <?php foreach ( $rows as $key => [ $label, $type ] ) : ?>
+                    <div class="bwm-ds-field">
+                        <label><?php echo esc_html( $label ); ?></label>
+                        <input type="<?php echo esc_attr( $type ); ?>" value="<?php echo esc_attr( $ts[ $key ] ?? '' ); ?>" data-field="text_styles.<?php echo esc_attr( $key ); ?>">
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+    }
+
     // --- AJAX Handlers ---
 
     /**
