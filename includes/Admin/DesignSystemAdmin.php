@@ -250,6 +250,109 @@ class DesignSystemAdmin {
         <?php
     }
 
+    private function render_panel_colors( array $config ): void {
+        $colors = $config['colors'];
+        $families = [
+            'primary'   => __( 'Primary',   'bricks-mcp' ),
+            'secondary' => __( 'Secondary', 'bricks-mcp' ),
+            'tertiary'  => __( 'Tertiary',  'bricks-mcp' ),
+            'accent'    => __( 'Accent',    'bricks-mcp' ),
+            'base'      => __( 'Base',      'bricks-mcp' ),
+            'neutral'   => __( 'Neutral',   'bricks-mcp' ),
+        ];
+        ?>
+        <section class="bwm-ds-panel" data-step="colors">
+            <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Colors', 'bricks-mcp' ); ?></h2>
+            <p class="bwm-ds-panel-help">
+                <?php esc_html_e( 'The --base transparencies are named --base-ultra-dark-trans-N. For other families they are --name-trans-N.', 'bricks-mcp' ); ?>
+            </p>
+
+            <?php foreach ( $families as $key => $label ) : ?>
+                <?php $this->render_color_family( $key, $label, $colors[ $key ] ?? [] ); ?>
+            <?php endforeach; ?>
+
+            <?php $this->render_color_bw( 'white', __( 'White', 'bricks-mcp' ), $colors['white'] ?? [] ); ?>
+            <?php $this->render_color_bw( 'black', __( 'Black', 'bricks-mcp' ), $colors['black'] ?? [] ); ?>
+        </section>
+        <?php
+    }
+
+    private function render_color_family( string $key, string $label, array $fam ): void {
+        $enabled        = ! empty( $fam['enabled'] );
+        $expanded       = ! empty( $fam['expanded'] );
+        $transparencies = ! empty( $fam['transparencies'] );
+        $shades         = $fam['shades'] ?? [];
+        $hover          = $fam['hover'] ?? '';
+
+        $shade_order = $expanded
+            ? [ 'base', 'ultra_dark', 'dark', 'semi_dark', 'medium', 'semi_light', 'light', 'ultra_light' ]
+            : [ 'base', 'ultra_dark', 'dark', 'light', 'ultra_light' ];
+        ?>
+        <div class="bwm-ds-color-family" data-family="<?php echo esc_attr( $key ); ?>">
+            <div class="bwm-ds-color-family-header">
+                <label class="bwm-ds-toggle-label">
+                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.enabled" <?php checked( $enabled ); ?>>
+                    <?php echo esc_html( sprintf( __( 'Enable %s', 'bricks-mcp' ), $label ) ); ?>
+                </label>
+                <label class="bwm-ds-toggle-label">
+                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.transparencies" <?php checked( $transparencies ); ?>>
+                    <?php esc_html_e( 'Transparencies', 'bricks-mcp' ); ?>
+                </label>
+                <label class="bwm-ds-toggle-label">
+                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.expanded" <?php checked( $expanded ); ?>>
+                    <?php esc_html_e( 'Expand Color Palette', 'bricks-mcp' ); ?>
+                </label>
+            </div>
+
+            <div class="bwm-ds-color-shades">
+                <?php foreach ( $shade_order as $shade ) : ?>
+                    <?php $hex = $shades[ $shade ] ?? '#000000'; ?>
+                    <div class="bwm-ds-color-shade">
+                        <input type="color" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.shades.<?php echo esc_attr( $shade ); ?>" <?php echo ( $shade === 'base' ) ? 'data-recompute="colors.' . esc_attr( $key ) . '"' : ''; ?>>
+                        <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.shades.<?php echo esc_attr( $shade ); ?>" maxlength="7">
+                        <label>--<?php echo esc_html( $key . ( $shade === 'base' ? '' : '-' . str_replace( '_', '-', $shade ) ) ); ?></label>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="bwm-ds-color-hover">
+                <input type="color" value="<?php echo esc_attr( $hover ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hover">
+                <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $hover ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hover" maxlength="7">
+                <label>--<?php echo esc_html( $key ); ?>-hover</label>
+            </div>
+
+            <?php if ( $transparencies ) : ?>
+                <div class="bwm-ds-trans-strip" data-family="<?php echo esc_attr( $key ); ?>"></div>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
+    private function render_color_bw( string $key, string $label, array $fam ): void {
+        $hex            = $fam['hex'] ?? ( $key === 'white' ? '#ffffff' : '#000000' );
+        $transparencies = ! empty( $fam['transparencies'] );
+        ?>
+        <div class="bwm-ds-color-family" data-family="<?php echo esc_attr( $key ); ?>">
+            <div class="bwm-ds-color-family-header">
+                <label class="bwm-ds-toggle-label">
+                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.transparencies" <?php checked( $transparencies ); ?>>
+                    <?php echo esc_html( sprintf( __( '%s Transparencies', 'bricks-mcp' ), $label ) ); ?>
+                </label>
+            </div>
+            <div class="bwm-ds-color-shades">
+                <div class="bwm-ds-color-shade">
+                    <input type="color" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hex">
+                    <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hex" maxlength="7">
+                    <label>--<?php echo esc_html( $key ); ?></label>
+                </div>
+            </div>
+            <?php if ( $transparencies ) : ?>
+                <div class="bwm-ds-trans-strip" data-family="<?php echo esc_attr( $key ); ?>"></div>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
     // --- AJAX Handlers ---
 
     /**
