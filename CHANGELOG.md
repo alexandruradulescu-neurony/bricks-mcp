@@ -4,6 +4,30 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.18.0] — 2026-04-15
+
+### Design System v2
+
+- Rewrite admin Design System tab as left-rail stepper with 7 panels (Spacing, Typography, Colors, Gaps/Padding, Radius, Sizes, Text Styles)
+- Every generated value is now individually editable, matching the Fancy Framework configurator
+- Add two new color families: **tertiary**, **neutral** (both disabled by default)
+- Add **Expand Color Palette** toggle per family — switches from 5 shades to 8 (adds semi-dark, medium, semi-light)
+- Add **Transparencies** toggle per family — generates 9 transparency variants (90% → 10%)
+- Add **hover variants** per family (auto-derived `darken(base, 10%)`, editable)
+- Add **White** and **Black** families with independent transparency toggles
+- Add **HTML font-size** toggle (62.5% / 100%) — emits `html { font-size: 100%; }` when 100% is selected
+- Add editable **Text Styles** panel (`--text-color`, `--heading-color`, font weights, line heights)
+- Add editable **Gaps/Padding** refs (accept `var()` values)
+- Add **Radius** individual variant overrides (all 10 derived values editable) + border colors
+- Add **Sizes** extra fields (max-width / max-width-m / max-width-s, min-height / min-height-section, logo-width mobile/desktop)
+- Refactor: extract `ScaleComputer`, `ColorComputer`, `ConfigMigrator` helpers from `DesignSystemGenerator`
+- Existing configs are auto-migrated on read — no user action required
+
+### Palette
+
+- BricksCore palette now includes hover variants (flat entries per enabled family)
+- Expanded shades and transparencies live as CSS variables only (not in palette) to keep the Bricks color picker usable
+
 ## [3.16.0] — 2026-04-15
 
 ### Fixed — Fresh Site Portability
