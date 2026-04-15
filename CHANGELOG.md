@@ -4,6 +4,12 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.18.10] — 2026-04-15
+
+### Change
+
+- **Palette renamed** from `BricksCore` to `Bricks-WP-MCP`. Apply now replaces palettes named either `Bricks-WP-MCP` or `BricksCore` (migration path — old palettes on upgrade get replaced rather than duplicated).
+
 ## [3.18.9] — 2026-04-15
 
 ### Fixes

@@ -257,10 +257,11 @@ class DesignSystemGenerator {
             \Bricks\Ajax::generate_style_manager_css_file();
         }
 
-        // --- Color palette: replace BricksCore palette ---
+        // --- Color palette: replace our palette (match both legacy + current names) ---
         $existing_palettes = get_option( 'bricks_color_palette', [] );
         $kept_palettes     = array_values( array_filter( $existing_palettes, function ( $p ) {
-            return ( $p['name'] ?? '' ) !== 'BricksCore';
+            $name = $p['name'] ?? '';
+            return $name !== 'Bricks-WP-MCP' && $name !== 'BricksCore';
         } ) );
         $kept_palettes[]   = $generated['palette'];
         update_option( 'bricks_color_palette', $kept_palettes );
@@ -666,7 +667,7 @@ class DesignSystemGenerator {
 
         return [
             'id'      => $palette_id,
-            'name'    => 'BricksCore',
+            'name'    => 'Bricks-WP-MCP',
             'colors'  => $all_colors,
             'default' => true,
         ];
