@@ -65,12 +65,28 @@ class DesignSystemAdmin {
         ?>
         <div class="bwm-design-system-wrap">
             <div class="bwm-ds-layout">
-                <div class="bwm-ds-left">
-                    <?php $this->render_section_colors( $config ); ?>
-                    <?php $this->render_section_spacing( $config ); ?>
-                    <?php $this->render_section_typography( $config ); ?>
-                    <?php $this->render_section_radius( $config ); ?>
-                    <?php $this->render_section_sizes( $config ); ?>
+                <nav class="bwm-ds-stepper" aria-label="<?php esc_attr_e( 'Design System sections', 'bricks-mcp' ); ?>">
+                    <button type="button" class="bwm-ds-step bwm-ds-step-active" data-step="spacing">
+                        <?php esc_html_e( 'Spacing', 'bricks-mcp' ); ?>
+                    </button>
+                    <button type="button" class="bwm-ds-step" data-step="typography">
+                        <?php esc_html_e( 'Typography', 'bricks-mcp' ); ?>
+                    </button>
+                    <button type="button" class="bwm-ds-step" data-step="colors">
+                        <?php esc_html_e( 'Colors', 'bricks-mcp' ); ?>
+                    </button>
+                    <button type="button" class="bwm-ds-step" data-step="gaps">
+                        <?php esc_html_e( 'Gaps/Padding', 'bricks-mcp' ); ?>
+                    </button>
+                    <button type="button" class="bwm-ds-step" data-step="radius">
+                        <?php esc_html_e( 'Radius', 'bricks-mcp' ); ?>
+                    </button>
+                    <button type="button" class="bwm-ds-step" data-step="sizes">
+                        <?php esc_html_e( 'Sizes', 'bricks-mcp' ); ?>
+                    </button>
+                    <button type="button" class="bwm-ds-step" data-step="text-styles">
+                        <?php esc_html_e( 'Text Styles', 'bricks-mcp' ); ?>
+                    </button>
 
                     <div class="bwm-ds-actions">
                         <button type="button" class="button button-primary button-hero" id="bwm-ds-apply">
@@ -81,212 +97,23 @@ class DesignSystemAdmin {
                         </a>
                         <div class="bwm-ds-status" id="bwm-ds-status"></div>
                     </div>
-                </div>
-                <div class="bwm-ds-right">
-                    <div class="bwm-ds-preview-panel">
-                        <div class="bwm-ds-preview-panel-header"><?php esc_html_e( 'Live Preview', 'bricks-mcp' ); ?></div>
-                        <div id="bwm-ds-live-preview"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
+                </nav>
 
-    /**
-     * Render Colors accordion section.
-     */
-    private function render_section_colors( array $config ): void {
-        $colors = $config['colors'] ?? [];
-        ?>
-        <div class="bwm-ds-section" data-section="colors">
-            <div class="bwm-ds-section-header bwm-ds-section-open">
-                <span class="bwm-ds-toggle">&#9660;</span>
-                <?php esc_html_e( 'Colors', 'bricks-mcp' ); ?>
-                <span class="bwm-ds-section-info"><?php esc_html_e( '4 base colors', 'bricks-mcp' ); ?></span>
-            </div>
-            <div class="bwm-ds-section-body" style="display:block;">
-                <div class="bwm-ds-inputs">
-                    <div class="bwm-ds-color-row">
-                        <input type="color" id="bwm-ds-primary" value="<?php echo esc_attr( $colors['primary'] ?? '#3b82f6' ); ?>" data-field="colors.primary">
-                        <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $colors['primary'] ?? '#3b82f6' ); ?>" data-field="colors.primary" maxlength="7">
-                        <label><?php esc_html_e( 'Primary', 'bricks-mcp' ); ?></label>
-                    </div>
-                    <div class="bwm-ds-color-row">
-                        <input type="color" id="bwm-ds-secondary" value="<?php echo esc_attr( $colors['secondary']['hex'] ?? '#f59e0b' ); ?>" data-field="colors.secondary.hex">
-                        <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $colors['secondary']['hex'] ?? '#f59e0b' ); ?>" data-field="colors.secondary.hex" maxlength="7">
-                        <label><?php esc_html_e( 'Secondary', 'bricks-mcp' ); ?></label>
-                        <label class="bwm-ds-toggle-label">
-                            <input type="checkbox" data-field="colors.secondary.enabled" <?php checked( $colors['secondary']['enabled'] ?? true ); ?>>
-                            <?php esc_html_e( 'Enabled', 'bricks-mcp' ); ?>
-                        </label>
-                    </div>
-                    <div class="bwm-ds-color-row">
-                        <input type="color" id="bwm-ds-accent" value="<?php echo esc_attr( $colors['accent']['hex'] ?? '#10b981' ); ?>" data-field="colors.accent.hex">
-                        <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $colors['accent']['hex'] ?? '#10b981' ); ?>" data-field="colors.accent.hex" maxlength="7">
-                        <label><?php esc_html_e( 'Accent', 'bricks-mcp' ); ?></label>
-                        <label class="bwm-ds-toggle-label">
-                            <input type="checkbox" data-field="colors.accent.enabled" <?php checked( $colors['accent']['enabled'] ?? true ); ?>>
-                            <?php esc_html_e( 'Enabled', 'bricks-mcp' ); ?>
-                        </label>
-                    </div>
-                    <div class="bwm-ds-color-row">
-                        <input type="color" id="bwm-ds-base" value="<?php echo esc_attr( $colors['base'] ?? '#374151' ); ?>" data-field="colors.base">
-                        <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $colors['base'] ?? '#374151' ); ?>" data-field="colors.base" maxlength="7">
-                        <label><?php esc_html_e( 'Base', 'bricks-mcp' ); ?></label>
-                    </div>
-                </div>
-                <hr class="bwm-ds-divider">
-                <div class="bwm-ds-preview" id="bwm-ds-color-preview">
-                    <div class="bwm-ds-preview-label"><?php esc_html_e( 'Generated Shades', 'bricks-mcp' ); ?></div>
-                    <!-- JS populates shade strips here -->
+                <div class="bwm-ds-panes">
+                    <?php $this->render_panel_spacing( $config ); ?>
+                    <?php $this->render_panel_typography( $config ); ?>
+                    <?php $this->render_panel_colors( $config ); ?>
+                    <?php $this->render_panel_gaps( $config ); ?>
+                    <?php $this->render_panel_radius( $config ); ?>
+                    <?php $this->render_panel_sizes( $config ); ?>
+                    <?php $this->render_panel_text_styles( $config ); ?>
                 </div>
             </div>
-        </div>
-        <?php
-    }
 
-    /**
-     * Render Spacing accordion section.
-     */
-    private function render_section_spacing( array $config ): void {
-        $s = $config['spacing'] ?? [];
-        ?>
-        <div class="bwm-ds-section" data-section="spacing">
-            <div class="bwm-ds-section-header">
-                <span class="bwm-ds-toggle">&#9654;</span>
-                <?php esc_html_e( 'Spacing', 'bricks-mcp' ); ?>
-            </div>
-            <div class="bwm-ds-section-body">
-                <div class="bwm-ds-inputs bwm-ds-inputs-row">
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Base Mobile (px)', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $s['base_mobile'] ?? 20 ); ?>" data-field="spacing.base_mobile" min="8" max="48" step="1">
-                    </div>
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Base Desktop (px)', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $s['base_desktop'] ?? 24 ); ?>" data-field="spacing.base_desktop" min="8" max="64" step="1">
-                    </div>
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Scale Ratio', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $s['scale'] ?? 1.5 ); ?>" data-field="spacing.scale" min="1.1" max="3.0" step="0.05">
-                    </div>
-                </div>
-                <hr class="bwm-ds-divider">
-                <div class="bwm-ds-preview" id="bwm-ds-spacing-preview">
-                    <div class="bwm-ds-preview-label"><?php esc_html_e( 'Computed Values', 'bricks-mcp' ); ?></div>
-                    <!-- JS populates table here -->
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render Typography accordion section.
-     */
-    private function render_section_typography( array $config ): void {
-        $text = $config['typography_text'] ?? [];
-        $head = $config['typography_headings'] ?? [];
-        ?>
-        <div class="bwm-ds-section" data-section="typography">
-            <div class="bwm-ds-section-header">
-                <span class="bwm-ds-toggle">&#9654;</span>
-                <?php esc_html_e( 'Typography', 'bricks-mcp' ); ?>
-            </div>
-            <div class="bwm-ds-section-body">
-                <h4 class="bwm-ds-subsection-title"><?php esc_html_e( 'Text', 'bricks-mcp' ); ?></h4>
-                <div class="bwm-ds-inputs bwm-ds-inputs-row">
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Base Mobile (px)', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $text['base_mobile'] ?? 16 ); ?>" data-field="typography_text.base_mobile" min="10" max="24" step="1">
-                    </div>
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Base Desktop (px)', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $text['base_desktop'] ?? 18 ); ?>" data-field="typography_text.base_desktop" min="10" max="32" step="1">
-                    </div>
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Scale Ratio', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $text['scale'] ?? 1.25 ); ?>" data-field="typography_text.scale" min="1.05" max="2.0" step="0.05">
-                    </div>
-                </div>
-                <div class="bwm-ds-preview" id="bwm-ds-text-preview"></div>
-
-                <h4 class="bwm-ds-subsection-title"><?php esc_html_e( 'Headings', 'bricks-mcp' ); ?></h4>
-                <div class="bwm-ds-inputs bwm-ds-inputs-row">
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Base Mobile (px)', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $head['base_mobile'] ?? 28 ); ?>" data-field="typography_headings.base_mobile" min="16" max="48" step="1">
-                    </div>
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Base Desktop (px)', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $head['base_desktop'] ?? 35 ); ?>" data-field="typography_headings.base_desktop" min="16" max="72" step="1">
-                    </div>
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Scale Ratio', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $head['scale'] ?? 1.25 ); ?>" data-field="typography_headings.scale" min="1.05" max="2.0" step="0.05">
-                    </div>
-                </div>
-                <div class="bwm-ds-preview" id="bwm-ds-headings-preview"></div>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render Radius accordion section.
-     */
-    private function render_section_radius( array $config ): void {
-        ?>
-        <div class="bwm-ds-section" data-section="radius">
-            <div class="bwm-ds-section-header">
-                <span class="bwm-ds-toggle">&#9654;</span>
-                <?php esc_html_e( 'Radius', 'bricks-mcp' ); ?>
-            </div>
-            <div class="bwm-ds-section-body">
-                <div class="bwm-ds-inputs">
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Base Radius (px)', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $config['radius'] ?? 8 ); ?>" data-field="radius" min="0" max="50" step="1">
-                    </div>
-                </div>
-                <hr class="bwm-ds-divider">
-                <div class="bwm-ds-preview" id="bwm-ds-radius-preview">
-                    <div class="bwm-ds-preview-label"><?php esc_html_e( 'Computed Variants', 'bricks-mcp' ); ?></div>
-                    <!-- JS populates radius preview boxes here -->
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render Sizes accordion section.
-     */
-    private function render_section_sizes( array $config ): void {
-        ?>
-        <div class="bwm-ds-section" data-section="sizes">
-            <div class="bwm-ds-section-header">
-                <span class="bwm-ds-toggle">&#9654;</span>
-                <?php esc_html_e( 'Sizes', 'bricks-mcp' ); ?>
-            </div>
-            <div class="bwm-ds-section-body">
-                <div class="bwm-ds-inputs bwm-ds-inputs-row">
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Container Width (px)', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $config['container_width'] ?? 1280 ); ?>" data-field="container_width" min="960" max="1920" step="10">
-                    </div>
-                    <div class="bwm-ds-field">
-                        <label><?php esc_html_e( 'Container Min Width (px)', 'bricks-mcp' ); ?></label>
-                        <input type="number" value="<?php echo esc_attr( $config['container_min'] ?? 380 ); ?>" data-field="container_min" min="320" max="480" step="10">
-                    </div>
-                </div>
-                <hr class="bwm-ds-divider">
-                <div class="bwm-ds-preview" id="bwm-ds-sizes-preview">
-                    <div class="bwm-ds-preview-label"><?php esc_html_e( 'Computed Sizes', 'bricks-mcp' ); ?></div>
-                    <!-- JS populates table here -->
-                </div>
-            </div>
+            <details class="bwm-ds-preview-wrap" open>
+                <summary><?php esc_html_e( 'Live Preview', 'bricks-mcp' ); ?></summary>
+                <div id="bwm-ds-live-preview"></div>
+            </details>
         </div>
         <?php
     }
