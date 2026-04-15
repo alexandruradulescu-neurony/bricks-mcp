@@ -478,33 +478,7 @@
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* Dark mode overrides — elements that must stay readable regardless of theme */
-@media (prefers-color-scheme: dark) {
-    /* Shadow preview boxes must stay light so the shadow is actually visible */
-    .bwm-ds-shadow-preview {
-        background: #f5f5f5;
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    /* Transparency checkerboard pattern tweak for dark background */
-    .bwm-ds-trans-swatch {
-        color: rgba(255, 255, 255, 0.7);
-    }
-
-    /* Token label pills in dark mode */
-    .bwm-ds-token-label {
-        background: rgba(255, 255, 255, 0.1);
-        color: rgba(255, 255, 255, 0.6);
-    }
-
-    /* Focus ring for stepper in dark mode */
-    .bwm-ds-step:focus-visible {
-        outline: 2px solid var(--bwm-brand);
-        outline-offset: 2px;
-    }
-}
-
-/* Focus ring for stepper (light mode baseline too) */
+/* Focus ring for stepper */
 .bwm-ds-step:focus-visible {
     outline: 2px solid var(--bwm-brand);
     outline-offset: 2px;

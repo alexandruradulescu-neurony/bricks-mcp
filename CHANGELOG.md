@@ -4,6 +4,12 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.20.0] — 2026-04-15
+
+### Removed
+
+- **Dark mode removed** from the plugin admin. The `@media (prefers-color-scheme: dark)` blocks in `admin-settings.css` and `admin-design-system.css` are gone. Admin now renders in the light scheme regardless of OS/browser preference — consistent look across all users.
+
 ## [3.19.3] — 2026-04-15
 
 ### Polish + accessibility
