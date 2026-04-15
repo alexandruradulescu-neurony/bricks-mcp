@@ -265,6 +265,7 @@ class DesignSystemAdmin {
                     </div>
                 <?php endforeach; ?>
             </div>
+        </section>
         <?php
     }
 

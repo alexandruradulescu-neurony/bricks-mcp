@@ -4,6 +4,12 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.18.3] — 2026-04-15
+
+### Critical fix
+
+- **Typography panel was missing `</section>` close tag** — the Text Styles subsection added in 3.18.2 swallowed the closing tag. As a result every panel after Typography (Colors, Gaps/Padding, Radius, Sizes) became a nested child of the Typography section, inheriting `display: none` and never appearing when their stepper button was clicked. Adds the missing close tag.
+
 ## [3.18.2] — 2026-04-15
 
 ### Design System v2 — UI improvements
