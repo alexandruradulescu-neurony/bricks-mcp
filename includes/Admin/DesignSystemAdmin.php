@@ -144,13 +144,15 @@ class DesignSystemAdmin {
                 <?php foreach ( $steps as $name => $pair ) : ?>
                     <div class="bwm-ds-step-row">
                         <div class="bwm-ds-step-name">--space-<?php echo esc_html( $name ); ?></div>
-                        <div class="bwm-ds-field">
-                            <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
-                            <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="spacing.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
-                        </div>
-                        <div class="bwm-ds-field">
-                            <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
-                            <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="spacing.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                        <div class="bwm-ds-step-inputs">
+                            <div class="bwm-ds-field">
+                                <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
+                                <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="spacing.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
+                            </div>
+                            <div class="bwm-ds-field">
+                                <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
+                                <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="spacing.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                            </div>
                         </div>
                         <div class="bwm-ds-swatch" data-swatch-size="<?php echo esc_attr( $pair['desktop'] ); ?>"></div>
                     </div>
@@ -197,16 +199,20 @@ class DesignSystemAdmin {
                 <?php foreach ( $head['steps'] as $name => $pair ) : ?>
                     <div class="bwm-ds-step-row">
                         <div class="bwm-ds-step-name">--<?php echo esc_html( $name ); ?></div>
-                        <div class="bwm-ds-field">
-                            <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
-                            <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="typography_headings.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
+                        <div class="bwm-ds-step-inputs">
+                            <div class="bwm-ds-field">
+                                <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
+                                <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="typography_headings.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
+                            </div>
+                            <div class="bwm-ds-field">
+                                <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
+                                <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="typography_headings.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                            </div>
                         </div>
-                        <div class="bwm-ds-type-preview bwm-ds-type-preview-mob" style="font-size:<?php echo (float) $pair['mobile']; ?>px"><?php esc_html_e( 'Heading', 'bricks-mcp' ); ?></div>
-                        <div class="bwm-ds-field">
-                            <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
-                            <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="typography_headings.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                        <div class="bwm-ds-step-previews">
+                            <div class="bwm-ds-type-preview bwm-ds-type-preview-mob" style="font-size:<?php echo (float) $pair['mobile']; ?>px"><?php esc_html_e( 'Heading', 'bricks-mcp' ); ?></div>
+                            <div class="bwm-ds-type-preview bwm-ds-type-preview-desk" style="font-size:<?php echo (float) $pair['desktop']; ?>px"><?php esc_html_e( 'Heading', 'bricks-mcp' ); ?></div>
                         </div>
-                        <div class="bwm-ds-type-preview bwm-ds-type-preview-desk" style="font-size:<?php echo (float) $pair['desktop']; ?>px"><?php esc_html_e( 'Heading', 'bricks-mcp' ); ?></div>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -231,16 +237,20 @@ class DesignSystemAdmin {
                 <?php foreach ( $text['steps'] as $name => $pair ) : ?>
                     <div class="bwm-ds-step-row">
                         <div class="bwm-ds-step-name">--text-<?php echo esc_html( $name ); ?></div>
-                        <div class="bwm-ds-field">
-                            <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
-                            <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
+                        <div class="bwm-ds-step-inputs">
+                            <div class="bwm-ds-field">
+                                <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
+                                <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
+                            </div>
+                            <div class="bwm-ds-field">
+                                <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
+                                <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                            </div>
                         </div>
-                        <div class="bwm-ds-type-preview bwm-ds-type-preview-mob bwm-ds-type-preview-text" style="font-size:<?php echo (float) $pair['mobile']; ?>px"><?php esc_html_e( 'Body text', 'bricks-mcp' ); ?></div>
-                        <div class="bwm-ds-field">
-                            <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
-                            <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                        <div class="bwm-ds-step-previews">
+                            <div class="bwm-ds-type-preview bwm-ds-type-preview-mob bwm-ds-type-preview-text" style="font-size:<?php echo (float) $pair['mobile']; ?>px"><?php esc_html_e( 'Body text', 'bricks-mcp' ); ?></div>
+                            <div class="bwm-ds-type-preview bwm-ds-type-preview-desk bwm-ds-type-preview-text" style="font-size:<?php echo (float) $pair['desktop']; ?>px"><?php esc_html_e( 'Body text', 'bricks-mcp' ); ?></div>
                         </div>
-                        <div class="bwm-ds-type-preview bwm-ds-type-preview-desk bwm-ds-type-preview-text" style="font-size:<?php echo (float) $pair['desktop']; ?>px"><?php esc_html_e( 'Body text', 'bricks-mcp' ); ?></div>
                     </div>
                 <?php endforeach; ?>
             </div>

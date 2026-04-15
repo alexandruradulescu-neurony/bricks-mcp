@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.18.5
+Stable tag: 3.18.6
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -156,6 +156,12 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.18.6 =
+* Fix: stepper button hover no longer makes active tab unreadable.
+* Fix: Design Pipeline Health diagnostic now verifies database-backed patterns (was checking a filesystem directory that no longer exists).
+* Typography and Spacing step rows now group the Mobile + Desktop inputs together and the previews/swatches together (readable grid instead of interleaved).
+* Removed the temporary lifecycle debug logging introduced in 3.18.5.
 
 = 3.18.4 =
 * Critical: release ZIP now includes the top-level `bricks-mcp/` wrapper directory. Without it, WordPress could install under a directory named after the zip filename, silently deactivating the plugin on upgrade.

@@ -4,6 +4,15 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.18.6] — 2026-04-15
+
+### Fixes
+
+- **Stepper button hover**: active tab is no longer washed out on hover. Hover + focus no longer override the brand background.
+- **Design Pipeline Health diagnostic**: rewrote the check to verify database-backed design patterns via `DesignPatternService` (patterns moved from `data/design-patterns/` to a WP option in 3.x; the diagnostic was still looking at the filesystem and always failing).
+- **Typography + Spacing step layout**: inputs are now grouped together on the left (Mobile + Desktop next to each other) and previews/swatches grouped on the right, instead of interleaving input / preview / input / preview.
+- Removed diagnostic lifecycle logging that 3.18.5 added temporarily.
+
 ## [3.18.5] — 2026-04-15
 
 ### Diagnostic

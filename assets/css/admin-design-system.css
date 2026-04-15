@@ -33,7 +33,9 @@
 
 .bwm-ds-step:hover { background: var(--bwm-gray-100); }
 
-.bwm-ds-step-active {
+.bwm-ds-step-active,
+.bwm-ds-step-active:hover,
+.bwm-ds-step-active:focus {
     background: var(--bwm-brand);
     color: var(--bwm-white);
     border-color: var(--bwm-brand);
@@ -113,6 +115,28 @@
     font-family: monospace;
     font-size: 12px;
     color: var(--bwm-gray-900);
+}
+
+.bwm-ds-step-inputs {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.bwm-ds-step-inputs .bwm-ds-field input[type="number"] {
+    width: 80px;
+}
+
+.bwm-ds-step-previews {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.bwm-ds-step-previews .bwm-ds-type-preview {
+    min-width: 0;
 }
 
 .bwm-ds-swatch {

@@ -49,22 +49,16 @@ class DesignPipelineCheck implements DiagnosticCheck {
 
 		$problems = array();
 
-		// 1. data/design-patterns/ readable + at least one pattern parses.
-		$patterns_dir = $base . 'data/design-patterns';
-		if ( ! is_dir( $patterns_dir ) || ! is_readable( $patterns_dir ) ) {
-			$problems[] = sprintf( __( 'Design patterns directory missing or unreadable: %s', 'bricks-mcp' ), $patterns_dir );
-		} else {
-			$pattern_files = glob( $patterns_dir . '/*/*.json' );
-			if ( empty( $pattern_files ) ) {
-				$problems[] = __( 'No design pattern JSON files found in data/design-patterns/.', 'bricks-mcp' );
-			} else {
-				$first  = $pattern_files[0];
-				$json   = file_get_contents( $first ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-				$parsed = is_string( $json ) ? json_decode( $json, true ) : null;
-				if ( ! is_array( $parsed ) ) {
-					$problems[] = sprintf( __( 'First design pattern failed to parse as JSON: %s', 'bricks-mcp' ), basename( $first ) );
-				}
+		// 1. Design patterns are database-backed (since 3.x). Verify at least one is loadable.
+		try {
+			$patterns = \BricksMCP\MCP\Services\DesignPatternService::list_all();
+			if ( ! is_array( $patterns ) ) {
+				$problems[] = __( 'DesignPatternService::list_all() returned a non-array value.', 'bricks-mcp' );
+			} elseif ( empty( $patterns ) ) {
+				$problems[] = __( 'No design patterns found in the database. Bundled patterns should seed on first activation.', 'bricks-mcp' );
 			}
+		} catch ( \Throwable $e ) {
+			$problems[] = sprintf( __( 'DesignPatternService threw: %s', 'bricks-mcp' ), $e->getMessage() );
 		}
 
 		// 2. StarterClassesService returns >= 13 entries.
@@ -107,6 +101,7 @@ class DesignPipelineCheck implements DiagnosticCheck {
 				'message'   => implode( ' / ', $problems ),
 				'fix_steps' => array(
 					__( 'Reinstall or update the Bricks MCP plugin to restore missing data files.', 'bricks-mcp' ),
+					__( 'If pattern count is zero, deactivate + reactivate the plugin to trigger the pattern seed.', 'bricks-mcp' ),
 					__( 'If the problem persists, check file permissions on the plugin directory.', 'bricks-mcp' ),
 				),
 				'category'  => $this->category(),
@@ -117,7 +112,7 @@ class DesignPipelineCheck implements DiagnosticCheck {
 			'id'        => $this->id(),
 			'label'     => $this->label(),
 			'status'    => 'pass',
-			'message'   => __( 'Design patterns, starter classes, and pipeline data files are healthy.', 'bricks-mcp' ),
+			'message'   => __( 'Design patterns (database), starter classes, and pipeline data files are healthy.', 'bricks-mcp' ),
 			'fix_steps' => array(),
 			'category'  => $this->category(),
 		);
