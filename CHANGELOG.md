@@ -4,6 +4,21 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.19.3] — 2026-04-15
+
+### Polish + accessibility
+
+- **Shadow inputs** get a dedicated full-width row layout instead of the narrow card-grid, so long shadow values no longer truncate. Preview box sits inline at 80px wide.
+- **Transition demo button** now uses your `--shadow-xl` for the hover state (was hardcoded rgba). Text color auto-contrasts on the primary background.
+- **Heading preview caps at 42px** in step rows — very large h1 values no longer blow out the row height.
+- **Pill radius preview** is now a 96×32 rectangle (vs. 48×48 square) so it visually differs from the circle preview.
+- **Reset** rendered as a `<button>` (was `<a href="#">`) for correct keyboard + screen reader semantics.
+- **Typography HTML font-size** uses `<fieldset>` + `<legend>` semantic grouping.
+- **Status messages** announced via `aria-live="polite"` after Apply / Reset actions.
+- **Inactive panels** get `aria-hidden="true"` so screen readers don't traverse them.
+- **Focus ring** on stepper buttons visible in both light and dark mode.
+- **aria-label** added to every step input, color picker, and hex field so screen readers announce which token you're editing.
+
 ## [3.19.2] — 2026-04-15
 
 ### Dark mode + contrast fixes

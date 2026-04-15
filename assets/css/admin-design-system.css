@@ -154,6 +154,10 @@
     line-height: 1;
     color: var(--bwm-gray-900);
     min-width: 80px;
+    max-height: 56px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
 }
 .bwm-ds-type-preview-mob { color: var(--bwm-gray-500); }
 .bwm-ds-type-preview-text { font-weight: 400; }
@@ -246,10 +250,45 @@
 
 .bwm-ds-text-fields .bwm-ds-field input { width: 100%; }
 
-/* Transition demo button in live preview */
-.bwm-ds-trans-demo:hover {
-    transform: scale(1.05);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+/* Shadow fields need full-width rows so long values don't truncate */
+.bwm-ds-shadow-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bwm-ds-shadow-fields .bwm-ds-field {
+    display: grid;
+    grid-template-columns: 140px 1fr 80px;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid var(--bwm-gray-100);
+    border-radius: 3px;
+}
+
+.bwm-ds-shadow-fields .bwm-ds-field label {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--bwm-gray-900);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.bwm-ds-shadow-fields .bwm-ds-field input[type="text"] {
+    width: 100%;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.bwm-ds-shadow-preview {
+    margin: 0;
+    height: 32px;
+    width: 100%;
+    background: var(--bwm-white);
+    border: 1px solid var(--bwm-gray-200);
+    border-radius: 4px;
+    transition: box-shadow 0.2s ease;
 }
 
 /* Radio group (html font-size) */
@@ -261,9 +300,18 @@
     background: var(--bwm-gray-50);
     border-radius: var(--bwm-radius);
     margin-bottom: 16px;
+    border: none;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 .bwm-ds-radio-group label { font-size: 13px; }
+.bwm-ds-radio-group legend.bwm-ds-field-label {
+    float: none;
+    padding: 0;
+    margin-right: 10px;
+    display: inline-block;
+}
 .bwm-ds-field-label { font-size: 12px; color: var(--bwm-gray-500); text-transform: uppercase; letter-spacing: 0.5px; margin-right: 10px; }
 
 /* Actions (sticky under stepper) */
@@ -277,9 +325,14 @@
 }
 
 .bwm-ds-reset {
+    background: none;
+    border: none;
+    padding: 0;
     color: var(--bwm-danger);
     text-decoration: none;
     font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
 }
 .bwm-ds-reset:hover { color: var(--bwm-danger); text-decoration: underline; }
 
@@ -401,14 +454,7 @@
     transition: border-radius 0.15s ease;
 }
 
-.bwm-ds-shadow-preview {
-    margin-top: 6px;
-    height: 40px;
-    background: var(--bwm-white);
-    border: 1px solid var(--bwm-gray-200);
-    border-radius: var(--bwm-radius);
-    transition: box-shadow 0.2s ease;
-}
+/* .bwm-ds-shadow-preview is defined in .bwm-ds-shadow-fields above */
 
 /* Token labels in live preview mockup */
 .bwm-ds-token-label {

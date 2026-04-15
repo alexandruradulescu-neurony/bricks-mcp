@@ -92,10 +92,10 @@ class DesignSystemAdmin {
                         <button type="button" class="button button-primary button-hero" id="bwm-ds-apply">
                             <?php esc_html_e( 'Apply to Site', 'bricks-mcp' ); ?>
                         </button>
-                        <a href="#" class="bwm-ds-reset" id="bwm-ds-reset">
+                        <button type="button" class="bwm-ds-reset button-link" id="bwm-ds-reset">
                             <?php esc_html_e( 'Reset to Defaults', 'bricks-mcp' ); ?>
-                        </a>
-                        <div class="bwm-ds-status" id="bwm-ds-status"></div>
+                        </button>
+                        <div class="bwm-ds-status" id="bwm-ds-status" aria-live="polite" aria-atomic="true"></div>
                     </div>
                 </nav>
 
@@ -151,11 +151,11 @@ class DesignSystemAdmin {
                         <div class="bwm-ds-step-inputs">
                             <div class="bwm-ds-field">
                                 <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
-                                <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="spacing.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
+                                <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="spacing.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5" aria-label="<?php echo esc_attr( '--space-' . $name . ' mobile' ); ?>">
                             </div>
                             <div class="bwm-ds-field">
                                 <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
-                                <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="spacing.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                                <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="spacing.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5" aria-label="<?php echo esc_attr( '--space-' . $name . ' desktop' ); ?>">
                             </div>
                         </div>
                         <div class="bwm-ds-swatch" data-swatch-size="<?php echo esc_attr( $pair['desktop'] ); ?>"></div>
@@ -177,11 +177,11 @@ class DesignSystemAdmin {
                 <?php esc_html_e( '--text-m is the size of the base text.', 'bricks-mcp' ); ?>
             </p>
 
-            <div class="bwm-ds-radio-group">
-                <div class="bwm-ds-field-label"><?php esc_html_e( 'HTML font-size', 'bricks-mcp' ); ?></div>
+            <fieldset class="bwm-ds-radio-group">
+                <legend class="bwm-ds-field-label"><?php esc_html_e( 'HTML font-size', 'bricks-mcp' ); ?></legend>
                 <label><input type="radio" name="html_font_size" value="62.5" data-field="html_font_size" <?php checked( $hfs, 62.5 ); ?>> <?php esc_html_e( '62.5% (1rem = 10px)', 'bricks-mcp' ); ?></label>
                 <label><input type="radio" name="html_font_size" value="100"  data-field="html_font_size" <?php checked( $hfs, 100.0 ); ?>> <?php esc_html_e( '100% (1rem = 16px)', 'bricks-mcp' ); ?></label>
-            </div>
+            </fieldset>
 
             <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Headings (base = h3)', 'bricks-mcp' ); ?></h3>
             <div class="bwm-ds-seed">
@@ -206,11 +206,11 @@ class DesignSystemAdmin {
                         <div class="bwm-ds-step-inputs">
                             <div class="bwm-ds-field">
                                 <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
-                                <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="typography_headings.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
+                                <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="typography_headings.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5" aria-label="<?php echo esc_attr( '--' . $name . ' mobile' ); ?>">
                             </div>
                             <div class="bwm-ds-field">
                                 <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
-                                <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="typography_headings.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                                <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="typography_headings.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5" aria-label="<?php echo esc_attr( '--' . $name . ' desktop' ); ?>">
                             </div>
                         </div>
                         <div class="bwm-ds-step-previews">
@@ -244,11 +244,11 @@ class DesignSystemAdmin {
                         <div class="bwm-ds-step-inputs">
                             <div class="bwm-ds-field">
                                 <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
-                                <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
+                                <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5" aria-label="<?php echo esc_attr( '--text-' . $name . ' mobile' ); ?>">
                             </div>
                             <div class="bwm-ds-field">
                                 <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
-                                <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                                <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5" aria-label="<?php echo esc_attr( '--text-' . $name . ' desktop' ); ?>">
                             </div>
                         </div>
                         <div class="bwm-ds-step-previews">
@@ -341,16 +341,16 @@ class DesignSystemAdmin {
                 <?php foreach ( $shade_order as $shade ) : ?>
                     <?php $hex = $shades[ $shade ] ?? '#000000'; ?>
                     <div class="bwm-ds-color-shade">
-                        <input type="color" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.shades.<?php echo esc_attr( $shade ); ?>" <?php echo ( $shade === 'base' ) ? 'data-recompute="colors.' . esc_attr( $key ) . '"' : ''; ?>>
-                        <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.shades.<?php echo esc_attr( $shade ); ?>" maxlength="7">
+                        <input type="color" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.shades.<?php echo esc_attr( $shade ); ?>" <?php echo ( $shade === 'base' ) ? 'data-recompute="colors.' . esc_attr( $key ) . '"' : ''; ?> aria-label="<?php echo esc_attr( $key . ' ' . str_replace( '_', '-', $shade ) . ' color picker' ); ?>">
+                        <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.shades.<?php echo esc_attr( $shade ); ?>" maxlength="7" aria-label="<?php echo esc_attr( $key . ' ' . str_replace( '_', '-', $shade ) . ' hex value' ); ?>">
                         <label>--<?php echo esc_html( $key . ( $shade === 'base' ? '' : '-' . str_replace( '_', '-', $shade ) ) ); ?></label>
                     </div>
                 <?php endforeach; ?>
             </div>
 
             <div class="bwm-ds-color-hover">
-                <input type="color" value="<?php echo esc_attr( $hover ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hover">
-                <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $hover ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hover" maxlength="7">
+                <input type="color" value="<?php echo esc_attr( $hover ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hover" aria-label="<?php echo esc_attr( $key . ' hover color picker' ); ?>">
+                <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $hover ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hover" maxlength="7" aria-label="<?php echo esc_attr( $key . ' hover hex value' ); ?>">
                 <label>--<?php echo esc_html( $key ); ?>-hover</label>
             </div>
 
@@ -374,8 +374,8 @@ class DesignSystemAdmin {
             </div>
             <div class="bwm-ds-color-shades">
                 <div class="bwm-ds-color-shade">
-                    <input type="color" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hex">
-                    <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hex" maxlength="7">
+                    <input type="color" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hex" aria-label="<?php echo esc_attr( $key . ' color picker' ); ?>">
+                    <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.hex" maxlength="7" aria-label="<?php echo esc_attr( $key . ' hex value' ); ?>">
                     <label>--<?php echo esc_html( $key ); ?></label>
                 </div>
             </div>
@@ -549,7 +549,7 @@ class DesignSystemAdmin {
             </p>
 
             <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Shadows', 'bricks-mcp' ); ?></h3>
-            <div class="bwm-ds-text-fields">
+            <div class="bwm-ds-shadow-fields">
                 <?php foreach ( $shadow_rows as $key => $label ) : ?>
                     <div class="bwm-ds-field">
                         <label><?php echo esc_html( $label ); ?></label>

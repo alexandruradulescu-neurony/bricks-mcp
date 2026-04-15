@@ -404,7 +404,7 @@
                     ${tag('--text-s')}Transitions (hover me)
                 </div>
                 <div style="display:flex;gap:${ss}px;flex-wrap:wrap;">
-                    <button type="button" class="bwm-ds-trans-demo" style="background:${primary};color:#fff;border:none;padding:${sxs}px ${sm}px;border-radius:${radius}px;font-size:${ts}px;font-weight:600;cursor:pointer;transition:transform ${durBase} ${easeOut}, box-shadow ${durBase} ${easeOut};">
+                    <button type="button" class="bwm-ds-trans-demo" data-hover-shadow="${shadows.xl || '0 20px 25px rgba(0,0,0,0.2)'}" style="background:${primary};color:${readableTextColor(primary)};border:none;padding:${sxs}px ${sm}px;border-radius:${radius}px;font-size:${ts}px;font-weight:600;cursor:pointer;transition:transform ${durBase} ${easeOut}, box-shadow ${durBase} ${easeOut};">
                         Hover — scale + shadow
                     </button>
                     <div style="font-size:${txs}px;color:${bodyTextColor};align-self:center;font-family:monospace;">
@@ -413,6 +413,14 @@
                 </div>
             </div>
         </div>`;
+
+        // Apply user's shadow-xl to transition demo button hover
+        const transBtn = container.querySelector('.bwm-ds-trans-demo');
+        if (transBtn) {
+            const hoverShadow = transBtn.dataset.hoverShadow;
+            transBtn.onmouseenter = () => { transBtn.style.boxShadow = hoverShadow; transBtn.style.transform = 'scale(1.05)'; };
+            transBtn.onmouseleave = () => { transBtn.style.boxShadow = ''; transBtn.style.transform = ''; };
+        }
     }
 
     function renderTypePreviews() {
@@ -421,8 +429,14 @@
             const deskInput = row.querySelector('input[data-field*=".desktop"]');
             const mobPrev   = row.querySelector('.bwm-ds-type-preview-mob');
             const deskPrev  = row.querySelector('.bwm-ds-type-preview-desk');
-            if (mobInput  && mobPrev)  mobPrev.style.fontSize  = (parseFloat(mobInput.value)  || 0) + 'px';
-            if (deskInput && deskPrev) deskPrev.style.fontSize = (parseFloat(deskInput.value) || 0) + 'px';
+            if (mobInput && mobPrev) {
+                const px = parseFloat(mobInput.value) || 0;
+                mobPrev.style.fontSize = Math.min(42, px) + 'px';
+            }
+            if (deskInput && deskPrev) {
+                const px = parseFloat(deskInput.value) || 0;
+                deskPrev.style.fontSize = Math.min(42, px) + 'px';
+            }
         });
     }
 
@@ -459,6 +473,14 @@
             const input = document.querySelector('input[data-radius-input="' + key + '"]');
             if (!input) return;
             shape.style.borderRadius = input.value || '0';
+            // Pill gets a wider rectangle so it visually differs from circle
+            if (key === 'radius_pill') {
+                shape.style.width = '96px';
+                shape.style.height = '32px';
+            } else {
+                shape.style.width = '48px';
+                shape.style.height = '48px';
+            }
         });
     }
 
@@ -486,7 +508,11 @@
 
     function switchStep(stepName) {
         document.querySelectorAll('.bwm-ds-step').forEach(b => b.classList.toggle('bwm-ds-step-active', b.dataset.step === stepName));
-        document.querySelectorAll('.bwm-ds-panel').forEach(p => p.classList.toggle('bwm-ds-panel-active', p.dataset.step === stepName));
+        document.querySelectorAll('.bwm-ds-panel').forEach(p => {
+            const isActive = p.dataset.step === stepName;
+            p.classList.toggle('bwm-ds-panel-active', isActive);
+            p.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+        });
     }
 
     // --- Events ---
@@ -627,6 +653,10 @@
         }
 
         render();
+
+        // Set initial aria-hidden on panels
+        const firstActive = document.querySelector('.bwm-ds-panel-active');
+        if (firstActive) switchStep(firstActive.dataset.step);
     }
 
     if (document.readyState === 'loading') {
