@@ -21,56 +21,11 @@ class DesignSystemGenerator {
         'Grid',
     ];
 
-    private const REM_BASE = 16;
-
     /**
      * Get default seed configuration.
      */
     public static function get_default_config(): array {
         return ConfigMigrator::migrate( [] );
-    }
-
-    /**
-     * Generate a fluid clamp() value.
-     */
-    private function generate_clamp( float $mobile_px, float $desktop_px, int $container_width, int $container_min ): string {
-        $min_rem = number_format( $mobile_px / self::REM_BASE, 2, '.', '' );
-        $max_rem = number_format( $desktop_px / self::REM_BASE, 2, '.', '' );
-        $slope   = number_format( ( $desktop_px - $mobile_px ) / ( $container_width - $container_min ), 4, '.', '' );
-
-        return "clamp({$min_rem}rem, calc({$min_rem}rem + {$slope} * (100vw - {$container_min}px)), {$max_rem}rem)";
-    }
-
-    /**
-     * Lighten a hex color by blending toward white.
-     */
-    private function lighten_color( string $hex, int $percent ): string {
-        $hex = ltrim( $hex, '#' );
-        $r   = (int) hexdec( substr( $hex, 0, 2 ) );
-        $g   = (int) hexdec( substr( $hex, 2, 2 ) );
-        $b   = (int) hexdec( substr( $hex, 4, 2 ) );
-
-        $r = min( 255, (int) round( $r + ( 255 - $r ) * ( $percent / 100 ) ) );
-        $g = min( 255, (int) round( $g + ( 255 - $g ) * ( $percent / 100 ) ) );
-        $b = min( 255, (int) round( $b + ( 255 - $b ) * ( $percent / 100 ) ) );
-
-        return sprintf( '#%02x%02x%02x', $r, $g, $b );
-    }
-
-    /**
-     * Darken a hex color by reducing toward black.
-     */
-    private function darken_color( string $hex, int $percent ): string {
-        $hex = ltrim( $hex, '#' );
-        $r   = (int) hexdec( substr( $hex, 0, 2 ) );
-        $g   = (int) hexdec( substr( $hex, 2, 2 ) );
-        $b   = (int) hexdec( substr( $hex, 4, 2 ) );
-
-        $r = max( 0, (int) round( $r * ( 1 - $percent / 100 ) ) );
-        $g = max( 0, (int) round( $g * ( 1 - $percent / 100 ) ) );
-        $b = max( 0, (int) round( $b * ( 1 - $percent / 100 ) ) );
-
-        return sprintf( '#%02x%02x%02x', $r, $g, $b );
     }
 
     /**
@@ -93,69 +48,71 @@ class DesignSystemGenerator {
      * @return array { variables: array[], categories: array[], palette: array, css: string }
      */
     public function generate( array $config ): array {
-        $cw  = (int) ( $config['container_width'] ?? 1280 );
-        $cm  = (int) ( $config['container_min'] ?? 380 );
+        // Ensure we always receive a fully-populated v2 config.
+        $config = ConfigMigrator::migrate( $config );
+
+        $sizes = $config['sizes'];
+        $cw    = (int) $sizes['container_width'];
+        $cm    = (int) $sizes['container_min'];
 
         $variables  = [];
         $categories = [];
 
         // Spacing.
-        $cat_id      = $this->random_id();
+        $cat_id       = $this->random_id();
         $categories[] = [ 'id' => $cat_id, 'name' => 'Spacing' ];
-        $variables    = array_merge( $variables, $this->compute_spacing( $config['spacing'] ?? [], $cat_id, $cw, $cm ) );
+        $variables    = array_merge( $variables, $this->compute_spacing( $config['spacing'], $cat_id, $cw, $cm ) );
 
         // Texts.
-        $cat_id      = $this->random_id();
+        $cat_id       = $this->random_id();
         $categories[] = [ 'id' => $cat_id, 'name' => 'Texts' ];
-        $variables    = array_merge( $variables, $this->compute_typography_text( $config['typography_text'] ?? [], $cat_id, $cw, $cm ) );
+        $variables    = array_merge( $variables, $this->compute_typography_text( $config['typography_text'], $cat_id, $cw, $cm ) );
 
         // Headings.
-        $cat_id      = $this->random_id();
+        $cat_id       = $this->random_id();
         $categories[] = [ 'id' => $cat_id, 'name' => 'Headings' ];
-        $variables    = array_merge( $variables, $this->compute_headings( $config['typography_headings'] ?? [], $cat_id, $cw, $cm ) );
+        $variables    = array_merge( $variables, $this->compute_headings( $config['typography_headings'], $cat_id, $cw, $cm ) );
 
         // Gaps/Padding.
-        $cat_id      = $this->random_id();
+        $cat_id       = $this->random_id();
         $categories[] = [ 'id' => $cat_id, 'name' => 'Gaps/Padding' ];
-        $variables    = array_merge( $variables, $this->compute_gaps( $cat_id ) );
+        $variables    = array_merge( $variables, $this->compute_gaps( $config['gaps'], $cat_id ) );
 
         // Styles.
-        $cat_id      = $this->random_id();
+        $cat_id       = $this->random_id();
         $categories[] = [ 'id' => $cat_id, 'name' => 'Styles' ];
-        $variables    = array_merge( $variables, $this->compute_styles( $cat_id ) );
+        $variables    = array_merge( $variables, $this->compute_styles( $config['text_styles'], $cat_id ) );
 
         // Radius.
-        $cat_id      = $this->random_id();
+        $cat_id       = $this->random_id();
         $categories[] = [ 'id' => $cat_id, 'name' => 'Radius' ];
-        $variables    = array_merge( $variables, $this->compute_radius( (int) ( $config['radius'] ?? 8 ), $cat_id ) );
+        $variables    = array_merge( $variables, $this->compute_radius_vars( $config['radius']['values'], $cat_id ) );
 
         // Sizes.
-        $cat_id      = $this->random_id();
+        $cat_id       = $this->random_id();
         $categories[] = [ 'id' => $cat_id, 'name' => 'Sizes' ];
-        $variables    = array_merge( $variables, $this->compute_sizes( $cw, $cm, $cat_id ) );
+        $variables    = array_merge( $variables, $this->compute_sizes( $config['sizes'], $cat_id, $cw, $cm ) );
 
         // Colors.
-        $cat_id      = $this->random_id();
+        $cat_id       = $this->random_id();
         $categories[] = [ 'id' => $cat_id, 'name' => 'Colors' ];
-        $variables    = array_merge( $variables, $this->compute_color_variables( $config['colors'] ?? [], $cat_id ) );
+        $variables    = array_merge( $variables, $this->compute_color_variables( $config['colors'], $cat_id ) );
 
         // Grid.
-        $cat_id      = $this->random_id();
+        $cat_id       = $this->random_id();
         $categories[] = [ 'id' => $cat_id, 'name' => 'Grid' ];
         $variables    = array_merge( $variables, $this->compute_grid( $cat_id ) );
 
-        // Color palette.
-        $palette = $this->compute_color_palette( $config['colors'] ?? [] );
+        // Palette.
+        $palette = $this->compute_color_palette( $config['colors'] );
 
-        // Framework CSS.
+        // Framework CSS (optionally prepend html font-size override).
         $css = $this->get_framework_css();
+        if ( (float) $config['html_font_size'] === 100.0 ) {
+            $css = "html { font-size: 100%; }\n\n" . $css;
+        }
 
-        return [
-            'variables'  => $variables,
-            'categories' => $categories,
-            'palette'    => $palette,
-            'css'        => $css,
-        ];
+        return compact( 'variables', 'categories', 'palette', 'css' );
     }
 
     /**
@@ -239,271 +196,281 @@ class DesignSystemGenerator {
      * Compute spacing variables.
      */
     private function compute_spacing( array $spacing, string $cat_id, int $cw, int $cm ): array {
-        $base_m = (float) ( $spacing['base_mobile'] ?? 20 );
-        $base_d = (float) ( $spacing['base_desktop'] ?? 24 );
-        $scale  = (float) ( $spacing['scale'] ?? 1.5 );
-
-        $steps = [
-            'space-xs'  => [ $base_m / ( $scale * $scale ), $base_d / ( $scale * $scale ) ],
-            'space-s'   => [ $base_m / $scale, $base_d / $scale ],
-            'space-m'   => [ $base_m, $base_d ],
-            'space-l'   => [ $base_m * $scale, $base_d * $scale ],
-            'space-xl'  => [ $base_m * $scale * $scale, $base_d * $scale * $scale ],
-            'space-xxl' => [ $base_m * pow( $scale, 3 ), $base_d * pow( $scale, 3 ) ],
-        ];
-
-        $vars = [];
-        foreach ( $steps as $name => [ $mob, $desk ] ) {
-            $vars[] = [
+        $out = [];
+        foreach ( $spacing['steps'] as $name => $pair ) {
+            $out[] = [
                 'id'       => $this->random_id(),
-                'name'     => $name,
-                'value'    => $this->generate_clamp( round( $mob, 2 ), round( $desk, 2 ), $cw, $cm ),
                 'category' => $cat_id,
+                'name'     => "--space-{$name}",
+                'value'    => ScaleComputer::generate_clamp( (float) $pair['mobile'], (float) $pair['desktop'], $cw, $cm ),
             ];
         }
-
-        // space-section = xxl * 1.25.
-        $section_m = $base_m * pow( $scale, 3 ) * 1.25;
-        $section_d = $base_d * pow( $scale, 3 ) * 1.25;
-        $vars[]    = [
-            'id'       => $this->random_id(),
-            'name'     => 'space-section',
-            'value'    => $this->generate_clamp( round( $section_m, 2 ), round( $section_d, 2 ), $cw, $cm ),
-            'category' => $cat_id,
-        ];
-
-        // logo-width (fixed).
-        $vars[] = [
-            'id'       => $this->random_id(),
-            'name'     => 'logo-width',
-            'value'    => $this->generate_clamp( 120, 200, $cw, $cm ),
-            'category' => $cat_id,
-        ];
-
-        return $vars;
+        return $out;
     }
 
     /**
-     * Compute text typography variables (text-xs through text-xxl).
+     * Compute text typography variables.
      */
-    private function compute_typography_text( array $typo, string $cat_id, int $cw, int $cm ): array {
-        $base_m = (float) ( $typo['base_mobile'] ?? 16 );
-        $base_d = (float) ( $typo['base_desktop'] ?? 18 );
-        $scale  = (float) ( $typo['scale'] ?? 1.25 );
-
-        // m is baseline. Steps: xs, s, m, mm, l, xl, xxl.
-        $steps = [
-            'text-xs'  => [ $base_m / ( $scale * $scale ), $base_d / ( $scale * $scale ) ],
-            'text-s'   => [ $base_m / $scale, $base_d / $scale ],
-            'text-m'   => [ $base_m, $base_d ],
-            'text-mm'  => [ $base_m * pow( $scale, 0.5 ), $base_d * pow( $scale, 0.5 ) ],
-            'text-l'   => [ $base_m * $scale, $base_d * $scale ],
-            'text-xl'  => [ $base_m * $scale * $scale, $base_d * $scale * $scale ],
-            'text-xxl' => [ $base_m * pow( $scale, 3 ), $base_d * pow( $scale, 3 ) ],
-        ];
-
-        $vars = [];
-        foreach ( $steps as $name => [ $mob, $desk ] ) {
-            $vars[] = [
+    private function compute_typography_text( array $text, string $cat_id, int $cw, int $cm ): array {
+        $out = [];
+        foreach ( $text['steps'] as $name => $pair ) {
+            $out[] = [
                 'id'       => $this->random_id(),
-                'name'     => $name,
-                'value'    => $this->generate_clamp( round( $mob, 2 ), round( $desk, 2 ), $cw, $cm ),
                 'category' => $cat_id,
+                'name'     => "--text-{$name}",
+                'value'    => ScaleComputer::generate_clamp( (float) $pair['mobile'], (float) $pair['desktop'], $cw, $cm ),
             ];
         }
-
-        return $vars;
+        return $out;
     }
 
     /**
-     * Compute heading typography variables (h1 through h6).
+     * Compute heading typography variables.
      */
-    private function compute_headings( array $typo, string $cat_id, int $cw, int $cm ): array {
-        $base_m = (float) ( $typo['base_mobile'] ?? 28 );
-        $base_d = (float) ( $typo['base_desktop'] ?? 35 );
-        $scale  = (float) ( $typo['scale'] ?? 1.25 );
-
-        // h3 is baseline. Scale up for h2, h1. Scale down for h4, h5, h6.
-        $steps = [
-            'h1' => [ $base_m * $scale * $scale, $base_d * $scale * $scale ],
-            'h2' => [ $base_m * $scale, $base_d * $scale ],
-            'h3' => [ $base_m, $base_d ],
-            'h4' => [ $base_m / $scale, $base_d / $scale ],
-            'h5' => [ $base_m / ( $scale * $scale ), $base_d / ( $scale * $scale ) ],
-            'h6' => [ $base_m / pow( $scale, 3 ), $base_d / pow( $scale, 3 ) ],
-        ];
-
-        $vars = [];
-        foreach ( $steps as $name => [ $mob, $desk ] ) {
-            $vars[] = [
+    private function compute_headings( array $headings, string $cat_id, int $cw, int $cm ): array {
+        $out = [];
+        foreach ( $headings['steps'] as $name => $pair ) {
+            $out[] = [
                 'id'       => $this->random_id(),
-                'name'     => $name,
-                'value'    => $this->generate_clamp( round( $mob, 2 ), round( $desk, 2 ), $cw, $cm ),
                 'category' => $cat_id,
+                'name'     => "--{$name}",
+                'value'    => ScaleComputer::generate_clamp( (float) $pair['mobile'], (float) $pair['desktop'], $cw, $cm ),
             ];
         }
-
-        return $vars;
+        return $out;
     }
 
     /**
-     * Compute gap/padding variables (derived from spacing var names).
+     * Compute gap/padding variables.
      */
-    private function compute_gaps( string $cat_id ): array {
-        return [
-            [ 'id' => $this->random_id(), 'name' => 'grid-gap',        'value' => 'var(--space-xl) var(--space-l)',         'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'grid-gap-s',      'value' => 'var(--space-l) var(--space-m)',          'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'card-gap',        'value' => 'var(--space-s)',                         'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'content-gap',     'value' => 'var(--space-m)',                         'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'container-gap',   'value' => 'var(--space-xxl)',                       'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'padding-section', 'value' => 'var(--space-section) var(--space-m)',    'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'offset',          'value' => '80px',                                  'category' => $cat_id ],
+    private function compute_gaps( array $gaps, string $cat_id ): array {
+        $map = [
+            'grid_gap'        => '--grid-gap',
+            'grid_gap_s'      => '--grid-gap-s',
+            'card_gap'        => '--card-gap',
+            'content_gap'     => '--content-gap',
+            'container_gap'   => '--container-gap',
+            'padding_section' => '--padding-section',
+            'offset'          => '--offset',
         ];
+        $out = [];
+        foreach ( $map as $key => $var ) {
+            $out[] = [
+                'id'       => $this->random_id(),
+                'category' => $cat_id,
+                'name'     => $var,
+                'value'    => (string) ( $gaps[ $key ] ?? '' ),
+            ];
+        }
+        return $out;
     }
 
     /**
      * Compute style variables (line-height, font-weight, colors, borders).
      */
-    private function compute_styles( string $cat_id ): array {
-        return [
-            [ 'id' => $this->random_id(), 'name' => 'text-line-height',    'value' => 'calc(10px + 2ex)',        'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'heading-line-height', 'value' => 'calc(7px + 2ex)',         'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'text-font-weight',    'value' => '400',                     'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'heading-font-weight', 'value' => '600',                     'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'text-color',          'value' => 'var(--base)',             'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'heading-color',       'value' => 'var(--base-ultra-dark)',  'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'border-color',        'value' => 'var(--base-light)',       'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'border-color-dark',   'value' => 'var(--base-dark)',        'category' => $cat_id ],
+    private function compute_styles( array $styles, string $cat_id ): array {
+        $map = [
+            'text_color'          => '--text-color',
+            'heading_color'       => '--heading-color',
+            'text_font_weight'    => '--text-font-weight',
+            'heading_font_weight' => '--heading-font-weight',
+            'text_line_height'    => '--text-line-height',
+            'heading_line_height' => '--heading-line-height',
+            'border_color'        => '--border-color',
+            'border_color_dark'   => '--border-color-dark',
         ];
+        $out = [];
+        foreach ( $map as $key => $var ) {
+            $out[] = [
+                'id'       => $this->random_id(),
+                'category' => $cat_id,
+                'name'     => $var,
+                'value'    => (string) ( $styles[ $key ] ?? '' ),
+            ];
+        }
+        return $out;
     }
 
     /**
-     * Compute radius variables from base.
+     * Compute radius variables from v2 values map.
      */
-    private function compute_radius( int $base, string $cat_id ): array {
-        return [
-            [ 'id' => $this->random_id(), 'name' => 'radius',         'value' => $base . 'px',                          'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'radius-inside',  'value' => 'calc(var(--radius) * 0.5)',            'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'radius-outside', 'value' => 'calc(var(--radius) * 1.4)',            'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'radius-btn',     'value' => '.3em',                                'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'radius-pill',    'value' => '9999px',                              'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'radius-circle',  'value' => '50%',                                 'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'radius-s',       'value' => (int) floor( $base * 0.7 ) . 'px',     'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'radius-m',       'value' => $base . 'px',                          'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'radius-l',       'value' => (int) floor( $base * 1.5 ) . 'px',     'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'radius-xl',      'value' => (int) floor( $base * 2.25 ) . 'px',    'category' => $cat_id ],
+    private function compute_radius_vars( array $values, string $cat_id ): array {
+        $map = [
+            'radius'         => '--radius',
+            'radius_inside'  => '--radius-inside',
+            'radius_outside' => '--radius-outside',
+            'radius_btn'     => '--radius-btn',
+            'radius_pill'    => '--radius-pill',
+            'radius_circle'  => '--radius-circle',
+            'radius_s'       => '--radius-s',
+            'radius_m'       => '--radius-m',
+            'radius_l'       => '--radius-l',
+            'radius_xl'      => '--radius-xl',
         ];
+        $out = [];
+        foreach ( $map as $key => $var ) {
+            $out[] = [
+                'id'       => $this->random_id(),
+                'category' => $cat_id,
+                'name'     => $var,
+                'value'    => (string) ( $values[ $key ] ?? '' ),
+            ];
+        }
+        return $out;
     }
 
     /**
      * Compute size variables.
      */
-    private function compute_sizes( int $cw, int $cm, string $cat_id ): array {
-        $vars = [
-            [ 'id' => $this->random_id(), 'name' => 'container-width',     'value' => $cw . 'px',                            'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'container-min-width', 'value' => $cm . 'px',                            'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'max-width',           'value' => (int) floor( $cw * 0.766 ) . 'px',     'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'max-width-m',         'value' => (int) floor( $cw * 0.656 ) . 'px',     'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'max-width-s',         'value' => (int) floor( $cw * 0.5 ) . 'px',       'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'min-height',          'value' => '340px',                               'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'min-height-section',  'value' => '540px',                               'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => 'content-width',       'value' => 'var(--container-width)',               'category' => $cat_id ],
+    private function compute_sizes( array $sizes, string $cat_id, int $cw, int $cm ): array {
+        $out = [];
+        $fixed_map = [
+            'container_width'    => '--container-width',
+            'container_min'      => '--container-min-width',
+            'max_width'          => '--max-width',
+            'max_width_m'        => '--max-width-m',
+            'max_width_s'        => '--max-width-s',
+            'min_height'         => '--min-height',
+            'min_height_section' => '--min-height-section',
         ];
-
-        // width-10 through width-90.
-        for ( $i = 10; $i <= 90; $i += 10 ) {
-            $vars[] = [
+        foreach ( $fixed_map as $key => $var ) {
+            $out[] = [
                 'id'       => $this->random_id(),
-                'name'     => "width-{$i}",
-                'value'    => 'calc(var(--content-width) * 0.' . $i / 10 . ')',
                 'category' => $cat_id,
+                'name'     => $var,
+                'value'    => (int) $sizes[ $key ] . 'px',
             ];
         }
 
-        return $vars;
+        // Logo width — fluid clamp between mobile and desktop.
+        $out[] = [
+            'id'       => $this->random_id(),
+            'category' => $cat_id,
+            'name'     => '--logo-width',
+            'value'    => ScaleComputer::generate_clamp(
+                (float) $sizes['logo_width_mobile'],
+                (float) $sizes['logo_width_desktop'],
+                $cw,
+                $cm
+            ),
+        ];
+
+        // content-width + width-10..90.
+        $out[] = [
+            'id'       => $this->random_id(),
+            'category' => $cat_id,
+            'name'     => '--content-width',
+            'value'    => 'var(--container-width)',
+        ];
+        for ( $i = 10; $i <= 90; $i += 10 ) {
+            $frac = number_format( $i / 100, 1, '.', '' );
+            $out[] = [
+                'id'       => $this->random_id(),
+                'category' => $cat_id,
+                'name'     => "--width-{$i}",
+                'value'    => "calc(var(--content-width) * {$frac})",
+            ];
+        }
+        return $out;
     }
 
     /**
-     * Compute color CSS variables (hex values stored as variables).
+     * Compute color CSS variables for 6 families + white + black.
      */
     private function compute_color_variables( array $colors, string $cat_id ): array {
-        $vars = [];
+        $out        = [];
+        $family_ids = [ 'primary', 'secondary', 'tertiary', 'accent', 'base', 'neutral' ];
 
-        // Primary (always enabled).
-        $primary = $colors['primary'] ?? '#3b82f6';
-        $vars    = array_merge( $vars, $this->build_color_family_vars( 'primary', $primary, false, $cat_id ) );
+        foreach ( $family_ids as $name ) {
+            $fam = $colors[ $name ] ?? null;
+            if ( ! is_array( $fam ) || empty( $fam['enabled'] ) ) {
+                continue;
+            }
 
-        // Secondary (optional).
-        $sec = $colors['secondary'] ?? [ 'enabled' => true, 'hex' => '#f59e0b' ];
-        if ( ! empty( $sec['enabled'] ) ) {
-            $vars = array_merge( $vars, $this->build_color_family_vars( 'secondary', $sec['hex'], false, $cat_id ) );
+            // Shade vars (5 or 8).
+            $shade_order = [ 'base', 'ultra_dark', 'dark', 'light', 'ultra_light' ];
+            if ( ! empty( $fam['expanded'] ) ) {
+                $shade_order = [ 'base', 'ultra_dark', 'dark', 'semi_dark', 'medium', 'semi_light', 'light', 'ultra_light' ];
+            }
+            foreach ( $shade_order as $shade ) {
+                if ( ! isset( $fam['shades'][ $shade ] ) ) {
+                    continue;
+                }
+                $var_suffix = ( $shade === 'base' ) ? '' : '-' . str_replace( '_', '-', $shade );
+                $out[] = [
+                    'id'       => $this->random_id(),
+                    'category' => $cat_id,
+                    'name'     => "--{$name}{$var_suffix}",
+                    'value'    => (string) $fam['shades'][ $shade ],
+                ];
+            }
+
+            // Hover.
+            if ( ! empty( $fam['hover'] ) ) {
+                $out[] = [
+                    'id'       => $this->random_id(),
+                    'category' => $cat_id,
+                    'name'     => "--{$name}-hover",
+                    'value'    => (string) $fam['hover'],
+                ];
+            }
+
+            // Transparencies.
+            if ( ! empty( $fam['transparencies'] ) ) {
+                $hex   = (string) ( $fam['shades']['base'] ?? '#000000' );
+                $trans = ColorComputer::derive_transparencies( $hex );
+                // Historical naming: base family uses --base-ultra-dark-trans-NN (not --base-trans-NN).
+                $trans_prefix = ( $name === 'base' ) ? "--{$name}-ultra-dark-trans-" : "--{$name}-trans-";
+                foreach ( $trans as $pct => $rgba ) {
+                    $out[] = [
+                        'id'       => $this->random_id(),
+                        'category' => $cat_id,
+                        'name'     => $trans_prefix . $pct,
+                        'value'    => $rgba,
+                    ];
+                }
+            }
         }
 
-        // Accent (optional).
-        $acc = $colors['accent'] ?? [ 'enabled' => true, 'hex' => '#10b981' ];
-        if ( ! empty( $acc['enabled'] ) ) {
-            $vars = array_merge( $vars, $this->build_color_family_vars( 'accent', $acc['hex'], false, $cat_id ) );
-        }
-
-        // Base (always, uses neutral shading curve).
-        $base = $colors['base'] ?? '#374151';
-        $vars = array_merge( $vars, $this->build_color_family_vars( 'base', $base, true, $cat_id ) );
-
-        // Base-ultra-dark transparencies.
-        $base_ud_hex = $this->lighten_color( $base, 10 );
-        $base_ud_r   = hexdec( substr( ltrim( $base_ud_hex, '#' ), 0, 2 ) );
-        $base_ud_g   = hexdec( substr( ltrim( $base_ud_hex, '#' ), 2, 2 ) );
-        $base_ud_b   = hexdec( substr( ltrim( $base_ud_hex, '#' ), 4, 2 ) );
-        for ( $i = 10; $i <= 90; $i += 10 ) {
-            $alpha  = number_format( $i / 100, 1, '.', '' );
-            $vars[] = [
-                'id'       => $this->random_id(),
-                'name'     => "base-ultra-dark-trans-{$i}",
-                'value'    => "rgba({$base_ud_r}, {$base_ud_g}, {$base_ud_b}, {$alpha})",
-                'category' => $cat_id,
-            ];
-        }
-
-        // White + black.
-        $vars[] = [ 'id' => $this->random_id(), 'name' => 'white', 'value' => '#ffffff', 'category' => $cat_id ];
-
-        // White transparencies.
-        for ( $i = 10; $i <= 90; $i += 10 ) {
-            $alpha  = number_format( $i / 100, 1, '.', '' );
-            $vars[] = [
-                'id'       => $this->random_id(),
-                'name'     => "white-trans-{$i}",
-                'value'    => "rgba(255, 255, 255, {$alpha})",
-                'category' => $cat_id,
-            ];
-        }
-
-        $vars[] = [ 'id' => $this->random_id(), 'name' => 'black', 'value' => '#000000', 'category' => $cat_id ];
-
-        return $vars;
-    }
-
-    /**
-     * Build 5 color variables for a color family (base + 4 shades).
-     */
-    private function build_color_family_vars( string $prefix, string $hex, bool $is_neutral, string $cat_id ): array {
-        if ( $is_neutral ) {
-            $ultra_dark = $this->lighten_color( $hex, 10 );
-            $dark       = $this->lighten_color( $hex, 25 );
-        } else {
-            $ultra_dark = $this->darken_color( $hex, 40 );
-            $dark       = $this->darken_color( $hex, 20 );
-        }
-        $light       = $this->lighten_color( $hex, 85 );
-        $ultra_light = $this->lighten_color( $hex, 95 );
-
-        return [
-            [ 'id' => $this->random_id(), 'name' => $prefix,                'value' => $hex,         'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => "{$prefix}-ultra-dark", 'value' => $ultra_dark,  'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => "{$prefix}-dark",       'value' => $dark,        'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => "{$prefix}-light",      'value' => $light,       'category' => $cat_id ],
-            [ 'id' => $this->random_id(), 'name' => "{$prefix}-ultra-light",'value' => $ultra_light, 'category' => $cat_id ],
+        // White.
+        $white = $colors['white'] ?? [ 'hex' => '#ffffff', 'transparencies' => true ];
+        $out[] = [
+            'id'       => $this->random_id(),
+            'category' => $cat_id,
+            'name'     => '--white',
+            'value'    => (string) $white['hex'],
         ];
+        if ( ! empty( $white['transparencies'] ) ) {
+            foreach ( ColorComputer::derive_transparencies( (string) $white['hex'] ) as $pct => $rgba ) {
+                $out[] = [
+                    'id'       => $this->random_id(),
+                    'category' => $cat_id,
+                    'name'     => "--white-trans-{$pct}",
+                    'value'    => $rgba,
+                ];
+            }
+        }
+
+        // Black.
+        $black = $colors['black'] ?? [ 'hex' => '#000000', 'transparencies' => false ];
+        $out[] = [
+            'id'       => $this->random_id(),
+            'category' => $cat_id,
+            'name'     => '--black',
+            'value'    => (string) $black['hex'],
+        ];
+        if ( ! empty( $black['transparencies'] ) ) {
+            foreach ( ColorComputer::derive_transparencies( (string) $black['hex'] ) as $pct => $rgba ) {
+                $out[] = [
+                    'id'       => $this->random_id(),
+                    'category' => $cat_id,
+                    'name'     => "--black-trans-{$pct}",
+                    'value'    => $rgba,
+                ];
+            }
+        }
+
+        return $out;
     }
 
     /**
@@ -543,80 +510,108 @@ class DesignSystemGenerator {
     }
 
     /**
-     * Compute Bricks-native color palette.
+     * Compute Bricks-native color palette (core shades + hover + white/black).
      */
     private function compute_color_palette( array $colors ): array {
-        $palette_id = $this->random_id();
-        $all_colors = [];
+        $palette_id  = $this->random_id();
+        $all_colors  = [];
+        $family_ids  = [ 'primary', 'secondary', 'tertiary', 'accent', 'base', 'neutral' ];
 
-        // Primary.
-        $primary_hex = $colors['primary'] ?? '#3b82f6';
-        $all_colors  = array_merge( $all_colors, $this->build_palette_family( 'Primary', 'primary', $primary_hex, false ) );
+        foreach ( $family_ids as $name ) {
+            $fam = $colors[ $name ] ?? null;
+            if ( ! is_array( $fam ) || empty( $fam['enabled'] ) ) {
+                continue;
+            }
+            $all_colors = array_merge( $all_colors, $this->build_palette_family(
+                ucfirst( $name ),
+                $name,
+                (string) ( $fam['shades']['base']        ?? '#000000' ),
+                (string) ( $fam['shades']['ultra_dark']  ?? '#000000' ),
+                (string) ( $fam['shades']['dark']        ?? '#000000' ),
+                (string) ( $fam['shades']['light']       ?? '#ffffff' ),
+                (string) ( $fam['shades']['ultra_light'] ?? '#ffffff' )
+            ) );
 
-        // Secondary.
-        $sec = $colors['secondary'] ?? [ 'enabled' => true, 'hex' => '#f59e0b' ];
-        if ( ! empty( $sec['enabled'] ) ) {
-            $all_colors = array_merge( $all_colors, $this->build_palette_family( 'Secondary', 'secondary', $sec['hex'], false ) );
+            // Flat hover entry.
+            if ( ! empty( $fam['hover'] ) ) {
+                $all_colors[] = [
+                    'id'    => $this->random_id(),
+                    'name'  => ucfirst( $name ) . ' Hover',
+                    'raw'   => "var(--{$name}-hover)",
+                    'light' => (string) $fam['hover'],
+                ];
+            }
         }
 
-        // Accent.
-        $acc = $colors['accent'] ?? [ 'enabled' => true, 'hex' => '#10b981' ];
-        if ( ! empty( $acc['enabled'] ) ) {
-            $all_colors = array_merge( $all_colors, $this->build_palette_family( 'Accent', 'accent', $acc['hex'], false ) );
-        }
-
-        // Base.
-        $base_hex   = $colors['base'] ?? '#374151';
-        $all_colors = array_merge( $all_colors, $this->build_palette_family( 'Base', 'base', $base_hex, true ) );
-
-        // White + transparencies.
-        $white_id     = $this->random_id();
-        $all_colors[] = [ 'id' => $white_id, 'name' => 'White', 'raw' => 'var(--white)', 'light' => '#ffffff' ];
-        for ( $i = 10; $i <= 90; $i += 10 ) {
-            $alpha        = number_format( $i / 100, 1, '.', '' );
+        // White + Black — flat entries.
+        if ( isset( $colors['white'] ) ) {
             $all_colors[] = [
-                'id'     => $this->random_id(),
-                'type'   => 'transparent',
-                'raw'    => "var(--white-trans-{$i})",
-                'index'  => ( $i / 10 ) - 1,
-                'parent' => $white_id,
-                'light'  => "rgba(255, 255, 255, {$alpha})",
+                'id'    => $this->random_id(),
+                'name'  => 'White',
+                'raw'   => 'var(--white)',
+                'light' => (string) ( $colors['white']['hex'] ?? '#ffffff' ),
+            ];
+        }
+        if ( isset( $colors['black'] ) ) {
+            $all_colors[] = [
+                'id'    => $this->random_id(),
+                'name'  => 'Black',
+                'raw'   => 'var(--black)',
+                'light' => (string) ( $colors['black']['hex'] ?? '#000000' ),
             ];
         }
 
-        // Black.
-        $all_colors[] = [ 'id' => $this->random_id(), 'name' => 'Black', 'raw' => 'var(--black)', 'light' => '#000000' ];
-
         return [
-            'id'      => $palette_id,
-            'name'    => 'BricksCore',
-            'colors'  => $all_colors,
-            'default' => true,
+            'id'     => $palette_id,
+            'name'   => 'BricksCore',
+            'colors' => $all_colors,
         ];
     }
 
     /**
-     * Build palette colors for one color family (5 entries: base + 4 shades).
+     * Build palette colors for one family (5 entries: base + 4 pre-computed shades).
      */
-    private function build_palette_family( string $label, string $prefix, string $hex, bool $is_neutral ): array {
+    private function build_palette_family( string $label, string $prefix, string $base_hex, string $ultra_dark_hex, string $dark_hex, string $light_hex, string $ultra_light_hex ): array {
         $parent_id = $this->random_id();
-
-        if ( $is_neutral ) {
-            $ultra_dark = $this->lighten_color( $hex, 10 );
-            $dark       = $this->lighten_color( $hex, 25 );
-        } else {
-            $ultra_dark = $this->darken_color( $hex, 40 );
-            $dark       = $this->darken_color( $hex, 20 );
-        }
-        $light       = $this->lighten_color( $hex, 85 );
-        $ultra_light = $this->lighten_color( $hex, 95 );
-
         return [
-            [ 'id' => $parent_id,         'name' => $label,     'raw' => "var(--{$prefix})",             'light' => $hex ],
-            [ 'id' => $this->random_id(), 'type' => 'dark',  'raw' => "var(--{$prefix}-ultra-dark)", 'index' => 0, 'parent' => $parent_id, 'light' => $ultra_dark ],
-            [ 'id' => $this->random_id(), 'type' => 'dark',  'raw' => "var(--{$prefix}-dark)",       'index' => 1, 'parent' => $parent_id, 'light' => $dark ],
-            [ 'id' => $this->random_id(), 'type' => 'light', 'raw' => "var(--{$prefix}-light)",      'index' => 0, 'parent' => $parent_id, 'light' => $light ],
-            [ 'id' => $this->random_id(), 'type' => 'light', 'raw' => "var(--{$prefix}-ultra-light)",'index' => 1, 'parent' => $parent_id, 'light' => $ultra_light ],
+            [
+                'id'    => $parent_id,
+                'name'  => $label,
+                'raw'   => "var(--{$prefix})",
+                'light' => $base_hex,
+            ],
+            [
+                'id'     => $this->random_id(),
+                'type'   => 'dark',
+                'raw'    => "var(--{$prefix}-dark)",
+                'parent' => $parent_id,
+                'index'  => 0,
+                'light'  => $dark_hex,
+            ],
+            [
+                'id'     => $this->random_id(),
+                'type'   => 'dark',
+                'raw'    => "var(--{$prefix}-ultra-dark)",
+                'parent' => $parent_id,
+                'index'  => 1,
+                'light'  => $ultra_dark_hex,
+            ],
+            [
+                'id'     => $this->random_id(),
+                'type'   => 'light',
+                'raw'    => "var(--{$prefix}-light)",
+                'parent' => $parent_id,
+                'index'  => 0,
+                'light'  => $light_hex,
+            ],
+            [
+                'id'     => $this->random_id(),
+                'type'   => 'light',
+                'raw'    => "var(--{$prefix}-ultra-light)",
+                'parent' => $parent_id,
+                'index'  => 1,
+                'light'  => $ultra_light_hex,
+            ],
         ];
     }
 
