@@ -40,6 +40,19 @@ When connecting to a site with existing designed pages, the discovery phase anal
 - `background: "dark"` → merges with existing background settings (preserves images)
 - Unknown schema keys → rejected with suggestions ("Did you mean style_overrides?")
 
+= Design System Generator =
+
+The plugin ships with a visual design system editor under Bricks MCP → Design System. A left-rail stepper walks through six editable sections:
+
+- **Spacing** — base mobile/desktop + scale ratio; seven clamp-based steps (xs → xxl, section)
+- **Typography** — separate scales for headings (h1–h6) and body text (xs → xxl) with live "Heading" / "Body text" previews, HTML font-size toggle (62.5% vs 100%), and text styles (text/heading color, font weights, line heights)
+- **Colors** — six families (primary, secondary, tertiary, accent, base, neutral) + white/black. Per-family toggles for Enable, Expand Color Palette (5 vs 8 shades), Transparencies (9 alpha steps). Hover variants auto-derived, editable. Core shades written to the Bricks color palette; expanded shades + transparencies available as CSS variables.
+- **Gaps / Padding** — grid-gap, card-gap, content-gap, container-gap, padding-section, offset. Accept `var()` references.
+- **Radius** — individually editable variants (radius, radius-inside, radius-outside, radius-btn, radius-pill, radius-circle, radius-s/m/l/xl) plus border colors. Visual shape indicators.
+- **Sizes** — container width / min-width (drive the clamp formula), max-widths, min-heights, logo-width mobile/desktop pair.
+
+Apply writes to `bricks_global_variables` (namespaced replace across nine owned categories), `bricks_color_palette` (BricksCore palette with parent/child shade hierarchy + hover entries), and `bricks_global_settings['customCss']` (framework CSS between markers). Configs from earlier plugin versions are auto-migrated on read — no user action required.
+
 = How It Works =
 
 The plugin registers a REST API endpoint on your WordPress site that speaks the MCP protocol. You add the endpoint URL to your AI client's MCP configuration, authenticate with a WordPress Application Password, and your AI can start working with your site immediately.
@@ -143,6 +156,71 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.18.4 =
+* Critical: release ZIP now includes the top-level `bricks-mcp/` wrapper directory. Without it, WordPress could install under a directory named after the zip filename, silently deactivating the plugin on upgrade.
+* Gap visual indicators now resolve `var(--space-X)` references to actual pixel values from your spacing scale (instead of falling back to a static 16px).
+* `ajax_save_config` and `ajax_apply` now normalize config through `ConfigMigrator::migrate()` before storing (defensive).
+* Removed dead `render_panel_text_styles()` method.
+
+= 3.18.3 =
+* Critical: Typography panel was missing its `</section>` close tag. Every panel after Typography (Colors, Gaps/Padding, Radius, Sizes) was nested inside it and inherited `display: none`, never appearing when their stepper button was clicked.
+
+= 3.18.2 =
+* Text typography step rows now show live "Body text" preview at both mobile and desktop sizes.
+* Text Styles merged into Typography panel (removed standalone step). Border colors stay in Radius step.
+* Gaps / Padding panel visual indicators — two boxes showing the gap value as spacing between them.
+* Radius panel visual indicators — colored square with the actual border-radius value applied.
+* Live preview restored to full mockup (hero with gradient + buttons, feature stats cards, sidebar card, footer, token labels).
+
+= 3.18.1 =
+* Fix: `BRICKS_MCP_VERSION` constant bumped to match docblock (was stale at 3.17.0, causing wrong version in admin header and spurious "update available" notice).
+* Heading previews grow live when step values change.
+* Spacing swatches grow live with the desktop value.
+* Structural toggles (Enable / Expand Color Palette / Transparencies) now re-render the Colors panel so new shade inputs and transparency strips appear immediately. New AJAX endpoint `bricks_mcp_ds_render_panel` returns server-rendered panel HTML.
+
+= 3.18.0 =
+* Design System v2: admin Design System tab rewritten as left-rail stepper with 7 panels (Spacing, Typography, Colors, Gaps/Padding, Radius, Sizes, Text Styles). Every generated value is individually editable.
+* Two new color families: **tertiary**, **neutral** (both disabled by default).
+* **Expand Color Palette** toggle per family — switches from 5 shades to 8 (adds semi-dark, medium, semi-light).
+* **Transparencies** toggle per family — generates 9 transparency variants (90% → 10%).
+* **Hover variants** per family (auto-derived `darken(base, 10%)`, editable).
+* **White** and **Black** families with independent transparency toggles.
+* **HTML font-size** toggle (62.5% / 100%) — emits `html { font-size: 100%; }` when 100% is selected.
+* Editable **Text Styles** (`--text-color`, `--heading-color`, font weights, line heights).
+* Editable **Gaps/Padding** refs (accept `var()` values).
+* **Radius** individual variant overrides (all 10 derived values editable) + border colors.
+* **Sizes** extra fields (max-width, max-width-m, max-width-s, min-height, min-height-section, logo-width mobile/desktop).
+* Refactor: extract `ScaleComputer`, `ColorComputer`, `ConfigMigrator` helpers from `DesignSystemGenerator`.
+* Existing configs are auto-migrated on read — no user action required.
+* BricksCore palette now includes hover variants (flat entries per enabled family). Expanded shades and transparencies live as CSS variables only (keeping the Bricks color picker usable).
+
+= 3.17.0 =
+* Internal improvements and stability fixes.
+
+= 3.16.0 =
+* Fresh-site portability: starter classes use CSS `var()` fallbacks, `SiteVariableResolver` returns hex on empty sites, `BUILDING_RULES` adapt to site state, WooCommerce scaffolds portable.
+* Infrastructure: centralized `BRICKS_MCP_GITHUB_REPO` constant, `BricksCore::META_KEY` replaces 12 hardcoded strings, filterable SSE keepalive interval, prerequisite TTL extended to 2 hours, optional `BRICKS_MCP_GITHUB_TOKEN` for authenticated update checks.
+* Code quality: dead code removed, `confirm` parameter removed from 10 schemas, migrations gated on version change, stronger randomness (`random_int` / `random_bytes`), unbounded queries fixed.
+* Extensibility: 7 new `apply_filters()` hooks for hosting providers, security plugins, schemas, and intent map.
+
+= 3.15.0 =
+* Internal improvements.
+
+= 3.14.1 =
+* Bug fixes.
+
+= 3.14.0 =
+* Feature updates.
+
+= 3.13.0 =
+* Feature updates.
+
+= 3.12.x =
+* Various improvements and bug fixes (3.12.0 through 3.12.3).
+
+= 3.11.x =
+* Various improvements and bug fixes (3.11.0 through 3.11.3).
 
 = 3.10.1 =
 * Pattern import normalization: imported patterns auto-mapped to site's classes and variables. Class references matched via semantic search; unmatched references flagged with warnings. Both admin import and MCP import_normalized run through normalization.
