@@ -4,6 +4,12 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.18.8] — 2026-04-15
+
+### Fixes
+
+- **Scale prefix format**: Bricks Style Manager requires scale prefixes to start with `--` (matching the CSS custom property syntax). 3.18.7 wrote `space-` / `text-` / empty, which the Bricks UI silently rejected ("No scales found"). Now writes `--space-`, `--text-`, `--` so scales appear correctly in Style Manager → Spacing and Typography tabs.
+
 ## [3.18.7] — 2026-04-15
 
 ### Fixes

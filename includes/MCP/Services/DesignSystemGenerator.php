@@ -63,7 +63,7 @@ class DesignSystemGenerator {
         $categories[] = [
             'id'             => $cat_id,
             'name'           => 'Spacing',
-            'scale'          => [ 'prefix' => 'space-' ],
+            'scale'          => [ 'prefix' => '--space-' ],
             'utilityClasses' => [],
         ];
         $variables    = array_merge( $variables, $this->compute_spacing( $config['spacing'], $cat_id, $cw, $cm ) );
@@ -73,7 +73,7 @@ class DesignSystemGenerator {
         $categories[] = [
             'id'             => $cat_id,
             'name'           => 'Texts',
-            'scale'          => [ 'prefix' => 'text-' ],
+            'scale'          => [ 'prefix' => '--text-' ],
             'utilityClasses' => [
                 [ 'className' => 'text-*', 'cssProperty' => 'font-size' ],
             ],
@@ -85,7 +85,7 @@ class DesignSystemGenerator {
         $categories[] = [
             'id'             => $cat_id,
             'name'           => 'Headings',
-            'scale'          => [ 'prefix' => '' ],
+            'scale'          => [ 'prefix' => '--' ],
             'utilityClasses' => [],
         ];
         $variables    = array_merge( $variables, $this->compute_headings( $config['typography_headings'], $cat_id, $cw, $cm ) );
