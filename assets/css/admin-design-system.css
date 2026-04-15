@@ -246,6 +246,12 @@
 
 .bwm-ds-text-fields .bwm-ds-field input { width: 100%; }
 
+/* Transition demo button in live preview */
+.bwm-ds-trans-demo:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
 /* Radio group (html font-size) */
 .bwm-ds-radio-group {
     display: flex;

@@ -231,6 +231,22 @@
 
         const radius = parseInt((config.radius && config.radius.base) || 8) || 8;
 
+        // New token categories (v3.19).
+        const shadows = config.shadows || {};
+        const shadowM = shadows.m || '0 4px 6px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05)';
+        const shadowL = shadows.l || '0 10px 15px rgba(0, 0, 0, 0.10), 0 4px 6px rgba(0, 0, 0, 0.05)';
+        const shadowXl = shadows.xl || '0 20px 25px rgba(0, 0, 0, 0.10), 0 10px 10px rgba(0, 0, 0, 0.04)';
+        const borders = config.borders || {};
+        const borderThin = borders.thin || '1px';
+        const borderMedium = borders.medium || '2px';
+        const aspects = config.aspect_ratios || {};
+        const aspectVideo = aspects.video || '16 / 9';
+        const aspectSquare = aspects.square || '1 / 1';
+        const aspectPhoto = aspects.photo || '4 / 3';
+        const trans = config.transitions || {};
+        const durBase = trans.duration_base || '300ms';
+        const easeOut = trans.ease_out || 'cubic-bezier(0.16, 1, 0.3, 1)';
+
         function tag(v) {
             return `<span class="bwm-ds-token-label">${v}</span>`;
         }
@@ -267,17 +283,17 @@
                     </div>
 
                     <div style="display:flex;gap:${ss}px;">
-                        <div style="flex:1;background:${primaryShades.ultra_light || '#eef'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;">
-                            ${tag('--primary-ultra-light')}
+                        <div style="flex:1;background:${primaryShades.ultra_light || '#eef'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;box-shadow:${shadowM};">
+                            ${tag('--primary-ultra-light')}${tag('--shadow-m')}
                             <div style="font-size:${h2}px;font-weight:700;color:${primary};">${tag('--primary')}106</div>
                             <div style="font-size:${ts}px;color:${base};margin-top:4px;">${tag('--text-s')}Variables</div>
                         </div>
-                        <div style="flex:1;background:${accentShades.ultra_light || '#efe'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;">
+                        <div style="flex:1;background:${accentShades.ultra_light || '#efe'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;box-shadow:${shadowM};">
                             ${tag('--accent-ultra-light')}
                             <div style="font-size:${h2}px;font-weight:700;color:${accent};">${tag('--accent')}9</div>
                             <div style="font-size:${ts}px;color:${base};margin-top:4px;">Categories</div>
                         </div>
-                        <div style="flex:1;background:${baseShades.ultra_light || '#eee'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;">
+                        <div style="flex:1;background:${baseShades.ultra_light || '#eee'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;box-shadow:${shadowM};">
                             ${tag('--base-ultra-light')}
                             <div style="font-size:${h2}px;font-weight:700;color:${baseShades.ultra_dark || '#222'};">31</div>
                             <div style="font-size:${ts}px;color:${base};margin-top:4px;">Palette Colors</div>
@@ -286,8 +302,8 @@
                 </div>
 
                 <div style="flex:1;min-width:0;">
-                    <div style="background:#fff;border:1px solid ${baseShades.light || '#ddd'};border-radius:${radius}px;padding:${sm}px;box-shadow:0 1px 3px rgba(0,0,0,0.08);position:relative;">
-                        ${tag('--radius')}
+                    <div style="background:#fff;border:${borderThin} solid ${baseShades.light || '#ddd'};border-radius:${radius}px;padding:${sm}px;box-shadow:${shadowL};position:relative;">
+                        ${tag('--radius')}${tag('--shadow-l')}${tag('--border-thin')}
                         <div style="font-size:${h4}px;font-weight:600;color:${baseShades.ultra_dark || '#222'};line-height:calc(7px + 2ex);margin-bottom:${sxs}px;">
                             ${tag('--h4')}Quick Start
                         </div>
@@ -308,6 +324,67 @@
                 </div>
                 <div style="font-size:${txs}px;color:${primary};">
                     ${tag('--primary')}Documentation &rarr;
+                </div>
+            </div>
+
+            <div style="background:${baseShades.ultra_light || '#f5f5f5'};padding:${sl}px ${sl}px ${sxl}px;">
+                <div style="font-size:${h4}px;font-weight:600;color:${baseShades.ultra_dark || '#222'};margin-bottom:${sm}px;">
+                    ${tag('--h4')}Effects &amp; Tokens Showcase
+                </div>
+
+                <div style="font-size:${ts}px;font-weight:600;color:${base};margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
+                    ${tag('--text-s')}Shadows
+                </div>
+                <div style="display:flex;gap:${sm}px;margin-bottom:${sm}px;flex-wrap:wrap;">
+                    ${[ ['xs', shadows.xs], ['s', shadows.s], ['m', shadowM], ['l', shadowL], ['xl', shadowXl] ].map(([name, val]) => `
+                        <div style="flex:1;min-width:100px;">
+                            <div style="background:#fff;border-radius:${radius}px;padding:${sm}px;height:60px;box-shadow:${val || shadowM};display:flex;align-items:center;justify-content:center;"></div>
+                            <div style="font-size:${txs}px;color:${base};text-align:center;margin-top:6px;font-family:monospace;">--shadow-${name}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div style="font-size:${ts}px;font-weight:600;color:${base};margin-top:${sm}px;margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
+                    ${tag('--text-s')}Border Widths
+                </div>
+                <div style="display:flex;gap:${sm}px;margin-bottom:${sm}px;">
+                    ${[ ['thin', borderThin], ['medium', borderMedium], ['thick', borders.thick || '4px'] ].map(([name, val]) => `
+                        <div style="flex:1;background:#fff;border:${val} solid ${primary};border-radius:${radius}px;padding:${sm}px;text-align:center;">
+                            <div style="font-family:monospace;font-size:${txs}px;color:${base};">--border-${name}</div>
+                            <div style="font-size:${txs}px;color:${baseShades.dark || '#777'};margin-top:2px;">${val}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div style="font-size:${ts}px;font-weight:600;color:${base};margin-top:${sm}px;margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
+                    ${tag('--text-s')}Aspect Ratios
+                </div>
+                <div style="display:flex;gap:${sm}px;margin-bottom:${sm}px;align-items:flex-end;">
+                    ${[
+                        ['square', aspectSquare, 90],
+                        ['video', aspectVideo, 160],
+                        ['photo', aspectPhoto, 120],
+                        ['portrait', aspects.portrait || '3 / 4', 80],
+                        ['wide', aspects.wide || '21 / 9', 210]
+                    ].map(([name, val, w]) => `
+                        <div style="text-align:center;">
+                            <div style="width:${w}px;aspect-ratio:${val};background:linear-gradient(135deg, ${primary}, ${primaryDark});border-radius:${radius}px;"></div>
+                            <div style="font-family:monospace;font-size:${txs}px;color:${base};margin-top:6px;">--aspect-${name}</div>
+                            <div style="font-size:${txs}px;color:${baseShades.dark || '#777'};">${val}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div style="font-size:${ts}px;font-weight:600;color:${base};margin-top:${sm}px;margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
+                    ${tag('--text-s')}Transitions (hover me)
+                </div>
+                <div style="display:flex;gap:${ss}px;flex-wrap:wrap;">
+                    <button type="button" class="bwm-ds-trans-demo" style="background:${primary};color:#fff;border:none;padding:${sxs}px ${sm}px;border-radius:${radius}px;font-size:${ts}px;font-weight:600;cursor:pointer;transition:transform ${durBase} ${easeOut}, box-shadow ${durBase} ${easeOut};">
+                        Hover — scale + shadow
+                    </button>
+                    <div style="font-size:${txs}px;color:${base};align-self:center;font-family:monospace;">
+                        transition: transform ${durBase} ${easeOut}
+                    </div>
                 </div>
             </div>
         </div>`;

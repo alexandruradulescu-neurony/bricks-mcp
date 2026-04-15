@@ -4,6 +4,17 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.19.1] — 2026-04-15
+
+### Live preview enhancements
+
+- **Live preview now showcases the 3.19 token categories**. A new "Effects & Tokens Showcase" section under the footer displays:
+  - **Shadows row** — 5 floating cards rendered with `--shadow-xs` through `--shadow-xl` side-by-side.
+  - **Border widths row** — 3 cards using `--border-thin/medium/thick` with the primary color.
+  - **Aspect ratios row** — 5 primary-colored boxes rendered with `--aspect-square/video/photo/portrait/wide`.
+  - **Transitions demo** — a hover-me button wired with `transition: transform var(--duration-base) var(--ease-out)` so you can feel the motion values live.
+- Existing feature cards and the sidebar quick-start card now apply `--shadow-m` / `--shadow-l` and `--border-thin` so the hero mockup reflects your tokens out of the box.
+
 ## [3.19.0] — 2026-04-15
 
 ### New
