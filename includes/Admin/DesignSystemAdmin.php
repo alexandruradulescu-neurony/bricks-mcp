@@ -383,6 +383,20 @@ class DesignSystemAdmin {
             'padding_section' => __( '--padding-section', 'bricks-mcp' ),
             'offset'          => __( '--offset',          'bricks-mcp' ),
         ];
+
+        $resolve_px = function( string $value ) use ( $config ) {
+            // Direct Npx.
+            if ( preg_match( '/^(\d+(?:\.\d+)?)px$/', trim( $value ), $m ) ) {
+                return (float) $m[1];
+            }
+            // First var(--space-X) reference (use the first one found — represents the gap-axis size).
+            if ( preg_match( '/var\(\s*--space-([a-z]+)\s*\)/', $value, $m ) ) {
+                $step = $m[1];
+                $px   = $config['spacing']['steps'][ $step ]['desktop'] ?? null;
+                return $px !== null ? (float) $px : 16.0;
+            }
+            return 16.0;
+        };
         ?>
         <section class="bwm-ds-panel" data-step="gaps">
             <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Gaps / Padding', 'bricks-mcp' ); ?></h2>
@@ -390,11 +404,14 @@ class DesignSystemAdmin {
                 <?php esc_html_e( '--offset is the height of your site header, used for fixed positioning and scroll anchors.', 'bricks-mcp' ); ?>
             </p>
             <div class="bwm-ds-gap-rows">
-                <?php foreach ( $map as $key => $label ) : ?>
+                <?php foreach ( $map as $key => $label ) :
+                    $val = $g[ $key ] ?? '';
+                    $px  = $resolve_px( $val );
+                    ?>
                     <div class="bwm-ds-gap-row">
                         <label class="bwm-ds-gap-label"><?php echo esc_html( $label ); ?></label>
-                        <input type="text" value="<?php echo esc_attr( $g[ $key ] ?? '' ); ?>" data-field="gaps.<?php echo esc_attr( $key ); ?>" data-gap-input="<?php echo esc_attr( $key ); ?>">
-                        <div class="bwm-ds-gap-indicator" data-gap-key="<?php echo esc_attr( $key ); ?>">
+                        <input type="text" value="<?php echo esc_attr( $val ); ?>" data-field="gaps.<?php echo esc_attr( $key ); ?>" data-gap-input="<?php echo esc_attr( $key ); ?>">
+                        <div class="bwm-ds-gap-indicator" data-gap-key="<?php echo esc_attr( $key ); ?>" data-px="<?php echo esc_attr( $px ); ?>" style="gap: <?php echo esc_attr( min( 60, max( 2, $px ) ) ); ?>px;">
                             <div class="bwm-ds-gap-box"></div>
                             <div class="bwm-ds-gap-box"></div>
                         </div>
@@ -491,34 +508,6 @@ class DesignSystemAdmin {
         <?php
     }
 
-    private function render_panel_text_styles( array $config ): void {
-        $ts = $config['text_styles'];
-        $rows = [
-            'text_color'          => [ '--text-color',          'text' ],
-            'heading_color'       => [ '--heading-color',       'text' ],
-            'text_font_weight'    => [ '--text-font-weight',    'number' ],
-            'heading_font_weight' => [ '--heading-font-weight', 'number' ],
-            'text_line_height'    => [ '--text-line-height',    'text' ],
-            'heading_line_height' => [ '--heading-line-height', 'text' ],
-        ];
-        ?>
-        <section class="bwm-ds-panel" data-step="text-styles">
-            <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Text Styles', 'bricks-mcp' ); ?></h2>
-            <p class="bwm-ds-panel-help">
-                <?php esc_html_e( 'Colors, weights, and line-heights for text and headings. Accept CSS variables.', 'bricks-mcp' ); ?>
-            </p>
-            <div class="bwm-ds-text-fields">
-                <?php foreach ( $rows as $key => [ $label, $type ] ) : ?>
-                    <div class="bwm-ds-field">
-                        <label><?php echo esc_html( $label ); ?></label>
-                        <input type="<?php echo esc_attr( $type ); ?>" value="<?php echo esc_attr( $ts[ $key ] ?? '' ); ?>" data-field="text_styles.<?php echo esc_attr( $key ); ?>">
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </section>
-        <?php
-    }
-
     // --- AJAX Handlers ---
 
     /**
@@ -569,6 +558,9 @@ class DesignSystemAdmin {
             wp_send_json_error( 'Invalid config' );
         }
 
+        // Normalize through migrator before storing (defensive — guarantees v2 shape).
+        $config = ConfigMigrator::migrate( $config );
+
         update_option( self::CONFIG_OPTION, $config );
         wp_send_json_success( [ 'saved' => true ] );
     }
@@ -588,7 +580,10 @@ class DesignSystemAdmin {
             wp_send_json_error( 'Invalid config' );
         }
 
-        // Save config first.
+        // Normalize through migrator (defensive).
+        $config = ConfigMigrator::migrate( $config );
+
+        // Save normalized config first.
         update_option( self::CONFIG_OPTION, $config );
 
         $generator = new DesignSystemGenerator();

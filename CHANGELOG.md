@@ -4,6 +4,18 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.18.4] — 2026-04-15
+
+### Critical fix
+
+- **ZIP packaging**: release archive now includes the top-level `bricks-mcp/` wrapper directory. Without it, WordPress could install the plugin under a directory named after the zip filename (e.g. `bricks-mcp-3.18.3/`), breaking the previous activation and silently deactivating the plugin on upgrade. With the wrapper, upgrades land in the canonical `bricks-mcp/` directory.
+
+### Fixes
+
+- **Gap visual indicators** now correctly resolve `var(--space-X)` references to actual pixel values from your spacing scale. Previously they fell back to a static 16px for any composite value. Server resolves at render time, JS resolves on live edits.
+- **`ajax_save_config` and `ajax_apply` now run the config through `ConfigMigrator::migrate()` before storing**. Defensive normalization guarantees the stored config always has the v2 shape, even if the JS sent partial data.
+- Removed dead `render_panel_text_styles()` method (merged into Typography panel in 3.18.2).
+
 ## [3.18.3] — 2026-04-15
 
 ### Critical fix

@@ -323,20 +323,30 @@
         });
     }
 
+    function resolveGapPx(value) {
+        if (!value) return 16;
+        const v = String(value).trim();
+        // Direct Npx
+        let m = v.match(/^(\d+(?:\.\d+)?)px$/);
+        if (m) return parseFloat(m[1]);
+        // First var(--space-X) reference
+        m = v.match(/var\(\s*--space-([a-z]+)\s*\)/);
+        if (m) {
+            const step = m[1];
+            const steps = (config.spacing && config.spacing.steps) || {};
+            const px = steps[step] && steps[step].desktop;
+            return px != null ? parseFloat(px) : 16;
+        }
+        return 16;
+    }
+
     function renderGapIndicators() {
         document.querySelectorAll('.bwm-ds-gap-indicator').forEach(ind => {
             const key   = ind.dataset.gapKey;
             const input = document.querySelector('input[data-gap-input="' + key + '"]');
             if (!input) return;
-            // Try to extract a px value from the (possibly composite) value.
-            const m = input.value.match(/(\d+(?:\.\d+)?)\s*px/);
-            const px = m ? parseFloat(m[1]) : null;
-            if (px == null) {
-                // Fallback for var() refs — show neutral default 16px.
-                ind.style.gap = '16px';
-            } else {
-                ind.style.gap = Math.min(60, Math.max(2, px)) + 'px';
-            }
+            const px = resolveGapPx(input.value);
+            ind.style.gap = Math.min(60, Math.max(2, px)) + 'px';
         });
     }
 
