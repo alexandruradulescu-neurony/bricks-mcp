@@ -58,19 +58,36 @@ class DesignSystemGenerator {
         $variables  = [];
         $categories = [];
 
-        // Spacing.
+        // Spacing — marked as a Bricks scale (appears in Style Manager → Spacing).
         $cat_id       = $this->random_id();
-        $categories[] = [ 'id' => $cat_id, 'name' => 'Spacing' ];
+        $categories[] = [
+            'id'             => $cat_id,
+            'name'           => 'Spacing',
+            'scale'          => [ 'prefix' => 'space-' ],
+            'utilityClasses' => [],
+        ];
         $variables    = array_merge( $variables, $this->compute_spacing( $config['spacing'], $cat_id, $cw, $cm ) );
 
-        // Texts.
+        // Texts — marked as a Bricks scale (appears in Style Manager → Typography).
         $cat_id       = $this->random_id();
-        $categories[] = [ 'id' => $cat_id, 'name' => 'Texts' ];
+        $categories[] = [
+            'id'             => $cat_id,
+            'name'           => 'Texts',
+            'scale'          => [ 'prefix' => 'text-' ],
+            'utilityClasses' => [
+                [ 'className' => 'text-*', 'cssProperty' => 'font-size' ],
+            ],
+        ];
         $variables    = array_merge( $variables, $this->compute_typography_text( $config['typography_text'], $cat_id, $cw, $cm ) );
 
-        // Headings.
+        // Headings — marked as a Bricks scale (empty prefix, steps are h1..h6).
         $cat_id       = $this->random_id();
-        $categories[] = [ 'id' => $cat_id, 'name' => 'Headings' ];
+        $categories[] = [
+            'id'             => $cat_id,
+            'name'           => 'Headings',
+            'scale'          => [ 'prefix' => '' ],
+            'utilityClasses' => [],
+        ];
         $variables    = array_merge( $variables, $this->compute_headings( $config['typography_headings'], $cat_id, $cw, $cm ) );
 
         // Gaps/Padding.
@@ -156,6 +173,12 @@ class DesignSystemGenerator {
 
         update_option( 'bricks_global_variables_categories', $new_cats );
         update_option( 'bricks_global_variables', $new_vars );
+
+        // Regenerate style manager CSS so scale categories (Spacing/Texts/Headings)
+        // show up in Bricks Style Manager immediately.
+        if ( class_exists( '\Bricks\Ajax' ) && method_exists( '\Bricks\Ajax', 'generate_style_manager_css_file' ) ) {
+            \Bricks\Ajax::generate_style_manager_css_file();
+        }
 
         // --- Color palette: replace BricksCore palette ---
         $existing_palettes = get_option( 'bricks_color_palette', [] );

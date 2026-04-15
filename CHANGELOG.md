@@ -4,6 +4,13 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.18.7] — 2026-04-15
+
+### Fixes
+
+- **Spacing / Texts / Headings now appear as scales in Bricks Style Manager.** Apply marks these categories with `scale` metadata so they show up in the Bricks native Spacing and Typography scale pickers, not just as raw variables.
+- After Apply, the Bricks style manager CSS file is regenerated so scale changes appear immediately.
+
 ## [3.18.6] — 2026-04-15
 
 ### Fixes
