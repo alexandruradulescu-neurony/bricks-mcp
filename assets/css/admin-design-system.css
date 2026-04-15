@@ -116,11 +116,12 @@
 }
 
 .bwm-ds-swatch {
-    width: 40px;
+    width: 40px;     /* fallback; JS overrides */
     height: 20px;
     background: var(--bwm-brand);
     border-radius: 2px;
     opacity: 0.4;
+    transition: width 0.15s ease;
 }
 
 /* Typography live previews */

@@ -169,6 +169,8 @@
             else input.value = val;
         });
         renderTransparencyStrips();
+        renderTypePreviews();
+        renderSwatches();
         renderLivePreview();
     }
 
@@ -206,6 +208,28 @@
         `;
     }
 
+    function renderTypePreviews() {
+        document.querySelectorAll('.bwm-ds-step-row').forEach(row => {
+            const mobInput  = row.querySelector('input[data-field*=".mobile"]');
+            const deskInput = row.querySelector('input[data-field*=".desktop"]');
+            const mobPrev   = row.querySelector('.bwm-ds-type-preview-mob');
+            const deskPrev  = row.querySelector('.bwm-ds-type-preview-desk');
+            if (mobInput  && mobPrev)  mobPrev.style.fontSize  = (parseFloat(mobInput.value)  || 0) + 'px';
+            if (deskInput && deskPrev) deskPrev.style.fontSize = (parseFloat(deskInput.value) || 0) + 'px';
+        });
+    }
+
+    function renderSwatches() {
+        document.querySelectorAll('.bwm-ds-step-row').forEach(row => {
+            const swatch = row.querySelector('.bwm-ds-swatch');
+            if (!swatch) return;
+            const deskInput = row.querySelector('input[data-field*=".desktop"]');
+            if (!deskInput) return;
+            const px = Math.min(120, Math.max(4, parseFloat(deskInput.value) || 0));
+            swatch.style.width = px + 'px';
+        });
+    }
+
     // --- Stepper ---
 
     function switchStep(stepName) {
@@ -241,6 +265,35 @@
 
         render();
         scheduleSave();
+
+        const restructure = input.dataset.restructure;
+        if (restructure) refreshPanel(restructure);
+    }
+
+    function refreshPanel(panelName) {
+        const fd = new FormData();
+        fd.append('action', 'bricks_mcp_ds_render_panel');
+        fd.append('nonce',  DS.nonce);
+        fd.append('panel',  panelName);
+        fd.append('config', JSON.stringify(config));
+
+        fetch(DS.ajaxUrl, { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success || !res.data || !res.data.html) return;
+                const oldPanel = document.querySelector('.bwm-ds-panel[data-step="' + panelName + '"]');
+                if (!oldPanel) return;
+                const wasActive = oldPanel.classList.contains('bwm-ds-panel-active');
+                const tmp = document.createElement('div');
+                tmp.innerHTML = res.data.html.trim();
+                const newPanel = tmp.firstElementChild;
+                if (!newPanel) return;
+                if (wasActive) newPanel.classList.add('bwm-ds-panel-active');
+                oldPanel.replaceWith(newPanel);
+                // After DOM swap, re-paint input values + previews from current config.
+                render();
+            })
+            .catch(() => {});
     }
 
     function onStepClick(e) {

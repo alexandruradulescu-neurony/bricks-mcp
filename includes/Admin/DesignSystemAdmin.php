@@ -18,6 +18,7 @@ class DesignSystemAdmin {
         add_action( 'wp_ajax_bricks_mcp_ds_save_config', [ $this, 'ajax_save_config' ] );
         add_action( 'wp_ajax_bricks_mcp_ds_apply', [ $this, 'ajax_apply' ] );
         add_action( 'wp_ajax_bricks_mcp_ds_reset', [ $this, 'ajax_reset' ] );
+        add_action( 'wp_ajax_bricks_mcp_ds_render_panel', [ $this, 'ajax_render_panel' ] );
     }
 
     /**
@@ -291,15 +292,15 @@ class DesignSystemAdmin {
         <div class="bwm-ds-color-family" data-family="<?php echo esc_attr( $key ); ?>">
             <div class="bwm-ds-color-family-header">
                 <label class="bwm-ds-toggle-label">
-                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.enabled" <?php checked( $enabled ); ?>>
+                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.enabled" data-restructure="colors" <?php checked( $enabled ); ?>>
                     <?php echo esc_html( sprintf( __( 'Enable %s', 'bricks-mcp' ), $label ) ); ?>
                 </label>
                 <label class="bwm-ds-toggle-label">
-                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.transparencies" <?php checked( $transparencies ); ?>>
+                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.transparencies" data-restructure="colors" <?php checked( $transparencies ); ?>>
                     <?php esc_html_e( 'Transparencies', 'bricks-mcp' ); ?>
                 </label>
                 <label class="bwm-ds-toggle-label">
-                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.expanded" <?php checked( $expanded ); ?>>
+                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.expanded" data-restructure="colors" <?php checked( $expanded ); ?>>
                     <?php esc_html_e( 'Expand Color Palette', 'bricks-mcp' ); ?>
                 </label>
             </div>
@@ -335,7 +336,7 @@ class DesignSystemAdmin {
         <div class="bwm-ds-color-family" data-family="<?php echo esc_attr( $key ); ?>">
             <div class="bwm-ds-color-family-header">
                 <label class="bwm-ds-toggle-label">
-                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.transparencies" <?php checked( $transparencies ); ?>>
+                    <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.transparencies" data-restructure="colors" <?php checked( $transparencies ); ?>>
                     <?php echo esc_html( sprintf( __( '%s Transparencies', 'bricks-mcp' ), $label ) ); ?>
                 </label>
             </div>
@@ -593,5 +594,44 @@ class DesignSystemAdmin {
         update_option( self::CONFIG_OPTION, $default );
 
         wp_send_json_success( [ 'config' => $default ] );
+    }
+
+    /**
+     * Render a single panel HTML string (used by JS to refresh after structural toggles).
+     */
+    public function ajax_render_panel(): void {
+        check_ajax_referer( 'bricks_mcp_design_system', 'nonce' );
+
+        if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
+            wp_send_json_error( 'Unauthorized', 403 );
+        }
+
+        $panel  = isset( $_POST['panel'] ) ? sanitize_key( wp_unslash( $_POST['panel'] ) ) : '';
+        $config = json_decode( wp_unslash( $_POST['config'] ?? '{}' ), true );
+        if ( ! is_array( $config ) ) {
+            wp_send_json_error( 'Invalid config' );
+        }
+        $config = ConfigMigrator::migrate( $config );
+
+        // Map panel slug to render method.
+        $methods = [
+            'spacing'     => 'render_panel_spacing',
+            'typography'  => 'render_panel_typography',
+            'colors'      => 'render_panel_colors',
+            'gaps'        => 'render_panel_gaps',
+            'radius'      => 'render_panel_radius',
+            'sizes'       => 'render_panel_sizes',
+            'text-styles' => 'render_panel_text_styles',
+        ];
+
+        if ( ! isset( $methods[ $panel ] ) || ! method_exists( $this, $methods[ $panel ] ) ) {
+            wp_send_json_error( 'Unknown panel: ' . $panel );
+        }
+
+        ob_start();
+        $this->{$methods[ $panel ]}( $config );
+        $html = ob_get_clean();
+
+        wp_send_json_success( [ 'html' => $html ] );
     }
 }

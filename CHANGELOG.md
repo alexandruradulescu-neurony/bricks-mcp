@@ -4,6 +4,16 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.18.1] — 2026-04-15
+
+### Fixes — Design System v2
+
+- **Version constant**: bump `BRICKS_MCP_VERSION` to match docblock (was stale at 3.17.0, causing wrong version in admin header + spurious "update available" notice)
+- **Heading previews now grow live** when step values change (font-size updated from input)
+- **Spacing swatches now grow live** with the desktop value (visual size indicator works)
+- **Structural toggles re-render the Colors panel** — Enable / Expand Color Palette / Transparencies now correctly add or remove shade inputs and the transparency strip (previously only the config was updated, DOM stayed stale)
+- New AJAX endpoint `bricks_mcp_ds_render_panel` returns server-rendered panel HTML for structural refresh
+
 ## [3.18.0] — 2026-04-15
 
 ### Design System v2
