@@ -164,6 +164,92 @@ class DesignSystemAdmin {
         <?php
     }
 
+    private function render_panel_typography( array $config ): void {
+        $head = $config['typography_headings'];
+        $text = $config['typography_text'];
+        $hfs  = (float) $config['html_font_size'];
+        ?>
+        <section class="bwm-ds-panel" data-step="typography">
+            <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Typography', 'bricks-mcp' ); ?></h2>
+            <p class="bwm-ds-panel-help">
+                <?php esc_html_e( '--text-m is the size of the base text.', 'bricks-mcp' ); ?>
+            </p>
+
+            <div class="bwm-ds-radio-group">
+                <div class="bwm-ds-field-label"><?php esc_html_e( 'HTML font-size', 'bricks-mcp' ); ?></div>
+                <label><input type="radio" name="html_font_size" value="62.5" data-field="html_font_size" <?php checked( $hfs, 62.5 ); ?>> <?php esc_html_e( '62.5% (1rem = 10px)', 'bricks-mcp' ); ?></label>
+                <label><input type="radio" name="html_font_size" value="100"  data-field="html_font_size" <?php checked( $hfs, 100.0 ); ?>> <?php esc_html_e( '100% (1rem = 16px)', 'bricks-mcp' ); ?></label>
+            </div>
+
+            <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Headings (base = h3)', 'bricks-mcp' ); ?></h3>
+            <div class="bwm-ds-seed">
+                <div class="bwm-ds-field">
+                    <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
+                    <input type="number" value="<?php echo esc_attr( $head['base_mobile'] ); ?>" data-field="typography_headings.base_mobile" data-recompute="typography_headings" min="16" max="48" step="1">
+                </div>
+                <div class="bwm-ds-field">
+                    <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
+                    <input type="number" value="<?php echo esc_attr( $head['base_desktop'] ); ?>" data-field="typography_headings.base_desktop" data-recompute="typography_headings" min="16" max="72" step="1">
+                </div>
+                <div class="bwm-ds-field">
+                    <label><?php esc_html_e( 'Scale', 'bricks-mcp' ); ?></label>
+                    <input type="number" value="<?php echo esc_attr( $head['scale'] ); ?>" data-field="typography_headings.scale" data-recompute="typography_headings" min="1.05" max="2.0" step="0.05">
+                </div>
+            </div>
+
+            <div class="bwm-ds-steps">
+                <?php foreach ( $head['steps'] as $name => $pair ) : ?>
+                    <div class="bwm-ds-step-row">
+                        <div class="bwm-ds-step-name">--<?php echo esc_html( $name ); ?></div>
+                        <div class="bwm-ds-field">
+                            <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
+                            <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="typography_headings.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
+                        </div>
+                        <div class="bwm-ds-type-preview bwm-ds-type-preview-mob" style="font-size:<?php echo (float) $pair['mobile']; ?>px"><?php esc_html_e( 'Heading', 'bricks-mcp' ); ?></div>
+                        <div class="bwm-ds-field">
+                            <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
+                            <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="typography_headings.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                        </div>
+                        <div class="bwm-ds-type-preview bwm-ds-type-preview-desk" style="font-size:<?php echo (float) $pair['desktop']; ?>px"><?php esc_html_e( 'Heading', 'bricks-mcp' ); ?></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Text (base = text-m)', 'bricks-mcp' ); ?></h3>
+            <div class="bwm-ds-seed">
+                <div class="bwm-ds-field">
+                    <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
+                    <input type="number" value="<?php echo esc_attr( $text['base_mobile'] ); ?>" data-field="typography_text.base_mobile" data-recompute="typography_text" min="10" max="24" step="1">
+                </div>
+                <div class="bwm-ds-field">
+                    <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
+                    <input type="number" value="<?php echo esc_attr( $text['base_desktop'] ); ?>" data-field="typography_text.base_desktop" data-recompute="typography_text" min="10" max="32" step="1">
+                </div>
+                <div class="bwm-ds-field">
+                    <label><?php esc_html_e( 'Scale', 'bricks-mcp' ); ?></label>
+                    <input type="number" value="<?php echo esc_attr( $text['scale'] ); ?>" data-field="typography_text.scale" data-recompute="typography_text" min="1.05" max="2.0" step="0.05">
+                </div>
+            </div>
+
+            <div class="bwm-ds-steps">
+                <?php foreach ( $text['steps'] as $name => $pair ) : ?>
+                    <div class="bwm-ds-step-row">
+                        <div class="bwm-ds-step-name">--text-<?php echo esc_html( $name ); ?></div>
+                        <div class="bwm-ds-field">
+                            <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
+                            <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
+                        </div>
+                        <div class="bwm-ds-field">
+                            <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
+                            <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+    }
+
     // --- AJAX Handlers ---
 
     /**
