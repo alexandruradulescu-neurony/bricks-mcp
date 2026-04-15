@@ -171,6 +171,8 @@
         renderTransparencyStrips();
         renderTypePreviews();
         renderSwatches();
+        renderGapIndicators();
+        renderRadiusShapes();
         renderLivePreview();
     }
 
@@ -191,21 +193,123 @@
     function renderLivePreview() {
         const container = document.getElementById('bwm-ds-live-preview');
         if (!container) return;
-        const primary = (config.colors.primary && config.colors.primary.shades && config.colors.primary.shades.base) || '#3b82f6';
-        const h1Desk  = (config.typography_headings.steps.h1 || {}).desktop || 55;
-        const textM   = (config.typography_text.steps.m || {}).desktop      || 18;
-        const sL      = (config.spacing.steps.l || {}).desktop               || 30;
-        const radius  = parseInt(config.radius.base) || 8;
+
+        const colors  = config.colors || {};
+        const primary = (colors.primary && colors.primary.shades && colors.primary.shades.base) || '#3b82f6';
+        const primaryDark = (colors.primary && colors.primary.shades && colors.primary.shades.dark) || darken(primary, 20);
+        const secondaryEnabled = colors.secondary && colors.secondary.enabled !== false;
+        const secondary = secondaryEnabled
+            ? ((colors.secondary.shades && colors.secondary.shades.base) || '#f59e0b')
+            : primary;
+        const accentEnabled = colors.accent && colors.accent.enabled !== false;
+        const accent = accentEnabled
+            ? ((colors.accent.shades && colors.accent.shades.base) || '#10b981')
+            : primary;
+        const base = (colors.base && colors.base.shades && colors.base.shades.base) || '#374151';
+
+        const primaryShades = (colors.primary && colors.primary.shades) || deriveShades(primary, false, false);
+        const accentShades  = (colors.accent  && colors.accent.shades)  || deriveShades(accent,  false, false);
+        const baseShades    = (colors.base    && colors.base.shades)    || deriveShades(base,    false, true);
+
+        const headSteps = (config.typography_headings && config.typography_headings.steps) || {};
+        const textSteps = (config.typography_text     && config.typography_text.steps)     || {};
+        const spaceSteps = (config.spacing            && config.spacing.steps)             || {};
+
+        const h1 = (headSteps.h1 || {}).desktop || 55;
+        const h2 = (headSteps.h2 || {}).desktop || 44;
+        const h4 = (headSteps.h4 || {}).desktop || 28;
+        const tm = (textSteps.m  || {}).desktop || 18;
+        const ts = (textSteps.s  || {}).desktop || 15;
+        const txs = (textSteps.xs || {}).desktop || 14;
+        const tl = (textSteps.l  || {}).desktop || 23;
+        const sxs = (spaceSteps.xs || {}).desktop || 11;
+        const ss  = (spaceSteps.s  || {}).desktop || 16;
+        const sm  = (spaceSteps.m  || {}).desktop || 24;
+        const sl  = (spaceSteps.l  || {}).desktop || 36;
+        const sxl = (spaceSteps.xl || {}).desktop || 54;
+
+        const radius = parseInt((config.radius && config.radius.base) || 8) || 8;
+
+        function tag(v) {
+            return `<span class="bwm-ds-token-label">${v}</span>`;
+        }
 
         container.innerHTML = `
-            <div class="bwm-ds-mockup">
-                <div class="bwm-ds-mockup-hero" style="background:${primary};padding:${sL * 2}px ${sL}px;color:#fff;">
-                    <div style="font-size:${h1Desk}px;font-weight:700;line-height:1.2;">Design System Preview</div>
-                    <div style="font-size:${textM}px;opacity:0.85;margin-top:${sL / 2}px;">Live preview of your current configuration.</div>
-                    <div class="bwm-ds-mockup-btn" style="display:inline-block;background:#fff;color:${primary};padding:8px 18px;border-radius:${radius}px;margin-top:${sL}px;">Get Started</div>
+        <div class="bwm-ds-mockup">
+            <div class="bwm-ds-mockup-hero" style="background:linear-gradient(135deg,${primary},${primaryDark});padding:${sxl}px ${sl}px;">
+                ${tag('--primary')}
+                <div style="font-size:${h1}px;font-weight:700;color:#fff;line-height:calc(7px + 2ex);margin-bottom:${ss}px;">
+                    ${tag('--h1')}Design System Preview
+                </div>
+                <div style="font-size:${tl}px;color:rgba(255,255,255,0.85);margin-bottom:${sm}px;max-width:480px;line-height:calc(10px + 2ex);">
+                    ${tag('--text-l')}Live mockup using your current configuration values applied in real time.
+                </div>
+                <div style="display:flex;gap:${ss}px;flex-wrap:wrap;">
+                    <div class="bwm-ds-mockup-btn" style="background:${secondary};color:#fff;padding:${sxs}px ${sm}px;border-radius:${radius}px;font-size:${ts}px;font-weight:600;">
+                        ${tag('--secondary')}Get Started
+                    </div>
+                    <div class="bwm-ds-mockup-btn" style="background:rgba(255,255,255,0.2);color:#fff;padding:${sxs}px ${sm}px;border-radius:${radius}px;border:1px solid rgba(255,255,255,0.3);font-size:${ts}px;">
+                        ${tag('--white-trans-20')}Learn More
+                    </div>
                 </div>
             </div>
-        `;
+
+            <div class="bwm-ds-mockup-body" style="display:flex;gap:${sl}px;padding:${sxl}px ${sl}px;background:#fff;">
+                <div style="flex:2;min-width:0;">
+                    <div style="font-size:${h2}px;font-weight:600;color:${baseShades.ultra_dark || '#222'};line-height:calc(7px + 2ex);margin-bottom:${ss}px;">
+                        ${tag('--h2')}Features &amp; Benefits
+                    </div>
+                    <div style="font-size:${tm}px;color:${base};line-height:calc(10px + 2ex);margin-bottom:${sm}px;">
+                        ${tag('--text-m')}Your design system generates consistent spacing, typography, and colors.
+                        <span style="color:${primary};text-decoration:underline;">${tag('--primary')}Explore the docs</span>
+                        to see how every token connects.
+                    </div>
+
+                    <div style="display:flex;gap:${ss}px;">
+                        <div style="flex:1;background:${primaryShades.ultra_light || '#eef'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;">
+                            ${tag('--primary-ultra-light')}
+                            <div style="font-size:${h2}px;font-weight:700;color:${primary};">${tag('--primary')}106</div>
+                            <div style="font-size:${ts}px;color:${base};margin-top:4px;">${tag('--text-s')}Variables</div>
+                        </div>
+                        <div style="flex:1;background:${accentShades.ultra_light || '#efe'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;">
+                            ${tag('--accent-ultra-light')}
+                            <div style="font-size:${h2}px;font-weight:700;color:${accent};">${tag('--accent')}9</div>
+                            <div style="font-size:${ts}px;color:${base};margin-top:4px;">Categories</div>
+                        </div>
+                        <div style="flex:1;background:${baseShades.ultra_light || '#eee'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;">
+                            ${tag('--base-ultra-light')}
+                            <div style="font-size:${h2}px;font-weight:700;color:${baseShades.ultra_dark || '#222'};">31</div>
+                            <div style="font-size:${ts}px;color:${base};margin-top:4px;">Palette Colors</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="flex:1;min-width:0;">
+                    <div style="background:#fff;border:1px solid ${baseShades.light || '#ddd'};border-radius:${radius}px;padding:${sm}px;box-shadow:0 1px 3px rgba(0,0,0,0.08);position:relative;">
+                        ${tag('--radius')}
+                        <div style="font-size:${h4}px;font-weight:600;color:${baseShades.ultra_dark || '#222'};line-height:calc(7px + 2ex);margin-bottom:${sxs}px;">
+                            ${tag('--h4')}Quick Start
+                        </div>
+                        <div style="font-size:${ts}px;color:${base};line-height:calc(10px + 2ex);margin-bottom:${ss}px;">
+                            ${tag('--text-s')}Adjust the seed values above, then click Apply to write all variables to your Bricks site.
+                        </div>
+                        <div class="bwm-ds-mockup-btn" style="display:inline-block;background:${primary};color:#fff;padding:${sxs}px ${sm}px;border-radius:${radius}px;font-size:${ts}px;font-weight:600;">
+                            ${tag('--primary')}Apply Now
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:${baseShades.ultra_dark || '#222'};padding:${sm}px ${sl}px;display:flex;justify-content:space-between;align-items:center;">
+                ${tag('--base-ultra-dark')}
+                <div style="font-size:${txs}px;color:${baseShades.light || '#aaa'};">
+                    ${tag('--text-xs')}Design System v2 &mdash; Built with BricksCore
+                </div>
+                <div style="font-size:${txs}px;color:${primary};">
+                    ${tag('--primary')}Documentation &rarr;
+                </div>
+            </div>
+        </div>`;
     }
 
     function renderTypePreviews() {
@@ -216,6 +320,32 @@
             const deskPrev  = row.querySelector('.bwm-ds-type-preview-desk');
             if (mobInput  && mobPrev)  mobPrev.style.fontSize  = (parseFloat(mobInput.value)  || 0) + 'px';
             if (deskInput && deskPrev) deskPrev.style.fontSize = (parseFloat(deskInput.value) || 0) + 'px';
+        });
+    }
+
+    function renderGapIndicators() {
+        document.querySelectorAll('.bwm-ds-gap-indicator').forEach(ind => {
+            const key   = ind.dataset.gapKey;
+            const input = document.querySelector('input[data-gap-input="' + key + '"]');
+            if (!input) return;
+            // Try to extract a px value from the (possibly composite) value.
+            const m = input.value.match(/(\d+(?:\.\d+)?)\s*px/);
+            const px = m ? parseFloat(m[1]) : null;
+            if (px == null) {
+                // Fallback for var() refs — show neutral default 16px.
+                ind.style.gap = '16px';
+            } else {
+                ind.style.gap = Math.min(60, Math.max(2, px)) + 'px';
+            }
+        });
+    }
+
+    function renderRadiusShapes() {
+        document.querySelectorAll('.bwm-ds-radius-shape').forEach(shape => {
+            const key   = shape.dataset.radiusKey;
+            const input = document.querySelector('input[data-radius-input="' + key + '"]');
+            if (!input) return;
+            shape.style.borderRadius = input.value || '0';
         });
     }
 

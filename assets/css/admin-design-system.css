@@ -132,6 +132,7 @@
     min-width: 80px;
 }
 .bwm-ds-type-preview-mob { color: var(--bwm-gray-500); }
+.bwm-ds-type-preview-text { font-weight: 400; }
 
 /* Color family blocks */
 .bwm-ds-color-family {
@@ -293,4 +294,101 @@
     .bwm-ds-stepper { flex-direction: row; flex-wrap: wrap; position: static; flex: 0 0 auto; }
     .bwm-ds-step { flex: 1 1 auto; }
     .bwm-ds-actions { flex: 0 0 100%; flex-direction: row; }
+}
+
+/* Gap indicator */
+.bwm-ds-gap-rows { display: flex; flex-direction: column; gap: 8px; }
+.bwm-ds-gap-row {
+    display: grid;
+    grid-template-columns: 160px 1fr 200px;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid var(--bwm-gray-100);
+    border-radius: 3px;
+}
+.bwm-ds-gap-label {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--bwm-gray-900);
+}
+.bwm-ds-gap-row input[type="text"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--bwm-gray-200);
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 12px;
+}
+.bwm-ds-gap-indicator {
+    display: flex;
+    gap: 8px;       /* JS overrides */
+    align-items: center;
+    height: 32px;
+    padding: 4px;
+    background: var(--bwm-gray-100);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.bwm-ds-gap-box {
+    flex: 1;
+    height: 100%;
+    background: var(--bwm-brand);
+    opacity: 0.4;
+    border-radius: 2px;
+    min-width: 8px;
+}
+
+/* Radius shape indicator */
+.bwm-ds-radius-rows { display: flex; flex-direction: column; gap: 8px; }
+.bwm-ds-radius-row {
+    display: grid;
+    grid-template-columns: 160px 1fr 60px;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid var(--bwm-gray-100);
+    border-radius: 3px;
+}
+.bwm-ds-radius-label {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--bwm-gray-900);
+}
+.bwm-ds-radius-row input[type="text"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--bwm-gray-200);
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 12px;
+}
+.bwm-ds-radius-shape {
+    width: 48px;
+    height: 48px;
+    background: var(--bwm-brand);
+    opacity: 0.5;
+    transition: border-radius 0.15s ease;
+}
+
+/* Token labels in live preview mockup */
+.bwm-ds-token-label {
+    display: inline-block;
+    font-size: 9px;
+    font-family: monospace;
+    font-weight: 500;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.12);
+    color: rgba(0, 0, 0, 0.5);
+    vertical-align: middle;
+    margin-right: 4px;
+    line-height: 1.4;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+}
+.bwm-ds-mockup-hero .bwm-ds-token-label {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.7);
 }

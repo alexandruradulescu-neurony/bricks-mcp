@@ -85,10 +85,6 @@ class DesignSystemAdmin {
                     <button type="button" class="bwm-ds-step" data-step="sizes">
                         <?php esc_html_e( 'Sizes', 'bricks-mcp' ); ?>
                     </button>
-                    <button type="button" class="bwm-ds-step" data-step="text-styles">
-                        <?php esc_html_e( 'Text Styles', 'bricks-mcp' ); ?>
-                    </button>
-
                     <div class="bwm-ds-actions">
                         <button type="button" class="button button-primary button-hero" id="bwm-ds-apply">
                             <?php esc_html_e( 'Apply to Site', 'bricks-mcp' ); ?>
@@ -107,7 +103,6 @@ class DesignSystemAdmin {
                     <?php $this->render_panel_gaps( $config ); ?>
                     <?php $this->render_panel_radius( $config ); ?>
                     <?php $this->render_panel_sizes( $config ); ?>
-                    <?php $this->render_panel_text_styles( $config ); ?>
                 </div>
             </div>
 
@@ -240,14 +235,36 @@ class DesignSystemAdmin {
                             <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
                             <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
                         </div>
+                        <div class="bwm-ds-type-preview bwm-ds-type-preview-mob bwm-ds-type-preview-text" style="font-size:<?php echo (float) $pair['mobile']; ?>px"><?php esc_html_e( 'Body text', 'bricks-mcp' ); ?></div>
                         <div class="bwm-ds-field">
                             <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
                             <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="typography_text.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
                         </div>
+                        <div class="bwm-ds-type-preview bwm-ds-type-preview-desk bwm-ds-type-preview-text" style="font-size:<?php echo (float) $pair['desktop']; ?>px"><?php esc_html_e( 'Body text', 'bricks-mcp' ); ?></div>
                     </div>
                 <?php endforeach; ?>
             </div>
-        </section>
+
+            <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Text Styles', 'bricks-mcp' ); ?></h3>
+            <div class="bwm-ds-text-fields">
+                <?php
+                $ts = $config['text_styles'];
+                $rows = [
+                    'text_color'          => [ '--text-color',          'text' ],
+                    'heading_color'       => [ '--heading-color',       'text' ],
+                    'text_font_weight'    => [ '--text-font-weight',    'number' ],
+                    'heading_font_weight' => [ '--heading-font-weight', 'number' ],
+                    'text_line_height'    => [ '--text-line-height',    'text' ],
+                    'heading_line_height' => [ '--heading-line-height', 'text' ],
+                ];
+                foreach ( $rows as $key => [ $label, $type ] ) :
+                    ?>
+                    <div class="bwm-ds-field">
+                        <label><?php echo esc_html( $label ); ?></label>
+                        <input type="<?php echo esc_attr( $type ); ?>" value="<?php echo esc_attr( $ts[ $key ] ?? '' ); ?>" data-field="text_styles.<?php echo esc_attr( $key ); ?>">
+                    </div>
+                <?php endforeach; ?>
+            </div>
         <?php
     }
 
@@ -371,11 +388,15 @@ class DesignSystemAdmin {
             <p class="bwm-ds-panel-help">
                 <?php esc_html_e( '--offset is the height of your site header, used for fixed positioning and scroll anchors.', 'bricks-mcp' ); ?>
             </p>
-            <div class="bwm-ds-text-fields">
+            <div class="bwm-ds-gap-rows">
                 <?php foreach ( $map as $key => $label ) : ?>
-                    <div class="bwm-ds-field">
-                        <label><?php echo esc_html( $label ); ?></label>
-                        <input type="text" value="<?php echo esc_attr( $g[ $key ] ?? '' ); ?>" data-field="gaps.<?php echo esc_attr( $key ); ?>">
+                    <div class="bwm-ds-gap-row">
+                        <label class="bwm-ds-gap-label"><?php echo esc_html( $label ); ?></label>
+                        <input type="text" value="<?php echo esc_attr( $g[ $key ] ?? '' ); ?>" data-field="gaps.<?php echo esc_attr( $key ); ?>" data-gap-input="<?php echo esc_attr( $key ); ?>">
+                        <div class="bwm-ds-gap-indicator" data-gap-key="<?php echo esc_attr( $key ); ?>">
+                            <div class="bwm-ds-gap-box"></div>
+                            <div class="bwm-ds-gap-box"></div>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -413,14 +434,18 @@ class DesignSystemAdmin {
                 </div>
             </div>
 
-            <div class="bwm-ds-text-fields">
+            <div class="bwm-ds-radius-rows">
                 <?php foreach ( $rows as $key => $label ) : ?>
-                    <div class="bwm-ds-field">
-                        <label><?php echo esc_html( $label ); ?></label>
-                        <input type="text" value="<?php echo esc_attr( $values[ $key ] ?? '' ); ?>" data-field="radius.values.<?php echo esc_attr( $key ); ?>">
+                    <div class="bwm-ds-radius-row">
+                        <label class="bwm-ds-radius-label"><?php echo esc_html( $label ); ?></label>
+                        <input type="text" value="<?php echo esc_attr( $values[ $key ] ?? '' ); ?>" data-field="radius.values.<?php echo esc_attr( $key ); ?>" data-radius-input="<?php echo esc_attr( $key ); ?>">
+                        <div class="bwm-ds-radius-shape" data-radius-key="<?php echo esc_attr( $key ); ?>" style="border-radius: <?php echo esc_attr( $values[ $key ] ?? '0' ); ?>"></div>
                     </div>
                 <?php endforeach; ?>
+            </div>
 
+            <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Border colors', 'bricks-mcp' ); ?></h3>
+            <div class="bwm-ds-text-fields">
                 <div class="bwm-ds-field">
                     <label>--border-color</label>
                     <input type="text" value="<?php echo esc_attr( $ts['border_color'] ?? '' ); ?>" data-field="text_styles.border_color">
@@ -621,7 +646,6 @@ class DesignSystemAdmin {
             'gaps'        => 'render_panel_gaps',
             'radius'      => 'render_panel_radius',
             'sizes'       => 'render_panel_sizes',
-            'text-styles' => 'render_panel_text_styles',
         ];
 
         if ( ! isset( $methods[ $panel ] ) || ! method_exists( $this, $methods[ $panel ] ) ) {

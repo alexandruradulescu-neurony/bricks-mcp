@@ -4,6 +4,16 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.18.2] — 2026-04-15
+
+### Design System v2 — UI improvements
+
+- **Text typography step rows now show live "Body text" preview** at both mobile and desktop sizes (matching the Headings panel)
+- **Text Styles merged into Typography panel** — text-color, heading-color, font weights, line heights now appear at the bottom of the Typography step. Removed standalone Text Styles step from the stepper. Border colors stay in the Radius step (matches Fancy Framework convention).
+- **Gaps / Padding panel now has visual indicators** — each row shows two boxes with the gap value as the spacing between them
+- **Radius panel now has visual indicators** — each row shows a colored square with the actual border-radius value applied (live updates as you type)
+- **Live preview restored to full mockup** — hero with gradient + buttons, body section with feature stats cards, sidebar quick-start card, and footer. Includes token labels (`--primary`, `--h1`, etc.) so you can see which variables drive each piece.
+
 ## [3.18.1] — 2026-04-15
 
 ### Fixes — Design System v2
