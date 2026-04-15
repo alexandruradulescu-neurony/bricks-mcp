@@ -118,6 +118,52 @@ class DesignSystemAdmin {
         <?php
     }
 
+    private function render_panel_spacing( array $config ): void {
+        $s     = $config['spacing'];
+        $steps = $s['steps'];
+        ?>
+        <section class="bwm-ds-panel bwm-ds-panel-active" data-step="spacing">
+            <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Spacing', 'bricks-mcp' ); ?></h2>
+            <p class="bwm-ds-panel-help">
+                <?php esc_html_e( '--space-m and --space-section are also used for section padding.', 'bricks-mcp' ); ?>
+            </p>
+
+            <div class="bwm-ds-seed">
+                <div class="bwm-ds-seed-label"><?php esc_html_e( 'Base space', 'bricks-mcp' ); ?></div>
+                <div class="bwm-ds-field">
+                    <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
+                    <input type="number" value="<?php echo esc_attr( $s['base_mobile'] ); ?>" data-field="spacing.base_mobile" data-recompute="spacing" min="8" max="48" step="1">
+                </div>
+                <div class="bwm-ds-field">
+                    <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
+                    <input type="number" value="<?php echo esc_attr( $s['base_desktop'] ); ?>" data-field="spacing.base_desktop" data-recompute="spacing" min="8" max="64" step="1">
+                </div>
+                <div class="bwm-ds-field">
+                    <label><?php esc_html_e( 'Scale', 'bricks-mcp' ); ?></label>
+                    <input type="number" value="<?php echo esc_attr( $s['scale'] ); ?>" data-field="spacing.scale" data-recompute="spacing" min="1.1" max="3.0" step="0.05">
+                </div>
+            </div>
+
+            <div class="bwm-ds-steps">
+                <?php foreach ( $steps as $name => $pair ) : ?>
+                    <div class="bwm-ds-step-row">
+                        <div class="bwm-ds-step-name">--space-<?php echo esc_html( $name ); ?></div>
+                        <div class="bwm-ds-field">
+                            <label><?php esc_html_e( 'Mobile', 'bricks-mcp' ); ?></label>
+                            <input type="number" value="<?php echo esc_attr( $pair['mobile'] ); ?>" data-field="spacing.steps.<?php echo esc_attr( $name ); ?>.mobile" step="0.5">
+                        </div>
+                        <div class="bwm-ds-field">
+                            <label><?php esc_html_e( 'Desktop', 'bricks-mcp' ); ?></label>
+                            <input type="number" value="<?php echo esc_attr( $pair['desktop'] ); ?>" data-field="spacing.steps.<?php echo esc_attr( $name ); ?>.desktop" step="0.5">
+                        </div>
+                        <div class="bwm-ds-swatch" data-swatch-size="<?php echo esc_attr( $pair['desktop'] ); ?>"></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+    }
+
     // --- AJAX Handlers ---
 
     /**
