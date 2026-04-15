@@ -11,7 +11,7 @@
  * Plugin Name:       Bricks WP MCP
  * Plugin URI:        https://github.com/alexandruradulescu-neurony/bricks-mcp
  * Description:       Connect AI assistants to your Bricks Builder site. Build pages, manage templates, and control your website using natural language through any MCP-compatible tool.
- * Version:           3.18.4
+ * Version:           3.18.5
  * Requires at least: 6.4
  * Requires PHP:      8.2
  * Author:            Alex Radulescu
@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin version.
-define( 'BRICKS_MCP_VERSION', '3.18.4' );
+define( 'BRICKS_MCP_VERSION', '3.18.5' );
 
 // Minimum PHP version.
 define( 'BRICKS_MCP_MIN_PHP_VERSION', '8.2' );
@@ -166,13 +166,24 @@ if ( file_exists( $bricks_mcp_composer_autoload ) ) {
 	require_once $bricks_mcp_composer_autoload;
 }
 
+// [3.18.5 DEBUG] Lifecycle tracing — remove in next release once deactivation is diagnosed.
+error_log( '[BricksMCP 3.18.5] plugin file loaded at ' . __FILE__ );
+
 /**
  * Run plugin activation routine.
  *
  * @return void
  */
 function bricks_mcp_activate(): void {
-	BricksMCP\Activator::activate();
+	error_log( '[BricksMCP 3.18.5] activation hook START' );
+	try {
+		BricksMCP\Activator::activate();
+		error_log( '[BricksMCP 3.18.5] activation hook END (success)' );
+	} catch ( \Throwable $e ) {
+		error_log( '[BricksMCP 3.18.5] activation FAILED: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+		error_log( '[BricksMCP 3.18.5] trace: ' . $e->getTraceAsString() );
+		throw $e;
+	}
 }
 register_activation_hook( __FILE__, 'bricks_mcp_activate' );
 
@@ -182,9 +193,31 @@ register_activation_hook( __FILE__, 'bricks_mcp_activate' );
  * @return void
  */
 function bricks_mcp_deactivate(): void {
+	$trace = wp_debug_backtrace_summary( null, 0, false );
+	error_log( '[BricksMCP 3.18.5] DEACTIVATION called. Caller trace:' );
+	if ( is_array( $trace ) ) {
+		foreach ( $trace as $i => $line ) {
+			error_log( '[BricksMCP 3.18.5]   #' . $i . ' ' . $line );
+		}
+	} else {
+		error_log( '[BricksMCP 3.18.5]   ' . (string) $trace );
+	}
 	BricksMCP\Deactivator::deactivate();
 }
 register_deactivation_hook( __FILE__, 'bricks_mcp_deactivate' );
+
+// Also log if WP fires the shutdown deactivation (recovery mode / fatal auto-deactivation).
+add_action( 'deactivated_plugin', function( $plugin ) {
+	if ( $plugin === plugin_basename( __FILE__ ) ) {
+		$trace = wp_debug_backtrace_summary( null, 0, false );
+		error_log( '[BricksMCP 3.18.5] deactivated_plugin action fired for us. Caller trace:' );
+		if ( is_array( $trace ) ) {
+			foreach ( $trace as $i => $line ) {
+				error_log( '[BricksMCP 3.18.5]   #' . $i . ' ' . $line );
+			}
+		}
+	}
+}, 10, 1 );
 
 /**
  * Initialize the plugin after theme is loaded (Bricks version available).
@@ -192,10 +225,19 @@ register_deactivation_hook( __FILE__, 'bricks_mcp_deactivate' );
  * @return void
  */
 function bricks_mcp_init(): void {
+	error_log( '[BricksMCP 3.18.5] init fired (after_setup_theme)' );
 	if ( ! bricks_mcp_check_bricks_version() ) {
+		error_log( '[BricksMCP 3.18.5] Bricks version check FAILED — admin notice added, returning' );
 		add_action( 'admin_notices', 'bricks_mcp_bricks_version_notice' );
 		return;
 	}
-	BricksMCP\Plugin::get_instance();
+	try {
+		BricksMCP\Plugin::get_instance();
+		error_log( '[BricksMCP 3.18.5] Plugin::get_instance() returned OK' );
+	} catch ( \Throwable $e ) {
+		error_log( '[BricksMCP 3.18.5] Plugin::get_instance() FAILED: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+		error_log( '[BricksMCP 3.18.5] trace: ' . $e->getTraceAsString() );
+		throw $e;
+	}
 }
 add_action( 'after_setup_theme', 'bricks_mcp_init' );

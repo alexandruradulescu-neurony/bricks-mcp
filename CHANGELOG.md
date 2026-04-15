@@ -4,6 +4,14 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.18.5] — 2026-04-15
+
+### Diagnostic
+
+- **Added extensive lifecycle debug logging** to `bricks-mcp.php` (plugin file load, activation hook, deactivation hook with caller stack trace, `deactivated_plugin` action hook listener, init hook) to diagnose a silent auto-deactivation reported by a user after recent upgrades.
+- When WP deactivates the plugin (for any reason), the call stack is written to `debug.log` so we can identify the trigger (normal upload flow vs WP fatal-error recovery vs other).
+- No functional code changes. Logging is prefixed `[BricksMCP 3.18.5]` for easy grep. Will be removed in 3.18.6 once diagnosed.
+
 ## [3.18.4] — 2026-04-15
 
 ### Critical fix
