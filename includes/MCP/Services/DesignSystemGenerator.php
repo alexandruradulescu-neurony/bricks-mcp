@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP\Services;
 
+use BricksMCP\MCP\Services\DesignSystem\ConfigMigrator;
+use BricksMCP\MCP\Services\DesignSystem\ScaleComputer;
+use BricksMCP\MCP\Services\DesignSystem\ColorComputer;
+
 class DesignSystemGenerator {
 
     public const OWNED_CATEGORIES = [
@@ -23,33 +27,7 @@ class DesignSystemGenerator {
      * Get default seed configuration.
      */
     public static function get_default_config(): array {
-        return [
-            'project_name'         => 'My Site',
-            'colors'               => [
-                'primary'   => '#3b82f6',
-                'secondary' => [ 'enabled' => true, 'hex' => '#f59e0b' ],
-                'accent'    => [ 'enabled' => true, 'hex' => '#10b981' ],
-                'base'      => '#374151',
-            ],
-            'spacing'              => [
-                'base_mobile'  => 20,
-                'base_desktop' => 24,
-                'scale'        => 1.5,
-            ],
-            'typography_text'      => [
-                'base_mobile'  => 16,
-                'base_desktop' => 18,
-                'scale'        => 1.25,
-            ],
-            'typography_headings'  => [
-                'base_mobile'  => 28,
-                'base_desktop' => 35,
-                'scale'        => 1.25,
-            ],
-            'radius'               => 8,
-            'container_width'      => 1280,
-            'container_min'        => 380,
-        ];
+        return ConfigMigrator::migrate( [] );
     }
 
     /**
