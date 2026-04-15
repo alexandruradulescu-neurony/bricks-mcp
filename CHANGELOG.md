@@ -4,6 +4,13 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.18.9] — 2026-04-15
+
+### Fixes
+
+- **Scales actually appear in Bricks Style Manager now.** 3.18.7/3.18.8 only wrote the `prefix` field on the scale metadata, but Bricks expects a full config object with `scaleScope`, `scaleType`, `scaleNames`, `baseline`, `manualValues`, `isManual`, and min/max font size + scale ratio. Now writes the complete shape matching Fancy Framework's import format.
+- Headings scale prefix corrected to `h` (not `--`). Step names in scaleNames are `1`–`6` (prefix `h` + step = variable `h1`..`h6`).
+
 ## [3.18.8] — 2026-04-15
 
 ### Fixes

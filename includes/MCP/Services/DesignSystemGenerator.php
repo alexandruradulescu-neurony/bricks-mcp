@@ -58,37 +58,114 @@ class DesignSystemGenerator {
         $variables  = [];
         $categories = [];
 
-        // Spacing — marked as a Bricks scale (appears in Style Manager → Spacing).
-        $cat_id       = $this->random_id();
+        // Spacing — marked as a Bricks native scale so Style Manager → Spacing picks it up.
+        $cat_id      = $this->random_id();
+        $sp          = $config['spacing'];
+        $sp_steps    = $sp['steps'];
+        $sp_scale_names = [ 'xs', 's', 'm', 'l', 'xl', 'xxl' ]; // exponential steps only (section excluded)
+        $sp_manual   = [];
+        foreach ( $sp_scale_names as $sn ) {
+            if ( isset( $sp_steps[ $sn ] ) ) {
+                $sp_manual[] = [
+                    'name' => 'space-' . $sn,
+                    'min'  => (int) round( (float) $sp_steps[ $sn ]['mobile'] ) . 'px',
+                    'max'  => (int) round( (float) $sp_steps[ $sn ]['desktop'] ) . 'px',
+                ];
+            }
+        }
         $categories[] = [
-            'id'             => $cat_id,
-            'name'           => 'Spacing',
-            'scale'          => [ 'prefix' => '--space-' ],
-            'utilityClasses' => [],
-        ];
-        $variables    = array_merge( $variables, $this->compute_spacing( $config['spacing'], $cat_id, $cw, $cm ) );
-
-        // Texts — marked as a Bricks scale (appears in Style Manager → Typography).
-        $cat_id       = $this->random_id();
-        $categories[] = [
-            'id'             => $cat_id,
-            'name'           => 'Texts',
-            'scale'          => [ 'prefix' => '--text-' ],
-            'utilityClasses' => [
-                [ 'className' => 'text-*', 'cssProperty' => 'font-size' ],
+            'id'    => $cat_id,
+            'name'  => 'Spacing',
+            'scale' => [
+                'scaleScope'          => 'spacing',
+                'scaleType'           => 'custom',
+                'scaleNames'          => $sp_scale_names,
+                'prefix'              => 'space-',
+                'minFontSize'         => (float) ( $sp['base_mobile']  ?? 20 ),
+                'minScaleRatio'       => (float) ( $sp['scale']        ?? 1.5 ),
+                'minScaleRatioSelect' => (float) ( $sp['scale']        ?? 1.5 ),
+                'maxFontSize'         => (float) ( $sp['base_desktop'] ?? 24 ),
+                'maxScaleRatio'       => (float) ( $sp['scale']        ?? 1.5 ),
+                'maxScaleRatioSelect' => (float) ( $sp['scale']        ?? 1.5 ),
+                'baseline'            => 'm',
+                'manualValues'        => $sp_manual,
+                'isManual'            => true,
             ],
         ];
-        $variables    = array_merge( $variables, $this->compute_typography_text( $config['typography_text'], $cat_id, $cw, $cm ) );
+        $variables = array_merge( $variables, $this->compute_spacing( $sp, $cat_id, $cw, $cm ) );
 
-        // Headings — marked as a Bricks scale (empty prefix, steps are h1..h6).
-        $cat_id       = $this->random_id();
+        // Texts — Bricks typography scale.
+        $cat_id      = $this->random_id();
+        $tx          = $config['typography_text'];
+        $tx_steps    = $tx['steps'];
+        $tx_scale_names = [ 'xs', 's', 'm', 'mm', 'l', 'xl', 'xxl' ];
+        $tx_manual   = [];
+        foreach ( $tx_scale_names as $sn ) {
+            if ( isset( $tx_steps[ $sn ] ) ) {
+                $tx_manual[] = [
+                    'name' => 'text-' . $sn,
+                    'min'  => (int) round( (float) $tx_steps[ $sn ]['mobile'] ) . 'px',
+                    'max'  => (int) round( (float) $tx_steps[ $sn ]['desktop'] ) . 'px',
+                ];
+            }
+        }
         $categories[] = [
-            'id'             => $cat_id,
-            'name'           => 'Headings',
-            'scale'          => [ 'prefix' => '--' ],
-            'utilityClasses' => [],
+            'id'    => $cat_id,
+            'name'  => 'Texts',
+            'scale' => [
+                'scaleScope'          => 'typography',
+                'scaleType'           => 'custom',
+                'scaleNames'          => $tx_scale_names,
+                'prefix'              => 'text-',
+                'minFontSize'         => (float) ( $tx['base_mobile']  ?? 16 ),
+                'minScaleRatio'       => (float) ( $tx['scale']        ?? 1.25 ),
+                'minScaleRatioSelect' => (float) ( $tx['scale']        ?? 1.25 ),
+                'maxFontSize'         => (float) ( $tx['base_desktop'] ?? 18 ),
+                'maxScaleRatio'       => (float) ( $tx['scale']        ?? 1.25 ),
+                'maxScaleRatioSelect' => (float) ( $tx['scale']        ?? 1.25 ),
+                'baseline'            => 'm',
+                'manualValues'        => $tx_manual,
+                'isManual'            => true,
+            ],
         ];
-        $variables    = array_merge( $variables, $this->compute_headings( $config['typography_headings'], $cat_id, $cw, $cm ) );
+        $variables = array_merge( $variables, $this->compute_typography_text( $tx, $cat_id, $cw, $cm ) );
+
+        // Headings — Bricks typography scale. scaleNames are just "1".."6"; prefix is "h".
+        $cat_id      = $this->random_id();
+        $hd          = $config['typography_headings'];
+        $hd_steps    = $hd['steps'];
+        $hd_scale_names = [ '1', '2', '3', '4', '5', '6' ];
+        $hd_manual   = [];
+        foreach ( $hd_scale_names as $sn ) {
+            $key = 'h' . $sn;
+            if ( isset( $hd_steps[ $key ] ) ) {
+                $hd_manual[] = [
+                    'name' => $key,
+                    'min'  => (int) round( (float) $hd_steps[ $key ]['mobile'] ) . 'px',
+                    'max'  => (int) round( (float) $hd_steps[ $key ]['desktop'] ) . 'px',
+                ];
+            }
+        }
+        $categories[] = [
+            'id'    => $cat_id,
+            'name'  => 'Headings',
+            'scale' => [
+                'scaleScope'          => 'typography',
+                'scaleType'           => 'custom',
+                'scaleNames'          => $hd_scale_names,
+                'prefix'              => 'h',
+                'minFontSize'         => (float) ( $hd['base_mobile']  ?? 28 ),
+                'minScaleRatio'       => (float) ( $hd['scale']        ?? 1.25 ),
+                'minScaleRatioSelect' => (float) ( $hd['scale']        ?? 1.25 ),
+                'maxFontSize'         => (float) ( $hd['base_desktop'] ?? 35 ),
+                'maxScaleRatio'       => (float) ( $hd['scale']        ?? 1.25 ),
+                'maxScaleRatioSelect' => (float) ( $hd['scale']        ?? 1.25 ),
+                'baseline'            => '3',
+                'manualValues'        => $hd_manual,
+                'isManual'            => true,
+            ],
+        ];
+        $variables = array_merge( $variables, $this->compute_headings( $hd, $cat_id, $cw, $cm ) );
 
         // Gaps/Padding.
         $cat_id       = $this->random_id();
