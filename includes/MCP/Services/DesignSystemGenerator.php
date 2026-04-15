@@ -201,7 +201,7 @@ class DesignSystemGenerator {
             $out[] = [
                 'id'       => $this->random_id(),
                 'category' => $cat_id,
-                'name'     => "--space-{$name}",
+                'name'     => "space-{$name}",
                 'value'    => ScaleComputer::generate_clamp( (float) $pair['mobile'], (float) $pair['desktop'], $cw, $cm ),
             ];
         }
@@ -217,7 +217,7 @@ class DesignSystemGenerator {
             $out[] = [
                 'id'       => $this->random_id(),
                 'category' => $cat_id,
-                'name'     => "--text-{$name}",
+                'name'     => "text-{$name}",
                 'value'    => ScaleComputer::generate_clamp( (float) $pair['mobile'], (float) $pair['desktop'], $cw, $cm ),
             ];
         }
@@ -233,7 +233,7 @@ class DesignSystemGenerator {
             $out[] = [
                 'id'       => $this->random_id(),
                 'category' => $cat_id,
-                'name'     => "--{$name}",
+                'name'     => "{$name}",
                 'value'    => ScaleComputer::generate_clamp( (float) $pair['mobile'], (float) $pair['desktop'], $cw, $cm ),
             ];
         }
@@ -245,13 +245,13 @@ class DesignSystemGenerator {
      */
     private function compute_gaps( array $gaps, string $cat_id ): array {
         $map = [
-            'grid_gap'        => '--grid-gap',
-            'grid_gap_s'      => '--grid-gap-s',
-            'card_gap'        => '--card-gap',
-            'content_gap'     => '--content-gap',
-            'container_gap'   => '--container-gap',
-            'padding_section' => '--padding-section',
-            'offset'          => '--offset',
+            'grid_gap'        => 'grid-gap',
+            'grid_gap_s'      => 'grid-gap-s',
+            'card_gap'        => 'card-gap',
+            'content_gap'     => 'content-gap',
+            'container_gap'   => 'container-gap',
+            'padding_section' => 'padding-section',
+            'offset'          => 'offset',
         ];
         $out = [];
         foreach ( $map as $key => $var ) {
@@ -270,14 +270,14 @@ class DesignSystemGenerator {
      */
     private function compute_styles( array $styles, string $cat_id ): array {
         $map = [
-            'text_color'          => '--text-color',
-            'heading_color'       => '--heading-color',
-            'text_font_weight'    => '--text-font-weight',
-            'heading_font_weight' => '--heading-font-weight',
-            'text_line_height'    => '--text-line-height',
-            'heading_line_height' => '--heading-line-height',
-            'border_color'        => '--border-color',
-            'border_color_dark'   => '--border-color-dark',
+            'text_color'          => 'text-color',
+            'heading_color'       => 'heading-color',
+            'text_font_weight'    => 'text-font-weight',
+            'heading_font_weight' => 'heading-font-weight',
+            'text_line_height'    => 'text-line-height',
+            'heading_line_height' => 'heading-line-height',
+            'border_color'        => 'border-color',
+            'border_color_dark'   => 'border-color-dark',
         ];
         $out = [];
         foreach ( $map as $key => $var ) {
@@ -296,16 +296,16 @@ class DesignSystemGenerator {
      */
     private function compute_radius_vars( array $values, string $cat_id ): array {
         $map = [
-            'radius'         => '--radius',
-            'radius_inside'  => '--radius-inside',
-            'radius_outside' => '--radius-outside',
-            'radius_btn'     => '--radius-btn',
-            'radius_pill'    => '--radius-pill',
-            'radius_circle'  => '--radius-circle',
-            'radius_s'       => '--radius-s',
-            'radius_m'       => '--radius-m',
-            'radius_l'       => '--radius-l',
-            'radius_xl'      => '--radius-xl',
+            'radius'         => 'radius',
+            'radius_inside'  => 'radius-inside',
+            'radius_outside' => 'radius-outside',
+            'radius_btn'     => 'radius-btn',
+            'radius_pill'    => 'radius-pill',
+            'radius_circle'  => 'radius-circle',
+            'radius_s'       => 'radius-s',
+            'radius_m'       => 'radius-m',
+            'radius_l'       => 'radius-l',
+            'radius_xl'      => 'radius-xl',
         ];
         $out = [];
         foreach ( $map as $key => $var ) {
@@ -325,13 +325,13 @@ class DesignSystemGenerator {
     private function compute_sizes( array $sizes, string $cat_id, int $cw, int $cm ): array {
         $out = [];
         $fixed_map = [
-            'container_width'    => '--container-width',
-            'container_min'      => '--container-min-width',
-            'max_width'          => '--max-width',
-            'max_width_m'        => '--max-width-m',
-            'max_width_s'        => '--max-width-s',
-            'min_height'         => '--min-height',
-            'min_height_section' => '--min-height-section',
+            'container_width'    => 'container-width',
+            'container_min'      => 'container-min-width',
+            'max_width'          => 'max-width',
+            'max_width_m'        => 'max-width-m',
+            'max_width_s'        => 'max-width-s',
+            'min_height'         => 'min-height',
+            'min_height_section' => 'min-height-section',
         ];
         foreach ( $fixed_map as $key => $var ) {
             $out[] = [
@@ -346,7 +346,7 @@ class DesignSystemGenerator {
         $out[] = [
             'id'       => $this->random_id(),
             'category' => $cat_id,
-            'name'     => '--logo-width',
+            'name'     => 'logo-width',
             'value'    => ScaleComputer::generate_clamp(
                 (float) $sizes['logo_width_mobile'],
                 (float) $sizes['logo_width_desktop'],
@@ -359,7 +359,7 @@ class DesignSystemGenerator {
         $out[] = [
             'id'       => $this->random_id(),
             'category' => $cat_id,
-            'name'     => '--content-width',
+            'name'     => 'content-width',
             'value'    => 'var(--container-width)',
         ];
         for ( $i = 10; $i <= 90; $i += 10 ) {
@@ -367,7 +367,7 @@ class DesignSystemGenerator {
             $out[] = [
                 'id'       => $this->random_id(),
                 'category' => $cat_id,
-                'name'     => "--width-{$i}",
+                'name'     => "width-{$i}",
                 'value'    => "calc(var(--content-width) * {$frac})",
             ];
         }
@@ -400,7 +400,7 @@ class DesignSystemGenerator {
                 $out[] = [
                     'id'       => $this->random_id(),
                     'category' => $cat_id,
-                    'name'     => "--{$name}{$var_suffix}",
+                    'name'     => "{$name}{$var_suffix}",
                     'value'    => (string) $fam['shades'][ $shade ],
                 ];
             }
@@ -410,17 +410,20 @@ class DesignSystemGenerator {
                 $out[] = [
                     'id'       => $this->random_id(),
                     'category' => $cat_id,
-                    'name'     => "--{$name}-hover",
+                    'name'     => "{$name}-hover",
                     'value'    => (string) $fam['hover'],
                 ];
             }
 
             // Transparencies.
             if ( ! empty( $fam['transparencies'] ) ) {
-                $hex   = (string) ( $fam['shades']['base'] ?? '#000000' );
-                $trans = ColorComputer::derive_transparencies( $hex );
+                // Base family: transparencies derived from --base-ultra-dark shade (matches var name).
+                // Other families: derived from --{name} (base) shade.
+                $source_shade = ( $name === 'base' ) ? 'ultra_dark' : 'base';
+                $hex          = (string) ( $fam['shades'][ $source_shade ] ?? '#000000' );
+                $trans        = ColorComputer::derive_transparencies( $hex );
                 // Historical naming: base family uses --base-ultra-dark-trans-NN (not --base-trans-NN).
-                $trans_prefix = ( $name === 'base' ) ? "--{$name}-ultra-dark-trans-" : "--{$name}-trans-";
+                $trans_prefix = ( $name === 'base' ) ? "{$name}-ultra-dark-trans-" : "{$name}-trans-";
                 foreach ( $trans as $pct => $rgba ) {
                     $out[] = [
                         'id'       => $this->random_id(),
@@ -437,7 +440,7 @@ class DesignSystemGenerator {
         $out[] = [
             'id'       => $this->random_id(),
             'category' => $cat_id,
-            'name'     => '--white',
+            'name'     => 'white',
             'value'    => (string) $white['hex'],
         ];
         if ( ! empty( $white['transparencies'] ) ) {
@@ -445,7 +448,7 @@ class DesignSystemGenerator {
                 $out[] = [
                     'id'       => $this->random_id(),
                     'category' => $cat_id,
-                    'name'     => "--white-trans-{$pct}",
+                    'name'     => "white-trans-{$pct}",
                     'value'    => $rgba,
                 ];
             }
@@ -456,7 +459,7 @@ class DesignSystemGenerator {
         $out[] = [
             'id'       => $this->random_id(),
             'category' => $cat_id,
-            'name'     => '--black',
+            'name'     => 'black',
             'value'    => (string) $black['hex'],
         ];
         if ( ! empty( $black['transparencies'] ) ) {
@@ -464,7 +467,7 @@ class DesignSystemGenerator {
                 $out[] = [
                     'id'       => $this->random_id(),
                     'category' => $cat_id,
-                    'name'     => "--black-trans-{$pct}",
+                    'name'     => "black-trans-{$pct}",
                     'value'    => $rgba,
                 ];
             }
@@ -562,9 +565,10 @@ class DesignSystemGenerator {
         }
 
         return [
-            'id'     => $palette_id,
-            'name'   => 'BricksCore',
-            'colors' => $all_colors,
+            'id'      => $palette_id,
+            'name'    => 'BricksCore',
+            'colors'  => $all_colors,
+            'default' => true,
         ];
     }
 
