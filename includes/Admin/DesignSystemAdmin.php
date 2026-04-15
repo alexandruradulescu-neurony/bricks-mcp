@@ -5,6 +5,7 @@ namespace BricksMCP\Admin;
 
 use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\DesignSystemGenerator;
+use BricksMCP\MCP\Services\DesignSystem\ConfigMigrator;
 
 class DesignSystemAdmin {
 
@@ -20,14 +21,12 @@ class DesignSystemAdmin {
     }
 
     /**
-     * Get saved config or defaults.
+     * Get saved config or defaults — always returns v2 shape via migrator.
      */
     public function get_config(): array {
         $saved = get_option( self::CONFIG_OPTION, null );
-        if ( null === $saved || ! is_array( $saved ) ) {
-            return DesignSystemGenerator::get_default_config();
-        }
-        return wp_parse_args( $saved, DesignSystemGenerator::get_default_config() );
+        $raw   = is_array( $saved ) ? $saved : [];
+        return ConfigMigrator::migrate( $raw );
     }
 
     /**
