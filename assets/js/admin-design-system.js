@@ -42,6 +42,21 @@
         return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
     }
 
+    /**
+     * Pick a readable text color (#fff or dark) for a given background hex.
+     * Uses WCAG relative luminance formula.
+     */
+    function readableTextColor(bgHex, darkFallback) {
+        const [r, g, b] = hexToRgb(bgHex);
+        const srgb = [r, g, b].map(v => {
+            const s = v / 255;
+            return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        });
+        const luminance = 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+        // If background is light (luminance > 0.5), use dark text. Otherwise white.
+        return luminance > 0.5 ? (darkFallback || '#1a1a1a') : '#ffffff';
+    }
+
     function deriveShades(hex, expanded, isNeutral) {
         const s = {
             base:        rgbToHex(...hexToRgb(hex)),
@@ -212,6 +227,16 @@
         const accentShades  = (colors.accent  && colors.accent.shades)  || deriveShades(accent,  false, false);
         const baseShades    = (colors.base    && colors.base.shades)    || deriveShades(base,    false, true);
 
+        // Auto-contrast text colors for colored backgrounds.
+        const heroTextColor      = readableTextColor(primary);
+        const secondaryTextColor = readableTextColor(secondary);
+        const accentTextColor    = readableTextColor(accent);
+
+        const statPrimaryTextColor = readableTextColor(primaryShades.ultra_light || '#eef');
+        const statAccentTextColor  = readableTextColor(accentShades.ultra_light  || '#efe');
+        const statBaseTextColor    = readableTextColor(baseShades.ultra_light    || '#eee');
+        const bodyTextColor        = readableTextColor(baseShades.ultra_light    || '#f5f5f5');
+
         const headSteps = (config.typography_headings && config.typography_headings.steps) || {};
         const textSteps = (config.typography_text     && config.typography_text.steps)     || {};
         const spaceSteps = (config.spacing            && config.spacing.steps)             || {};
@@ -255,17 +280,17 @@
         <div class="bwm-ds-mockup">
             <div class="bwm-ds-mockup-hero" style="background:linear-gradient(135deg,${primary},${primaryDark});padding:${sxl}px ${sl}px;">
                 ${tag('--primary')}
-                <div style="font-size:${h1}px;font-weight:700;color:#fff;line-height:calc(7px + 2ex);margin-bottom:${ss}px;">
+                <div style="font-size:${h1}px;font-weight:700;color:${heroTextColor};line-height:calc(7px + 2ex);margin-bottom:${ss}px;">
                     ${tag('--h1')}Design System Preview
                 </div>
-                <div style="font-size:${tl}px;color:rgba(255,255,255,0.85);margin-bottom:${sm}px;max-width:480px;line-height:calc(10px + 2ex);">
+                <div style="font-size:${tl}px;color:${heroTextColor};opacity:0.85;margin-bottom:${sm}px;max-width:480px;line-height:calc(10px + 2ex);">
                     ${tag('--text-l')}Live mockup using your current configuration values applied in real time.
                 </div>
                 <div style="display:flex;gap:${ss}px;flex-wrap:wrap;">
-                    <div class="bwm-ds-mockup-btn" style="background:${secondary};color:#fff;padding:${sxs}px ${sm}px;border-radius:${radius}px;font-size:${ts}px;font-weight:600;">
+                    <div class="bwm-ds-mockup-btn" style="background:${secondary};color:${secondaryTextColor};padding:${sxs}px ${sm}px;border-radius:${radius}px;font-size:${ts}px;font-weight:600;">
                         ${tag('--secondary')}Get Started
                     </div>
-                    <div class="bwm-ds-mockup-btn" style="background:rgba(255,255,255,0.2);color:#fff;padding:${sxs}px ${sm}px;border-radius:${radius}px;border:1px solid rgba(255,255,255,0.3);font-size:${ts}px;">
+                    <div class="bwm-ds-mockup-btn" style="background:${heroTextColor === '#ffffff' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'};color:${heroTextColor};padding:${sxs}px ${sm}px;border-radius:${radius}px;border:1px solid ${heroTextColor === '#ffffff' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'};font-size:${ts}px;">
                         ${tag('--white-trans-20')}Learn More
                     </div>
                 </div>
@@ -286,17 +311,17 @@
                         <div style="flex:1;background:${primaryShades.ultra_light || '#eef'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;box-shadow:${shadowM};">
                             ${tag('--primary-ultra-light')}${tag('--shadow-m')}
                             <div style="font-size:${h2}px;font-weight:700;color:${primary};">${tag('--primary')}106</div>
-                            <div style="font-size:${ts}px;color:${base};margin-top:4px;">${tag('--text-s')}Variables</div>
+                            <div style="font-size:${ts}px;color:${statPrimaryTextColor};margin-top:4px;">${tag('--text-s')}Variables</div>
                         </div>
                         <div style="flex:1;background:${accentShades.ultra_light || '#efe'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;box-shadow:${shadowM};">
                             ${tag('--accent-ultra-light')}
                             <div style="font-size:${h2}px;font-weight:700;color:${accent};">${tag('--accent')}9</div>
-                            <div style="font-size:${ts}px;color:${base};margin-top:4px;">Categories</div>
+                            <div style="font-size:${ts}px;color:${statAccentTextColor};margin-top:4px;">Categories</div>
                         </div>
                         <div style="flex:1;background:${baseShades.ultra_light || '#eee'};padding:${sm}px;border-radius:${radius}px;text-align:center;position:relative;box-shadow:${shadowM};">
                             ${tag('--base-ultra-light')}
                             <div style="font-size:${h2}px;font-weight:700;color:${baseShades.ultra_dark || '#222'};">31</div>
-                            <div style="font-size:${ts}px;color:${base};margin-top:4px;">Palette Colors</div>
+                            <div style="font-size:${ts}px;color:${statBaseTextColor};margin-top:4px;">Palette Colors</div>
                         </div>
                     </div>
                 </div>
@@ -322,8 +347,8 @@
                 <div style="font-size:${txs}px;color:${baseShades.light || '#aaa'};">
                     ${tag('--text-xs')}Design System v2 &mdash; Built with BricksCore
                 </div>
-                <div style="font-size:${txs}px;color:${primary};">
-                    ${tag('--primary')}Documentation &rarr;
+                <div style="font-size:${txs}px;color:${primaryShades.light || primary};">
+                    ${tag('--primary-light')}Documentation &rarr;
                 </div>
             </div>
 
@@ -332,19 +357,19 @@
                     ${tag('--h4')}Effects &amp; Tokens Showcase
                 </div>
 
-                <div style="font-size:${ts}px;font-weight:600;color:${base};margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
+                <div style="font-size:${ts}px;font-weight:600;color:${bodyTextColor};margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
                     ${tag('--text-s')}Shadows
                 </div>
                 <div style="display:flex;gap:${sm}px;margin-bottom:${sm}px;flex-wrap:wrap;">
                     ${[ ['xs', shadows.xs], ['s', shadows.s], ['m', shadowM], ['l', shadowL], ['xl', shadowXl] ].map(([name, val]) => `
                         <div style="flex:1;min-width:100px;">
                             <div style="background:#fff;border-radius:${radius}px;padding:${sm}px;height:60px;box-shadow:${val || shadowM};display:flex;align-items:center;justify-content:center;"></div>
-                            <div style="font-size:${txs}px;color:${base};text-align:center;margin-top:6px;font-family:monospace;">--shadow-${name}</div>
+                            <div style="font-size:${txs}px;color:${bodyTextColor};text-align:center;margin-top:6px;font-family:monospace;">--shadow-${name}</div>
                         </div>
                     `).join('')}
                 </div>
 
-                <div style="font-size:${ts}px;font-weight:600;color:${base};margin-top:${sm}px;margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
+                <div style="font-size:${ts}px;font-weight:600;color:${bodyTextColor};margin-top:${sm}px;margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
                     ${tag('--text-s')}Border Widths
                 </div>
                 <div style="display:flex;gap:${sm}px;margin-bottom:${sm}px;">
@@ -356,7 +381,7 @@
                     `).join('')}
                 </div>
 
-                <div style="font-size:${ts}px;font-weight:600;color:${base};margin-top:${sm}px;margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
+                <div style="font-size:${ts}px;font-weight:600;color:${bodyTextColor};margin-top:${sm}px;margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
                     ${tag('--text-s')}Aspect Ratios
                 </div>
                 <div style="display:flex;gap:${sm}px;margin-bottom:${sm}px;align-items:flex-end;">
@@ -369,20 +394,20 @@
                     ].map(([name, val, w]) => `
                         <div style="text-align:center;">
                             <div style="width:${w}px;aspect-ratio:${val};background:linear-gradient(135deg, ${primary}, ${primaryDark});border-radius:${radius}px;"></div>
-                            <div style="font-family:monospace;font-size:${txs}px;color:${base};margin-top:6px;">--aspect-${name}</div>
+                            <div style="font-family:monospace;font-size:${txs}px;color:${bodyTextColor};margin-top:6px;">--aspect-${name}</div>
                             <div style="font-size:${txs}px;color:${baseShades.dark || '#777'};">${val}</div>
                         </div>
                     `).join('')}
                 </div>
 
-                <div style="font-size:${ts}px;font-weight:600;color:${base};margin-top:${sm}px;margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
+                <div style="font-size:${ts}px;font-weight:600;color:${bodyTextColor};margin-top:${sm}px;margin-bottom:${ss}px;text-transform:uppercase;letter-spacing:0.5px;">
                     ${tag('--text-s')}Transitions (hover me)
                 </div>
                 <div style="display:flex;gap:${ss}px;flex-wrap:wrap;">
                     <button type="button" class="bwm-ds-trans-demo" style="background:${primary};color:#fff;border:none;padding:${sxs}px ${sm}px;border-radius:${radius}px;font-size:${ts}px;font-weight:600;cursor:pointer;transition:transform ${durBase} ${easeOut}, box-shadow ${durBase} ${easeOut};">
                         Hover — scale + shadow
                     </button>
-                    <div style="font-size:${txs}px;color:${base};align-self:center;font-family:monospace;">
+                    <div style="font-size:${txs}px;color:${bodyTextColor};align-self:center;font-family:monospace;">
                         transition: transform ${durBase} ${easeOut}
                     </div>
                 </div>

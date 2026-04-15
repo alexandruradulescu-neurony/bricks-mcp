@@ -4,6 +4,17 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.19.2] — 2026-04-15
+
+### Dark mode + contrast fixes
+
+- **Dark mode text is now readable.** The `--bwm-gray-900` variable (primary text color) was not being remapped in the `prefers-color-scheme: dark` block, so panel titles / step labels / help text rendered nearly black on a dark admin background. Now remaps to `#f9fafb` in dark mode.
+- **Shadow preview boxes keep their light background** in dark mode so the shadow is actually visible against a contrasting surface.
+- **Live preview auto-contrasts text colors.** Hero title / body / button text now uses a WCAG luminance check on the background — picks white or dark text automatically, so pastel primary/secondary colors no longer produce invisible labels.
+- Stats card labels, showcase subtitles, and footer link now pick readable colors based on their actual background luminance.
+- Token label pills and transparency checkerboard got dark-mode tweaks so they stay visible.
+- New focus ring on stepper buttons for keyboard navigation (light + dark mode).
+
 ## [3.19.1] — 2026-04-15
 
 ### Live preview enhancements
