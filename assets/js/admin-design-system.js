@@ -173,6 +173,7 @@
         renderSwatches();
         renderGapIndicators();
         renderRadiusShapes();
+        renderShadowPreviews();
         renderLivePreview();
     }
 
@@ -356,6 +357,15 @@
             const input = document.querySelector('input[data-radius-input="' + key + '"]');
             if (!input) return;
             shape.style.borderRadius = input.value || '0';
+        });
+    }
+
+    function renderShadowPreviews() {
+        document.querySelectorAll('.bwm-ds-shadow-preview').forEach(box => {
+            const key   = box.dataset.shadowKey;
+            const input = document.querySelector('input[data-field="shadows.' + key + '"]');
+            if (!input) return;
+            box.style.boxShadow = input.value || 'none';
         });
     }
 

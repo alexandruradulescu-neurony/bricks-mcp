@@ -4,6 +4,22 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.19.0] — 2026-04-15
+
+### New
+
+- **5 new design token categories** (27 new variables):
+  - **Shadows** (`--shadow-xs`, `--shadow-s`, `--shadow-m`, `--shadow-l`, `--shadow-xl`, `--shadow-inset`)
+  - **Transitions** (`--duration-fast/base/slow`, `--ease-out/in-out/spring`)
+  - **Z-Index** (`--z-base` through `--z-tooltip`, 100× gaps per layer)
+  - **Border Widths** (`--border-thin/medium/thick`)
+  - **Aspect Ratios** (`--aspect-square/video/photo/portrait/wide`)
+- New admin "Effects" stepper panel (Shadows + Transitions + Z-Index subsections).
+- Border Widths added to the Radius panel.
+- Aspect Ratios added to the Sizes panel.
+- Shadow inputs have live preview boxes next to them so you can see the shadow applied.
+- Existing configs auto-migrated on read — new defaults populate, no user action needed.
+
 ## [3.18.10] — 2026-04-15
 
 ### Change

@@ -19,6 +19,11 @@ class DesignSystemGenerator {
         'Sizes',
         'Colors',
         'Grid',
+        'Shadows',
+        'Transitions',
+        'Z-Index',
+        'Borders',
+        'Aspect Ratios',
     ];
 
     /**
@@ -196,6 +201,31 @@ class DesignSystemGenerator {
         $cat_id       = $this->random_id();
         $categories[] = [ 'id' => $cat_id, 'name' => 'Grid' ];
         $variables    = array_merge( $variables, $this->compute_grid( $cat_id ) );
+
+        // Shadows.
+        $cat_id       = $this->random_id();
+        $categories[] = [ 'id' => $cat_id, 'name' => 'Shadows' ];
+        $variables    = array_merge( $variables, $this->compute_shadows( $config['shadows'], $cat_id ) );
+
+        // Transitions.
+        $cat_id       = $this->random_id();
+        $categories[] = [ 'id' => $cat_id, 'name' => 'Transitions' ];
+        $variables    = array_merge( $variables, $this->compute_transitions( $config['transitions'], $cat_id ) );
+
+        // Z-Index.
+        $cat_id       = $this->random_id();
+        $categories[] = [ 'id' => $cat_id, 'name' => 'Z-Index' ];
+        $variables    = array_merge( $variables, $this->compute_z_index( $config['z_index'], $cat_id ) );
+
+        // Borders.
+        $cat_id       = $this->random_id();
+        $categories[] = [ 'id' => $cat_id, 'name' => 'Borders' ];
+        $variables    = array_merge( $variables, $this->compute_borders( $config['borders'], $cat_id ) );
+
+        // Aspect Ratios.
+        $cat_id       = $this->random_id();
+        $categories[] = [ 'id' => $cat_id, 'name' => 'Aspect Ratios' ];
+        $variables    = array_merge( $variables, $this->compute_aspect_ratios( $config['aspect_ratios'], $cat_id ) );
 
         // Palette.
         $palette = $this->compute_color_palette( $config['colors'] );
@@ -470,6 +500,108 @@ class DesignSystemGenerator {
                 'category' => $cat_id,
                 'name'     => "width-{$i}",
                 'value'    => "calc(var(--content-width) * {$frac})",
+            ];
+        }
+        return $out;
+    }
+
+    private function compute_shadows( array $shadows, string $cat_id ): array {
+        $map = [
+            'xs'    => 'shadow-xs',
+            's'     => 'shadow-s',
+            'm'     => 'shadow-m',
+            'l'     => 'shadow-l',
+            'xl'    => 'shadow-xl',
+            'inset' => 'shadow-inset',
+        ];
+        $out = [];
+        foreach ( $map as $key => $var ) {
+            $out[] = [
+                'id'       => $this->random_id(),
+                'category' => $cat_id,
+                'name'     => $var,
+                'value'    => (string) ( $shadows[ $key ] ?? '' ),
+            ];
+        }
+        return $out;
+    }
+
+    private function compute_transitions( array $t, string $cat_id ): array {
+        $map = [
+            'duration_fast' => 'duration-fast',
+            'duration_base' => 'duration-base',
+            'duration_slow' => 'duration-slow',
+            'ease_out'      => 'ease-out',
+            'ease_in_out'   => 'ease-in-out',
+            'ease_spring'   => 'ease-spring',
+        ];
+        $out = [];
+        foreach ( $map as $key => $var ) {
+            $out[] = [
+                'id'       => $this->random_id(),
+                'category' => $cat_id,
+                'name'     => $var,
+                'value'    => (string) ( $t[ $key ] ?? '' ),
+            ];
+        }
+        return $out;
+    }
+
+    private function compute_z_index( array $z, string $cat_id ): array {
+        $map = [
+            'base'     => 'z-base',
+            'sticky'   => 'z-sticky',
+            'dropdown' => 'z-dropdown',
+            'overlay'  => 'z-overlay',
+            'modal'    => 'z-modal',
+            'popover'  => 'z-popover',
+            'tooltip'  => 'z-tooltip',
+        ];
+        $out = [];
+        foreach ( $map as $key => $var ) {
+            $out[] = [
+                'id'       => $this->random_id(),
+                'category' => $cat_id,
+                'name'     => $var,
+                'value'    => (string) ( $z[ $key ] ?? '' ),
+            ];
+        }
+        return $out;
+    }
+
+    private function compute_borders( array $b, string $cat_id ): array {
+        $map = [
+            'thin'   => 'border-thin',
+            'medium' => 'border-medium',
+            'thick'  => 'border-thick',
+        ];
+        $out = [];
+        foreach ( $map as $key => $var ) {
+            $out[] = [
+                'id'       => $this->random_id(),
+                'category' => $cat_id,
+                'name'     => $var,
+                'value'    => (string) ( $b[ $key ] ?? '' ),
+            ];
+        }
+        return $out;
+    }
+
+    private function compute_aspect_ratios( array $a, string $cat_id ): array {
+        $map = [
+            'square'   => 'aspect-square',
+            'video'    => 'aspect-video',
+            'photo'    => 'aspect-photo',
+            'portrait' => 'aspect-portrait',
+            'wide'     => 'aspect-wide',
+        ];
+        $out = [];
+        foreach ( $map as $key => $var ) {
+            $out[] = [
+                'id'       => $this->random_id(),
+                'category' => $cat_id,
+                'name'     => $var,
+                'value'    => (string) ( $a[ $key ] ?? '' ),
             ];
         }
         return $out;

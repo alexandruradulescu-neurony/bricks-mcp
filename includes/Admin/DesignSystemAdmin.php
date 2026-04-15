@@ -82,6 +82,9 @@ class DesignSystemAdmin {
                     <button type="button" class="bwm-ds-step" data-step="radius">
                         <?php esc_html_e( 'Radius', 'bricks-mcp' ); ?>
                     </button>
+                    <button type="button" class="bwm-ds-step" data-step="effects">
+                        <?php esc_html_e( 'Effects', 'bricks-mcp' ); ?>
+                    </button>
                     <button type="button" class="bwm-ds-step" data-step="sizes">
                         <?php esc_html_e( 'Sizes', 'bricks-mcp' ); ?>
                     </button>
@@ -102,6 +105,7 @@ class DesignSystemAdmin {
                     <?php $this->render_panel_colors( $config ); ?>
                     <?php $this->render_panel_gaps( $config ); ?>
                     <?php $this->render_panel_radius( $config ); ?>
+                    <?php $this->render_panel_effects( $config ); ?>
                     <?php $this->render_panel_sizes( $config ); ?>
                 </div>
             </div>
@@ -472,6 +476,24 @@ class DesignSystemAdmin {
                 <?php endforeach; ?>
             </div>
 
+            <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Border Widths', 'bricks-mcp' ); ?></h3>
+            <div class="bwm-ds-text-fields">
+                <?php
+                $borders = $config['borders'] ?? [];
+                $border_rows = [
+                    'thin'   => '--border-thin',
+                    'medium' => '--border-medium',
+                    'thick'  => '--border-thick',
+                ];
+                foreach ( $border_rows as $key => $label ) :
+                    ?>
+                    <div class="bwm-ds-field">
+                        <label><?php echo esc_html( $label ); ?></label>
+                        <input type="text" value="<?php echo esc_attr( $borders[ $key ] ?? '' ); ?>" data-field="borders.<?php echo esc_attr( $key ); ?>">
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
             <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Border colors', 'bricks-mcp' ); ?></h3>
             <div class="bwm-ds-text-fields">
                 <div class="bwm-ds-field">
@@ -482,6 +504,79 @@ class DesignSystemAdmin {
                     <label>--border-color-dark</label>
                     <input type="text" value="<?php echo esc_attr( $ts['border_color_dark'] ?? '' ); ?>" data-field="text_styles.border_color_dark">
                 </div>
+            </div>
+        </section>
+        <?php
+    }
+
+    private function render_panel_effects( array $config ): void {
+        $shadows = $config['shadows'] ?? [];
+        $trans   = $config['transitions'] ?? [];
+        $zs      = $config['z_index'] ?? [];
+
+        $shadow_rows = [
+            'xs'    => '--shadow-xs',
+            's'     => '--shadow-s',
+            'm'     => '--shadow-m',
+            'l'     => '--shadow-l',
+            'xl'    => '--shadow-xl',
+            'inset' => '--shadow-inset',
+        ];
+
+        $trans_rows = [
+            'duration_fast' => '--duration-fast',
+            'duration_base' => '--duration-base',
+            'duration_slow' => '--duration-slow',
+            'ease_out'      => '--ease-out',
+            'ease_in_out'   => '--ease-in-out',
+            'ease_spring'   => '--ease-spring',
+        ];
+
+        $z_rows = [
+            'base'     => '--z-base',
+            'sticky'   => '--z-sticky',
+            'dropdown' => '--z-dropdown',
+            'overlay'  => '--z-overlay',
+            'modal'    => '--z-modal',
+            'popover'  => '--z-popover',
+            'tooltip'  => '--z-tooltip',
+        ];
+        ?>
+        <section class="bwm-ds-panel" data-step="effects">
+            <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Effects', 'bricks-mcp' ); ?></h2>
+            <p class="bwm-ds-panel-help">
+                <?php esc_html_e( 'Shadows, transitions, and z-index layers. All editable.', 'bricks-mcp' ); ?>
+            </p>
+
+            <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Shadows', 'bricks-mcp' ); ?></h3>
+            <div class="bwm-ds-text-fields">
+                <?php foreach ( $shadow_rows as $key => $label ) : ?>
+                    <div class="bwm-ds-field">
+                        <label><?php echo esc_html( $label ); ?></label>
+                        <input type="text" value="<?php echo esc_attr( $shadows[ $key ] ?? '' ); ?>" data-field="shadows.<?php echo esc_attr( $key ); ?>">
+                        <div class="bwm-ds-shadow-preview" data-shadow-key="<?php echo esc_attr( $key ); ?>"></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Transitions', 'bricks-mcp' ); ?></h3>
+            <div class="bwm-ds-text-fields">
+                <?php foreach ( $trans_rows as $key => $label ) : ?>
+                    <div class="bwm-ds-field">
+                        <label><?php echo esc_html( $label ); ?></label>
+                        <input type="text" value="<?php echo esc_attr( $trans[ $key ] ?? '' ); ?>" data-field="transitions.<?php echo esc_attr( $key ); ?>">
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Z-Index', 'bricks-mcp' ); ?></h3>
+            <div class="bwm-ds-text-fields">
+                <?php foreach ( $z_rows as $key => $label ) : ?>
+                    <div class="bwm-ds-field">
+                        <label><?php echo esc_html( $label ); ?></label>
+                        <input type="number" value="<?php echo esc_attr( $zs[ $key ] ?? 0 ); ?>" data-field="z_index.<?php echo esc_attr( $key ); ?>" step="1" min="0">
+                    </div>
+                <?php endforeach; ?>
             </div>
         </section>
         <?php
@@ -511,6 +606,26 @@ class DesignSystemAdmin {
                     <div class="bwm-ds-field">
                         <label><?php echo esc_html( $label ); ?></label>
                         <input type="<?php echo esc_attr( $type ); ?>" value="<?php echo esc_attr( $s[ $key ] ?? '' ); ?>" data-field="sizes.<?php echo esc_attr( $key ); ?>">
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Aspect Ratios', 'bricks-mcp' ); ?></h3>
+            <div class="bwm-ds-text-fields">
+                <?php
+                $aspects = $config['aspect_ratios'] ?? [];
+                $aspect_rows = [
+                    'square'   => '--aspect-square',
+                    'video'    => '--aspect-video',
+                    'photo'    => '--aspect-photo',
+                    'portrait' => '--aspect-portrait',
+                    'wide'     => '--aspect-wide',
+                ];
+                foreach ( $aspect_rows as $key => $label ) :
+                    ?>
+                    <div class="bwm-ds-field">
+                        <label><?php echo esc_html( $label ); ?></label>
+                        <input type="text" value="<?php echo esc_attr( $aspects[ $key ] ?? '' ); ?>" data-field="aspect_ratios.<?php echo esc_attr( $key ); ?>">
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -651,6 +766,7 @@ class DesignSystemAdmin {
             'colors'      => 'render_panel_colors',
             'gaps'        => 'render_panel_gaps',
             'radius'      => 'render_panel_radius',
+            'effects'     => 'render_panel_effects',
             'sizes'       => 'render_panel_sizes',
         ];
 

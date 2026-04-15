@@ -121,6 +121,53 @@ final class ConfigMigrator {
             'logo_width_desktop' => 200,
         ], $new['sizes'] );
 
+        // Shadows (new in v3.19).
+        $new['shadows'] = array_merge( [
+            'xs'    => '0 1px 2px rgba(0, 0, 0, 0.05)',
+            's'     => '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05)',
+            'm'     => '0 4px 6px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05)',
+            'l'     => '0 10px 15px rgba(0, 0, 0, 0.10), 0 4px 6px rgba(0, 0, 0, 0.05)',
+            'xl'    => '0 20px 25px rgba(0, 0, 0, 0.10), 0 10px 10px rgba(0, 0, 0, 0.04)',
+            'inset' => 'inset 0 2px 4px rgba(0, 0, 0, 0.06)',
+        ], $new['shadows'] ?? [] );
+
+        // Transitions (new in v3.19).
+        $new['transitions'] = array_merge( [
+            'duration_fast' => '150ms',
+            'duration_base' => '300ms',
+            'duration_slow' => '500ms',
+            'ease_out'      => 'cubic-bezier(0.16, 1, 0.3, 1)',
+            'ease_in_out'   => 'cubic-bezier(0.4, 0, 0.2, 1)',
+            'ease_spring'   => 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+        ], $new['transitions'] ?? [] );
+
+        // Z-Index (new in v3.19).
+        $new['z_index'] = array_merge( [
+            'base'     => 1,
+            'sticky'   => 100,
+            'dropdown' => 1000,
+            'overlay'  => 2000,
+            'modal'    => 3000,
+            'popover'  => 4000,
+            'tooltip'  => 5000,
+        ], $new['z_index'] ?? [] );
+
+        // Borders (new in v3.19).
+        $new['borders'] = array_merge( [
+            'thin'   => '1px',
+            'medium' => '2px',
+            'thick'  => '4px',
+        ], $new['borders'] ?? [] );
+
+        // Aspect ratios (new in v3.19).
+        $new['aspect_ratios'] = array_merge( [
+            'square'   => '1 / 1',
+            'video'    => '16 / 9',
+            'photo'    => '4 / 3',
+            'portrait' => '3 / 4',
+            'wide'     => '21 / 9',
+        ], $new['aspect_ratios'] ?? [] );
+
         // Drop obsolete top-level keys.
         unset( $new['project_name'], $new['container_width'], $new['container_min'] );
 

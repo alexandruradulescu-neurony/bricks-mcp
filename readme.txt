@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.18.10
+Stable tag: 3.19.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -156,6 +156,14 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.19.0 =
+* New: 5 new design token categories (27 new variables): Shadows, Transitions, Z-Index, Border Widths, Aspect Ratios.
+* New: "Effects" stepper panel in the Design System admin (Shadows, Transitions, Z-Index subsections).
+* New: Border Widths subsection added to the Radius panel.
+* New: Aspect Ratios subsection added to the Sizes panel.
+* New: Shadow inputs show a live preview box so you can see the shadow applied.
+* Existing configs auto-migrated on read — new defaults populate automatically, no user action needed.
 
 = 3.18.6 =
 * Fix: stepper button hover no longer makes active tab unreadable.
