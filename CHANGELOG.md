@@ -4,6 +4,34 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.21.2] — 2026-04-16
+
+### Codebase audit (88 PHP files)
+
+- **Bug fix:** `verify_build` root section detection — parent compared to string `'0'` but Bricks stores integer `0`. Hierarchy summary was empty. Fixed with `empty()`.
+- **Bug fix:** WooCommerce scaffold hints referenced dead `get_builder_guide()` tool — updated to `bricks:get_knowledge('woocommerce')`.
+- **Fix:** `uninstall.php` missing `bricks_mcp_db_version` option cleanup.
+- **Fix:** `DesignPipelineCheck` missing from WP Site Health screen — 10 of 11 checks were bridged; this was the gap.
+- **Fix:** `DesignPipelineCheck` fallback `plugin_dir_path()` received directory instead of file path.
+- **Fix:** `BricksCore` undefined variable risk — `$stored` not initialized before try block.
+- **Fix:** `ComponentHandler` empty array guard on `elements[0]` access.
+- **Cleanup:** `PageContentSubHandler` hardcoded meta key string replaced with `BricksCore::META_KEY` constant.
+- **Cleanup:** `BricksService` orphaned `@param` docblock fragment removed.
+- **Cleanup:** `OnboardingHandler` 4-space indentation converted to tabs (project standard).
+- **Dead code:** `UpdateChecker` unused deprecated `GITHUB_API_URL` constant removed.
+
+**Data layer alignment: ALL CLEAN.** Zero stale references across all 88 files.
+
+## [3.21.1] — 2026-04-16
+
+### Knowledge integration
+
+- **Building rules extracted** to `data/building-rules.json` — single source of truth, `BUILDING_RULES_BASE` PHP constant deleted.
+- **Discovery suggests knowledge domains** — `recommended_knowledge` array in Phase 1 response, keyword-scanned from description (form → `forms`, popup → `popups`, etc.).
+- **10 schema responses include `knowledge_hint`** — every `get_*_schema` and `get_breakpoints` response points to the matching knowledge domain.
+- **Form pipeline warning** cross-links to `bricks:get_knowledge('forms')`.
+- **Breakpoints example** fixed: `_padding:mobile` → `_padding:mobile_portrait`.
+
 ## [3.21.0] — 2026-04-16
 
 ### Architecture — data layer refactor

@@ -163,6 +163,23 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 
 == Changelog ==
 
+= 3.21.2 =
+* Fix: `verify_build` root section detection broken — parent compared to string '0' but Bricks stores integer 0.
+* Fix: WooCommerce scaffold hints referenced dead `get_builder_guide()` — updated to `bricks:get_knowledge('woocommerce')`.
+* Fix: `uninstall.php` missing `bricks_mcp_db_version` option cleanup.
+* Fix: `DesignPipelineCheck` missing from WP Site Health screen.
+* Fix: `BricksCore` undefined variable risk, `ComponentHandler` empty array guard, `DesignPipelineCheck` fallback path.
+* Cleanup: hardcoded meta key, orphaned docblock, indentation consistency.
+* Dead code: unused `GITHUB_API_URL` constant removed.
+* 88-file audit: zero stale references to deleted data layer files.
+
+= 3.21.1 =
+* New: building rules extracted to `data/building-rules.json` — single source of truth.
+* New: discovery response includes `recommended_knowledge` array — suggests relevant knowledge domains per description.
+* New: 10 schema responses include `knowledge_hint` pointing to matching knowledge domain.
+* Fix: form pipeline warning cross-links to `bricks:get_knowledge('forms')`.
+* Fix: breakpoints example `_padding:mobile` → `_padding:mobile_portrait`.
+
 = 3.21.0 =
 * Architecture: unified element registry (`data/elements.json`) — merged 4 sources into one 44-element file. Single source of truth for hierarchy, content keys, flex behavior, defaults, purpose/capabilities/rules.
 * Architecture: unified settings key registry (`data/settings-keys.json`) — 66 Bricks settings keys including Bricks 2.3 parallax + 3D transforms. Deleted redundant PHP constant.
