@@ -428,11 +428,6 @@ class BricksService {
 	}
 
 	/**
-	 * @param string $search   Optional partial name match filter.
-	 * @param string $category Optional category ID filter.
-	 * @return array<int, array<string, mixed>> Array of global classes.
-	 */
-	/**
 	 * Get the GlobalClassService instance for direct dependency injection.
 	 *
 	 * @return GlobalClassService

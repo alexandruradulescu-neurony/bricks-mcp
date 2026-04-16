@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP\Handlers\Page;
 
+use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\ValidationService;
 
@@ -93,8 +94,7 @@ final class PageContentSubHandler {
 		$elements = $this->bricks_service->normalize_elements( $args['elements'] );
 
 		// Element count safety check.
-		$meta_key         = defined( 'BRICKS_DB_PAGE_CONTENT' ) ? BRICKS_DB_PAGE_CONTENT : '_bricks_page_content_2';
-		$current_elements = get_post_meta( $post_id, $meta_key, true );
+		$current_elements = get_post_meta( $post_id, BricksCore::META_KEY, true );
 		$old_count        = is_array( $current_elements ) ? count( $current_elements ) : 0;
 		$new_count        = count( $elements );
 
