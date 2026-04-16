@@ -1,0 +1,404 @@
+{
+  "_comment": "Bricks Builder settings key registry. Maps every style-related settings key (prefix '_') to its CSS target, type, format, and logical group. SINGLE SOURCE OF TRUTH — consumed both by SchemaGenerator::is_valid_settings_key() for pipeline validation and by the AI-facing get_element_schemas response. Non-prefixed settings (text, tag, link, icon, image, etc.) are element-specific and discovered live via bricks:get_element_schemas.",
+  "_maintenance": "When adding a key: set css (actual CSS property / 'internal' / 'data-attribute' / 'css-variable' / 'meta'), type, group (one of the keys in 'groups'), format (human-readable), and optionally 'since' (first Bricks version). Keep groups coherent.",
+  "groups": {
+    "layout": "Display + flex + grid container + individual child placement",
+    "spacing": "Padding, margin, column/row/shorthand gap",
+    "sizing": "Width/height + min/max constraints + aspect ratio",
+    "position": "CSS position + top/right/bottom/left + z-index + order",
+    "typography": "Text styling (object-shaped, covers font-size/weight/color/line-height/text-align/letter-spacing/text-transform/font-family)",
+    "color": "Foreground color (as top-level shortcut to typography.color)",
+    "background": "Background color, image, overlay, gradient",
+    "border": "Border + radius + box-shadow",
+    "transform": "2D/3D transforms + origin + perspective",
+    "motion": "Parallax effects (Bricks 2.3+)",
+    "effects": "Opacity, overflow, cursor, transition, filter, object-fit",
+    "meta": "Non-CSS settings — custom CSS block, class refs, interactions, HTML attributes, internal markers"
+  },
+  "properties": {
+    "_padding": {
+      "css": "padding",
+      "type": "spacing",
+      "group": "spacing",
+      "format": "Object with top/right/bottom/left keys, each a CSS length (e.g. {\"top\":\"60px\",\"right\":\"40px\",\"bottom\":\"60px\",\"left\":\"40px\"})"
+    },
+    "_margin": {
+      "css": "margin",
+      "type": "spacing",
+      "group": "spacing",
+      "format": "Object with top/right/bottom/left keys, each a CSS length"
+    },
+    "_gap": {
+      "css": "gap",
+      "type": "string",
+      "group": "spacing",
+      "format": "CSS shorthand gap. Requires _display: flex/grid. On flex blocks the pipeline auto-converts to _columnGap (row) or _rowGap (column)."
+    },
+    "_columnGap": {
+      "css": "column-gap",
+      "type": "string",
+      "group": "spacing",
+      "format": "CSS length value for horizontal gap in flex/grid"
+    },
+    "_rowGap": {
+      "css": "row-gap",
+      "type": "string",
+      "group": "spacing",
+      "format": "CSS length value for vertical gap in flex/grid"
+    },
+    "_display": {
+      "css": "display",
+      "type": "string",
+      "group": "layout",
+      "format": "flex, inline-flex, grid, inline-grid, block, inline-block, inline, none. Layout elements (section/container/block) are flex by default."
+    },
+    "_direction": {
+      "css": "flex-direction",
+      "type": "string",
+      "group": "layout",
+      "format": "row, column, row-reverse, column-reverse"
+    },
+    "_flexWrap": {
+      "css": "flex-wrap",
+      "type": "string",
+      "group": "layout",
+      "format": "nowrap, wrap, wrap-reverse"
+    },
+    "_flexGrow": {
+      "css": "flex-grow",
+      "type": "number",
+      "group": "layout",
+      "format": "Non-negative integer"
+    },
+    "_flexShrink": {
+      "css": "flex-shrink",
+      "type": "number",
+      "group": "layout",
+      "format": "Non-negative integer"
+    },
+    "_alignItems": {
+      "css": "align-items",
+      "type": "string",
+      "group": "layout",
+      "format": "flex-start, center, flex-end, stretch, baseline, start, end"
+    },
+    "_justifyContent": {
+      "css": "justify-content",
+      "type": "string",
+      "group": "layout",
+      "format": "flex-start, center, flex-end, space-between, space-around, space-evenly, start, end"
+    },
+    "_alignContent": {
+      "css": "align-content",
+      "type": "string",
+      "group": "layout",
+      "format": "flex-start, center, flex-end, space-between, space-around, stretch. Only in multi-line flex / grid."
+    },
+    "_justifyItems": {
+      "css": "justify-items",
+      "type": "string",
+      "group": "layout",
+      "format": "start, center, end, stretch. Grid container."
+    },
+    "_alignSelf": {
+      "css": "align-self",
+      "type": "string",
+      "group": "layout",
+      "format": "auto, flex-start, center, flex-end, stretch, start, end"
+    },
+    "_justifySelf": {
+      "css": "justify-self",
+      "type": "string",
+      "group": "layout",
+      "format": "auto, start, center, end, stretch. Grid child."
+    },
+    "_gridTemplateColumns": {
+      "css": "grid-template-columns",
+      "type": "string",
+      "group": "layout",
+      "format": "CSS grid template. Prefer var(--grid-N) (N=1..12) or repeat(N, 1fr)."
+    },
+    "_gridTemplateRows": {
+      "css": "grid-template-rows",
+      "type": "string",
+      "group": "layout",
+      "format": "CSS grid-template-rows"
+    },
+    "_gridTemplateAreas": {
+      "css": "grid-template-areas",
+      "type": "string",
+      "group": "layout",
+      "format": "CSS grid-template-areas string (e.g. '\"a a b\" \"c d d\"')"
+    },
+    "_gridAutoFlow": {
+      "css": "grid-auto-flow",
+      "type": "string",
+      "group": "layout",
+      "format": "row, column, dense, row dense, column dense"
+    },
+    "_gridAutoColumns": {
+      "css": "grid-auto-columns",
+      "type": "string",
+      "group": "layout",
+      "format": "CSS track size (e.g. 'minmax(200px, 1fr)')"
+    },
+    "_gridAutoRows": {
+      "css": "grid-auto-rows",
+      "type": "string",
+      "group": "layout",
+      "format": "CSS track size"
+    },
+    "_gridRow": {
+      "css": "grid-row",
+      "type": "string",
+      "group": "layout",
+      "format": "CSS grid-row shorthand (e.g. '1 / span 2')"
+    },
+    "_gridColumn": {
+      "css": "grid-column",
+      "type": "string",
+      "group": "layout",
+      "format": "CSS grid-column shorthand (e.g. 'span 2 / auto')"
+    },
+    "_order": {
+      "css": "order",
+      "type": "number",
+      "group": "layout",
+      "format": "Integer (negative values move earlier, positive later)"
+    },
+    "_width": {
+      "css": "width",
+      "type": "string",
+      "group": "sizing",
+      "format": "CSS length or percentage (e.g. '100%', '33.33%', '600px')"
+    },
+    "_widthMax": {
+      "css": "max-width",
+      "type": "string",
+      "group": "sizing",
+      "format": "CSS length. NOTE: the key is _widthMax, NOT _maxWidth."
+    },
+    "_widthMin": {
+      "css": "min-width",
+      "type": "string",
+      "group": "sizing",
+      "format": "CSS length. NOTE: the key is _widthMin, NOT _minWidth."
+    },
+    "_height": {
+      "css": "height",
+      "type": "string",
+      "group": "sizing",
+      "format": "CSS length or percentage"
+    },
+    "_minHeight": {
+      "css": "min-height",
+      "type": "string",
+      "group": "sizing",
+      "format": "CSS length"
+    },
+    "_maxHeight": {
+      "css": "max-height",
+      "type": "string",
+      "group": "sizing",
+      "format": "CSS length"
+    },
+    "_aspectRatio": {
+      "css": "aspect-ratio",
+      "type": "string",
+      "group": "sizing",
+      "format": "width/height ratio (e.g. '16/9', '1/1', '4/3')"
+    },
+    "_position": {
+      "css": "position",
+      "type": "string",
+      "group": "position",
+      "format": "relative, absolute, fixed, sticky, static"
+    },
+    "_top": { "css": "top", "type": "string", "group": "position", "format": "CSS length" },
+    "_right": { "css": "right", "type": "string", "group": "position", "format": "CSS length" },
+    "_bottom": { "css": "bottom", "type": "string", "group": "position", "format": "CSS length" },
+    "_left": { "css": "left", "type": "string", "group": "position", "format": "CSS length" },
+    "_zIndex": {
+      "css": "z-index",
+      "type": "number",
+      "group": "position",
+      "format": "Integer"
+    },
+    "_typography": {
+      "css": "typography-object",
+      "type": "object",
+      "group": "typography",
+      "format": "Object with font-size, font-weight, color (raw/hex wrapped), line-height, text-align, letter-spacing, text-transform, font-family, text-decoration"
+    },
+    "_color": {
+      "css": "color",
+      "type": "color",
+      "group": "color",
+      "format": "Color object {raw: 'var(--primary)'} or {hex: '#FFF'}. Top-level shortcut for typography.color."
+    },
+    "_background": {
+      "css": "background",
+      "type": "object",
+      "group": "background",
+      "format": "Object with color ({raw|hex}), image ({id,url,filename,size}), position, size, repeat, attachment, overlay ({color, image}). The 'unsplash:query' string in .image triggers pipeline sideload."
+    },
+    "_gradient": {
+      "css": "background-gradient",
+      "type": "object",
+      "group": "background",
+      "format": "Object with colors (array of {color:{raw|hex}, stop}), angle (e.g. '135deg'), applyTo ('background' or 'overlay')"
+    },
+    "_border": {
+      "css": "border",
+      "type": "object",
+      "group": "border",
+      "format": "Object with width (per-side object top/right/bottom/left), style (string, not per-side), color ({raw|hex}), radius (per-side object top/right/bottom/left)"
+    },
+    "_boxShadow": {
+      "css": "box-shadow",
+      "type": "string",
+      "group": "border",
+      "format": "CSS box-shadow value (e.g. '0 4px 12px rgba(0,0,0,0.1)')"
+    },
+    "_transform": {
+      "css": "transform",
+      "type": "object",
+      "group": "transform",
+      "format": "Object with function keys: translateX/Y (CSS length), rotateX/Y/Z (number, auto-appends 'deg'), skewX/Y (number, auto-appends 'deg'), scale3dX/Y/Z (unitless number, Bricks 2.3+), perspective (CSS length, always first in output, Bricks 2.3+)"
+    },
+    "_transformOrigin": {
+      "css": "transform-origin",
+      "type": "string",
+      "group": "transform",
+      "format": "CSS transform-origin (e.g. 'center', 'top left', '50% 50%'). Default: 'center'"
+    },
+    "_perspective": {
+      "css": "perspective",
+      "type": "string",
+      "group": "transform",
+      "format": "CSS perspective distance with unit (e.g. '800px'). Sets 3D context on a PARENT — children get 3D depth.",
+      "since": "2.3"
+    },
+    "_perspectiveOrigin": {
+      "css": "perspective-origin",
+      "type": "string",
+      "group": "transform",
+      "format": "Origin point for perspective (e.g. 'center', '50% 50%', 'left top')",
+      "since": "2.3"
+    },
+    "_motionElementParallax": {
+      "css": "data-attribute",
+      "type": "boolean",
+      "group": "motion",
+      "format": "true enables element parallax — emits data-brx-motion-parallax on the element for frontend JS. Not visible in builder preview.",
+      "since": "2.3"
+    },
+    "_motionElementParallaxSpeedX": {
+      "css": "css-variable",
+      "type": "number",
+      "group": "motion",
+      "format": "Horizontal parallax speed percentage. Sets --brx-motion-parallax-speed-x. Negative = opposite scroll direction. Requires _motionElementParallax: true.",
+      "since": "2.3"
+    },
+    "_motionElementParallaxSpeedY": {
+      "css": "css-variable",
+      "type": "number",
+      "group": "motion",
+      "format": "Vertical parallax speed percentage. Sets --brx-motion-parallax-speed-y. Requires _motionElementParallax: true.",
+      "since": "2.3"
+    },
+    "_motionBackgroundParallax": {
+      "css": "data-attribute",
+      "type": "boolean",
+      "group": "motion",
+      "format": "true enables background-image parallax — emits data-brx-motion-parallax. Not visible in builder preview.",
+      "since": "2.3"
+    },
+    "_motionBackgroundParallaxSpeed": {
+      "css": "css-variable",
+      "type": "number",
+      "group": "motion",
+      "format": "Background parallax speed percentage. Sets --brx-motion-background-speed. Requires _motionBackgroundParallax: true.",
+      "since": "2.3"
+    },
+    "_motionStartVisiblePercent": {
+      "css": "internal",
+      "type": "number",
+      "group": "motion",
+      "format": "0-100. Where parallax starts based on viewport scroll progress (0 = element entering viewport, 50 = near center).",
+      "since": "2.3"
+    },
+    "_opacity": {
+      "css": "opacity",
+      "type": "number",
+      "group": "effects",
+      "format": "0 to 1 (decimal)"
+    },
+    "_overflow": {
+      "css": "overflow",
+      "type": "string",
+      "group": "effects",
+      "format": "visible, hidden, scroll, auto, clip"
+    },
+    "_cursor": {
+      "css": "cursor",
+      "type": "string",
+      "group": "effects",
+      "format": "auto, default, pointer, grab, not-allowed, wait, help, crosshair, etc."
+    },
+    "_pointerEvents": {
+      "css": "pointer-events",
+      "type": "string",
+      "group": "effects",
+      "format": "auto, none"
+    },
+    "_transition": {
+      "css": "transition",
+      "type": "string",
+      "group": "effects",
+      "format": "CSS transition value (e.g. 'transform 0.3s ease-out'). Prefer composing from --duration-* and --ease-* variables."
+    },
+    "_filter": {
+      "css": "filter",
+      "type": "string",
+      "group": "effects",
+      "format": "CSS filter value (e.g. 'blur(4px) brightness(0.9)')"
+    },
+    "_objectFit": {
+      "css": "object-fit",
+      "type": "string",
+      "group": "effects",
+      "format": "cover, contain, fill, none, scale-down (affects image/video)"
+    },
+    "_cssCustom": {
+      "css": "custom",
+      "type": "string",
+      "group": "meta",
+      "format": "Custom CSS block. Use %root% as selector shorthand — it auto-resolves to the element's root selector. Do NOT use on text-basic/heading/button/icon/text/text-link (pipeline quarantines those to prevent frontend crashes)."
+    },
+    "_cssGlobalClasses": {
+      "css": "classes",
+      "type": "array",
+      "group": "meta",
+      "format": "Array of global class IDs to apply to this element. Use global_class:list to get ID mapping."
+    },
+    "_interactions": {
+      "css": "interactions",
+      "type": "array",
+      "group": "meta",
+      "format": "Array of interaction objects {id, trigger, action, target, ...}. See bricks:get_knowledge('animations') or bricks:get_interaction_schema."
+    },
+    "_attributes": {
+      "css": "html-attributes",
+      "type": "array",
+      "group": "meta",
+      "format": "Array of {name, value} objects emitted as HTML attributes on the element root"
+    },
+    "_hidden": {
+      "css": "internal",
+      "type": "object",
+      "group": "meta",
+      "format": "Internal marker object used by nested elements (tabs/accordion/slider) to target sub-parts via _cssClasses (tab-menu, tab-title, tab-content, tab-pane)"
+    }
+  }
+}

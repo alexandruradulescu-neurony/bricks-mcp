@@ -544,20 +544,10 @@ final class PageReadSubHandler {
 		$settings = $element['settings'] ?? [];
 		$name     = $element['name'] ?? '';
 
-		// Common content keys by element type.
-		$content_keys = [
-			'heading'        => 'text',
-			'text-basic'     => 'text',
-			'text'           => 'text',
-			'text-link'      => 'text',
-			'button'         => 'text',
-			'icon-box'       => 'title',
-			'alert'          => 'content',
-			'counter'        => 'countTo',
-			'animated-typing' => 'content',
-		];
+		// Read content_key from the unified element registry (data/elements.json).
+		$registry = \BricksMCP\MCP\Services\ElementSettingsGenerator::get_element_registry();
+		$key      = $registry[ $name ]['content_key'] ?? '';
 
-		$key = $content_keys[ $name ] ?? '';
 		if ( $key && isset( $settings[ $key ] ) ) {
 			$val = $settings[ $key ];
 			return is_string( $val ) ? strip_tags( $val ) : (string) $val;

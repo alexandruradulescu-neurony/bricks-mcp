@@ -114,9 +114,8 @@ final class BricksToolHandler {
 	 * @return array<string, mixed>|\WP_Error Knowledge content or error.
 	 */
 	private function tool_get_knowledge( array $args ): array|\WP_Error {
-		$domain = sanitize_text_field( $args['domain'] ?? '' );
-
-		$valid_domains = [ 'building', 'forms', 'dynamic-data', 'components', 'popups', 'woocommerce', 'animations', 'seo' ];
+		$domain        = sanitize_text_field( $args['domain'] ?? '' );
+		$valid_domains = self::discover_knowledge_domains();
 
 		if ( empty( $domain ) ) {
 			return [
@@ -129,8 +128,8 @@ final class BricksToolHandler {
 			return new \WP_Error(
 				'invalid_domain',
 				sprintf(
-					/* translators: %s: domain name */
-					__( 'Unknown knowledge domain "%s". Available: %s', 'bricks-mcp' ),
+					/* translators: 1: domain name, 2: comma-separated list of available domains */
+					__( 'Unknown knowledge domain "%1$s". Available: %2$s', 'bricks-mcp' ),
 					$domain,
 					implode( ', ', $valid_domains )
 				)
@@ -154,6 +153,26 @@ final class BricksToolHandler {
 			'domain'  => $domain,
 			'content' => trim( $content ),
 		];
+	}
+
+	/**
+	 * Discover available knowledge domains by scanning data/knowledge/*.md.
+	 *
+	 * Auto-discovery: drop a new .md file into data/knowledge/ and it becomes
+	 * a valid domain immediately — no enum updates needed.
+	 *
+	 * @return array<int, string> Sorted list of domain names (filename without .md).
+	 */
+	public static function discover_knowledge_domains(): array {
+		static $cached = null;
+		if ( null !== $cached ) {
+			return $cached;
+		}
+		$files   = glob( BRICKS_MCP_PLUGIN_DIR . 'data/knowledge/*.md' ) ?: [];
+		$domains = array_map( static fn( string $f ): string => basename( $f, '.md' ), $files );
+		sort( $domains );
+		$cached = array_values( array_unique( $domains ) );
+		return $cached;
 	}
 
 	/**
@@ -547,7 +566,7 @@ final class BricksToolHandler {
 					),
 					'domain'       => array(
 						'type'        => 'string',
-						'enum'        => array( 'building', 'forms', 'dynamic-data', 'components', 'popups', 'woocommerce', 'animations', 'seo' ),
+						'enum'        => self::discover_knowledge_domains(),
 						'description' => __( 'Knowledge domain (get_knowledge: optional, omit to list available domains)', 'bricks-mcp' ),
 					),
 				),

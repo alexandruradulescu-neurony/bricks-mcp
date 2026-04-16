@@ -2,9 +2,9 @@
 /**
  * Design pipeline health check.
  *
- * Verifies the pipeline's data files (design patterns, element defaults,
- * hierarchy rules, class context rules) and the StarterClassesService
- * are loadable and valid.
+ * Verifies the pipeline's data files (elements registry, settings-keys
+ * registry) and the database-backed design pattern library are loadable
+ * and valid.
  *
  * @package BricksMCP
  * @license GPL-2.0-or-later
@@ -15,7 +15,6 @@ declare(strict_types=1);
 namespace BricksMCP\Admin\Checks;
 
 use BricksMCP\Admin\DiagnosticCheck;
-use BricksMCP\MCP\Services\StarterClassesService;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -61,24 +60,10 @@ class DesignPipelineCheck implements DiagnosticCheck {
 			$problems[] = sprintf( __( 'DesignPatternService threw: %s', 'bricks-mcp' ), $e->getMessage() );
 		}
 
-		// 2. StarterClassesService returns >= 13 entries.
-		try {
-			$starters = StarterClassesService::get_starter_classes();
-			if ( ! is_array( $starters ) || count( $starters ) < 13 ) {
-				$problems[] = sprintf(
-					__( 'StarterClassesService returned %d classes (expected at least 13).', 'bricks-mcp' ),
-					is_array( $starters ) ? count( $starters ) : 0
-				);
-			}
-		} catch ( \Throwable $e ) {
-			$problems[] = sprintf( __( 'StarterClassesService threw: %s', 'bricks-mcp' ), $e->getMessage() );
-		}
-
-		// 3. Three core JSON data files load and parse.
+		// 2. Core JSON data files load and parse.
 		$required_files = [
-			'data/element-defaults.json',
-			'data/element-hierarchy-rules.json',
-			'data/class-context-rules.json',
+			'data/elements.json',
+			'data/settings-keys.json',
 		];
 		foreach ( $required_files as $rel ) {
 			$path = $base . $rel;
@@ -112,7 +97,7 @@ class DesignPipelineCheck implements DiagnosticCheck {
 			'id'        => $this->id(),
 			'label'     => $this->label(),
 			'status'    => 'pass',
-			'message'   => __( 'Design patterns (database), starter classes, and pipeline data files are healthy.', 'bricks-mcp' ),
+			'message'   => __( 'Design patterns (database) and pipeline data files are healthy.', 'bricks-mcp' ),
 			'fix_steps' => array(),
 			'category'  => $this->category(),
 		);

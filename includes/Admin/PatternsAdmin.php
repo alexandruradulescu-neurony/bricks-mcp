@@ -22,6 +22,7 @@ class PatternsAdmin {
 		add_action( 'wp_ajax_bricks_mcp_delete_pattern', [ $this, 'ajax_delete_pattern' ] );
 		add_action( 'wp_ajax_bricks_mcp_export_patterns', [ $this, 'ajax_export_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_import_patterns', [ $this, 'ajax_import_patterns' ] );
+		add_action( 'wp_ajax_bricks_mcp_reseed_patterns', [ $this, 'ajax_reseed_patterns' ] );
 	}
 
 	/**
@@ -81,6 +82,7 @@ class PatternsAdmin {
 				<button type="button" class="button button-secondary" id="bricks-mcp-export-patterns"><?php esc_html_e( 'Export', 'bricks-mcp' ); ?></button>
 				<button type="button" class="button button-secondary" id="bricks-mcp-import-patterns-btn"><?php esc_html_e( 'Import', 'bricks-mcp' ); ?></button>
 				<input type="file" id="bricks-mcp-import-file" accept=".json" style="display:none;">
+				<button type="button" class="button button-link-delete" id="bricks-mcp-reseed-patterns" title="<?php esc_attr_e( 'Overwrite shipped pattern IDs from data/design-patterns.json. Custom patterns with unique IDs are preserved.', 'bricks-mcp' ); ?>"><?php esc_html_e( 'Reset to plugin defaults', 'bricks-mcp' ); ?></button>
 				<span class="bwm-patterns-count" style="margin-left:auto;color:#666;">
 					<?php printf( esc_html__( '%d patterns total', 'bricks-mcp' ), count( $patterns ) ); ?>
 				</span>
@@ -309,6 +311,25 @@ class PatternsAdmin {
 		}
 
 		$result = DesignPatternService::import( $patterns );
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX: Re-seed plugin-shipped patterns from data/design-patterns.json.
+	 *
+	 * Overwrites DB entries whose IDs match a seed pattern. Custom patterns
+	 * with unique IDs are preserved untouched.
+	 */
+	public function ajax_reseed_patterns(): void {
+		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+		}
+
+		$result = DesignPatternService::reseed_plugin_patterns();
+		if ( isset( $result['error'] ) ) {
+			wp_send_json_error( [ 'message' => $result['error'] ] );
+		}
 		wp_send_json_success( $result );
 	}
 }

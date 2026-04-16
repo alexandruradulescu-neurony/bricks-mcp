@@ -43,133 +43,69 @@ class SchemaGenerator {
 	private const CACHE_DURATION = DAY_IN_SECONDS;
 
 	/**
-	 * CSS-to-Bricks property mapping for AI reference.
-	 * @var array<string, string>
-	 */
-	private const CSS_PROPERTY_MAP = [
-		'_padding'             => 'padding (top/right/bottom/left object)',
-		'_margin'              => 'margin (top/right/bottom/left object)',
-		'_background'          => 'background-color via color.raw/hex',
-		'_gradient'            => 'background gradient (colors array with color+stop, angle)',
-		'_typography'          => 'font-size, font-weight, color, line-height, text-align, letter-spacing, text-transform, font-family',
-		'_direction'           => 'flex-direction',
-		'_display'             => 'display (flex, grid, block, none)',
-		'_alignItems'          => 'align-items',
-		'_justifyContent'      => 'justify-content',
-		'_flexWrap'            => 'flex-wrap',
-		'_flexGrow'            => 'flex-grow',
-		'_flexShrink'          => 'flex-shrink',
-		'_columnGap'           => 'column-gap',
-		'_rowGap'              => 'row-gap',
-		'_gap'                 => 'gap (shorthand, for grid)',
-		'_gridTemplateColumns' => 'grid-template-columns',
-		'_gridTemplateRows'    => 'grid-template-rows',
-		'_alignItemsGrid'      => 'align-items (grid context)',
-		'_border'              => 'border (width/style/color/radius object)',
-		'_width'               => 'width',
-		'_widthMax'            => 'max-width',
-		'_widthMin'            => 'min-width',
-		'_height'              => 'height',
-		'_overflow'            => 'overflow',
-		'_position'            => 'position (relative, absolute, fixed, sticky)',
-		'_top'                 => 'top',
-		'_right'               => 'right',
-		'_bottom'              => 'bottom',
-		'_left'                => 'left',
-		'_zIndex'              => 'z-index',
-		'_opacity'             => 'opacity',
-		'_transform'           => 'transform',
-		'_transition'          => 'transition',
-		'_boxShadow'           => 'box-shadow',
-		'_cssCustom'           => 'Custom CSS block (any CSS, use #brxe-{id} selector)',
-		'_cssGlobalClasses'    => 'Array of global class IDs to apply',
-	];
-
-	/**
-	 * Element nesting rules for AI reference.
-	 * @var array<string, array<string, mixed>>
-	 */
-	private const NESTING_RULES = [
-		'section'          => [ 'accepts_children' => true,  'nestable' => false, 'typical_children' => [ 'container' ], 'typical_parents' => [ 'root' ] ],
-		'container'        => [ 'accepts_children' => true,  'nestable' => false, 'typical_children' => [ 'heading', 'text-basic', 'button', 'image', 'container', 'block' ], 'typical_parents' => [ 'section', 'container', 'block', 'div' ] ],
-		'block'            => [ 'accepts_children' => true,  'nestable' => false, 'typical_children' => [ 'heading', 'text-basic', 'button', 'image', 'container', 'block' ], 'typical_parents' => [ 'section', 'container', 'block', 'div' ] ],
-		'div'              => [ 'accepts_children' => true,  'nestable' => false, 'typical_children' => [ 'heading', 'text-basic', 'button', 'image' ], 'typical_parents' => [ 'section', 'container', 'block', 'div' ] ],
-		'heading'          => [ 'accepts_children' => false, 'nestable' => false ],
-		'text-basic'       => [ 'accepts_children' => false, 'nestable' => false ],
-		'text'             => [ 'accepts_children' => false, 'nestable' => false ],
-		'text-link'        => [ 'accepts_children' => false, 'nestable' => false ],
-		'button'           => [ 'accepts_children' => false, 'nestable' => false ],
-		'image'            => [ 'accepts_children' => false, 'nestable' => false ],
-		'icon'             => [ 'accepts_children' => false, 'nestable' => false ],
-		'video'            => [ 'accepts_children' => false, 'nestable' => false ],
-		'code'             => [ 'accepts_children' => false, 'nestable' => false ],
-		'divider'          => [ 'accepts_children' => false, 'nestable' => false ],
-		'list'             => [ 'accepts_children' => false, 'nestable' => false ],
-		'icon-box'         => [ 'accepts_children' => false, 'nestable' => false ],
-		'map'              => [ 'accepts_children' => false, 'nestable' => false ],
-		'form'             => [ 'accepts_children' => false, 'nestable' => false ],
-		'rating'           => [ 'accepts_children' => false, 'nestable' => false ],
-		'counter'          => [ 'accepts_children' => false, 'nestable' => false ],
-		'countdown'        => [ 'accepts_children' => false, 'nestable' => false ],
-		'progress-bar'     => [ 'accepts_children' => false, 'nestable' => false ],
-		'pie-chart'        => [ 'accepts_children' => false, 'nestable' => false ],
-		'alert'            => [ 'accepts_children' => false, 'nestable' => false ],
-		'accordion'        => [ 'accepts_children' => false, 'nestable' => false ],
-		'tabs'             => [ 'accepts_children' => false, 'nestable' => false ],
-		'slider'           => [ 'accepts_children' => false, 'nestable' => false ],
-		'accordion-nested' => [ 'accepts_children' => true,  'nestable' => true, 'typical_children' => [ 'block' ], 'typical_parents' => [ 'section', 'container' ] ],
-		'tabs-nested'      => [ 'accepts_children' => true,  'nestable' => true, 'typical_children' => [ 'block' ], 'typical_parents' => [ 'section', 'container' ] ],
-		'slider-nested'    => [ 'accepts_children' => true,  'nestable' => true, 'typical_children' => [ 'block' ], 'typical_parents' => [ 'section', 'container' ] ],
-		'nav-nested'       => [ 'accepts_children' => true,  'nestable' => true, 'typical_children' => [ 'block' ], 'typical_parents' => [ 'section', 'container' ] ],
-		'offcanvas'        => [ 'accepts_children' => true,  'nestable' => true, 'typical_children' => [ 'block', 'container' ], 'typical_parents' => [ 'section', 'container' ] ],
-		'dropdown'         => [ 'accepts_children' => true,  'nestable' => true, 'typical_children' => [ 'block' ], 'typical_parents' => [ 'container', 'block' ] ],
-		'toggle'           => [ 'accepts_children' => true,  'nestable' => true, 'typical_children' => [ 'block' ], 'typical_parents' => [ 'container', 'block' ] ],
-		'popup'            => [ 'accepts_children' => true,  'nestable' => true, 'typical_children' => [ 'block', 'container' ], 'typical_parents' => [ 'section', 'container' ] ],
-		'template'         => [ 'accepts_children' => false, 'nestable' => true ],
-	];
-
-	/**
-	 * Cached CSS property map loaded from data file.
+	 * Cached Bricks settings key registry loaded from data/settings-keys.json.
 	 *
 	 * @var array<string, mixed>|null
 	 */
-	private static ?array $css_property_map_data = null;
+	private static ?array $settings_keys_data = null;
 
 	/**
-	 * Get CSS-to-Bricks property mapping.
+	 * Get Bricks settings key registry (AI-facing flat shape).
 	 *
-	 * Loads from data/css-property-map.json for the full structured map,
-	 * falls back to the hardcoded constant for backward compatibility.
+	 * Flattens the structured registry from data/settings-keys.json into the
+	 * key => "css-property — format (Bricks X.X+)" shape returned by the
+	 * get_element_schemas response. Single source of truth — the JSON file.
 	 *
-	 * @return array<string, string> Key → description map (legacy format for schema responses).
+	 * @return array<string, string> Key → description map.
 	 */
-	public function get_css_property_map(): array {
-		return self::CSS_PROPERTY_MAP;
+	public function get_settings_keys_flat(): array {
+		$full = self::get_settings_keys();
+		$flat = [];
+		foreach ( $full as $key => $def ) {
+			if ( ! is_array( $def ) ) {
+				continue;
+			}
+			$css    = $def['css'] ?? '';
+			$format = $def['format'] ?? '';
+			$since  = ! empty( $def['since'] ) ? sprintf( ' (Bricks %s+)', $def['since'] ) : '';
+			// Prefer "css — format" when both are informative; fall back to whichever is set.
+			if ( '' !== $css && '' !== $format && ! in_array( $css, [ 'internal', 'custom', 'classes', 'interactions', 'html-attributes', 'data-attribute', 'css-variable', 'typography-object', 'background-gradient' ], true ) ) {
+				$flat[ $key ] = $css . ' — ' . $format . $since;
+			} elseif ( '' !== $format ) {
+				$flat[ $key ] = $format . $since;
+			} elseif ( '' !== $css ) {
+				$flat[ $key ] = $css . $since;
+			} else {
+				$flat[ $key ] = '';
+			}
+		}
+		return $flat;
 	}
 
 	/**
-	 * Get the full structured CSS property map from the data file.
+	 * Get the full structured Bricks settings key registry.
 	 *
-	 * Returns the complete map with type, format, and css info for each property.
+	 * Returns the complete map with css, type, format, group, and optional
+	 * since info for each key.
 	 *
-	 * @return array<string, array<string, string>> Key → {css, type, format} map.
+	 * @return array<string, array<string, string>> Key → {css, type, format, group, since?} map.
 	 */
-	public static function get_css_property_map_full(): array {
-		if ( null === self::$css_property_map_data ) {
-			$path = dirname( __DIR__, 3 ) . '/data/css-property-map.json';
+	public static function get_settings_keys(): array {
+		if ( null === self::$settings_keys_data ) {
+			$path = dirname( __DIR__, 3 ) . '/data/settings-keys.json';
 			if ( file_exists( $path ) ) {
 				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 				$data = is_string( $json ) ? json_decode( $json, true ) : [];
-				self::$css_property_map_data = $data['properties'] ?? [];
+				self::$settings_keys_data = $data['properties'] ?? [];
 			} else {
-				self::$css_property_map_data = [];
+				self::$settings_keys_data = [];
 			}
 		}
-		return self::$css_property_map_data;
+		return self::$settings_keys_data;
 	}
 
 	/**
-	 * Check if a settings key is a valid Bricks CSS property.
+	 * Check if a settings key is a valid Bricks setting.
 	 *
 	 * Accepts both base keys (_padding) and composite keys (_padding:mobile:hover).
 	 *
@@ -185,21 +121,44 @@ class SchemaGenerator {
 			return true;
 		}
 
-		$map = self::get_css_property_map_full();
+		$map = self::get_settings_keys();
 		return isset( $map[ $base_key ] );
 	}
 
 	/**
 	 * Get nesting rules for a specific element or all elements.
 	 *
+	 * Reads from the unified element registry (data/elements.json) and projects
+	 * just the nesting-relevant fields: accepts_children, nestable (default false),
+	 * typical_children, typical_parents (derived from valid_parents).
+	 *
 	 * @param string|null $element_name Element name, or null for all rules.
 	 * @return array<string, mixed>
 	 */
 	public function get_nesting_rules( ?string $element_name = null ): array {
+		$registry = ElementSettingsGenerator::get_element_registry();
+		$project  = static function ( array $entry ): array {
+			return [
+				'accepts_children' => ! empty( $entry['accepts_children'] ),
+				'nestable'         => ! empty( $entry['nestable'] ),
+				'typical_children' => $entry['typical_children'] ?? [],
+				'typical_parents'  => $entry['valid_parents'] ?? [],
+			];
+		};
+
 		if ( null !== $element_name ) {
-			return self::NESTING_RULES[ $element_name ] ?? [ 'accepts_children' => false, 'nestable' => false ];
+			$entry = $registry[ $element_name ] ?? null;
+			if ( null === $entry ) {
+				return [ 'accepts_children' => false, 'nestable' => false ];
+			}
+			return $project( $entry );
 		}
-		return self::NESTING_RULES;
+
+		$rules = [];
+		foreach ( $registry as $name => $entry ) {
+			$rules[ $name ] = $project( $entry );
+		}
+		return $rules;
 	}
 
 	/**

@@ -34,13 +34,6 @@ final class DesignSchemaValidator {
 	private ?array $element_names = null;
 
 	/**
-	 * Cached hierarchy rules from data/element-hierarchy-rules.json.
-	 *
-	 * @var array<string, array<string, mixed>>|null
-	 */
-	private static ?array $hierarchy_rules = null;
-
-	/**
 	 * Constructor.
 	 *
 	 * @param SchemaGenerator $schema_generator Schema generator for element type validation.
@@ -50,22 +43,15 @@ final class DesignSchemaValidator {
 	}
 
 	/**
-	 * Load hierarchy rules from the data file (cached in static property).
+	 * Load hierarchy rules from the unified element registry (data/elements.json).
 	 *
-	 * @return array<string, array<string, mixed>>
+	 * Returns element metadata including valid_parents, accepts_children, typical_children —
+	 * the hierarchy-relevant subset of each element's entry.
+	 *
+	 * @return array<string, array<string, mixed>> Element name => metadata map.
 	 */
 	private static function get_hierarchy_rules(): array {
-		if ( null === self::$hierarchy_rules ) {
-			$path = dirname( __DIR__, 3 ) . '/data/element-hierarchy-rules.json';
-			if ( file_exists( $path ) ) {
-				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-				$data = is_string( $json ) ? json_decode( $json, true ) : [];
-				self::$hierarchy_rules = $data['rules'] ?? [];
-			} else {
-				self::$hierarchy_rules = [];
-			}
-		}
-		return self::$hierarchy_rules;
+		return ElementSettingsGenerator::get_element_registry();
 	}
 
 	/**

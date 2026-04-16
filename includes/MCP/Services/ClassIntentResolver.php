@@ -35,13 +35,6 @@ final class ClassIntentResolver {
 	private ?array $cached_classes = null;
 
 	/**
-	 * Tracks class names auto-added by context rules (not requested in design_plan).
-	 *
-	 * @var array<int, string>
-	 */
-	private array $classes_auto_added = [];
-
-	/**
 	 * Constructor.
 	 *
 	 * @param GlobalClassService $class_service Global class service.
@@ -61,7 +54,7 @@ final class ClassIntentResolver {
 	 * @param array<int, string>        $intents    Unique class intent strings.
 	 * @param bool                      $dry_run    When true, only match existing classes — never create new ones.
 	 * @param array<string, array>      $style_map  Optional class_intent => style_overrides map. When creating a new class, its styles are populated from this map.
-	 * @return array{map: array<string, string>, classes_reused: string[], classes_created: string[], classes_with_styles: string[], classes_auto_added: string[]}
+	 * @return array{map: array<string, string>, classes_reused: string[], classes_created: string[], classes_with_styles: string[]}
 	 */
 	public function resolve( array $intents, bool $dry_run = false, array $style_map = [] ): array {
 		$intents = array_values( array_unique( $intents ) );
@@ -165,7 +158,6 @@ final class ClassIntentResolver {
 			'classes_reused'      => $classes_reused,
 			'classes_created'     => $classes_created,
 			'classes_with_styles' => $classes_with_styles,
-			'classes_auto_added'  => $this->classes_auto_added,
 		];
 	}
 
@@ -179,15 +171,6 @@ final class ClassIntentResolver {
 	 */
 	private static function normalize( string $name ): string {
 		return strtolower( str_replace( [ '-', '_' ], '', $name ) );
-	}
-
-	/**
-	 * Get all global classes (cached per request). Public accessor for reverse lookups.
-	 *
-	 * @return array<int, array<string, mixed>>
-	 */
-	public function get_classes_public(): array {
-		return $this->get_classes();
 	}
 
 	/**
@@ -207,225 +190,5 @@ final class ClassIntentResolver {
 	 */
 	public function clear_cache(): void {
 		$this->cached_classes = null;
-	}
-
-	/**
-	 * Suggest a global class for an element based on its type and context.
-	 *
-	 * Used when no explicit class_intent is set. Checks context rules
-	 * against existing global classes to find a semantic match.
-	 *
-	 * @param string               $element_type    Bricks element type (e.g., 'text-basic', 'block', 'icon').
-	 * @param string               $parent_type     Parent element type (e.g., 'container', 'block').
-	 * @param array<string>        $sibling_types   Types of sibling elements in order.
-	 * @param int                  $position        This element's position among siblings (0-indexed).
-	 * @param array<string>        $child_types     Types of this element's children.
-	 * @param string|null          $parent_class    Class applied to the parent element (name, not ID).
-	 * @param array<string, mixed> $element_context Optional context: content text, child class intents, etc.
-	 * @return string|null Global class ID if a match is found, null otherwise.
-	 */
-	public function suggest_for_context(
-		string $element_type,
-		string $parent_type,
-		array $sibling_types,
-		int $position,
-		array $child_types = [],
-		?string $parent_class = null,
-		array $element_context = []
-	): ?string {
-		$rules   = self::get_context_rules();
-		$classes = $this->get_classes();
-
-		// Build name → id + name → settings maps.
-		$class_by_name = [];
-		foreach ( $classes as $class ) {
-			$name = $class['name'] ?? '';
-			if ( '' !== $name ) {
-				$class_by_name[ $name ] = $class;
-			}
-		}
-
-		foreach ( $rules as $rule ) {
-			$pattern      = $rule['class_pattern'] ?? '';
-			$rule_type    = $rule['element_type'] ?? '';
-			$context      = $rule['context'] ?? '';
-
-			// Rule must match element type.
-			if ( $rule_type !== $element_type ) {
-				continue;
-			}
-
-			// Check context condition.
-			$context_matches = match ( $context ) {
-				'before_heading' => $this->check_before_heading( $sibling_types, $position ),
-				'grid_columns_2' => $this->check_grid_columns( $child_types, 2 ),
-				'grid_columns_3' => $this->check_grid_columns( $child_types, 3 ),
-				'parent_of_pills' => $this->check_parent_of_pills( $child_types ),
-				'has_icon_and_text' => $this->check_icon_and_text( $child_types ),
-				'inside_pill' => $this->check_inside_pill( $parent_class ),
-				default => false,
-			};
-
-			if ( ! $context_matches ) {
-				continue;
-			}
-
-			// Evaluate guard conditions (if any) to prevent over-application.
-			if ( ! empty( $rule['guard_conditions'] ) && ! $this->should_apply_with_guards( $rule['guard_conditions'], $element_context, $child_types ) ) {
-				continue;
-			}
-
-			// Find a class matching this pattern.
-			foreach ( $class_by_name as $name => $class ) {
-				if ( $name === $pattern || str_starts_with( $name, $pattern . '-' ) || str_starts_with( $name, $pattern . '_' ) ) {
-					$class_id = $class['id'] ?? null;
-					if ( null !== $class_id ) {
-						$this->classes_auto_added[] = $name;
-					}
-					return $class_id;
-				}
-			}
-		}
-
-		return null;
-	}
-
-	/**
-	 * Get the list of class names that were auto-added by context rules.
-	 *
-	 * These classes were applied via suggest_for_context() rather than being
-	 * explicitly requested in the design plan's class_intent.
-	 *
-	 * @return array<int, string> Auto-added class names.
-	 */
-	public function get_classes_auto_added(): array {
-		return array_values( array_unique( $this->classes_auto_added ) );
-	}
-
-	/**
-	 * Context check: element is text-basic and next sibling is a heading.
-	 */
-	private function check_before_heading( array $sibling_types, int $position ): bool {
-		return isset( $sibling_types[ $position + 1 ] ) && 'heading' === $sibling_types[ $position + 1 ];
-	}
-
-	/**
-	 * Context check: element is a block/div with exactly N children (grid columns).
-	 */
-	private function check_grid_columns( array $child_types, int $expected ): bool {
-		return count( $child_types ) === $expected;
-	}
-
-	/**
-	 * Context check: element has children that look like pill blocks (icon + text pairs).
-	 */
-	private function check_parent_of_pills( array $child_types ): bool {
-		// At least 3 children and all are blocks.
-		if ( count( $child_types ) < 3 ) {
-			return false;
-		}
-		foreach ( $child_types as $type ) {
-			if ( 'block' !== $type ) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	/**
-	 * Context check: element has exactly icon + text-basic children.
-	 */
-	private function check_icon_and_text( array $child_types ): bool {
-		if ( 2 !== count( $child_types ) ) {
-			return false;
-		}
-		return 'icon' === $child_types[0] && 'text-basic' === $child_types[1];
-	}
-
-	/**
-	 * Context check: element is inside a parent with tag-pill class.
-	 */
-	private function check_inside_pill( ?string $parent_class ): bool {
-		return null !== $parent_class && str_contains( $parent_class, 'tag-pill' );
-	}
-
-	/**
-	 * Evaluate guard conditions from a context rule to prevent over-application.
-	 *
-	 * Guards are optional constraints that must ALL pass for the rule to apply.
-	 * They provide content-aware filtering beyond structural context checks.
-	 *
-	 * @param array<string, mixed> $guards          Guard conditions from the rule.
-	 * @param array<string, mixed> $element_context  Element context (content, child_class_intents, etc.).
-	 * @param array<string>        $child_types      Types of this element's children.
-	 * @return bool True if all guards pass, false if any guard fails.
-	 */
-	private function should_apply_with_guards( array $guards, array $element_context, array $child_types ): bool {
-		// Guard: max_content_length — reject if content text exceeds threshold.
-		if ( isset( $guards['max_content_length'] ) ) {
-			$content = $element_context['content'] ?? '';
-			if ( is_string( $content ) && mb_strlen( strip_tags( $content ) ) > (int) $guards['max_content_length'] ) {
-				return false;
-			}
-		}
-
-		// Guard: must_be_uppercase_or_short — tagline heuristic.
-		// Content should either start with an uppercase letter or be very short (< 30 chars).
-		if ( ! empty( $guards['must_be_uppercase_or_short'] ) ) {
-			$content = trim( strip_tags( $element_context['content'] ?? '' ) );
-			if ( '' !== $content ) {
-				$is_short     = mb_strlen( $content ) < 30;
-				$starts_upper = preg_match( '/^\p{Lu}/u', $content );
-				if ( ! $is_short && ! $starts_upper ) {
-					return false;
-				}
-			}
-		}
-
-		// Guard: children_must_have_class — at least min_pill_children must have the required class intent.
-		if ( isset( $guards['children_must_have_class'] ) ) {
-			$required_class = $guards['children_must_have_class'];
-			$min_count      = (int) ( $guards['min_pill_children'] ?? 2 );
-			$child_intents  = $element_context['child_class_intents'] ?? [];
-			$matching       = 0;
-
-			foreach ( $child_intents as $intent ) {
-				if ( is_string( $intent ) && str_contains( $intent, $required_class ) ) {
-					$matching++;
-				}
-			}
-
-			if ( $matching < $min_count ) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * Cached context rules from data/class-context-rules.json.
-	 *
-	 * @var array<int, array<string, string>>|null
-	 */
-	private static ?array $context_rules = null;
-
-	/**
-	 * Load context rules from the data file.
-	 *
-	 * @return array<int, array<string, string>>
-	 */
-	private static function get_context_rules(): array {
-		if ( null === self::$context_rules ) {
-			$path = dirname( __DIR__, 3 ) . '/data/class-context-rules.json';
-			if ( file_exists( $path ) ) {
-				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-				$data = is_string( $json ) ? json_decode( $json, true ) : [];
-				self::$context_rules = $data['rules'] ?? [];
-			} else {
-				self::$context_rules = [];
-			}
-		}
-		return self::$context_rules;
 	}
 }

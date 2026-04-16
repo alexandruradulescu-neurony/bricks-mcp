@@ -334,6 +334,12 @@ final class OnboardingService {
                 'example' => __( 'Design a services page with hero, features, pricing, and CTA sections', 'bricks-mcp' ),
                 'flow' => __( 'Call propose_design first → review resolved data → write schema → call build_from_schema', 'bricks-mcp' ),
             ],
+            'knowledge_library' => [
+                'description' => __( 'Domain-specific guidance for complex subsystems', 'bricks-mcp' ),
+                'tools'       => [ 'bricks:get_knowledge' ],
+                'domains'     => \BricksMCP\MCP\Handlers\BricksToolHandler::discover_knowledge_domains(),
+                'usage'       => __( 'Call bricks:get_knowledge(domain=NAME) for deep reference. Call without domain to list all. Key domains: query-loops (pagination, nested loops), templates (conditions, scoring), global-classes (IDs vs names), forms (18 field types, 7 actions), animations (interactions, parallax).', 'bricks-mcp' ),
+            ],
         ];
     }
 

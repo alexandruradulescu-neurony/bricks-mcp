@@ -33,11 +33,6 @@ final class ElementSettingsGenerator {
 	private ?MediaService $media_service;
 
 	/**
-	 * @var ClassIntentResolver|null
-	 */
-	private ?ClassIntentResolver $class_resolver;
-
-	/**
 	 * Cached element schemas keyed by element name.
 	 *
 	 * @var array<string, array<string, mixed>>
@@ -45,41 +40,51 @@ final class ElementSettingsGenerator {
 	private array $schema_cache = [];
 
 	/**
-	 * Element defaults loaded from data/element-defaults.json.
+	 * Element registry loaded from data/elements.json (cached in static property).
 	 *
-	 * @var array<string, mixed>|null
+	 * @var array<string, array<string, mixed>>|null
 	 */
-	private static ?array $element_defaults = null;
+	private static ?array $element_registry = null;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param SchemaGenerator        $schema_generator Schema generator instance.
-	 * @param MediaService|null      $media_service    Optional media service for Unsplash image resolution.
-	 * @param ClassIntentResolver|null $class_resolver Optional class resolver for contextual class suggestions.
+	 * @param SchemaGenerator   $schema_generator Schema generator instance.
+	 * @param MediaService|null $media_service    Optional media service for Unsplash image resolution.
 	 */
-	public function __construct( SchemaGenerator $schema_generator, ?MediaService $media_service = null, ?ClassIntentResolver $class_resolver = null ) {
+	public function __construct( SchemaGenerator $schema_generator, ?MediaService $media_service = null ) {
 		$this->schema_generator = $schema_generator;
 		$this->media_service    = $media_service;
-		$this->class_resolver   = $class_resolver;
 	}
 
 	/**
-	 * Load element defaults from the data file (cached in static property).
+	 * Get the full Bricks element registry from data/elements.json.
 	 *
-	 * @return array<string, mixed>
+	 * @return array<string, array<string, mixed>> Element name => metadata map.
 	 */
-	private static function get_defaults(): array {
-		if ( null === self::$element_defaults ) {
-			$path = dirname( __DIR__, 3 ) . '/data/element-defaults.json';
+	public static function get_element_registry(): array {
+		if ( null === self::$element_registry ) {
+			$path = dirname( __DIR__, 3 ) . '/data/elements.json';
 			if ( file_exists( $path ) ) {
 				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-				self::$element_defaults = is_string( $json ) ? json_decode( $json, true ) : [];
+				$data = is_string( $json ) ? json_decode( $json, true ) : [];
+				self::$element_registry = $data['elements'] ?? [];
 			} else {
-				self::$element_defaults = [];
+				self::$element_registry = [];
 			}
 		}
-		return self::$element_defaults;
+		return self::$element_registry;
+	}
+
+	/**
+	 * Get a single element's metadata from the registry.
+	 *
+	 * @param string $type Element type name.
+	 * @return array<string, mixed> Metadata or empty array if unknown.
+	 */
+	private static function get_element_meta( string $type ): array {
+		$registry = self::get_element_registry();
+		return $registry[ $type ] ?? [];
 	}
 
 	/**
@@ -89,8 +94,8 @@ final class ElementSettingsGenerator {
 	 * @return string|null Settings key for content, or null if not applicable.
 	 */
 	private static function get_content_key( string $type ): ?string {
-		$defaults = self::get_defaults();
-		return $defaults['content_keys'][ $type ] ?? null;
+		$meta = self::get_element_meta( $type );
+		return $meta['content_key'] ?? null;
 	}
 
 	/**
@@ -100,8 +105,8 @@ final class ElementSettingsGenerator {
 	 * @return bool
 	 */
 	private static function is_structural( string $type ): bool {
-		$defaults = self::get_defaults();
-		return in_array( $type, $defaults['structural_elements'] ?? [ 'section', 'container', 'block', 'div' ], true );
+		$meta = self::get_element_meta( $type );
+		return ! empty( $meta['structural'] );
 	}
 
 	/**
@@ -111,8 +116,8 @@ final class ElementSettingsGenerator {
 	 * @return bool
 	 */
 	private static function is_flex_by_default( string $type ): bool {
-		$defaults = self::get_defaults();
-		return in_array( $type, $defaults['flex_by_default'] ?? [ 'section', 'container', 'block' ], true );
+		$meta = self::get_element_meta( $type );
+		return ! empty( $meta['flex_by_default'] );
 	}
 
 	/**
@@ -124,8 +129,8 @@ final class ElementSettingsGenerator {
 	 * @return bool
 	 */
 	private static function should_skip_auto_flex( string $type ): bool {
-		$defaults = self::get_defaults();
-		return in_array( $type, $defaults['skip_auto_flex'] ?? [], true );
+		$meta = self::get_element_meta( $type );
+		return ! empty( $meta['skip_auto_flex'] );
 	}
 
 	/**
@@ -158,7 +163,7 @@ final class ElementSettingsGenerator {
 	 * @return array<string, mixed> Nested element tree (simplified format for ElementNormalizer).
 	 */
 	public function generate( array $structure, array $class_map, array $design_context, array $classes_with_styles = [] ): array {
-		return $this->process_node( $structure, $class_map, $design_context, 'root', [], 0, null, $classes_with_styles, false );
+		return $this->process_node( $structure, $class_map, $design_context, $classes_with_styles, false );
 	}
 
 	/**
@@ -167,61 +172,19 @@ final class ElementSettingsGenerator {
 	 * @param array<string, mixed>  $node                Structure node.
 	 * @param array<string, string> $class_map           class_intent => global_class_id map.
 	 * @param array<string, mixed>  $design_context      Design context.
-	 * @param string                $parent_type         Parent element type ('root' for top-level).
-	 * @param array<string>         $sibling_types       Types of all siblings in order.
-	 * @param int                   $position            This node's position among siblings.
-	 * @param string|null           $parent_class        Class name applied to parent (for context rules).
 	 * @param array<string>         $classes_with_styles  Class intents that have styles in the class (skip inline).
+	 * @param bool                  $is_dark_context     Whether this node inherits a dark-background parent context.
 	 * @return array<string, mixed> Bricks element in simplified nested format.
 	 */
 	private function process_node(
 		array $node,
 		array $class_map,
 		array $design_context,
-		string $parent_type = 'root',
-		array $sibling_types = [],
-		int $position = 0,
-		?string $parent_class = null,
 		array $classes_with_styles = [],
 		bool $is_dark_context = false
 	): array {
 		$type     = $node['type'] ?? 'div';
 		$settings = $this->build_settings( $node, $type, $class_map, $design_context, $classes_with_styles );
-
-		// Auto-suggest class if none was explicitly set and resolver is available.
-		if ( null !== $this->class_resolver && ! isset( $settings['_cssGlobalClasses'] ) ) {
-			$child_types = [];
-			foreach ( $node['children'] ?? [] as $child ) {
-				if ( is_array( $child ) && ! empty( $child['type'] ) ) {
-					$child_types[] = $child['type'];
-				}
-			}
-
-			// Build element context for guard condition evaluation.
-			$element_context = [
-				'content'              => $node['content'] ?? '',
-				'child_class_intents'  => array_map(
-					static fn( $child ) => is_array( $child ) ? ( $child['class_intent'] ?? '' ) : '',
-					$node['children'] ?? []
-				),
-			];
-
-			$suggested_id = $this->class_resolver->suggest_for_context(
-				$type,
-				$parent_type,
-				$sibling_types,
-				$position,
-				$child_types,
-				$parent_class,
-				$element_context
-			);
-
-			if ( null !== $suggested_id ) {
-				if ( is_array( $settings ) ) {
-					$settings['_cssGlobalClasses'] = [ $suggested_id ];
-				}
-			}
-		}
 
 		// Ensure settings is never an empty array (would serialize as JSON [] instead of {}).
 		if ( empty( $settings ) ) {
@@ -233,23 +196,6 @@ final class ElementSettingsGenerator {
 			'settings' => $settings,
 		];
 
-		// Determine this node's class name for child context (used by inside_pill rule etc.).
-		$this_class_name = null;
-		if ( ! empty( $node['class_intent'] ) ) {
-			$this_class_name = $node['class_intent'];
-		} elseif ( is_array( $settings ) && ! empty( $settings['_cssGlobalClasses'] ) ) {
-			// Reverse-lookup class name from ID for child context.
-			$this_class_name = $this->resolve_class_name_from_id( $settings['_cssGlobalClasses'][0] );
-		}
-
-		// Build sibling type list for children.
-		$child_sibling_types = [];
-		foreach ( $node['children'] ?? [] as $child ) {
-			if ( is_array( $child ) ) {
-				$child_sibling_types[] = $child['type'] ?? 'div';
-			}
-		}
-
 		// Determine if children inherit a dark context.
 		$child_is_dark = $is_dark_context;
 		if ( is_array( $settings ) ) {
@@ -259,24 +205,18 @@ final class ElementSettingsGenerator {
 			}
 		}
 
-		// Process children recursively with context.
+		// Process children recursively with dark-context propagation.
 		if ( ! empty( $node['children'] ) && is_array( $node['children'] ) ) {
 			$children = [];
-			$child_pos = 0;
 			foreach ( $node['children'] as $child ) {
 				if ( is_array( $child ) ) {
 					$children[] = $this->process_node(
 						$child,
 						$class_map,
 						$design_context,
-						$type,
-						$child_sibling_types,
-						$child_pos,
-						$this_class_name,
 						$classes_with_styles,
 						$child_is_dark
 					);
-					$child_pos++;
 				}
 			}
 			if ( ! empty( $children ) ) {
@@ -344,7 +284,7 @@ final class ElementSettingsGenerator {
 		}
 
 		// 3. Apply content to the correct settings key.
-		// First try element-defaults.json, then fall back to cached schema's working_example.
+		// First try the element registry (data/elements.json), then fall back to cached schema's working_example.
 		if ( isset( $node['content'] ) ) {
 			$content_key = self::get_content_key( $type );
 
@@ -392,23 +332,11 @@ final class ElementSettingsGenerator {
 			}
 		}
 
-		// 6b. Handle form element — apply default field configuration when none is set.
+		// 6b. Form element with no fields — surface a warning rather than silently inject a template.
+		// Form templates used to be baked in (Romanian newsletter/contact/login), but those shipped
+		// with site-specific strings. AI clients must now supply `fields` via element_settings.
 		if ( 'form' === $type && empty( $settings['fields'] ) ) {
-			$form_type = $node['form_type'] ?? FormTypeDetector::detect(
-				( $node['role'] ?? '' ) . ' ' . ( $node['label'] ?? '' ) . ' ' . ( $node['content_hint'] ?? '' )
-			);
-			$defaults  = self::get_defaults();
-			$template  = $defaults['form_templates'][ $form_type ] ?? $defaults['form_templates']['contact'] ?? null;
-
-			if ( null !== $template ) {
-				// Generate unique field IDs to avoid collisions across multiple forms.
-				foreach ( $template['fields'] as &$field ) {
-					$field['id'] = substr( md5( (string) wp_rand() . $field['id'] ), 0, 6 );
-				}
-				unset( $field );
-
-				$settings = array_merge( $settings, $template );
-			}
+			$settings['_pipeline_warnings'][] = 'Form element has no fields. Supply a "fields" array via element_settings (see bricks:get_form_schema for structure).';
 		}
 
 		// 7. Handle image elements with optional Unsplash resolution.
@@ -584,19 +512,16 @@ final class ElementSettingsGenerator {
 		}
 
 		// 12b. Merge element_settings escape hatch (type-specific settings like percent, countTo, bars).
+		$es_defaults = self::get_element_meta( $type )['element_settings_defaults'] ?? [];
 		if ( ! empty( $node['element_settings'] ) && is_array( $node['element_settings'] ) ) {
 			// Load sane defaults first, then overlay the AI's element_settings on top.
-			$defaults     = self::get_defaults();
-			$es_defaults  = $defaults['element_settings_defaults'][ $type ] ?? [];
-			$merged_es    = array_merge( $es_defaults, $node['element_settings'] );
-
+			$merged_es = array_merge( $es_defaults, $node['element_settings'] );
 			foreach ( $merged_es as $es_key => $es_value ) {
 				$settings[ $es_key ] = $es_value;
 			}
-		} elseif ( isset( self::get_defaults()['element_settings_defaults'][ $type ] ) ) {
+		} elseif ( ! empty( $es_defaults ) ) {
 			// No element_settings provided but defaults exist — apply defaults
 			// so the element renders with sensible values out of the box.
-			$es_defaults = self::get_defaults()['element_settings_defaults'][ $type ];
 			foreach ( $es_defaults as $es_key => $es_value ) {
 				if ( ! isset( $settings[ $es_key ] ) ) {
 					$settings[ $es_key ] = $es_value;
@@ -890,26 +815,6 @@ final class ElementSettingsGenerator {
 		}
 
 		return $settings;
-	}
-
-	/**
-	 * Reverse-lookup a class name from its ID.
-	 *
-	 * Used to pass parent class name context to child elements for context rules.
-	 *
-	 * @param string $class_id Global class ID.
-	 * @return string|null Class name or null if not found.
-	 */
-	private function resolve_class_name_from_id( string $class_id ): ?string {
-		if ( null === $this->class_resolver ) {
-			return null;
-		}
-		foreach ( $this->class_resolver->get_classes_public() as $class ) {
-			if ( ( $class['id'] ?? '' ) === $class_id ) {
-				return $class['name'] ?? null;
-			}
-		}
-		return null;
 	}
 
 	/**

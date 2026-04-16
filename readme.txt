@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.20.0
+Stable tag: 3.21.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -28,7 +28,7 @@ When connecting to a site with existing designed pages, the discovery phase anal
 
 = Design Pattern Library =
 
-17 curated section compositions (heroes, splits, features, CTAs, pricing, testimonials, content) serve as reference examples during discovery. Patterns capture *composition* — what elements in what arrangement — not appearance. The site's design system handles how sections actually look.
+21 curated section compositions (heroes, splits, features, CTAs, pricing, testimonials, content) serve as reference examples during discovery. Patterns capture *composition* — what elements in what arrangement — not appearance. The site's design system handles how sections actually look. Patterns live in the database (auto-migrated from plugin-shipped defaults on first install) and are fully editable via the Patterns admin tab or the `design_pattern` tool.
 
 = Pipeline Auto-Fixes =
 
@@ -42,16 +42,17 @@ When connecting to a site with existing designed pages, the discovery phase anal
 
 = Design System Generator =
 
-The plugin ships with a visual design system editor under Bricks MCP → Design System. A left-rail stepper walks through six editable sections:
+The plugin ships with a visual design system editor under Bricks MCP → Design System. A left-rail stepper walks through seven editable sections:
 
 - **Spacing** — base mobile/desktop + scale ratio; seven clamp-based steps (xs → xxl, section)
 - **Typography** — separate scales for headings (h1–h6) and body text (xs → xxl) with live "Heading" / "Body text" previews, HTML font-size toggle (62.5% vs 100%), and text styles (text/heading color, font weights, line heights)
 - **Colors** — six families (primary, secondary, tertiary, accent, base, neutral) + white/black. Per-family toggles for Enable, Expand Color Palette (5 vs 8 shades), Transparencies (9 alpha steps). Hover variants auto-derived, editable. Core shades written to the Bricks color palette; expanded shades + transparencies available as CSS variables.
 - **Gaps / Padding** — grid-gap, card-gap, content-gap, container-gap, padding-section, offset. Accept `var()` references.
-- **Radius** — individually editable variants (radius, radius-inside, radius-outside, radius-btn, radius-pill, radius-circle, radius-s/m/l/xl) plus border colors. Visual shape indicators.
-- **Sizes** — container width / min-width (drive the clamp formula), max-widths, min-heights, logo-width mobile/desktop pair.
+- **Radius** — individually editable variants (radius, radius-inside, radius-outside, radius-btn, radius-pill, radius-circle, radius-s/m/l/xl) plus border colors and border widths (thin/medium/thick). Visual shape indicators.
+- **Sizes** — container width / min-width (drive the clamp formula), max-widths, min-heights, logo-width mobile/desktop pair, and aspect ratios (square/video/photo/portrait/wide).
+- **Effects** — shadows (xs → xl + inset) with live preview boxes, transitions (durations fast/base/slow + easings out/in-out/spring), and z-index layers (base → tooltip).
 
-Apply writes to `bricks_global_variables` (namespaced replace across nine owned categories), `bricks_color_palette` (BricksCore palette with parent/child shade hierarchy + hover entries), and `bricks_global_settings['customCss']` (framework CSS between markers). Configs from earlier plugin versions are auto-migrated on read — no user action required.
+Apply writes to `bricks_global_variables` (namespaced replace across fourteen owned categories: Spacing, Texts, Headings, Gaps/Padding, Styles, Radius, Sizes, Colors, Grid, Shadows, Transitions, Z-Index, Borders, Aspect Ratios), `bricks_color_palette` (Bricks-WP-MCP palette with parent/child shade hierarchy + hover entries), and `bricks_global_settings['customCss']` (framework CSS between markers). Configs from earlier plugin versions are auto-migrated on read — no user action required.
 
 = How It Works =
 
@@ -59,17 +60,18 @@ The plugin registers a REST API endpoint on your WordPress site that speaks the 
 
 An intent router classifies every request into one of the three workflows above, each with server-enforced prerequisites (site info, global classes, CSS variables). A design build gate ensures that section-level layouts and large element trees are always routed through `build_from_schema` for consistent, high-quality output.
 
-= Available Tools (23 tools) =
+= Available Tools (27 tools) =
 
 * **get_site_info** — Site config, design tokens, color palette, page summaries
+* **get_onboarding_guide** — Auto-orientation for AI assistants on new sessions: workflows, quick-start examples, site context, briefs
 * **confirm_destructive_action** — Token-based confirmation for delete/replace operations
 * **page** — List, search, get (detail/summary/context/describe views), create, update content, append, import clipboard, delete, duplicate, snapshots, SEO
-* **element** — Add, update, remove, move, bulk add/update, duplicate, find elements on pages
-* **template** — Manage Bricks templates (header, footer, content, popup), import/export
+* **element** — Add, update, remove, move, bulk add/update, duplicate, find, copy styling between elements
+* **template** — Manage Bricks templates (header, footer, content, popup), import from URL / JSON / clipboard, export
 * **template_condition** — Set template display conditions
 * **template_taxonomy** — Manage template tags and bundles
-* **bricks** — Enable/disable Bricks on pages, builder settings, element schemas, breakpoints, dynamic tags, query types, form/interaction/component/popup/filter/condition schemas, global queries, AI notes, on-demand knowledge fragments
-* **global_class** — Create/edit/delete CSS classes with styles, batch operations, import CSS/JSON, categories
+* **bricks** — Enable/disable Bricks on pages, builder settings, element schemas, breakpoints, dynamic tags, query types, form/interaction/component/popup/filter/condition schemas, global queries, AI notes, on-demand knowledge fragments (8 domain guides)
+* **global_class** — Create/edit/delete CSS classes with styles, batch operations, import CSS/JSON, categories, semantic search, render sample
 * **global_variable** — Manage CSS variables and categories
 * **color_palette** — Manage color palettes and individual colors
 * **typography_scale** — Manage typography scale variables
@@ -77,12 +79,16 @@ An intent router classifies every request into one of the three workflows above,
 * **component** — List/create/update components, instantiate, update properties, fill slots
 * **font** — Adobe Fonts, font settings, webfont loading
 * **code** — Page CSS and custom scripts
-* **media** — Unsplash search, sideload images, manage featured images, image settings
+* **media** — Unsplash search, sideload images, manage featured images, image settings, smart_search (business-brief-enriched Unsplash)
 * **menu** — Create/edit/delete menus, assign to locations
 * **wordpress** — Get posts/users/plugins, activate/deactivate plugins, create/update users
 * **metabox** — Read Meta Box custom fields, list field groups, get dynamic tags
 * **woocommerce** — WooCommerce status, elements, dynamic tags, template scaffolding
+* **propose_design** — Two-phase design proposal: Phase 1 returns site context + element capabilities + reference patterns; Phase 2 (with design_plan) returns proposal_id + suggested_schema
+* **propose_page_layout** — Maps page intent (landing, services, about, product, contact) to a sequenced list of section types with recommended pattern IDs and ready-to-use design_plan skeletons
 * **build_from_schema** — Declarative design pipeline: validates schema, resolves class intents, expands patterns, generates element settings, resolves CSS variables, and writes the final Bricks content
+* **verify_build** — Post-build verification: returns element count, type counts, classes used, and human-readable section descriptions so the AI can self-verify the result matches intent
+* **design_pattern** — Manage the database-backed pattern library: list, get, semantic_search, create, update, delete, export, import, normalize (map external pattern to site), generate_prompt, plus category CRUD
 
 All tools are free to use. The plugin is open source and hosted on [GitHub](https://github.com/alexandruradulescu-neurony/bricks-mcp).
 
@@ -147,7 +153,7 @@ Any MCP-compatible client can connect to this plugin. Verified clients include C
 
 = Is it safe to expose a REST API endpoint for AI access? =
 
-Yes, when configured correctly. The plugin includes multiple security layers: WordPress Application Password authentication (enabled by default), per-tool capability checks, configurable rate limiting (120-1000 RPM), a Dangerous Actions toggle that gates JavaScript/code injection, token-based confirmation for destructive operations (delete, replace, cascade remove), auto-snapshots before content writes, element count safety checks that prevent accidental content wipes, and centralized CSS sanitization. Never disable authentication on a publicly accessible site.
+Yes, when configured correctly. The plugin includes multiple security layers: WordPress Application Password authentication (enabled by default), per-tool capability checks, configurable rate limiting (10-1000 RPM, default 120), a Dangerous Actions toggle that gates JavaScript/code injection, token-based confirmation for destructive operations (delete, replace, cascade remove), auto-snapshots before content writes, element count safety checks that prevent accidental content wipes, and centralized CSS sanitization. Never disable authentication on a publicly accessible site.
 
 == Screenshots ==
 
@@ -157,6 +163,32 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 
 == Changelog ==
 
+= 3.21.0 =
+* Architecture: unified element registry (`data/elements.json`) — merged 4 sources into one 44-element file. Single source of truth for hierarchy, content keys, flex behavior, defaults, purpose/capabilities/rules.
+* Architecture: unified settings key registry (`data/settings-keys.json`) — 66 Bricks settings keys including Bricks 2.3 parallax + 3D transforms. Deleted redundant PHP constant.
+* New: design pattern seed file (`data/design-patterns.json`) — 21 patterns auto-seed on first activation. Fixes fresh-install empty pattern library. Admin "Reset to plugin defaults" button.
+* New: 3 knowledge files — `query-loops` (5 query types, pagination, global queries), `templates` (condition scoring, precedence, import/export), `global-classes` (IDs vs names, 16 actions, style shape).
+* New: knowledge auto-discovery — drop a `.md` file in `data/knowledge/` and it's instantly available. No code changes needed.
+* New: server instructions + onboarding now mention knowledge library with domain list.
+* Rewrite: all 8 existing knowledge files verified against live MCP schemas. Major bug fixes: popup action names, WC tag prefix, component connection format, form options format, breakpoint names.
+* Removed: `StarterClassesService` (245 lines), `class-context-rules.json` + auto-suggest code (~260 lines), hardcoded Romanian form templates.
+* Documentation: readme tool count 23→27, design system description updated, changelog backfilled.
+
+= 3.20.0 =
+* Removed: dark mode removed from plugin admin. `@media (prefers-color-scheme: dark)` blocks deleted from `admin-settings.css` and `admin-design-system.css`. Admin renders in light scheme regardless of OS/browser preference.
+
+= 3.19.3 =
+* Polish + accessibility: shadow inputs get full-width row layout (long values no longer truncate), heading preview caps at 42px, pill radius preview is now a 96×32 rectangle (vs. 48×48 square), Reset is a semantic `<button>`, Typography HTML font-size uses `<fieldset>` + `<legend>`, status messages announced via `aria-live="polite"`, inactive panels get `aria-hidden="true"`, focus ring on stepper buttons, `aria-label` on every step input + color picker + hex field.
+
+= 3.19.2 =
+* Fix: dark mode text readable — `--bwm-gray-900` was not being remapped in the `prefers-color-scheme: dark` block.
+* Fix: shadow preview boxes keep light background in dark mode so shadow is visible.
+* Fix: live preview auto-contrasts text colors via WCAG luminance check — hero title / body / button text pick white or dark automatically, pastel backgrounds no longer produce invisible labels.
+* (Dark mode was later removed entirely in 3.20.0.)
+
+= 3.19.1 =
+* Live preview now showcases the 3.19 token categories: Shadows row (5 cards with `--shadow-xs` through `--shadow-xl`), Border Widths row, Aspect Ratios row, and a hover-me Transitions demo button wired with `--duration-base` + `--ease-out`. Existing feature cards and sidebar card apply `--shadow-m` / `--shadow-l` + `--border-thin`.
+
 = 3.19.0 =
 * New: 5 new design token categories (27 new variables): Shadows, Transitions, Z-Index, Border Widths, Aspect Ratios.
 * New: "Effects" stepper panel in the Design System admin (Shadows, Transitions, Z-Index subsections).
@@ -164,6 +196,13 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 * New: Aspect Ratios subsection added to the Sizes panel.
 * New: Shadow inputs show a live preview box so you can see the shadow applied.
 * Existing configs auto-migrated on read — new defaults populate automatically, no user action needed.
+
+= 3.18.7 – 3.18.10 =
+* Iteration fixes so Spacing / Texts / Headings appear as native scales in the Bricks Style Manager: scale metadata now writes the complete `scaleScope` / `scaleType` / `scaleNames` / `baseline` / `manualValues` / `isManual` / `minFontSize` / `maxFontSize` / `minScaleRatio` / `maxScaleRatio` shape matching Fancy Framework's import format. Scale prefix format corrected (`--space-`, `--text-`, `h`). Bricks style manager CSS regenerated after Apply so changes appear immediately.
+* Palette renamed from `BricksCore` to `Bricks-WP-MCP`. Apply now replaces palettes named either, so old palettes on upgrade get replaced rather than duplicated.
+
+= 3.18.5 =
+* Internal diagnostic: lifecycle logging to investigate a silent auto-deactivation report (removed in 3.18.6).
 
 = 3.18.6 =
 * Fix: stepper button hover no longer makes active tab unreadable.

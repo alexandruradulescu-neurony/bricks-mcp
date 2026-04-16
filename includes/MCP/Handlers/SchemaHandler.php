@@ -182,7 +182,7 @@ final class SchemaHandler {
 			'bricks_version'   => $this->schema_generator->get_bricks_version(),
 			'cached'           => false,
 			'schemas'          => $schemas,
-			'css_property_map' => $this->schema_generator->get_css_property_map(),
+			'settings_keys'    => $this->schema_generator->get_settings_keys_flat(),
 			'breakpoints'      => $this->bricks_service->get_breakpoints(),
 		);
 

@@ -162,7 +162,7 @@ final class Router {
 		$design_validator     = new DesignSchemaValidator( $this->schema_generator );
 		$class_resolver       = new ClassIntentResolver( $this->bricks_service->get_global_class_service() );
 		$schema_expander      = new SchemaExpander();
-		$element_settings_gen = new ElementSettingsGenerator( $this->schema_generator, $this->media_service, $class_resolver );
+		$element_settings_gen = new ElementSettingsGenerator( $this->schema_generator, $this->media_service );
 		$proposal_service     = new ProposalService( $this->bricks_service->get_global_class_service(), $this->schema_generator, $this->bricks_service );
 		$schema_handler       = new Handlers\SchemaHandler( $this->schema_generator, $this->bricks_service );
 

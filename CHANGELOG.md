@@ -4,6 +4,31 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.21.0] — 2026-04-16
+
+### Architecture — data layer refactor
+
+- **Unified element registry** (`data/elements.json`): merged `element-defaults.json` + `element-hierarchy-rules.json` + `ELEMENT_CAPABILITIES` (from ProposalService) + `NESTING_RULES` (from SchemaGenerator) into one 44-element registry. Single source of truth for hierarchy, content keys, flex behavior, element_settings defaults, purpose/capabilities/rules.
+- **Unified settings key registry** (`data/settings-keys.json`): renamed from `css-property-map.json`, expanded from 37 to 66 keys (all Bricks 2.3 properties including parallax, 3D transforms, grid family, cursor, filter, attributes). Deleted redundant PHP `CSS_PROPERTY_MAP` constant — `get_settings_keys_flat()` reads from JSON. AI reference and pipeline validator now guaranteed in sync.
+- **Design pattern seed file** (`data/design-patterns.json`): 21 curated patterns shipped with plugin, auto-seeded into DB on first activation via `DesignPatternService::migrate_plugin_patterns()`. Fixes fresh-install bug where new sites got empty pattern library. Admin "Reset to plugin defaults" button re-seeds (overwrites matching IDs, preserves custom patterns).
+- **Deleted `StarterClassesService`** (245 lines): removed service + `bootstrap_recommendation` from discovery response + health check. Not needed.
+- **Deleted `class-context-rules.json`** + all auto-suggest code: removed `suggest_for_context()`, 6 check methods, guard evaluator, context-rules loader from `ClassIntentResolver` + `ElementSettingsGenerator`. ~260 lines of code removed. AI must now specify `class_intent` explicitly.
+- **Deleted form templates**: removed hardcoded Romanian newsletter/contact/login form templates. Pipeline now emits warning if form has no fields — AI must supply fields per site language/branding.
+
+### Knowledge library — rewritten + expanded (8 → 11 files)
+
+- **All 8 existing knowledge files rewritten** against live MCP schemas (`get_form_schema`, `get_popup_schema`, `get_component_schema`, `get_dynamic_tags`, `get_element_schemas`). Every claim verified. Major bugs fixed: popup action names (`show_popup` → `show` + `target: popup`), WC tag prefix (`{wc_*}` → `{woo_*}`), component connection format (`{true}` → `["key"]`), form options format (array → newline string), breakpoints (`mobile` → `mobile_landscape`/`mobile_portrait`).
+- **3 new knowledge files**: `query-loops.md` (5 query types, pagination, global queries, nested loops), `templates.md` (9 types, condition scoring, precedence, import/export), `global-classes.md` (IDs vs names, 16 actions, style shape, batch ops, CSS import).
+- **Auto-discovery**: `BricksToolHandler::discover_knowledge_domains()` scans `data/knowledge/*.md` — drop a new file and it's instantly available. Replaces hardcoded enum.
+- **Server instructions** now mention knowledge library with domain list on every session init.
+- **Onboarding** workflow guide includes `knowledge_library` tier with usage instructions.
+- **Cross-links** between all 11 files. Each file's "Related Knowledge" section lists relevant siblings.
+
+### Documentation updated
+
+- `readme.txt`: tool count 23→27, added 5 missing tools, design system 6→7 panels / 14 categories, pattern count 17→21, rate limit range corrected, changelog backfilled.
+- `data/knowledge/building.md`: form auto-detection section rewritten (templates deleted), breakpoints fixed, Tractari examples replaced with neutral English, auto-fix list expanded, cross-links to all 10 sibling domains.
+
 ## [3.20.0] — 2026-04-15
 
 ### Removed

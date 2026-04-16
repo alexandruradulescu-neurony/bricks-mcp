@@ -618,7 +618,10 @@ final class StreamableHttpHandler {
 			. "- Prerequisites are server-enforced per workflow — write operations REJECTED if skipped.\n"
 			. "- Design build gate: append_content, bulk_add, and create with section elements or >8 elements will be REJECTED — use build_from_schema instead.\n"
 			. "- build_from_schema requires a valid proposal_id from the PROPOSAL phase (not discovery).\n"
-			. "- Destructive actions (delete, replace) require token-based confirmation."
+			. "- Destructive actions (delete, replace) require token-based confirmation.\n\n"
+			. "KNOWLEDGE: For domain-specific guidance, call bricks:get_knowledge(domain). "
+			. "Available domains: " . implode( ', ', \BricksMCP\MCP\Handlers\BricksToolHandler::discover_knowledge_domains() ) . ". "
+			. "Call without domain to list all. Key domains: query-loops (pagination, nested loops), templates (conditions, scoring), global-classes (IDs vs names, style shape), forms (18 field types, 7 actions), animations (interactions, parallax)."
 			. $notes_text;
 
 		return $instructions;

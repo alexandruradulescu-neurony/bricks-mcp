@@ -1,0 +1,704 @@
+{
+  "_comment": "Bricks element registry. Single source of truth for per-element metadata used by the build pipeline and read paths. Each entry describes one Bricks element type.",
+  "_maintenance": "Per-element fields: valid_parents (required, array of allowed parent types or 'root'), accepts_children (required, bool), typical_children (optional, array for containers), content_key (optional, string — the Bricks settings key that schema.content maps to), default_tag (optional, string — default HTML tag), flex_by_default (optional, bool — pipeline auto-applies _display:flex), structural (optional, bool — a layout element rather than content), skip_auto_flex (optional, bool — nested elements that manage their own layout), nestable (optional, bool — Bricks nestable element with child-element support), element_settings_defaults (optional, object — sane defaults merged into settings when no element_settings given), purpose (optional, string — one-line description served to AI), capabilities (optional, array — what the element can do), rules (optional, array — do's and don'ts for the AI), notes (optional, string — free-form hints).",
+  "elements": {
+    "accordion": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "notes": "Deprecated base version. Use accordion-nested for customizable accordion content — its child divs are the panes."
+    },
+    "accordion-nested": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "div"
+      ],
+      "skip_auto_flex": true,
+      "notes": "Each accordion item is a div child.",
+      "nestable": true,
+      "purpose": "Collapsible FAQ/accordion sections",
+      "capabilities": [
+        "multiple panels with any nested content",
+        "click to expand/collapse"
+      ]
+    },
+    "alert": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "content",
+      "purpose": "Notification banner — info, success, warning, error",
+      "capabilities": [
+        "icon + text content",
+        "dismissible flag",
+        "color variants"
+      ],
+      "rules": [
+        "content goes in the alert text setting; choose alert type for color"
+      ]
+    },
+    "animated-typing": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "prefix",
+      "element_settings_defaults": {
+        "strings": [
+          "Loading..."
+        ],
+        "typeSpeed": 80
+      },
+      "notes": "Compositional element — 'prefix' + animated 'strings' array + 'suffix'. schema.content maps to prefix (static text before animation). Use element_settings for the 'strings' array with actual animated words.",
+      "purpose": "Typewriter / typing animation effect — cycles through a list of strings",
+      "capabilities": [
+        "multiple strings to cycle through",
+        "type/back speed",
+        "loop"
+      ],
+      "rules": [
+        "use element_settings.strings (array of strings to cycle), typeSpeed (ms per char)"
+      ]
+    },
+    "block": {
+      "valid_parents": [
+        "container",
+        "div",
+        "block"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "heading",
+        "text",
+        "text-basic",
+        "button",
+        "image",
+        "icon",
+        "div",
+        "block"
+      ],
+      "structural": true,
+      "flex_by_default": true,
+      "purpose": "Structural grouping — columns, rows, card wrappers",
+      "capabilities": [
+        "flex direction (_direction: row for horizontal)",
+        "CSS grid (layout: grid + columns)",
+        "semantic HTML tags (ul, li, article, nav, figure)",
+        "responsive grid collapse"
+      ],
+      "rules": [
+        "use block for horizontal rows — NOT div (div ignores _direction)"
+      ]
+    },
+    "button": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "text",
+      "purpose": "Call-to-action button",
+      "capabilities": [
+        "ICON support — native icon left/right of text (ti-mobile, ti-comment-alt, etc.)",
+        "link with tel: or https:// URL",
+        "style variants via class_intent (primary, outline, ghost)"
+      ],
+      "rules": [
+        "use native icon feature — do NOT put emoji in button text"
+      ]
+    },
+    "carousel": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "notes": "Simple carousel element (non-nested). For custom carousel content, use slider-nested with div children."
+    },
+    "code": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "notes": "Inline HTML/CSS/JS code snippet."
+    },
+    "container": {
+      "valid_parents": [
+        "section"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "block",
+        "div",
+        "heading",
+        "text",
+        "text-basic",
+        "button",
+        "image"
+      ],
+      "structural": true,
+      "flex_by_default": true,
+      "purpose": "Content container inside a section — controls max-width and centering",
+      "capabilities": [
+        "flex alignment (_alignItems, _justifyContent)",
+        "text-align for centered text layouts"
+      ],
+      "rules": [
+        "DO NOT set _gap — child theme handles it",
+        "use multiple containers for multiple visual rows"
+      ]
+    },
+    "countdown": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "notes": "Countdown timer to a target date/time."
+    },
+    "counter": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "countTo",
+      "element_settings_defaults": {
+        "countTo": 100,
+        "duration": 2000
+      },
+      "purpose": "Animated number counter",
+      "capabilities": [
+        "count-to target number",
+        "prefix/suffix text",
+        "animation on scroll"
+      ]
+    },
+    "div": {
+      "valid_parents": [
+        "container",
+        "div",
+        "block",
+        "tabs-nested",
+        "accordion-nested"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "heading",
+        "text",
+        "text-basic",
+        "button",
+        "image",
+        "icon",
+        "div",
+        "block"
+      ],
+      "structural": true,
+      "notes": "Does NOT default to flex. Requires explicit _display: flex for flex layouts.",
+      "purpose": "Small wrapper — icon circles, overlays, decorative containers",
+      "capabilities": [
+        "explicit _display: flex for centering content"
+      ],
+      "rules": [
+        "does NOT support _direction — use block instead for rows"
+      ]
+    },
+    "divider": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "purpose": "Horizontal separator line",
+      "capabilities": [
+        "custom width, color, style"
+      ]
+    },
+    "dropdown": {
+      "valid_parents": [
+        "container",
+        "block"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "block"
+      ],
+      "nestable": true,
+      "notes": "Dropdown menu container (nestable). Children are the dropdown items."
+    },
+    "form": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "form-field"
+      ],
+      "notes": "Schema must supply 'fields' array via element_settings. The pipeline no longer injects default field templates — AI must specify newsletter/contact/login fields explicitly per site language/branding.",
+      "purpose": "Contact or input form",
+      "capabilities": [
+        "text fields, email, textarea, select, checkbox",
+        "submit button",
+        "email notifications"
+      ]
+    },
+    "heading": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "text",
+      "default_tag": "h2",
+      "purpose": "Title text (h1–h6)",
+      "capabilities": [
+        "HTML in content — use <span style=\"color:var(--secondary)\">text</span> for colored words",
+        "tag: h1 for page titles, h2 for sections, h3-h4 for cards"
+      ],
+      "rules": [
+        "DO NOT set font-size, color, line-height, font-weight — child theme handles all heading styles"
+      ]
+    },
+    "icon": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "purpose": "Single decorative or functional icon",
+      "capabilities": [
+        "Themify icon library (ti-truck, ti-shield, ti-timer, etc.)",
+        "custom size, color"
+      ]
+    },
+    "icon-box": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "content",
+      "notes": "Content key is 'content' (HTML body), verified against Bricks 2.3 working_example. 'title' is a separate heading field, not the content.",
+      "purpose": "Feature card — icon + heading + text combined",
+      "capabilities": [
+        "built-in icon, title, and description fields",
+        "good for feature grids and service highlights"
+      ]
+    },
+    "image": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "purpose": "Image element — photos, illustrations, logos",
+      "capabilities": [
+        "Unsplash auto-fetch via src: \"unsplash:query\"",
+        "attachment ID reference",
+        "external URL",
+        "border-radius for rounded corners",
+        "aspect-ratio control"
+      ]
+    },
+    "image-gallery": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "items",
+      "notes": "Gallery of images. Supports loadMoreInitial / loadMoreStep / loadMoreInfiniteScroll for progressive loading."
+    },
+    "list": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "purpose": "Bulleted or numbered list",
+      "capabilities": [
+        "custom icons per item",
+        "ordered or unordered"
+      ]
+    },
+    "map": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "notes": "Google Maps embed with address or coordinates."
+    },
+    "nav-nested": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "div"
+      ],
+      "skip_auto_flex": true,
+      "nestable": true
+    },
+    "offcanvas": {
+      "valid_parents": [
+        "section",
+        "container"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "block",
+        "container"
+      ],
+      "nestable": true,
+      "notes": "Off-canvas slide-in panel (nestable). Triggered by a toggle/button."
+    },
+    "pie-chart": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "percent",
+      "element_settings_defaults": {
+        "percent": 75,
+        "size": 200,
+        "lineWidth": 16
+      },
+      "purpose": "Circular percentage chart / radial progress",
+      "capabilities": [
+        "percent (0-100)",
+        "bar color, track color",
+        "inner content (percent text)"
+      ],
+      "rules": [
+        "use element_settings.percent (integer 0-100), barColor and trackColor are {raw} color objects"
+      ]
+    },
+    "popup": {
+      "valid_parents": [
+        "section",
+        "container"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "block",
+        "container"
+      ],
+      "nestable": true,
+      "notes": "Popup content container (nestable). Lives inside a popup template."
+    },
+    "pricing-tables": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "pricingTables",
+      "purpose": "Pricing tier card",
+      "capabilities": [
+        "plan name, price, features list, CTA button",
+        "highlight/featured tier"
+      ]
+    },
+    "progress-bar": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "bars",
+      "element_settings_defaults": {
+        "bars": [
+          {
+            "label": "Progress",
+            "percentage": 75
+          }
+        ]
+      },
+      "purpose": "Animated horizontal progress bar — for skill bars, completion meters",
+      "capabilities": [
+        "multiple bars in one element via \"bars\" array",
+        "animation on scroll",
+        "percentage label visibility"
+      ],
+      "rules": [
+        "use element_settings.bars for an array of {label, percentage} objects",
+        "pair with a heading for context"
+      ]
+    },
+    "rating": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "rating",
+      "element_settings_defaults": {
+        "rating": 5,
+        "maxRating": 5
+      },
+      "purpose": "Star rating display (or other icon) — for review summaries, product ratings",
+      "capabilities": [
+        "rating value (e.g. 4.5)",
+        "max rating (default 5)",
+        "icon style"
+      ],
+      "rules": [
+        "use element_settings.rating (number 0-maxRating)"
+      ]
+    },
+    "section": {
+      "valid_parents": [
+        "root"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "container"
+      ],
+      "structural": true,
+      "flex_by_default": true,
+      "purpose": "Full-width page section — the outermost wrapper",
+      "capabilities": [
+        "background image with overlay",
+        "gradient background",
+        "min-height for hero sections",
+        "dark/light mode"
+      ],
+      "rules": [
+        "DO NOT set _padding — child theme handles it",
+        "only contains containers as direct children"
+      ]
+    },
+    "slider": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "notes": "Deprecated base version. Use slider-nested — each slide is a div child."
+    },
+    "slider-nested": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "div"
+      ],
+      "skip_auto_flex": true,
+      "notes": "Each slide is a div child.",
+      "nestable": true,
+      "purpose": "Image or content carousel/slideshow",
+      "capabilities": [
+        "multiple slides with any nested content",
+        "autoplay, navigation arrows, dots"
+      ]
+    },
+    "social-icons": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "icons",
+      "purpose": "Row of social media icons with links",
+      "capabilities": [
+        "icons array (facebook, twitter, instagram, etc.)",
+        "shape (circle, square, none)",
+        "size variants"
+      ],
+      "rules": [
+        "each icon needs a URL; pair with a heading for context"
+      ]
+    },
+    "svg": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "code",
+      "notes": "Inline SVG element. Content stored in 'code' or 'file' setting."
+    },
+    "tabs": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "notes": "Deprecated base version. Use tabs-nested — its child divs are the tab panes (tabs-nested supports rich content per pane; plain tabs only takes a string repeater)."
+    },
+    "tabs-nested": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "div"
+      ],
+      "skip_auto_flex": true,
+      "notes": "Each tab pane is a div child.",
+      "nestable": true,
+      "purpose": "Tabbed content panels — each tab has full nested content",
+      "capabilities": [
+        "multiple tab panes with any content inside",
+        "tab labels, icons"
+      ],
+      "rules": [
+        "use tabs-nested NOT tabs — basic tabs only support plain text"
+      ]
+    },
+    "template": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "nestable": true,
+      "notes": "Embeds another Bricks template (header, footer, section, content)."
+    },
+    "testimonials": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "items"
+    },
+    "text": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "text",
+      "default_tag": "p"
+    },
+    "text-basic": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "text",
+      "default_tag": "p",
+      "purpose": "Paragraph or body text — descriptions, subtitles, taglines, eyebrows",
+      "capabilities": [
+        "HTML content supported",
+        "can be styled as tagline/eyebrow via class_intent"
+      ],
+      "rules": [
+        "DO NOT set font-size, color, line-height — child theme handles body text styles"
+      ]
+    },
+    "text-link": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div",
+        "text-basic"
+      ],
+      "accepts_children": false,
+      "content_key": "text",
+      "purpose": "Clickable text link",
+      "capabilities": [
+        "link URL (internal or external)",
+        "custom link text"
+      ]
+    },
+    "toggle": {
+      "valid_parents": [
+        "container",
+        "block"
+      ],
+      "accepts_children": true,
+      "typical_children": [
+        "block"
+      ],
+      "nestable": true,
+      "notes": "Toggle button — triggers the visibility of a target element (offcanvas, dropdown, etc.)."
+    },
+    "toggle-mode": {
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "notes": "Bricks 2.3+ light/dark mode toggle button. No content — configured via icon/iconColor/iconSize + iconDark/iconDarkColor/iconDarkSize + ariaLabel."
+    },
+    "video": {
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
+      "accepts_children": false,
+      "content_key": "iframeUrl",
+      "purpose": "Video embed",
+      "capabilities": [
+        "YouTube, Vimeo, or self-hosted video URL"
+      ]
+    }
+  }
+}

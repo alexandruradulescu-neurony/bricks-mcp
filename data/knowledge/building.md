@@ -1,5 +1,22 @@
 # General Building Rules for Bricks
 
+## Related Knowledge Domains
+
+This file covers structure, classes, CSS variables, and general schema rules. For deeper topics call `bricks:get_knowledge(domain=...)`:
+
+- `query-loops` — 5 query types (post/term/user/api/array), pagination, global queries, nested loops, archive `is_main_query`
+- `templates` — template types, condition scoring system, header/footer/content precedence, import/export
+- `global-classes` — IDs vs names, style shape, 16 actions, class-first workflow, batch ops, CSS import, semantic search
+- `forms` — 18 field types, 7 actions (email/redirect/webhook/login/registration/create-post/custom), spam protection
+- `dynamic-data` — `{post_title}` tag syntax, 12 groups / 70+ tags, colon-arg params, query filters
+- `components` — component definitions, 9 property types, connection format, slot mechanics
+- `popups` — popup template system + triggers + 30 display settings + infobox mode
+- `animations` — `_interactions` array, 17 triggers + 19 actions, Animate.css, Bricks 2.3+ parallax + 3D transforms
+- `woocommerce` — 8 WC template types, `{woo_*}` dynamic tags, scaffolding, Quick View
+- `seo` — 5 SEO plugins auto-detected, inline audit, Open Graph / Twitter fields
+
+For element-specific schemas (settings, controls, working examples) call `bricks:get_element_schemas(element='NAME')` — read live from the installed Bricks version, always current.
+
 ## Page Structure
 
 Every Bricks page follows: **section > container > block/div > content elements**.
@@ -22,7 +39,7 @@ section
 
 ## Centering and Alignment
 
-Use flex alignment, NOT `text-align: center`:
+- Use flex alignment, NOT `text-align: center`:
 - Center children horizontally: `_alignItems: center` on the parent container/block
 - Center children vertically: `_justifyContent: center` on the parent
 - `_typography.text-align: center` only affects text INSIDE an element, not element positioning
@@ -101,7 +118,7 @@ The `element_settings` key is an escape hatch for type-specific Bricks settings 
 - **form**: `fields`, `submitButtonText`, `formId`, `actions`
 - **progress-bar**: `bars` (array of `{label, percentage}`)
 - **rating**: `rating`, `scale`, `iconEmpty`, `iconFull`
-- **animated-typing**: `content`, `typeSpeed`, `loop`
+- **animated-typing**: `strings` (array of strings to cycle), `prefix`, `suffix`, `typeSpeed`, `loop`
 
 ### Example usage in design schema
 
@@ -133,22 +150,34 @@ Bricks uses composite keys for responsive and pseudo-state styles:
 ```
 
 Examples:
-- `_margin:tablet_portrait` — margin on tablet
-- `_padding:mobile` — padding on mobile
+- `_margin:tablet_portrait` — margin on tablet portrait
+- `_padding:mobile_landscape` — padding on mobile landscape
 - `_background:hover` — background on hover
-- `_typography:mobile:hover` — typography on mobile hover
+- `_typography:mobile_portrait:hover` — typography on mobile portrait hover
 
-Available breakpoints: `tablet_landscape`, `tablet_portrait`, `mobile`
+Available breakpoints: `tablet_landscape`, `tablet_portrait`, `mobile_landscape`, `mobile_portrait`.
+
+**Warning:** plain `mobile` is NOT a valid breakpoint — it's silently ignored. Use `mobile_landscape` (≤768px) or `mobile_portrait` (≤478px).
+
+**Custom breakpoints:** sites can define custom breakpoints via Bricks > Settings > General > Custom breakpoints. Always call `bricks:get_breakpoints` to discover available breakpoints rather than assuming defaults.
+
+**Mobile-first mode:** if the site uses mobile-first (smallest breakpoint as base), styles inherit upward via `min-width` media queries instead of downward via `max-width`.
 
 ## CSS Variables
 
 Always use `var(--name)` instead of hardcoded values:
 - Spacing: `var(--space-xs)` through `var(--space-section)`
 - Typography: `var(--text-xs)` through `var(--text-xxl)`, `var(--h1)` through `var(--h6)`
-- Colors: `var(--primary)`, `var(--base-ultra-dark)`, `var(--white)`, etc.
-- Radius: `var(--radius)`, `var(--radius-btn)`, `var(--radius-pill)`
+- Colors: `var(--primary)`, `var(--base-ultra-dark)`, `var(--white)`, etc. (+ optional tertiary, neutral families; expanded 8-shade palettes + 9-step transparencies when enabled)
+- Radius: `var(--radius)`, `var(--radius-btn)`, `var(--radius-pill)`, `var(--radius-s/m/l/xl)`
+- Borders: `var(--border-thin)`, `var(--border-medium)`, `var(--border-thick)`
 - Grid: `var(--grid-1)` through `var(--grid-12)`, plus ratios `var(--grid-1-2)`, etc.
-- Gaps: `var(--grid-gap)`, `var(--content-gap)`, `var(--container-gap)`
+- Gaps: `var(--grid-gap)`, `var(--content-gap)`, `var(--container-gap)`, `var(--card-gap)`, `var(--padding-section)`, `var(--offset)`
+- Shadows: `var(--shadow-xs)` through `var(--shadow-xl)`, plus `var(--shadow-inset)`
+- Transitions: `var(--duration-fast/base/slow)` + `var(--ease-out)`, `var(--ease-in-out)`, `var(--ease-spring)`
+- Z-Index: `var(--z-base)`, `var(--z-sticky)`, `var(--z-dropdown)`, `var(--z-overlay)`, `var(--z-modal)`, `var(--z-popover)`, `var(--z-tooltip)` (100× gaps per layer)
+- Aspect Ratios: `var(--aspect-square)`, `var(--aspect-video)`, `var(--aspect-photo)`, `var(--aspect-portrait)`, `var(--aspect-wide)`
+- Sizes: `var(--container-width)`, `var(--max-width)`, `var(--max-width-m/s)`, `var(--min-height)`, `var(--min-height-section)`, `var(--logo-width)`
 
 ## Gap Handling on Flex Blocks
 
@@ -192,47 +221,77 @@ Buttons support native icons — do NOT use emoji in button text:
 ```json
 {
   "type": "button",
-  "content": "Suna Acum: 0722 222 222",
+  "content": "Call Now",
   "icon": "mobile",
-  "iconPosition": "left"
+  "iconPosition": "left",
+  "link": { "type": "external", "url": "tel:+15550100" }
 }
 ```
 
-The `icon` string (e.g., `"mobile"`) resolves to Themify `ti-mobile`. You can also pass full object: `{"library": "fontawesomeSolid", "icon": "fas fa-phone"}`.
+The `icon` string (e.g., `"mobile"`) resolves to the site's primary icon library (Themify by default → `ti-mobile`). The library is read from the `icon_library` brief at runtime. You can also pass a full object to override per-button: `{"library": "fontawesomeSolid", "icon": "fas fa-phone"}`. Supported libraries: `themify`, `fontawesomeSolid`, `fontawesomeRegular`, `ionicons`.
 
-## Form Auto-Detection
+## Forms — supply fields explicitly
 
-When a form element has no fields explicitly set, the pipeline detects the form type from the element's `role`, `label`, or `content_hint` and applies a template:
+The `form` element requires a `fields` array via `element_settings`. The pipeline does NOT inject default field templates — emit a pipeline warning if fields are missing.
 
-- **newsletter** — detected from: newsletter, subscribe, signup, opt-in, register, inregistr. Template: email field (67% width) + submit button (33% width) + terms HTML field.
-- **login** — detected from: login, sign-in, auth, conecta, autentific. Template: email + password fields.
-- **contact** (default) — Template: name (50%) + email (50%) + textarea + submit.
+```json
+{
+  "type": "form",
+  "element_settings": {
+    "fields": [
+      { "id": "ct_name", "type": "text", "label": "Name", "placeholder": "Your name", "width": "50" },
+      { "id": "ct_email", "type": "email", "label": "Email", "placeholder": "Your email", "required": true, "width": "50" },
+      { "id": "ct_message", "type": "textarea", "label": "Message", "placeholder": "Your message", "required": true, "width": "100" }
+    ],
+    "actions": ["email"],
+    "submitButtonText": "Send",
+    "emailTo": "admin_email"
+  }
+}
+```
 
-To use a specific type regardless of content_hint, set `form_type` on the schema node.
+Field types: `text`, `email`, `textarea`, `password`, `select`, `checkbox`, `radio`, `file`, `hidden`, `html`. See `bricks:get_knowledge('forms')` for full field reference and `bricks:get_form_schema` for the live Bricks form schema.
 
-## Invalid Keys That Get Auto-Fixed
+## Auto-Fixes Applied by the Pipeline
 
-The pipeline auto-converts these common mistakes:
-- `_maxWidth` → `_widthMax` (Bricks uses `_widthMax`)
+These common mistakes are silently corrected with a warning attached to the build response:
+
+**Settings keys**
+- `_maxWidth` → `_widthMax` (Bricks key is `_widthMax`)
 - `_minWidth` → `_widthMin`
 - `_textAlign` → `_typography.text-align`
-- `_gap` → `_columnGap` or `_rowGap` based on direction
+- `_gap` → `_columnGap` or `_rowGap` based on `_direction` (flex blocks only)
 
-Unknown keys (e.g., `settings`, `styles`, `css`, raw Bricks keys like `_padding` on node level) are rejected with suggestions.
+**Color shape**
+- String colors → `{raw|hex}` object on `_typography.color`, `_background.color`, `_border.color`, `_color`
+- Per-side `_border.style` object → string (Bricks expects a single style)
+
+**Element values**
+- `counter.countTo`: `"500+"` → integer `500` + `suffix: "+"`
+- `pie-chart.percent`: string → integer clamped 0–100
+- `video`: YouTube/Vimeo URL → `ytId`/`vimeoId` + `videoType`
+- `rating.rating`: clamped to `0..maxRating`
+
+**Background**
+- `background: "dark"` merges with existing `_background` (preserves images set via `style_overrides` or `unsplash:query`)
+
+**Quarantines**
+- `_cssCustom` on text-basic / heading / button / icon / text / text-link is stripped (would crash the frontend with "Array to string conversion"). Move to a global class via `class_intent` instead.
+
+**Rejections (no auto-fix)**
+- Unknown schema-node keys: `settings`, `styles`, `css`, raw `_padding` at node level. Validator returns "Did you mean..." suggestions for known typos.
+- Invalid breakpoints (e.g. plain `mobile`) are silently ignored by Bricks — pipeline does NOT reject these.
 
 ## Design Pattern Library
 
-The plugin ships 21 curated section compositions across 7 categories (heroes, features, ctas, pricing, testimonials, splits, content). Custom patterns can be added in two ways:
+The plugin ships 21 curated section compositions across 7 categories (heroes, features, ctas, pricing, testimonials, splits, content/generic). These are auto-migrated into the database on first install and are fully editable from then on.
 
-- **Via MCP:** `design_pattern:create(pattern)` saves to the database tier
-- **Via file:** Place JSON files in `wp-content/uploads/bricks-mcp/design-patterns/{category}.json`
-
-Override priority: database > user files > plugin-shipped. Custom patterns survive plugin updates.
+Add new patterns via `design_pattern:create(pattern)` or the Patterns admin tab under **Settings → Bricks MCP → Patterns**. All patterns live in the `bricks_mcp_custom_patterns` WP option — custom patterns survive plugin updates.
 
 ### Discovery
 
-- `design_pattern:list` — all patterns across all tiers, with `source` labels
-- `design_pattern:semantic_search(query)` — natural language search across name, description, tags, category
+- `design_pattern:list` — all patterns with `source: "database"` labels
+- `design_pattern:semantic_search(query)` — natural language search scored across name, description, tags, category, layout, background
 - `propose_design` Phase 1 automatically shows the best-matching patterns for your description
 
 ### Pattern metadata
@@ -241,12 +300,15 @@ Each pattern has optional AI metadata:
 - `ai_description` — 1-2 sentence description of what the pattern looks like when built
 - `ai_usage_hints` — array of tips for when/how to use the pattern
 
-Use these to pick the right pattern for the task. All plugin-shipped patterns have this metadata pre-filled.
+Use these to pick the right pattern for the task. All 21 shipped patterns have this metadata pre-filled.
 
 ### Managing patterns
 
 - `design_pattern:create(pattern)` — save a new pattern (required: id, name, category, tags)
-- `design_pattern:update(id, pattern)` — update a database pattern (plugin/user-file patterns are read-only)
-- `design_pattern:delete(id)` — remove a DB pattern, or hide a plugin/user-file pattern from all lists
+- `design_pattern:update(id, pattern)` — update any database pattern
+- `design_pattern:delete(id)` — remove a pattern from the database
 - `design_pattern:export(ids?)` — export patterns as JSON for cross-site sharing
 - `design_pattern:import(patterns)` — import a JSON array of patterns (auto-suffixes conflicting IDs)
+- `design_pattern:normalize(pattern)` — map an imported pattern's class/variable references to the current site's design system (semantic matching, warnings on unmatched)
+- `design_pattern:generate_prompt(description)` — get a structured AI prompt (with site context + classes + variables) to generate a pattern composition from scratch
+- Plus full category CRUD: `list_categories`, `create_category`, `update_category`, `delete_category`

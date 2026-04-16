@@ -232,6 +232,24 @@
     e.target.value = '';
   });
 
+  // -- Reset to plugin defaults (re-seed) ----------------------
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.matches('#bricks-mcp-reseed-patterns')) return;
+    if (!confirm('Reset plugin-shipped patterns to defaults?\n\nThis OVERWRITES patterns whose IDs match the shipped set. Your custom patterns (unique IDs) are preserved.')) return;
+
+    post({ action: 'bricks_mcp_reseed_patterns', nonce: nonce }).then(function (res) {
+      if (res.success) {
+        var d = res.data || {};
+        var msg = 'Seeded ' + (d.seeded || 0) + ', overwrote ' + (d.overwritten || 0) + ', skipped ' + (d.skipped || 0) + '.';
+        showNotice(msg, 'success');
+        location.reload();
+      } else {
+        showNotice('Reseed failed: ' + (res.data ? res.data.message : 'Unknown'), 'error');
+      }
+    });
+  });
+
   // =============================================================
   // PATTERN CREATOR FORM
   // =============================================================

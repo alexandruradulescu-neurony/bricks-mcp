@@ -1,90 +1,247 @@
 # Forms in Bricks Builder
 
+## Related Knowledge
+
+- `building` — schema rules, where to put `_attributes` and `_conditions` on form fields
+- `dynamic-data` — pre-fill field values via dynamic tags (`value: "{wp_user_email}"`)
+- **Live form schema (authoritative):** `bricks:get_form_schema` — all 18 field types, action keys, examples. Always current.
+
 ## Structure
 
-A form element contains nested form fields. The form element itself holds submission settings, while each child field defines its type and validation.
-
-```
-section
-  form (submitButtonText, formFields config, actions)
-    form-field (type: text, label, placeholder, required)
-    form-field (type: email, label, required)
-    form-field (type: textarea)
-```
-
-## Key Settings
-
-| Setting | Description |
-|---------|-------------|
-| `submitButtonText` | Button label (default: "Submit") |
-| `formFields` | Array of field objects defining the form |
-| `actions` | Array of post-submission actions |
-
-## Field Types
-
-Common field types: `text`, `email`, `textarea`, `tel`, `url`, `number`, `select`, `checkbox`, `radio`, `file`, `password`, `hidden`, `datepicker`.
-
-Each field object supports:
-- `type` — field type
-- `label` — display label
-- `placeholder` — placeholder text
-- `required` — boolean, enables validation
-- `id` — unique field identifier (used in action mappings)
-- `width` — column width percentage (25, 33, 50, 67, 75, 100)
-
-## Form Auto-Detection in the Design Pipeline
-
-When `build_from_schema` encounters a `form` element with no explicit `formFields`, the pipeline auto-detects the form type from the element's `role`, `label`, or `content_hint` and applies a template. This keeps design_plan authoring terse — you can say "newsletter form" and get proper fields.
-
-`FormTypeDetector` (shared utility) uses these patterns:
-
-| Form type | Detected from | Template fields |
-|---|---|---|
-| **newsletter** | newsletter, subscribe, signup, opt-in, register, inregistr | email (67% width) + submit button (33%) + terms HTML field |
-| **login** | login, sign-in, auth, conecta, autentific | email + password fields |
-| **contact** (default) | anything else (or explicitly "contact") | name (50%) + email (50%) + textarea + submit |
-
-### Explicit override
-
-To force a specific type regardless of content_hint, set `form_type` directly on the schema node:
+Form is a single element with all fields inside its settings — NOT a parent containing `form-field` children.
 
 ```json
 {
-  "type": "form",
-  "form_type": "newsletter",
-  "role": "inline_signup"
+  "name": "form",
+  "settings": {
+    "fields": [...],
+    "actions": ["email"],
+    "submitButtonText": "Send",
+    "successMessage": "Thanks!"
+  }
 }
 ```
 
-### Styling defaults
+## Field Object
 
-Form templates come with sensible Bricks defaults:
-- Submit buttons use the primary button class (matches site)
-- Newsletter form uses inline row layout with email + button side by side
-- Contact form stacks fields vertically with 2-column name/email row at top
+Every field needs `id` + `type`:
 
-## Submission Actions
+```json
+{
+  "id": "abc123",
+  "type": "text",
+  "label": "Name",
+  "placeholder": "Your name",
+  "required": true,
+  "width": 50
+}
+```
 
-Actions fire sequentially after successful validation:
-- **Email** — send form data to specified address
-- **Redirect** — navigate to URL after submission
-- **Custom** — webhook/external integration
+### Required props
+- `id` — **6-char lowercase alphanumeric** (same format as element IDs). Bricks uses `form-field-{id}` as the HTTP submission key.
+- `type` — one of the 18 types below.
 
-## Validation
+### Common optional props (any field type)
+- `label` — text above the field
+- `placeholder` — hint inside the field
+- `value` — default value (supports dynamic tags)
+- `required` — boolean
+- `width` — column width 0–100 (percent; 100 = full width)
+- `name` — custom HTML name attr (defaults to `form-field-{id}`)
+- `errorMessage` — custom validation error text
+- `isHoneypot` — invisible spam trap (works without any API key — use this first)
 
-- Set `required: true` on individual fields
-- Email fields auto-validate format
-- File fields support `allowedTypes` and `maxSize`
-- Custom validation patterns via `pattern` setting (regex)
+## Field Types (18)
+
+| Type | Notes / extra props |
+|---|---|
+| `text` | + `minLength`, `maxLength`, `pattern` |
+| `email` | auto-validates email format |
+| `tel` | + `pattern` for format constraint |
+| `url` | URL input |
+| `number` | + `min`, `max`, `step` |
+| `password` | + optional reveal toggle |
+| `textarea` | + `height` |
+| `richtext` | TinyMCE editor (Bricks 2.1+) + `height` |
+| `select` | + `options` (newline string), `valueLabelOptions` (bool) |
+| `checkbox` | + `options` (newline string), `valueLabelOptions` |
+| `radio` | + `options` (newline string), `valueLabelOptions` |
+| `file` | + `fileUploadLimit`, `fileUploadSize` (KB), `fileUploadAllowedTypes`, `fileUploadStorage` |
+| `image` | image picker (Bricks 2.1+) |
+| `gallery` | gallery picker |
+| `datepicker` | Flatpickr; + `time` (bool), `l10n` (lang code) |
+| `hidden` | + `value` (often a dynamic tag) |
+| `html` | static HTML output, NOT an input |
+| `rememberme` | "remember me" checkbox for login forms |
+
+### Options format (footgun)
+
+For `select` / `checkbox` / `radio`, `options` is a **newline-separated string**, NOT an array:
+
+```json
+{ "type": "select", "id": "country", "label": "Country",
+  "options": "United States\nUnited Kingdom\nGermany\nFrance" }
+```
+
+For separate value/label pairs (value::label):
+
+```json
+{ "type": "select", "id": "size", "label": "Size",
+  "valueLabelOptions": true,
+  "options": "sm::Small\nmd::Medium\nlg::Large" }
+```
+
+## General Form Settings
+
+| Setting | Default | Use |
+|---|---|---|
+| `submitButtonText` | `"Send"` | Button label |
+| `successMessage` | — | Shown after successful submit |
+| `requiredAsterisk` | `false` | Show `*` on required fields |
+| `showLabels` | `true` | Show field labels |
+| `disableBrowserValidation` | `false` | Adds HTML `novalidate` |
+| `validateAllFieldsOnSubmit` | `false` | Show all errors at once vs first only |
+
+## Spam Protection
+
+| Method | Setup | Use |
+|---|---|---|
+| **Honeypot** | `isHoneypot: true` on a hidden field | Zero-config — use first, always |
+| **reCAPTCHA v3** | `enableRecaptcha: true` + API keys in Bricks > Settings > API Keys | Google |
+| **hCaptcha** | `enableHCaptcha: true` + API keys | Privacy-friendly alternative |
+| **Cloudflare Turnstile** | `enableTurnstile: true` + API keys | Cloudflare |
+
+## Actions (7)
+
+`actions` is an array — runs sequentially after successful validation. **`redirect` always runs LAST regardless of array position.**
+
+### `email` — send notification
+
+```json
+"actions": ["email"],
+"emailSubject": "New contact submission",
+"emailTo": "admin_email",        ← or specific address
+"emailContent": "Name: {{name_id}}\n\nMessage:\n{{message_id}}",
+"htmlEmail": true
+```
+
+Required: `emailSubject`, `emailTo` (use `"admin_email"` for the WP admin, or a literal email; `"custom"` then `emailToCustom` for a specific address).
+
+Optional: `emailBcc`, `fromEmail`, `fromName`, `replyToEmail`, `emailContent`, `htmlEmail`, `emailErrorMessage`.
+
+**Templating in `emailContent`:** `{{field_id}}` substitutes the value of the field with that id. `{{all_fields}}` dumps every field.
+
+**Confirmation email** (separate from notification — sent to the submitter): `confirmationEmailSubject`, `confirmationEmailContent`, `confirmationEmailTo` (a field id whose value is the recipient email).
+
+### `redirect` — navigate after submit
+
+```json
+"actions": ["redirect"],
+"redirect": "/thank-you",
+"redirectTimeout": 1500            ← optional ms delay
+```
+
+Always runs LAST — chain with `email` to notify then redirect.
+
+### `webhook` — POST to external URL (Bricks 2.0+)
+
+```json
+"actions": ["webhook"],
+"webhooks": [
+  {
+    "name": "Slack notification",
+    "url": "https://hooks.slack.com/services/...",
+    "contentType": "json",
+    "dataTemplate": "{\"text\":\"New lead: {{name_id}} <{{email_id}}>\"}",
+    "headers": "{\"Authorization\":\"Bearer xxx\"}"
+  }
+]
+```
+
+`dataTemplate` empty = sends all fields. Optional: `webhookMaxSize` (KB, default 1024), `webhookErrorIgnore`.
+
+### `login` — authenticate user
+
+```json
+"actions": ["login", "redirect"],
+"loginName": "lgn001",             ← field id holding email/username
+"loginPassword": "lgn002",         ← field id holding password
+"loginRemember": "lgn003",         ← optional: rememberme field id
+"loginErrorMessage": "Invalid credentials",
+"redirect": "/account"
+```
+
+### `registration` — create WP user
+
+```json
+"actions": ["registration", "redirect"],
+"registrationEmail": "reg002",
+"registrationPassword": "reg003",
+"registrationUserName": "reg001",
+"registrationFirstName": "reg004",
+"registrationLastName": "reg005",
+"registrationRole": "subscriber",   ← NEVER "administrator" — Bricks blocks
+"registrationAutoLogin": true,
+"registrationPasswordMinLength": 8,
+"registrationWPNotification": false,
+"redirect": "/welcome"
+```
+
+### `create-post` — create WP post (Bricks 2.1+)
+
+```json
+"actions": ["create-post"],
+"createPostType": "feedback",
+"createPostTitle": "fid001",        ← field id whose value becomes post title
+"createPostContent": "fid002",
+"createPostStatus": "draft",
+"createPostMeta": [
+  { "metaKey": "rating", "metaValue": "fid003", "sanitizationMethod": "absint" }
+],
+"createPostTaxonomies": [
+  { "taxonomy": "category", "fieldId": "fid004" }
+]
+```
+
+### `custom` — fire WP action
+
+Implement via the `bricks/form/custom_action` filter hook in PHP.
+
+## Field Validation
+
+- `required: true` — mandatory
+- Email type — auto-validates format
+- `minLength` / `maxLength` — text/textarea
+- `min` / `max` / `step` — number
+- `pattern` — regex (text/tel)
+- `fileUploadAllowedTypes` — comma-separated extensions (e.g. `"jpg,png,pdf"`)
+- `fileUploadSize` — max bytes per file (KB)
+- `errorMessage` — custom message per field
+
+## Pre-fill Field Values
+
+Set `value` to a string, dynamic tag, or both:
+
+```json
+{ "type": "email", "id": "em0001", "value": "{wp_user_email}" }     ← logged-in user's email
+{ "type": "hidden", "id": "src001", "value": "{url_parameter:utm_source}" }
+{ "type": "hidden", "id": "ref001", "value": "{post_id}" }
+```
 
 ## Common Pitfalls
 
-1. Field `id` values must be unique within the form — duplicates break email mappings
-2. The form element must exist as a parent; form fields outside a form element do nothing
-3. Email action requires `emailTo` to be set or the submission silently fails
-4. File uploads require server-side configuration (max upload size in PHP/WordPress)
-5. When relying on form auto-detection, make sure the element's `role` or `content_hint` contains a trigger word — otherwise the pipeline defaults to a contact form
+1. **Field IDs must be 6-char lowercase alphanumeric** — `"name"` or `"my_field"` is rejected. Use `wp_rand`-style 6-char ids like `abc123`.
+2. **Options as array** — wrong. Bricks expects newline-separated string `"A\nB\nC"` (or `"value::label\n..."` with `valueLabelOptions: true`).
+3. **`fields` not `formFields`** — the settings key is `fields`.
+4. **`emailTo` missing** — silent failure on email action. Use `"admin_email"` for default recipient.
+5. **`redirect` ordering** — runs LAST regardless of position in actions array. Don't fight it.
+6. **`registrationRole: "administrator"`** — Bricks blocks for security. Use `subscriber`, `author`, `editor`, etc.
+7. **CAPTCHA without API keys** — `enableRecaptcha: true` does nothing if API keys aren't configured in Bricks Settings. Use `isHoneypot` first (zero-config).
+8. **File upload limits** — frontend `fileUploadSize` doesn't override PHP's `upload_max_filesize`. Configure server-side limits separately.
+9. **Templating syntax** — `{{field_id}}` in `emailContent` / `dataTemplate` (double braces). Single-brace `{post_title}` is dynamic data, NOT a form-field substitution.
+10. **`html` field type is output, not input** — submits no value. Use it for static instructions/disclaimers.
 
 ## Reference
 
-Use `bricks:get_form_schema` for the complete form schema with all available settings and field types.
+- `bricks:get_form_schema` — full schema (18 field types, all action keys, working examples)
+- `dynamic-data` knowledge — pre-fill values from current user / URL / post context

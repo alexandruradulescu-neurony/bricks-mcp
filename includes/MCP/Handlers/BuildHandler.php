@@ -218,15 +218,6 @@ final class BuildHandler {
 		// Initialize pipeline warnings collector (populated by steps below + element-level warnings).
 		$pipeline_warnings = [];
 
-		// Step 8b: Check for auto-added classes (applied by context rules, not in design_plan).
-		$auto_added = $this->class_resolver->get_classes_auto_added();
-		if ( ! empty( $auto_added ) ) {
-			$pipeline_warnings[] = sprintf(
-				'Auto-attached classes (verify visual fit): %s. These were applied by context rules, not requested in your design_plan.',
-				implode( ', ', $auto_added )
-			);
-		}
-
 		// Step 9: Build summary.
 		$element_count = $this->count_elements( $all_elements );
 		$tree_summary  = $this->build_tree_summary( $all_elements );

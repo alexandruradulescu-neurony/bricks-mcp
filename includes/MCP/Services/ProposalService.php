@@ -121,130 +121,8 @@ final class ProposalService {
 		];
 	}
 
-	/**
-	 * Element capabilities for discovery phase.
-	 * Each entry describes PURPOSE + CAPABILITIES so the AI makes informed design decisions.
-	 */
-	private const ELEMENT_CAPABILITIES = [
-		'section' => [
-			'purpose'      => 'Full-width page section — the outermost wrapper',
-			'capabilities' => [ 'background image with overlay', 'gradient background', 'min-height for hero sections', 'dark/light mode' ],
-			'rules'        => [ 'DO NOT set _padding — child theme handles it', 'only contains containers as direct children' ],
-		],
-		'container' => [
-			'purpose'      => 'Content container inside a section — controls max-width and centering',
-			'capabilities' => [ 'flex alignment (_alignItems, _justifyContent)', 'text-align for centered text layouts' ],
-			'rules'        => [ 'DO NOT set _gap — child theme handles it', 'use multiple containers for multiple visual rows' ],
-		],
-		'block' => [
-			'purpose'      => 'Structural grouping — columns, rows, card wrappers',
-			'capabilities' => [ 'flex direction (_direction: row for horizontal)', 'CSS grid (layout: grid + columns)', 'semantic HTML tags (ul, li, article, nav, figure)', 'responsive grid collapse' ],
-			'rules'        => [ 'use block for horizontal rows — NOT div (div ignores _direction)' ],
-		],
-		'div' => [
-			'purpose'      => 'Small wrapper — icon circles, overlays, decorative containers',
-			'capabilities' => [ 'explicit _display: flex for centering content' ],
-			'rules'        => [ 'does NOT support _direction — use block instead for rows' ],
-		],
-		'heading' => [
-			'purpose'      => 'Title text (h1–h6)',
-			'capabilities' => [ 'HTML in content — use <span style="color:var(--secondary)">text</span> for colored words', 'tag: h1 for page titles, h2 for sections, h3-h4 for cards' ],
-			'rules'        => [ 'DO NOT set font-size, color, line-height, font-weight — child theme handles all heading styles' ],
-		],
-		'text-basic' => [
-			'purpose'      => 'Paragraph or body text — descriptions, subtitles, taglines, eyebrows',
-			'capabilities' => [ 'HTML content supported', 'can be styled as tagline/eyebrow via class_intent' ],
-			'rules'        => [ 'DO NOT set font-size, color, line-height — child theme handles body text styles' ],
-		],
-		'text-link' => [
-			'purpose'      => 'Clickable text link',
-			'capabilities' => [ 'link URL (internal or external)', 'custom link text' ],
-		],
-		'button' => [
-			'purpose'      => 'Call-to-action button',
-			'capabilities' => [ 'ICON support — native icon left/right of text (ti-mobile, ti-comment-alt, etc.)', 'link with tel: or https:// URL', 'style variants via class_intent (primary, outline, ghost)' ],
-			'rules'        => [ 'use native icon feature — do NOT put emoji in button text' ],
-		],
-		'image' => [
-			'purpose'      => 'Image element — photos, illustrations, logos',
-			'capabilities' => [ 'Unsplash auto-fetch via src: "unsplash:query"', 'attachment ID reference', 'external URL', 'border-radius for rounded corners', 'aspect-ratio control' ],
-		],
-		'icon' => [
-			'purpose'      => 'Single decorative or functional icon',
-			'capabilities' => [ 'Themify icon library (ti-truck, ti-shield, ti-timer, etc.)', 'custom size, color' ],
-		],
-		'icon-box' => [
-			'purpose'      => 'Feature card — icon + heading + text combined',
-			'capabilities' => [ 'built-in icon, title, and description fields', 'good for feature grids and service highlights' ],
-		],
-		'video' => [
-			'purpose'      => 'Video embed',
-			'capabilities' => [ 'YouTube, Vimeo, or self-hosted video URL' ],
-		],
-		'divider' => [
-			'purpose'      => 'Horizontal separator line',
-			'capabilities' => [ 'custom width, color, style' ],
-		],
-		'tabs-nested' => [
-			'purpose'      => 'Tabbed content panels — each tab has full nested content',
-			'capabilities' => [ 'multiple tab panes with any content inside', 'tab labels, icons' ],
-			'rules'        => [ 'use tabs-nested NOT tabs — basic tabs only support plain text' ],
-		],
-		'accordion-nested' => [
-			'purpose'      => 'Collapsible FAQ/accordion sections',
-			'capabilities' => [ 'multiple panels with any nested content', 'click to expand/collapse' ],
-		],
-		'slider-nested' => [
-			'purpose'      => 'Image or content carousel/slideshow',
-			'capabilities' => [ 'multiple slides with any nested content', 'autoplay, navigation arrows, dots' ],
-		],
-		'form' => [
-			'purpose'      => 'Contact or input form',
-			'capabilities' => [ 'text fields, email, textarea, select, checkbox', 'submit button', 'email notifications' ],
-		],
-		'counter' => [
-			'purpose'      => 'Animated number counter',
-			'capabilities' => [ 'count-to target number', 'prefix/suffix text', 'animation on scroll' ],
-		],
-		'list' => [
-			'purpose'      => 'Bulleted or numbered list',
-			'capabilities' => [ 'custom icons per item', 'ordered or unordered' ],
-		],
-		'pricing-tables' => [
-			'purpose'      => 'Pricing tier card',
-			'capabilities' => [ 'plan name, price, features list, CTA button', 'highlight/featured tier' ],
-		],
-		'progress-bar' => [
-			'purpose'      => 'Animated horizontal progress bar — for skill bars, completion meters',
-			'capabilities' => [ 'multiple bars in one element via "bars" array', 'animation on scroll', 'percentage label visibility' ],
-			'rules'        => [ 'use element_settings.bars for an array of {label, percentage} objects', 'pair with a heading for context' ],
-		],
-		'pie-chart' => [
-			'purpose'      => 'Circular percentage chart / radial progress',
-			'capabilities' => [ 'percent (0-100)', 'bar color, track color', 'inner content (percent text)' ],
-			'rules'        => [ 'use element_settings.percent (integer 0-100), barColor and trackColor are {raw} color objects' ],
-		],
-		'alert' => [
-			'purpose'      => 'Notification banner — info, success, warning, error',
-			'capabilities' => [ 'icon + text content', 'dismissible flag', 'color variants' ],
-			'rules'        => [ 'content goes in the alert text setting; choose alert type for color' ],
-		],
-		'animated-typing' => [
-			'purpose'      => 'Typewriter / typing animation effect — cycles through a list of strings',
-			'capabilities' => [ 'multiple strings to cycle through', 'type/back speed', 'loop' ],
-			'rules'        => [ 'use element_settings.strings (array of strings to cycle), typeSpeed (ms per char)' ],
-		],
-		'rating' => [
-			'purpose'      => 'Star rating display (or other icon) — for review summaries, product ratings',
-			'capabilities' => [ 'rating value (e.g. 4.5)', 'max rating (default 5)', 'icon style' ],
-			'rules'        => [ 'use element_settings.rating (number 0-maxRating)' ],
-		],
-		'social-icons' => [
-			'purpose'      => 'Row of social media icons with links',
-			'capabilities' => [ 'icons array (facebook, twitter, instagram, etc.)', 'shape (circle, square, none)', 'size variants' ],
-			'rules'        => [ 'each icon needs a URL; pair with a heading for context' ],
-		],
-	];
+	// ELEMENT_CAPABILITIES extracted to data/elements.json (purpose/capabilities/rules per element).
+	// get_element_capabilities() below reads from the registry and applies the has_design_system override.
 
 	/**
 	 * Building rules — included in every discovery response.
@@ -284,16 +162,42 @@ final class ProposalService {
 	/**
 	 * Get element capabilities, adjusted based on site state.
 	 *
+	 * Reads purpose/capabilities/rules from the unified element registry
+	 * (data/elements.json). When the site has no design system, the baseline
+	 * rules for section/container/heading/text-basic are replaced with
+	 * instructions to set explicit values.
+	 *
 	 * @param bool $has_design_system True if site has meaningful classes/theme styles.
+	 * @return array<string, array<string, mixed>> Element name => {purpose, capabilities, rules}.
 	 */
 	private static function get_element_capabilities( bool $has_design_system ): array {
-		$caps = self::ELEMENT_CAPABILITIES;
+		$registry = ElementSettingsGenerator::get_element_registry();
+		$caps     = [];
+
+		foreach ( $registry as $name => $entry ) {
+			if ( empty( $entry['purpose'] ) ) {
+				continue; // Only elements annotated with purpose/capabilities appear in discovery.
+			}
+			$caps[ $name ] = [
+				'purpose'      => $entry['purpose'],
+				'capabilities' => $entry['capabilities'] ?? [],
+				'rules'        => $entry['rules'] ?? [],
+			];
+		}
 
 		if ( ! $has_design_system ) {
-			$caps['section']['rules']    = [ 'Set explicit _padding or use starter classes' ];
-			$caps['container']['rules']  = [ 'Set explicit _gap or use starter classes' ];
-			$caps['heading']['rules']    = [ 'Set explicit font-size, color, and font-weight or use class_intent' ];
-			$caps['text-basic']['rules'] = [ 'Set explicit font-size and color or use class_intent' ];
+			if ( isset( $caps['section'] ) ) {
+				$caps['section']['rules'] = [ 'Set explicit _padding or use starter classes' ];
+			}
+			if ( isset( $caps['container'] ) ) {
+				$caps['container']['rules'] = [ 'Set explicit _gap or use starter classes' ];
+			}
+			if ( isset( $caps['heading'] ) ) {
+				$caps['heading']['rules'] = [ 'Set explicit font-size, color, and font-weight or use class_intent' ];
+			}
+			if ( isset( $caps['text-basic'] ) ) {
+				$caps['text-basic']['rules'] = [ 'Set explicit font-size and color or use class_intent' ];
+			}
 		}
 
 		return $caps;
@@ -382,16 +286,6 @@ final class ProposalService {
 		$existing_sections = $this->analyze_existing_sections( $page_id );
 		$style_hints       = $this->aggregate_site_style_hints( $existing_sections );
 
-		// Bootstrap check — few or no global classes.
-		$bootstrap_recommendation = null;
-		if ( count( $all_classes ) < 5 ) {
-			$bootstrap_recommendation = [
-				'warning' => 'Site has few/no global classes. Building will create new classes as needed, but starting with a curated set produces more consistent results.',
-				'action'  => 'Optional: call global_class:batch_create with suggested_starter_classes below before building.',
-				'suggested_starter_classes' => StarterClassesService::get_starter_classes(),
-			];
-		}
-
 		$next_step = 'You now have the site context, available building blocks, and REFERENCE PATTERNS showing proven compositions. '
 			. 'Think as a DESIGNER: pick the closest reference_pattern that matches the user\'s request, '
 			. 'then adapt it into a design_plan. The pattern shows the correct composition — you adjust the content. '
@@ -414,10 +308,6 @@ final class ProposalService {
 		if ( ! empty( $existing_sections ) ) {
 			$response['existing_page_sections'] = $existing_sections;
 			$response['site_style_hints']       = $style_hints;
-		}
-
-		if ( null !== $bootstrap_recommendation ) {
-			$response['bootstrap_recommendation'] = $bootstrap_recommendation;
 		}
 
 		// Build site_context.
@@ -665,11 +555,14 @@ final class ProposalService {
 				$path = "design_plan.elements[{$idx}]";
 				if ( empty( $el['type'] ) ) {
 					$errors[] = "{$path}.type is required — pick from available_elements.";
-				} elseif ( ! isset( self::ELEMENT_CAPABILITIES[ $el['type'] ] ) && ! in_array( $el['type'], [ 'section', 'container', 'block', 'div' ], true ) ) {
-					// Check against Bricks catalog as fallback.
-					$schema = $this->schema_generator->get_element_schema( $el['type'] );
-					if ( is_wp_error( $schema ) ) {
-						$errors[] = "{$path}.type \"{$el['type']}\" is not a known element.";
+				} else {
+					$registry = ElementSettingsGenerator::get_element_registry();
+					if ( ! isset( $registry[ $el['type'] ] ) ) {
+						// Check against Bricks catalog as fallback.
+						$schema = $this->schema_generator->get_element_schema( $el['type'] );
+						if ( is_wp_error( $schema ) ) {
+							$errors[] = "{$path}.type \"{$el['type']}\" is not a known element.";
+						}
 					}
 				}
 				if ( empty( $el['role'] ) ) {
