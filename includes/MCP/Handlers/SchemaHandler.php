@@ -184,6 +184,7 @@ final class SchemaHandler {
 			'schemas'          => $schemas,
 			'settings_keys'    => $this->schema_generator->get_settings_keys_flat(),
 			'breakpoints'      => $this->bricks_service->get_breakpoints(),
+			'knowledge_hint'   => "For building rules and CSS variable reference, call bricks:get_knowledge('building'). For class workflow, call bricks:get_knowledge('global-classes').",
 		);
 
 		if ( $offset > 0 || null !== $limit ) {
@@ -256,9 +257,10 @@ final class SchemaHandler {
 		ksort( $grouped );
 
 		return array(
-			'total_tags' => $total_count,
-			'groups'     => $grouped,
-			'usage_hint' => 'Embed tags directly in element settings values. Text fields use bare tag string e.g. "{post_title}". Image fields use {"useDynamicData": "{featured_image}"}. Link fields use {"type": "dynamic", "dynamicData": "{post_url}"}.',
+			'total_tags'     => $total_count,
+			'groups'         => $grouped,
+			'usage_hint'     => 'Embed tags directly in element settings values. Text fields use bare tag string e.g. "{post_title}". Image fields use {"useDynamicData": "{featured_image}"}. Link fields use {"type": "dynamic", "dynamicData": "{post_url}"}.',
+			'knowledge_hint' => "Call bricks:get_knowledge('dynamic-data') for tag syntax, format-by-field-type, colon-arg params, query filters, element conditions, and power patterns.",
 		);
 	}
 
@@ -461,6 +463,7 @@ final class SchemaHandler {
 			'global_query_hint'   => 'Set query.id to a global query ID instead of inline settings. Bricks resolves the global query at render time. Use bricks:get_global_queries to list available global queries.',
 			'setup_hint'          => 'To create a query loop, set hasLoop: true and a query object on any layout element (container, div, block). For archive templates, ALWAYS set is_main_query: true in the query object.',
 			'security_note'       => 'Never set useQueryEditor or queryEditor — these enable PHP execution and are a security risk.',
+			'knowledge_hint'      => "Call bricks:get_knowledge('query-loops') for setup, pagination (infinite scroll + load-more), global queries, nested loops, and archive is_main_query rule.",
 		);
 	}
 
@@ -478,6 +481,7 @@ final class SchemaHandler {
 
 		$data                     = FilterSchemaCatalog::data();
 		$data['filters_enabled']  = $filters_enabled;
+		$data['knowledge_hint']   = "Call bricks:get_knowledge('query-loops') for query filter integration and pagination.";
 
 		return $data;
 	}
@@ -497,7 +501,9 @@ final class SchemaHandler {
 	 * @return array<string, mixed>|\WP_Error Condition schema or error.
 	 */
 	public function tool_get_condition_schema( array $args ): array|\WP_Error { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		return ConditionSchemaCatalog::data();
+		$data = ConditionSchemaCatalog::data();
+		$data['knowledge_hint'] = "Call bricks:get_knowledge('templates') for template condition scoring, precedence, and condition object shapes.";
+		return $data;
 	}
 
 	/**
@@ -509,7 +515,9 @@ final class SchemaHandler {
 	 * @return array<string, mixed> Form schema reference.
 	 */
 	public function tool_get_form_schema( array $args ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		return FormSchemaCatalog::data();
+		$data = FormSchemaCatalog::data();
+		$data['knowledge_hint'] = "Call bricks:get_knowledge('forms') for 18 field types, 7 actions, options format, spam protection, and working examples.";
+		return $data;
 	}
 
 	/**
@@ -521,7 +529,9 @@ final class SchemaHandler {
 	 * @return array<string, mixed> Interaction schema reference.
 	 */
 	public function tool_get_interaction_schema( array $args ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		return InteractionSchemaCatalog::data();
+		$data = InteractionSchemaCatalog::data();
+		$data['knowledge_hint'] = "Call bricks:get_knowledge('animations') for 17 triggers, 19 actions, Animate.css catalog, Bricks 2.3+ parallax, and 3D transforms.";
+		return $data;
 	}
 
 	/**
@@ -620,6 +630,7 @@ final class SchemaHandler {
 				'Component IDs use the same 6-char alphanumeric format as element IDs',
 				'Nested components are supported up to 10 levels deep',
 			),
+			'knowledge_hint'       => "Call bricks:get_knowledge('components') for connection format, slot mechanics, all 8 actions, and working end-to-end example.",
 		);
 	}
 
@@ -782,6 +793,7 @@ final class SchemaHandler {
 				'An infobox is a popup sub-type (popupIsInfoBox=true). Create as popup, then set popupIsInfoBox via set_popup_settings. See infobox_behavior for which settings apply.',
 				'template:list and template:get responses include is_infobox boolean for quick identification.',
 				),
+			'knowledge_hint'   => "Call bricks:get_knowledge('popups') for trigger patterns, 30+ display settings across 7 categories, infobox mode, AJAX mode, display limits, and common pitfalls.",
 		);
 	}
 }

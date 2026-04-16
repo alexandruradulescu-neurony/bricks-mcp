@@ -336,7 +336,7 @@ final class ElementSettingsGenerator {
 		// Form templates used to be baked in (Romanian newsletter/contact/login), but those shipped
 		// with site-specific strings. AI clients must now supply `fields` via element_settings.
 		if ( 'form' === $type && empty( $settings['fields'] ) ) {
-			$settings['_pipeline_warnings'][] = 'Form element has no fields. Supply a "fields" array via element_settings (see bricks:get_form_schema for structure).';
+			$settings['_pipeline_warnings'][] = 'Form element has no fields. Supply a "fields" array via element_settings. Call bricks:get_knowledge(domain="forms") for the 18 field types, 7 actions, and working examples.';
 		}
 
 		// 7. Handle image elements with optional Unsplash resolution.

@@ -121,40 +121,56 @@ final class ProposalService {
 		];
 	}
 
-	// ELEMENT_CAPABILITIES extracted to data/elements.json (purpose/capabilities/rules per element).
-	// get_element_capabilities() below reads from the registry and applies the has_design_system override.
+	// ELEMENT_CAPABILITIES extracted to data/elements.json.
+	// BUILDING_RULES_BASE extracted to data/building-rules.json.
 
 	/**
-	 * Building rules — included in every discovery response.
-	 * The no_override rule is adjusted at runtime based on site state.
+	 * Cached building rules from data/building-rules.json.
+	 *
+	 * @var array<string, string>|null
 	 */
-	private const BUILDING_RULES_BASE = [
-		'structure'       => 'Every page follows: section > container > block/div > content elements. Multiple visual rows = multiple containers inside a section.',
-		'centering'       => 'Use flex alignment (_alignItems: center, _justifyContent: center) — NOT text-align. text-align only affects text inside an element.',
-		'classes'         => 'Use class_intent on every element when possible. The pipeline creates reusable classes WITH styles. Inline style_overrides only for instance-specific overrides.',
-		'style_overrides' => 'ONLY use style_overrides for truly one-off values (e.g., a specific width, margin-top:auto, a unique color on one element). If 2+ elements share the same styles, that MUST be a class_intent instead. Colors, typography, padding, radius, backgrounds — all belong in class_intent, not style_overrides.',
-		'labels'          => 'Add label to sections ("Hero"), containers (row description), and blocks ("CTA Buttons", "Cards Grid").',
-		'variables'       => 'Always use var(--name) — never hardcode colors, spacing, radius, or font sizes. Examples: var(--space-m), var(--primary), var(--radius), var(--h2).',
-		'rows'            => 'For horizontal rows, use block with _direction: row. NOT div — div ignores _direction.',
-		'responsive'      => 'Composite keys for responsive: _property:tablet_portrait, _property:mobile. Grids should collapse: 3-col → 2-col at tablet → 1-col at mobile.',
-		'backgrounds'     => 'Background overlays use _gradient with applyTo: "overlay". Background images need actual URLs (sideload from Unsplash first). Section background: "dark" auto-sets dark bg + white text on children.',
-		'buttons'         => 'Buttons support native icons (icon + iconPosition settings). Do NOT use emoji in button text. Use class_intent for styling (btn-hero-primary, btn-hero-ghost).',
-		'gaps'            => 'On flex blocks: use _columnGap for horizontal spacing (row direction), _rowGap for vertical spacing (column direction). Plain _gap does NOT generate CSS on flex layout blocks. The pipeline auto-converts _gap to the correct key based on _direction.',
-	];
+	private static ?array $building_rules_cache = null;
+
+	/**
+	 * Load building rules from data file.
+	 *
+	 * @return array<string, string>
+	 */
+	private static function load_building_rules(): array {
+		if ( null === self::$building_rules_cache ) {
+			$path = dirname( __DIR__, 3 ) . '/data/building-rules.json';
+			if ( file_exists( $path ) ) {
+				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+				$data = is_string( $json ) ? json_decode( $json, true ) : [];
+				self::$building_rules_cache = $data['rules'] ?? [];
+			} else {
+				self::$building_rules_cache = [];
+			}
+		}
+		return self::$building_rules_cache;
+	}
 
 	/**
 	 * Get building rules, adjusted based on whether the site has a design system.
 	 *
+	 * Reads from data/building-rules.json, applies no_override variant at runtime.
+	 *
 	 * @param bool $has_design_system True if site has meaningful classes/theme styles.
 	 */
 	private static function get_building_rules( bool $has_design_system ): array {
-		$rules = self::BUILDING_RULES_BASE;
-
-		if ( $has_design_system ) {
-			$rules['no_override'] = 'DO NOT set these inline — the design system handles them globally: section _padding, container _gap, heading font-size/color/line-height/font-weight, body text font-size/color/line-height.';
-		} else {
-			$rules['no_override'] = 'No design system detected. Set explicit values for section _padding, container _gap, heading typography, and body text styles. Use the starter classes or var(--name, fallback) pattern.';
+		$path = dirname( __DIR__, 3 ) . '/data/building-rules.json';
+		$data = [];
+		if ( file_exists( $path ) ) {
+			$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$data = is_string( $json ) ? json_decode( $json, true ) : [];
 		}
+
+		$rules = $data['rules'] ?? [];
+		$variants = $data['no_override_variants'] ?? [];
+
+		$rules['no_override'] = $has_design_system
+			? ( $variants['has_design_system'] ?? '' )
+			: ( $variants['no_design_system'] ?? '' );
 
 		return $rules;
 	}
@@ -352,9 +368,53 @@ final class ProposalService {
 		$response['site_context_hash']    = $context_hash;
 		$response['site_context_changed'] = true;
 		$response['design_plan_format']   = $this->get_design_plan_format();
+		$response['recommended_knowledge'] = self::detect_recommended_knowledge( $description );
 		$response['next_step'] .= ' For subsequent sections, you can skip Phase 1 and call propose_design directly with a design_plan.';
 
 		return $response;
+	}
+
+	/**
+	 * Detect which knowledge domains are relevant to a description.
+	 *
+	 * Scans the description for keywords that map to knowledge domains.
+	 * Returns an array of domain names the AI should fetch for deeper guidance.
+	 *
+	 * @param string $description Free-text design description.
+	 * @return array<int, string> Relevant knowledge domain names.
+	 */
+	private static function detect_recommended_knowledge( string $description ): array {
+		$desc   = strtolower( $description );
+		$domains = [];
+
+		$keyword_map = [
+			'forms'          => [ 'form', 'newsletter', 'contact', 'login', 'signup', 'register', 'subscribe', 'email field', 'input field' ],
+			'popups'         => [ 'popup', 'modal', 'overlay', 'lightbox', 'dialog', 'exit intent' ],
+			'animations'     => [ 'animation', 'scroll', 'parallax', 'fade', 'slide', 'interaction', 'hover effect', 'entrance', 'scroll-reveal' ],
+			'query-loops'    => [ 'query', 'loop', 'posts', 'archive', 'blog', 'pagination', 'load more', 'infinite scroll', 'listing' ],
+			'templates'      => [ 'template', 'header', 'footer', 'archive template', 'single post template' ],
+			'global-classes' => [ 'global class', 'batch class', 'import css', 'class system' ],
+			'woocommerce'    => [ 'woocommerce', 'product', 'cart', 'checkout', 'shop', 'store', 'ecommerce', 'e-commerce' ],
+			'seo'            => [ 'seo', 'meta description', 'open graph', 'og:', 'robots', 'canonical' ],
+			'dynamic-data'   => [ 'dynamic', '{post_', 'dynamic tag', 'custom field', 'acf', 'meta box' ],
+			'components'     => [ 'component', 'reusable', 'slot', 'property', 'instance' ],
+		];
+
+		foreach ( $keyword_map as $domain => $keywords ) {
+			foreach ( $keywords as $kw ) {
+				if ( str_contains( $desc, $kw ) ) {
+					$domains[] = $domain;
+					break; // One match per domain is enough.
+				}
+			}
+		}
+
+		// Always recommend 'building' as the baseline guide.
+		if ( ! empty( $domains ) ) {
+			array_unshift( $domains, 'building' );
+		}
+
+		return array_values( array_unique( $domains ) );
 	}
 
 	/**

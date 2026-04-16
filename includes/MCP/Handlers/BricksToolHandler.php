@@ -329,11 +329,12 @@ final class BricksToolHandler {
 			'custom_breakpoints_enabled' => $is_custom,
 			'composite_key_format'       => '{property}:{breakpoint}:{pseudo}',
 			'examples'                   => array(
-				'_margin:tablet_portrait' => 'Margin on tablet portrait',
-				'_padding:mobile'         => 'Padding on mobile',
-				'_background:hover'       => 'Background on hover state',
-				'_margin:mobile:hover'    => 'Margin on mobile hover',
+				'_margin:tablet_portrait'  => 'Margin on tablet portrait',
+				'_padding:mobile_portrait' => 'Padding on mobile portrait',
+				'_background:hover'        => 'Background on hover state',
+				'_margin:mobile_portrait:hover' => 'Margin on mobile portrait hover',
 			),
+			'knowledge_hint'             => "Call bricks:get_knowledge('building') for composite key format, responsive rules, and mobile-first mode guidance. WARNING: plain 'mobile' is NOT a valid breakpoint — use 'mobile_landscape' or 'mobile_portrait'.",
 		);
 	}
 
