@@ -178,7 +178,7 @@ final class DesignSchemaValidator {
 		'pie-chart'       => [ 'percent', 'content', 'barColor', 'trackColor', 'size', 'lineWidth' ],
 		'counter'         => [ 'countTo', 'countFrom', 'prefix', 'suffix', 'duration', 'separator' ],
 		'video'           => [ 'videoType', 'ytId', 'vimeoId', 'mp4', 'fileUrl', 'iframeUrl', 'autoplay', 'loop', 'muted', 'controls', 'preload' ],
-		'slider-nested'   => [ 'sliderOptions' ],
+		'slider-nested'   => [ 'perPage', 'gap', 'arrows', 'dots', 'autoplay', 'speed', 'loop', 'centeredSlides', 'effect', 'height' ],
 		'form'            => [ 'formFields', 'actions', 'submitButtonText', 'submitButtonStyle' ],
 		'progress-bar'    => [ 'bars', 'showLabel', 'showPercentage', 'animation' ],
 		'rating'          => [ 'rating', 'maxRating', 'icon', 'starColor', 'starColorEmpty' ],

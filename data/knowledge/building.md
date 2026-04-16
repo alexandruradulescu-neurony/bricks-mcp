@@ -114,7 +114,7 @@ The `element_settings` key is an escape hatch for type-specific Bricks settings 
 - **pie-chart**: `percent`, `barColor`, `trackColor`, `size`, `lineWidth`
 - **counter**: `countTo`, `prefix`, `suffix`, `duration`
 - **video**: `iframeUrl`, `videoType`, `overlay`
-- **slider-nested**: `autoplay`, `speed`, `effect`, `loop`, `arrows`, `dots`
+- **slider-nested** (Splide.js): `perPage` (string, slides visible — NOT slidesToShow/slidesPerView), `gap` (string, use `var(--content-gap)` — NOT spaceBetween), `arrows`, `dots`, `autoplay`, `speed`, `loop`, `centeredSlides`
 - **form**: `fields`, `submitButtonText`, `formId`, `actions`
 - **progress-bar**: `bars` (array of `{label, percentage}`)
 - **rating**: `rating`, `scale`, `iconEmpty`, `iconFull`

@@ -532,13 +532,34 @@
         "div"
       ],
       "skip_auto_flex": true,
-      "notes": "Each slide is a div child.",
       "nestable": true,
-      "purpose": "Image or content carousel/slideshow",
+      "purpose": "Image or content carousel/slideshow (Splide.js under the hood)",
       "capabilities": [
         "multiple slides with any nested content",
-        "autoplay, navigation arrows, dots"
-      ]
+        "autoplay, navigation arrows, dots",
+        "configurable slides per view, gap, speed, loop"
+      ],
+      "rules": [
+        "Bricks uses Splide.js — NOT Swiper. Use Splide setting keys.",
+        "perPage (string) — slides visible at once. e.g. '4'. NOT slidesToShow or slidesPerView.",
+        "gap (string) — space between slides in px. Use 'var(--content-gap)' or 'var(--grid-gap)' from design system. NOT spaceBetween.",
+        "arrows (bool) — show prev/next navigation arrows.",
+        "dots (bool) — show pagination dots.",
+        "autoplay (bool) — auto-advance slides.",
+        "speed (int) — transition speed in ms.",
+        "loop (bool) — infinite loop.",
+        "centeredSlides (bool) — center the active slide.",
+        "Each slide is a div (or block) child of the slider-nested element."
+      ],
+      "element_settings_defaults": {
+        "perPage": "3",
+        "gap": "var(--content-gap)",
+        "arrows": true,
+        "dots": true,
+        "loop": true,
+        "speed": 600
+      },
+      "notes": "Bricks slider-nested uses Splide.js. Key names: perPage (not slidesToShow/slidesPerView), gap (not spaceBetween), arrows (not navigation), dots (not pagination). Always use CSS variables for gap (e.g. var(--content-gap))."
     },
     "social-icons": {
       "valid_parents": [
