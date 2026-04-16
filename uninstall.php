@@ -35,6 +35,7 @@ function bricks_mcp_delete_options(): void {
 		'bricks_mcp_design_system_config',
 		'bricks_mcp_ds_last_applied',
 		'bricks_mcp_structured_brief',
+		'bricks_mcp_db_version',
 	];
 
 	foreach ( $options as $option ) {

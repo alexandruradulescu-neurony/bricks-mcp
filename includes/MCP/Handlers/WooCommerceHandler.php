@@ -1169,7 +1169,7 @@ final class WooCommerceHandler {
 				'Use element:update to modify individual element settings',
 				'Use element:add to insert additional elements',
 				'Use element:remove to remove unwanted elements',
-				'Use get_builder_guide(section="woocommerce") for WooCommerce building patterns',
+				"Call bricks:get_knowledge('woocommerce') for WC template types, dynamic tags, and scaffolding guidance",
 			),
 		);
 
@@ -1280,7 +1280,7 @@ final class WooCommerceHandler {
 			'total_created' => count( $created ),
 			'total_skipped' => count( $skipped ),
 			'total_failed'  => count( $failed ),
-			'next_steps'    => 'Use template:get to view and customize individual templates. Use page:update_content or element:add/update to modify elements. Use get_builder_guide(section="woocommerce") for patterns.',
+			'next_steps'    => "Use template:get to view and customize individual templates. Use page:update_content or element:add/update to modify elements. Call bricks:get_knowledge('woocommerce') for WC template types, dynamic tags, and customization guidance.",
 		);
 	}
 

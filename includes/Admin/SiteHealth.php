@@ -78,6 +78,10 @@ class SiteHealth {
 			'label' => __( 'Bricks MCP: PHP timeout', 'bricks-mcp' ),
 			'test'  => [ $this, 'test_php_timeout' ],
 		];
+		$tests['direct']['bricks_mcp_design_pipeline'] = [
+			'label' => __( 'Bricks MCP: Design pipeline health', 'bricks-mcp' ),
+			'test'  => [ $this, 'test_design_pipeline' ],
+		];
 		return $tests;
 	}
 
@@ -187,6 +191,17 @@ class SiteHealth {
 	 */
 	public function test_php_timeout(): array {
 		$check  = new Checks\PhpTimeoutCheck();
+		$result = $check->run();
+		return $this->format_site_health_result( $result, 'performance' );
+	}
+
+	/**
+	 * Run the design pipeline health check.
+	 *
+	 * @return array<string, mixed> Site Health result array.
+	 */
+	public function test_design_pipeline(): array {
+		$check  = new Checks\DesignPipelineCheck();
 		$result = $check->run();
 		return $this->format_site_health_result( $result, 'performance' );
 	}

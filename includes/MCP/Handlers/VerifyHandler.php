@@ -122,7 +122,7 @@ final class VerifyHandler {
 		}
 
 		// Build hierarchy tree for last section (most recently built).
-		$sections = array_filter( $elements, fn( $el ) => ( $el['name'] ?? '' ) === 'section' && ( $el['parent'] ?? '' ) === '0' );
+		$sections = array_filter( $elements, fn( $el ) => ( $el['name'] ?? '' ) === 'section' && empty( $el['parent'] ) );
 		$last_section = ! empty( $sections ) ? end( $sections ) : null;
 		$hierarchy = null;
 

@@ -208,6 +208,9 @@ final class ComponentHandler {
 		}
 
 		// Set root element ID to match component ID.
+		if ( empty( $elements ) ) {
+			return new \WP_Error( 'empty_elements', __( 'Elements array is empty after normalization.', 'bricks-mcp' ) );
+		}
 		$elements[0]['id']     = $component_id;
 		$elements[0]['parent'] = 0;
 

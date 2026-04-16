@@ -228,6 +228,7 @@ class BricksCore {
 		wp_cache_delete( $post_id, 'post_meta' );
 
 		// Temporarily unhook Bricks sanitize/update filters that block programmatic meta writes.
+		$stored = null;
 		$this->unhook_bricks_meta_filters( $meta_key );
 		try {
 			$updated = update_post_meta( $post_id, $meta_key, $elements );

@@ -44,7 +44,7 @@ class DesignPipelineCheck implements DiagnosticCheck {
 	}
 
 	public function run(): array {
-		$base = defined( 'BRICKS_MCP_PLUGIN_DIR' ) ? BRICKS_MCP_PLUGIN_DIR : plugin_dir_path( __DIR__ . '/../../../' );
+		$base = defined( 'BRICKS_MCP_PLUGIN_DIR' ) ? BRICKS_MCP_PLUGIN_DIR : dirname( __DIR__, 3 ) . '/';
 
 		$problems = array();
 

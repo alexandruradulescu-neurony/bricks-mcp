@@ -41,9 +41,6 @@ final class UpdateChecker {
 		return 'https://api.github.com/repos/' . $repo . '/releases/latest';
 	}
 
-	/** @deprecated Use github_api_url() instead. */
-	private const GITHUB_API_URL = 'https://api.github.com/repos/alexandruradulescu-neurony/bricks-mcp/releases/latest';
-
 	/**
 	 * Transient key for cached update data.
 	 *
