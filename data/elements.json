@@ -6,6 +6,7 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Deprecated base version. Use accordion-nested for customizable accordion content — its child divs are the panes.",
+      "purpose": "Deprecated — use accordion-nested for customizable accordion content",
       "working_example": {
         "accordions": [
           { "id": "acc001", "title": "Accordion Item 1", "subtitle": "More details", "content": "Content of accordion item 1." },
@@ -114,6 +115,8 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "HTML5 audio player. Supply a media URL or attachment ID.",
+      "purpose": "HTML5 audio player — podcasts, music, sound clips",
+      "capabilities": ["self-hosted or external audio URL", "native browser play/pause controls"],
       "working_example": {}
     },
     "back-to-top": {
@@ -122,6 +125,8 @@
       "typical_children": ["icon", "text-basic"],
       "nestable": true,
       "notes": "Nestable back-to-top button. Children define the button content (icon + optional label).",
+      "purpose": "Scroll-to-top button — fixed position, appears on scroll",
+      "capabilities": ["nestable — icon + text children define button content", "auto-shows after scroll threshold"],
       "working_example": {
         "_nestable_children": [
           {
@@ -157,6 +162,8 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Auto-generated breadcrumb navigation trail.",
+      "purpose": "Breadcrumb navigation trail — Home > Parent > Current page",
+      "capabilities": ["auto-generated from WordPress page hierarchy", "custom separator character"],
       "working_example": {}
     },
     "button": {
@@ -180,6 +187,8 @@
       "valid_parents": ["section", "container", "block", "div"],
       "accepts_children": false,
       "notes": "Simple carousel element (non-nested). For custom carousel content, use slider-nested with div children.",
+      "purpose": "Simple post carousel — use slider-nested for custom content slides",
+      "capabilities": ["dynamic data fields from posts query", "arrows, infinite loop, auto-rotation"],
       "working_example": {
         "fields": [
           {
@@ -200,6 +209,9 @@
       "valid_parents": ["section", "container", "block", "div"],
       "accepts_children": false,
       "notes": "Inline HTML/CSS/JS code snippet.",
+      "purpose": "Custom HTML/CSS/JS/PHP code block",
+      "capabilities": ["inline code rendering", "PHP execution when dangerous actions enabled"],
+      "rules": ["requires 'Dangerous Actions' toggle enabled in plugin settings for PHP"],
       "working_example": {
         "code": "<h1>Custom HTML/PHP</h1><?php echo date(\"Y\"); ?>",
         "executeCode": true
@@ -220,6 +232,8 @@
       "valid_parents": ["section", "container", "block", "div"],
       "accepts_children": false,
       "notes": "Countdown timer to a target date/time.",
+      "purpose": "Countdown timer to a target date/time — launches, events, sales",
+      "capabilities": ["configurable date target", "days/hours/minutes/seconds format fields"],
       "working_example": {
         "date": "2026-12-31 00:00",
         "fields": [
@@ -249,6 +263,8 @@
       "accepts_children": false,
       "content_key": "title",
       "notes": "Custom title element with separate title and subtitle fields.",
+      "purpose": "Decorative title with separate subtitle field",
+      "capabilities": ["title + subtitle rendered as one element", "independent styling per part"],
       "working_example": {
         "title": "Custom Title",
         "subtitle": "Subtitle text here"
@@ -278,6 +294,8 @@
       "typical_children": ["block"],
       "nestable": true,
       "notes": "Dropdown menu container (nestable). Children are the dropdown items.",
+      "purpose": "Dropdown menu container — for navigation submenus",
+      "capabilities": ["hover or click trigger via element_settings.trigger", "nestable — children are dropdown items"],
       "working_example": {
         "text": "Dropdown"
       }
@@ -286,6 +304,8 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Facebook Page embed widget.",
+      "purpose": "Facebook Page embed widget — timeline, events feed",
+      "capabilities": ["page timeline and events tabs", "configurable width and height"],
       "working_example": {
         "href": "https://facebook.com/facebook"
       }
@@ -376,6 +396,8 @@
       "accepts_children": false,
       "content_key": "items",
       "notes": "Gallery of images. Supports loadMoreInitial / loadMoreStep / loadMoreInfiniteScroll for progressive loading.",
+      "purpose": "Image gallery grid with optional lightbox",
+      "capabilities": ["masonry or grid layout", "lightbox on click", "progressive loading (loadMoreInitial/loadMoreStep/loadMoreInfiniteScroll)"],
       "working_example": {
         "items": {
           "images": [
@@ -389,6 +411,8 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Instagram feed embed. Requires Instagram API token configuration.",
+      "purpose": "Instagram feed embed — displays recent posts from account",
+      "capabilities": ["follow button with custom text and icon", "requires Instagram API token in Bricks settings"],
       "working_example": {
         "followText": "Follow us @yourhandle",
         "followIcon": { "library": "ionicons", "icon": "ion-logo-instagram" }
@@ -411,6 +435,8 @@
       "accepts_children": false,
       "content_key": "logoText",
       "notes": "Site logo element. Shows site logo image or text fallback.",
+      "purpose": "Site logo — image with text fallback",
+      "capabilities": ["auto-fetches site logo from WordPress settings", "text fallback via logoText setting"],
       "working_example": {
         "logoText": "Site Name"
       }
@@ -419,6 +445,9 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Google Maps embed with address or coordinates.",
+      "purpose": "Google Maps embed with markers and controls",
+      "capabilities": ["latitude/longitude coordinates", "multiple address markers", "zoom/scroll/drag/streetView controls"],
+      "rules": ["requires Google Maps API key in Bricks settings"],
       "working_example": {
         "addresses": [
           { "id": "map001", "latitude": "40.7128", "longitude": "-74.0060" }
@@ -433,12 +462,16 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Map connector element — links multiple map markers or locations.",
+      "purpose": "Route connector between map markers",
+      "capabilities": ["links multiple map address points visually"],
       "working_example": {}
     },
     "map-leaflet": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Leaflet (OpenStreetMap) embed — no API key required.",
+      "purpose": "OpenStreetMap embed via Leaflet — no API key required",
+      "capabilities": ["custom tile layers", "zoom/drag controls", "free alternative to Google Maps"],
       "working_example": {
         "layers": [
           { "id": "mpl001", "name": "OpenStreetMap", "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png" }
@@ -452,6 +485,9 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "WordPress menu widget. Renders a registered WP nav menu. For custom navigation, use nav-nested.",
+      "purpose": "WordPress registered menu — renders a saved WP nav menu",
+      "capabilities": ["selects from registered menu locations", "basic horizontal/vertical layout"],
+      "rules": ["for custom navigation with dropdowns and nested content, use nav-nested instead"],
       "working_example": {}
     },
     "nav-nested": {
@@ -460,6 +496,8 @@
       "typical_children": ["div"],
       "skip_auto_flex": true,
       "nestable": true,
+      "purpose": "Custom navigation menu — full nesting control for mega menus",
+      "capabilities": ["nestable — text-link and dropdown children", "mega menu support with any nested content", "mobile responsive patterns"],
       "working_example": {
         "_nestable_children": [
           {
@@ -489,12 +527,17 @@
       "typical_children": ["block", "container"],
       "nestable": true,
       "notes": "Off-canvas slide-in panel (nestable). Triggered by a toggle/button.",
+      "purpose": "Slide-in panel — mobile menus, sidebars, filter panels",
+      "capabilities": ["nestable — any content inside", "triggered by toggle/button element", "left/right/top/bottom slide position"],
       "working_example": {}
     },
     "pagination": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Query pagination — use inside or after a query loop.",
+      "purpose": "Query loop pagination — prev/next/numbered page links",
+      "capabilities": ["auto-detects parent query loop", "customizable labels and style"],
+      "rules": ["place after or inside a posts/query loop element"],
       "working_example": {}
     },
     "pie-chart": {
@@ -522,12 +565,17 @@
       "typical_children": ["block", "container"],
       "nestable": true,
       "notes": "Popup content container (nestable). Lives inside a popup template.",
+      "purpose": "Popup/modal content container — lives inside popup templates",
+      "capabilities": ["nestable — any content inside the modal", "trigger conditions (click, scroll, exit intent, timed delay)", "close on overlay click or button"],
+      "rules": ["must be placed inside a popup template type — see bricks:get_knowledge('popups')"],
       "working_example": {}
     },
     "post-author": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Single post author bio box — avatar, name, bio, links.",
+      "purpose": "Author bio box — avatar, name, bio, website links",
+      "capabilities": ["toggle avatar, name, website, bio, posts link individually", "for single post templates"],
       "working_example": {
         "avatar": true,
         "name": true,
@@ -541,6 +589,8 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "WordPress comments section for a single post.",
+      "purpose": "WordPress comments section with reply form",
+      "capabilities": ["comment list with avatars", "reply form with submit button", "for single post templates"],
       "working_example": {
         "title": true,
         "avatar": true,
@@ -553,18 +603,24 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Renders the post content (the_content). Use in single post templates.",
+      "purpose": "Renders the full post body content (the_content)",
+      "capabilities": ["outputs formatted post content", "for single post templates"],
       "working_example": {}
     },
     "post-excerpt": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Renders the post excerpt. Use in archive loops or single post templates.",
+      "purpose": "Post excerpt — short summary text",
+      "capabilities": ["auto-generated or manual excerpt", "for archive loops or single post templates"],
       "working_example": {}
     },
     "post-meta": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Displays post metadata — author, date, comments, categories. Uses dynamic data tags.",
+      "purpose": "Post metadata display — author, date, comments count",
+      "capabilities": ["dynamic data tags per field ({author_name}, {post_date})", "customizable separator", "for single post or archive templates"],
       "working_example": {
         "meta": [
           { "id": "mtd001", "dynamicData": "{author_name}" },
@@ -577,6 +633,8 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Previous/next post links for single post templates.",
+      "purpose": "Previous/next post links for single post templates",
+      "capabilities": ["shows label, title, thumbnail", "customizable arrow icons"],
       "working_example": {
         "label": true,
         "title": true,
@@ -589,12 +647,16 @@
       "valid_parents": ["section", "container", "block", "div"],
       "accepts_children": false,
       "notes": "Reading progress bar that fills as user scrolls through post content.",
+      "purpose": "Reading progress indicator — fills as user scrolls",
+      "capabilities": ["auto-tracks scroll position vs content length", "customizable color and height"],
       "working_example": {}
     },
     "post-reading-time": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Estimated reading time display for the current post.",
+      "purpose": "Estimated reading time display",
+      "capabilities": ["auto-calculated from content length", "customizable prefix/suffix text"],
       "working_example": {
         "prefix": "Reading time: ",
         "suffix": " minutes"
@@ -604,6 +666,8 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Social sharing buttons for the current post.",
+      "purpose": "Social sharing buttons for the current post",
+      "capabilities": ["Facebook, Twitter, LinkedIn, WhatsApp, Pinterest, Telegram, Email", "brand colors option"],
       "working_example": {
         "items": [
           { "id": "psh001", "service": "facebook" },
@@ -621,6 +685,8 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Displays post taxonomy terms (categories, tags). Use in post templates.",
+      "purpose": "Post taxonomy terms — categories or tags as links",
+      "capabilities": ["any registered taxonomy", "style variants (dark, light)"],
       "working_example": {
         "taxonomy": "category",
         "style": "dark"
@@ -631,6 +697,8 @@
       "accepts_children": false,
       "content_key": "tag",
       "notes": "Dynamic post title element for single post templates.",
+      "purpose": "Dynamic post title — pulls from current post",
+      "capabilities": ["customizable HTML tag (h1-h6)", "for single post or archive templates"],
       "working_example": {
         "tag": "h1"
       }
@@ -639,12 +707,17 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Auto-generated table of contents from post headings.",
+      "purpose": "Auto-generated table of contents from post headings",
+      "capabilities": ["scans h2-h6 headings in content", "smooth scroll to sections"],
       "working_example": {}
     },
     "posts": {
       "valid_parents": ["section", "container", "block", "div"],
       "accepts_children": false,
       "notes": "Post listing / query loop element. Displays posts with configurable fields and layout.",
+      "purpose": "Post listing / query loop — blog grids, archives, related content",
+      "capabilities": ["WP_Query parameters for filtering", "grid/list layout with gutter control", "dynamic data fields per post card", "use with pagination element for multi-page results"],
+      "rules": ["pair with pagination element for paged results", "use bricks:get_knowledge('query-loops') for query parameters"],
       "working_example": {
         "gutter": "30px",
         "fields": [
@@ -721,6 +794,9 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Shows 'Showing X of Y results' text for query loops.",
+      "purpose": "Query results count text — 'Showing X of Y results'",
+      "capabilities": ["auto-detects parent query loop", "customizable format string"],
+      "rules": ["place inside or near a posts/query loop element"],
       "working_example": {}
     },
     "rating": {
@@ -742,6 +818,8 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Related posts based on shared taxonomy terms. Use in single post templates.",
+      "purpose": "Related posts grid based on shared taxonomy terms",
+      "capabilities": ["configurable taxonomies (category, post_tag)", "dynamic data fields per post", "for single post templates"],
       "working_example": {
         "taxonomies": ["category", "post_tag"],
         "content": [
@@ -754,6 +832,8 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Search form element with optional overlay mode.",
+      "purpose": "Search form — inline or fullscreen overlay mode",
+      "capabilities": ["overlay mode with custom title", "AJAX search results support"],
       "working_example": {
         "searchOverlayTitle": "Search"
       }
@@ -778,18 +858,23 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Renders a WordPress shortcode. Supply the shortcode string.",
+      "purpose": "WordPress shortcode renderer — any registered shortcode",
+      "capabilities": ["supports any [shortcode] with attributes", "renders output inline"],
       "working_example": {}
     },
     "sidebar": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "WordPress widget sidebar area.",
+      "purpose": "WordPress widget sidebar area — legacy widget integration",
+      "capabilities": ["renders any registered widget area", "for classic WordPress widgets"],
       "working_example": {}
     },
     "slider": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Deprecated base version. Use slider-nested — each slide is a div child.",
+      "purpose": "Deprecated — use slider-nested for custom slide content with full nesting",
       "working_example": {
         "items": [
           {
@@ -868,6 +953,8 @@
       "valid_parents": ["section", "container", "block", "div"],
       "accepts_children": false,
       "notes": "Template slot — placeholder for content injection in template hierarchies.",
+      "purpose": "Template slot — content injection point for component architecture",
+      "capabilities": ["placeholder filled by parent template or component", "enables reusable component patterns"],
       "working_example": {}
     },
     "social-icons": {
@@ -903,12 +990,15 @@
       "accepts_children": false,
       "content_key": "code",
       "notes": "Inline SVG element. Content stored in 'code' or 'file' setting.",
+      "purpose": "Inline SVG — icons, illustrations, decorative shapes at any size",
+      "capabilities": ["inline SVG code or file reference", "preserves vector quality at any resolution"],
       "working_example": {}
     },
     "tabs": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "Deprecated base version. Use tabs-nested — its child divs are the tab panes (tabs-nested supports rich content per pane; plain tabs only takes a string repeater).",
+      "purpose": "Deprecated — use tabs-nested for rich tab content with full nesting",
       "working_example": {
         "tabs": [
           { "id": "tab001", "title": "Tab 1", "content": "Tab 1 content goes here." },
@@ -985,6 +1075,8 @@
       "accepts_children": false,
       "content_key": "items",
       "notes": "Team member cards with photo, name, role, and description.",
+      "purpose": "Team member cards — photo, name, role, description",
+      "capabilities": ["repeater with title, subtitle, description per member", "avatar/photo support"],
       "working_example": {
         "items": [
           { "id": "tmm001", "title": "John Doe", "subtitle": "CEO", "description": "Team member description." },
@@ -997,12 +1089,16 @@
       "accepts_children": false,
       "nestable": true,
       "notes": "Embeds another Bricks template (header, footer, section, content).",
+      "purpose": "Embed another Bricks template — reusable sections, headers, footers",
+      "capabilities": ["renders any saved Bricks template by ID", "header, footer, section, or content template types"],
       "working_example": {}
     },
     "testimonials": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "content_key": "items",
+      "purpose": "Customer testimonial carousel/cards — quotes with author info",
+      "capabilities": ["repeater with quote text, author name, job title", "auto-rotation between testimonials"],
       "working_example": {
         "items": [
           { "id": "tes001", "content": "Great service, highly recommended!", "name": "Client A", "job": "CEO" },
@@ -1015,6 +1111,9 @@
       "accepts_children": false,
       "content_key": "text",
       "default_tag": "p",
+      "purpose": "Rich text block — paragraphs with full HTML formatting",
+      "capabilities": ["HTML content with bold, italic, links, spans", "dynamic data tag support"],
+      "rules": ["for plain text without HTML formatting, prefer text-basic"],
       "working_example": {
         "text": "<p>Paragraph text</p>"
       }
@@ -1048,12 +1147,16 @@
       "typical_children": ["block"],
       "nestable": true,
       "notes": "Toggle button — triggers the visibility of a target element (offcanvas, dropdown, etc.).",
+      "purpose": "Toggle button — triggers visibility of target elements",
+      "capabilities": ["nestable — button content is fully customizable", "triggers offcanvas, dropdown, or any element by ID"],
       "working_example": {}
     },
     "toggle-mode": {
       "valid_parents": ["section", "container", "block", "div"],
       "accepts_children": false,
       "notes": "Bricks 2.3+ light/dark mode toggle button. No content — configured via icon/iconColor/iconSize + iconDark/iconDarkColor/iconDarkSize + ariaLabel.",
+      "purpose": "Light/dark mode toggle switch",
+      "capabilities": ["separate icons for light and dark states", "ariaLabel for accessibility", "auto-toggles site color scheme"],
       "working_example": {
         "ariaLabel": "Toggle mode"
       }
@@ -1076,6 +1179,8 @@
       "valid_parents": ["container", "block", "div"],
       "accepts_children": false,
       "notes": "WordPress widget element. Wraps any WP widget (archives, categories, recent posts, etc.).",
+      "purpose": "WordPress widget wrapper — renders classic WP widgets",
+      "capabilities": ["archives, categories, recent posts, tag cloud, meta, search", "legacy widget integration for non-Bricks content"],
       "working_example": {
         "type": "posts"
       }
