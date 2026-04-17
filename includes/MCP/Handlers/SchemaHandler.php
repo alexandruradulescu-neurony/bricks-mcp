@@ -154,6 +154,42 @@ final class SchemaHandler {
 			return $result;
 		}
 
+		// Batch fetch: multiple specific elements by name (comma-separated or array).
+		$elements_param = $args['elements'] ?? '';
+		if ( ! empty( $elements_param ) ) {
+			$element_names = is_array( $elements_param )
+				? $elements_param
+				: array_map( 'trim', explode( ',', $elements_param ) );
+			$element_names = array_filter( array_map( 'sanitize_text_field', $element_names ) );
+
+			if ( count( $element_names ) > 20 ) {
+				return new \WP_Error( 'too_many_elements', 'Maximum 20 elements per batch request. Use get_element_schemas without filters for the full catalog.' );
+			}
+
+			$schemas = [];
+			$not_found = [];
+			foreach ( $element_names as $name ) {
+				$schema = $this->schema_generator->get_element_schema( $name );
+				if ( is_wp_error( $schema ) ) {
+					$not_found[] = $name;
+				} else {
+					$schemas[ $name ] = $schema;
+				}
+			}
+
+			$result = [
+				'total_elements' => count( $schemas ),
+				'bricks_version' => $this->schema_generator->get_bricks_version(),
+				'schemas'        => $schemas,
+			];
+
+			if ( ! empty( $not_found ) ) {
+				$result['not_found'] = $not_found;
+			}
+
+			return $result;
+		}
+
 		// Full catalog with schemas.
 		$all_schemas = $this->schema_generator->get_all_schemas();
 		$schemas     = array_values( $all_schemas );

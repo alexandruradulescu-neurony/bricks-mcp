@@ -595,7 +595,7 @@ final class StreamableHttpHandler {
 			. "2. INSTRUCTED BUILD → use element:bulk_add or page:append_content\n"
 			. "   Signals: \"add a section with\", \"insert a heading and two columns\", \"put a form here\"\n"
 			. "   Prerequisites: get_site_info + global_class:list\n"
-			. "   Call bricks:get_element_schemas for any unfamiliar element types before building.\n\n"
+			. "   Call bricks:get_element_schemas(elements='heading,slider-nested,image') to batch-fetch only the element schemas you need (max 20). More efficient than fetching all.\n\n"
 			. "3. DESIGN BUILD → 4-step flow (ALL steps required, server-enforced):\n\n"
 			. "   Step 1 — DISCOVER: Call propose_design(page_id, description) WITHOUT design_plan.\n"
 			. "   You receive: site context, available element types with PURPOSE descriptions, layouts, classes, variables, briefs.\n"

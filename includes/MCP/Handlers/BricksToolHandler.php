@@ -556,7 +556,11 @@ final class BricksToolHandler {
 					),
 					'element'      => array(
 						'type'        => 'string',
-						'description' => __( "Specific element type name (get_element_schemas: optional, e.g. 'heading')", 'bricks-mcp' ),
+						'description' => __( "Single element type name (get_element_schemas: optional, e.g. 'heading')", 'bricks-mcp' ),
+					),
+					'elements'     => array(
+						'type'        => 'string',
+						'description' => __( "Batch fetch: comma-separated element type names (get_element_schemas: optional, e.g. 'heading,slider-nested,image,button'). Max 20. More efficient than fetching all schemas when you know which elements you need.", 'bricks-mcp' ),
 					),
 					'catalog_only' => array(
 						'type'        => 'boolean',
