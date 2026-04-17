@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.22.0
+Stable tag: 3.23.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,12 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.23.0 =
+* Data: 76 element working examples extracted from PHP to `data/elements.json` — updatable without code release.
+* Data: 32 new element entries added to registry (post-*, WordPress widgets, maps, misc).
+* Refactor: `SchemaGenerator` reads working examples from registry; 562 lines of hardcoded PHP removed.
+* No behavior change — all MCP tool consumers receive identical data.
 
 = 3.21.2 =
 * Fix: `verify_build` root section detection broken — parent compared to string '0' but Bricks stores integer 0.

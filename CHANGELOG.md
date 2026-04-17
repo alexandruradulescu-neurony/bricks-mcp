@@ -4,6 +4,15 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.23.0] — 2026-04-17
+
+### Working examples extracted to data layer (IMP 5)
+
+- **Data migration:** 76 element working examples moved from ~560 lines of hardcoded PHP (`SchemaGenerator::generate_working_example()`) into `data/elements.json` `working_example` field — single source of truth, updatable without code release.
+- **32 new element entries** added to registry: post-title, post-excerpt, post-content, post-meta, post-author, post-taxonomy, post-comments, post-navigation, post-reading-time, post-reading-progress-bar, post-sharing, post-toc, related-posts, posts, nav-menu, search, shortcode, sidebar, wordpress, breadcrumbs, back-to-top, audio, instagram-feed, facebook-page, logo, custom-title, team-members, map-leaflet, map-connector, pagination, query-results-summary, slot.
+- **SchemaGenerator refactored:** `generate_working_example()` reads from element registry first, falls back to control-based detection for unknown/third-party elements only. File reduced from 1409 → 847 lines.
+- **No behavior change:** all consumers (`bricks:get_element_schemas`, `propose_design`, `ElementSettingsGenerator` content_key fallback) receive identical data.
+
 ## [3.21.2] — 2026-04-16
 
 ### Codebase audit (88 PHP files)
