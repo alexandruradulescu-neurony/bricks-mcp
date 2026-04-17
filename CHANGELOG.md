@@ -14,6 +14,20 @@ For the WordPress.org plugin update system, see also `readme.txt` (same content,
 - **Server instructions updated:** Gate enforcement text reflects section-only check. New PERSISTENT MEMORY section explains `bricks:add_note` / `bricks:get_notes` workflow with concrete examples of what to save.
 - **Tool descriptions updated:** `bypass_design_gate` parameter descriptions in PageHandler and ElementHandler reflect section-only gating.
 
+### Element coverage — 100%
+
+- **76/76 elements annotated** with `purpose` field (up from 26). AI discovery now describes every element type — post-*, query, navigation, media, maps, interactive, utility, deprecated.
+- **73/76 with `capabilities`** (3 deprecated elements correctly excluded).
+- **23 with `rules`** — do's and don'ts for elements that need guidance.
+
+### Batch element schema fetch
+
+- **New `elements` parameter** for `bricks:get_element_schemas` — comma-separated list, max 20. Fetch only the schemas needed instead of all 76: `bricks(action="get_element_schemas", elements="heading,slider-nested,image")`.
+
+### New knowledge: template-elements (231 lines)
+
+- **`template-elements.md`** — complete guide for building single post and archive templates. Covers all 13 post-* elements, posts/pagination/query-results-summary, dynamic data tags, layout patterns, and 8 common pitfalls. Knowledge domains now total 12 files, 2466 lines.
+
 ## [3.23.0] — 2026-04-17
 
 ### Working examples extracted to data layer (IMP 5)

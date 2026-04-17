@@ -169,6 +169,9 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 * New: Server instructions document the notes workflow with concrete examples.
 * Safety: Pattern repeat capped at 50 (validator rejects, expander hard-caps).
 * Fix: Design gate simplified — section presence only, removed arbitrary 8-element count threshold.
+* Data: 76/76 elements now have purpose annotations — 100% AI discovery coverage (was 26/76).
+* New: Batch element schema fetch — `elements` parameter for `get_element_schemas` (comma-separated, max 20).
+* New: `template-elements` knowledge file (231 lines) — post-* elements, archive patterns, dynamic data tags.
 
 = 3.23.0 =
 * Data: 76 element working examples extracted from PHP to `data/elements.json` — updatable without code release.
