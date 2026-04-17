@@ -23,6 +23,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class SchemaExpander {
 
 	/**
+	 * Maximum allowed repeat count per pattern reference.
+	 * Prevents memory bombs from unbounded expansion (e.g. repeat: 1000).
+	 */
+	private const MAX_REPEAT = 50;
+
+	/**
 	 * Expand a full design schema, resolving all patterns and repeats.
 	 *
 	 * @param array<string, mixed> $schema The validated design schema.
@@ -74,7 +80,7 @@ final class SchemaExpander {
 				return $node;
 			}
 
-			$repeat = $node['repeat'] ?? 1;
+			$repeat = min( (int) ( $node['repeat'] ?? 1 ), self::MAX_REPEAT );
 			$data   = $node['data'] ?? [];
 
 			if ( $repeat > 1 && ! empty( $data ) ) {

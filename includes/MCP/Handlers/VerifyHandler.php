@@ -163,6 +163,7 @@ final class VerifyHandler {
 			'content_sample'    => $content_sample,
 			'status'            => 'ok',
 			'verification'      => 'Compare page_description and sections[*].description with your design intent. Check content_sample.headings and .buttons for actual text. If has_placeholder_content is true, replace [PLACEHOLDER] text. Compare type_counts and classes_used against your design_plan.',
+			'notes_hint'        => 'If you learned something about this site during the build (e.g. preferred layouts, naming conventions, design patterns that work well, corrections you had to make), save it via bricks:add_note(text="..."). Notes persist across sessions and are shown in future discovery responses.',
 		];
 	}
 

@@ -326,6 +326,16 @@ final class ProposalService {
 			$response['site_style_hints']       = $style_hints;
 		}
 
+		// Include persistent AI notes — design preferences, corrections, site-specific learnings.
+		// Always included (both full and slim responses) so every session starts with context.
+		if ( null !== $this->bricks_service ) {
+			$notes = $this->bricks_service->get_notes();
+			if ( ! empty( $notes ) ) {
+				$response['ai_notes'] = array_map( fn( $n ) => $n['text'] ?? '', $notes );
+				$response['ai_notes_hint'] = 'These are persistent notes from previous sessions. Follow them. After this build, save any new design decisions or corrections via bricks:add_note.';
+			}
+		}
+
 		// Build site_context.
 		$site_context = [
 			'classes' => [

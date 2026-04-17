@@ -858,7 +858,7 @@ final class ElementHandler {
 					),
 					'bypass_design_gate' => array(
 						'type'        => 'boolean',
-						'description' => __( 'Set true to bypass the design build gate. By default, bulk_add with >8 elements will be rejected and redirected to build_from_schema.', 'bricks-mcp' ),
+						'description' => __( 'Set true to bypass the design build gate. By default, bulk_add with section elements will be rejected and redirected to build_from_schema.', 'bricks-mcp' ),
 					),
 				),
 				'required'   => array( 'action' ),

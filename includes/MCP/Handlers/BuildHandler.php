@@ -377,6 +377,11 @@ final class BuildHandler {
 			$response['warnings'] = $pipeline_warnings;
 		}
 
+		$response['next_steps'] = [
+			sprintf( 'Call verify_build(page_id=%d) to confirm the result matches your design intent.', $page_id ),
+			'If you discovered site-specific preferences, corrections, or design patterns worth remembering, save them via bricks:add_note(text="..."). Notes persist across sessions.',
+		];
+
 		return $response;
 	}
 

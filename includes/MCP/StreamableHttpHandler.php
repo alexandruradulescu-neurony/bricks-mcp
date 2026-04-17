@@ -616,12 +616,19 @@ final class StreamableHttpHandler {
 			. "   Prerequisites: get_site_info + global_class:list + global_variable:list\n\n"
 			. "ENFORCEMENT:\n"
 			. "- Prerequisites are server-enforced per workflow — write operations REJECTED if skipped.\n"
-			. "- Design build gate: append_content, bulk_add, and create with section elements or >8 elements will be REJECTED — use build_from_schema instead.\n"
+			. "- Design build gate: append_content, bulk_add, and create with SECTION elements will be REJECTED — use build_from_schema instead. Non-section elements are allowed for instructed builds.\n"
 			. "- build_from_schema requires a valid proposal_id from the PROPOSAL phase (not discovery).\n"
 			. "- Destructive actions (delete, replace) require token-based confirmation.\n\n"
 			. "KNOWLEDGE: For domain-specific guidance, call bricks:get_knowledge(domain). "
 			. "Available domains: " . implode( ', ', \BricksMCP\MCP\Handlers\BricksToolHandler::discover_knowledge_domains() ) . ". "
-			. "Call without domain to list all. Key domains: query-loops (pagination, nested loops), templates (conditions, scoring), global-classes (IDs vs names, style shape), forms (18 field types, 7 actions), animations (interactions, parallax)."
+			. "Call without domain to list all. Key domains: query-loops (pagination, nested loops), templates (conditions, scoring), global-classes (IDs vs names, style shape), forms (18 field types, 7 actions), animations (interactions, parallax).\n\n"
+			. "PERSISTENT MEMORY: Save design decisions, corrections, and site-specific learnings via bricks:add_note(text=\"...\"). "
+			. "Notes persist across sessions and appear in discovery responses + server instructions. "
+			. "Read existing notes via bricks:get_notes(). Examples of what to save:\n"
+			. "- \"This site uses perPage:4 for all sliders with var(--grid-gap) spacing\"\n"
+			. "- \"Client prefers dark hero sections with centered layout\"\n"
+			. "- \"Always use ti-truck icon for delivery/transport features\"\n"
+			. "- \"Homepage sections alternate: dark → light → tinted-neutral → light\""
 			. $notes_text;
 
 		return $instructions;

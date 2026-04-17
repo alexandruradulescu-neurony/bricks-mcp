@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.23.0
+Stable tag: 3.24.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,13 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.24.0 =
+* New: AI notes included in discovery responses — persistent memory across sessions.
+* New: Build + verify responses include hints prompting AI to save design learnings.
+* New: Server instructions document the notes workflow with concrete examples.
+* Safety: Pattern repeat capped at 50 (validator rejects, expander hard-caps).
+* Fix: Design gate simplified — section presence only, removed arbitrary 8-element count threshold.
 
 = 3.23.0 =
 * Data: 76 element working examples extracted from PHP to `data/elements.json` — updatable without code release.

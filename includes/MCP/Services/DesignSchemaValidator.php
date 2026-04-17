@@ -237,11 +237,17 @@ final class DesignSchemaValidator {
 	 * @param string                $parent_type Parent element type ('root' for top-level).
 	 */
 	private function validate_structure_node( array $node, string $path, array $patterns, array &$errors, string $parent_type = 'root' ): void {
-		// If it's a ref, validate the reference exists.
+		// If it's a ref, validate the reference exists and repeat is within bounds.
 		if ( ! empty( $node['ref'] ) ) {
 			$ref_name = $node['ref'];
 			if ( ! isset( $patterns[ $ref_name ] ) ) {
 				$errors[] = "{$path}.ref \"{$ref_name}\" does not match any defined pattern.";
+			}
+			$repeat = (int) ( $node['repeat'] ?? 1 );
+			if ( $repeat > 50 ) {
+				$errors[] = "{$path}.repeat is {$repeat} — maximum allowed is 50. Reduce repeat count.";
+			} elseif ( $repeat < 1 ) {
+				$errors[] = "{$path}.repeat must be at least 1.";
 			}
 			// Ref nodes don't need a type — the pattern provides it.
 			return;

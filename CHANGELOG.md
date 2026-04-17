@@ -4,6 +4,16 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.24.0] — 2026-04-17
+
+### System hardening
+
+- **Persistent memory:** AI notes now included in discovery responses (`ai_notes` + `ai_notes_hint`). Build and verify responses include `next_steps`/`notes_hint` prompting the AI to save design decisions via `bricks:add_note`. Server instructions document the notes workflow with examples.
+- **Pattern repeat cap:** Schema validator rejects `repeat > 50` with clear error. SchemaExpander hard-caps with `min()` as defense-in-depth. Prevents memory bombs from unbounded expansion.
+- **Design gate simplified:** Removed arbitrary 8-element count threshold. Gate now checks section presence only — non-section instructed builds of any element count are allowed. Cleaner, less confusing, no false rejections for legitimate bulk operations.
+- **Server instructions updated:** Gate enforcement text reflects section-only check. New PERSISTENT MEMORY section explains `bricks:add_note` / `bricks:get_notes` workflow with concrete examples of what to save.
+- **Tool descriptions updated:** `bypass_design_gate` parameter descriptions in PageHandler and ElementHandler reflect section-only gating.
+
 ## [3.23.0] — 2026-04-17
 
 ### Working examples extracted to data layer (IMP 5)

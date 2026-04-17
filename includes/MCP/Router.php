@@ -55,13 +55,6 @@ final class Router {
 	 *
 	 * @var array<string, array<string, string>>
 	 */
-	/**
-	 * Element count threshold for the design build gate.
-	 *
-	 * @var int
-	 */
-	private const DESIGN_GATE_THRESHOLD = 8;
-
 	private const GATED_OPERATIONS = [
 		'page'      => [
 			'update_content'   => 'direct',
@@ -468,13 +461,14 @@ final class Router {
 	}
 
 	/**
-	 * Design build gate: reject complex element trees that should use build_from_schema.
+	 * Design build gate: reject section elements that should use build_from_schema.
 	 *
 	 * Checks page:append_content, page:update_content, page:create (with elements),
 	 * page:import_clipboard, and element:bulk_add. Rejects when:
-	 * - Any root element is a section (full sections must use build_from_schema)
-	 * - Total element count exceeds 8 (complex structures must use build_from_schema)
+	 * - Any root element is a section (full sections must use build_from_schema
+	 *   for proper validation, class resolution, and design consistency).
 	 *
+	 * Non-section elements of any count are allowed for instructed builds.
 	 * Can be bypassed with bypass_design_gate: true in arguments.
 	 *
 	 * @param string               $name      Tool name.
@@ -516,7 +510,8 @@ final class Router {
 		$page_id     = (int) ( $arguments['post_id'] ?? $arguments['page_id'] ?? 0 );
 		$next_target = $page_id > 0 ? sprintf( 'page_id=%d', $page_id ) : 'page_id=<your_page_id>';
 
-		// Check 1: Any root element is a section.
+		// Gate: section elements must use the design build pipeline.
+		// Non-section elements of any count are allowed for instructed builds.
 		foreach ( $elements as $el ) {
 			$el_name = $el['name'] ?? '';
 			if ( 'section' === $el_name ) {
@@ -524,7 +519,7 @@ final class Router {
 					'bricks_mcp_use_build_from_schema',
 					sprintf(
 						/* translators: %s: Suggested next call (e.g. propose_design(page_id=42, description='...')). */
-						__( 'Section elements must be built using build_from_schema. Start the 4-step pipeline now: call %s to discover site context, then again with a design_plan, then build_from_schema. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
+						__( 'Section elements must be built using build_from_schema for proper validation, class resolution, and design consistency. Start the 4-step pipeline: call %s to discover site context, then again with a design_plan, then build_from_schema, then verify_build. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
 						sprintf( "propose_design(%s, description='<describe the section>')", $next_target )
 					),
 					422
@@ -532,42 +527,7 @@ final class Router {
 			}
 		}
 
-		// Check 2: Total element count exceeds threshold.
-		$count = $this->count_elements_recursive( $elements );
-		if ( $count > self::DESIGN_GATE_THRESHOLD ) {
-			return Response::error(
-				'bricks_mcp_use_build_from_schema',
-				sprintf(
-					/* translators: 1: Element count, 2: Suggested next call. */
-					__( 'Complex content (%1$d elements) must be built using build_from_schema. Start the 4-step pipeline now: call %2$s to discover site context, then again with a design_plan, then build_from_schema. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
-					$count,
-					sprintf( "propose_design(%s, description='<describe the section>')", $next_target )
-				),
-				422
-			);
-		}
-
 		return null;
-	}
-
-	/**
-	 * Recursively count elements in a nested tree.
-	 *
-	 * @param array<int, array<string, mixed>> $elements Element array.
-	 * @return int Total element count.
-	 */
-	private function count_elements_recursive( array $elements ): int {
-		$count = 0;
-		foreach ( $elements as $el ) {
-			if ( ! is_array( $el ) ) {
-				continue;
-			}
-			$count++;
-			if ( ! empty( $el['children'] ) && is_array( $el['children'] ) ) {
-				$count += $this->count_elements_recursive( $el['children'] );
-			}
-		}
-		return $count;
 	}
 
 	/**
