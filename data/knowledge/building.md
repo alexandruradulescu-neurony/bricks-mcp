@@ -107,39 +107,38 @@ The v3.7.0+ pipeline auto-fixes string colors (wraps them in the correct object 
 
 ## Element-Specific Settings via element_settings
 
-The `element_settings` key is an escape hatch for type-specific Bricks settings that do not fit into `style_overrides`, `content`, or `class_intent` in the design schema.
+The `element_settings` key passes type-specific Bricks settings that don't fit `style_overrides`, `content`, or `class_intent`.
 
-### Supported element types and whitelisted keys
+### Works on ANY element type
 
-- **pie-chart**: `percent`, `barColor`, `trackColor`, `size`, `lineWidth`
-- **counter**: `countTo`, `prefix`, `suffix`, `duration`
-- **video**: `iframeUrl`, `videoType`, `overlay`
-- **slider-nested** (Splide.js): `perPage` (string, slides visible — NOT slidesToShow/slidesPerView), `gap` (string, use `var(--content-gap)` — NOT spaceBetween), `arrows`, `dots`, `autoplay`, `speed`, `loop`, `centeredSlides`
-- **form**: `fields`, `submitButtonText`, `formId`, `actions`
-- **progress-bar**: `bars` (array of `{label, percentage}`)
-- **rating**: `rating`, `scale`, `iconEmpty`, `iconFull`
-- **animated-typing**: `strings` (array of strings to cycle), `prefix`, `suffix`, `typeSpeed`, `loop`
+`element_settings` is accepted on every element — no whitelist restriction. The pipeline blocks only dangerous code-injection keys (`customScriptsHeader`, `customScriptsBodyHeader`, `customScriptsBodyFooter`, `useQueryEditor`, `queryEditor`). Everything else passes through.
 
-### Example usage in design schema
+**Before using element_settings on an element type, read the relevant knowledge domain** to learn what keys that element accepts:
+- Sliders → `bricks:get_knowledge('building')` (Splide.js section) or `bricks:get_knowledge('animations')`
+- Forms → `bricks:get_knowledge('forms')` + `bricks:get_form_schema`
+- Components → `bricks:get_knowledge('components')` + `bricks:get_component_schema`
+- Popups → `bricks:get_knowledge('popups')` + `bricks:get_popup_schema`
+- Query loops → `bricks:get_knowledge('query-loops')` + `bricks:get_query_types`
+
+### Common examples
 
 ```json
-{
-  "type": "pie-chart",
-  "element_settings": {
-    "percent": 92,
-    "barColor": {"raw": "var(--accent-dark)"},
-    "trackColor": {"raw": "var(--white)"},
-    "size": 140,
-    "lineWidth": 12
-  }
-}
+{"type": "pie-chart", "element_settings": {"percent": 92, "barColor": {"raw": "var(--accent-dark)"}, "size": 140}}
+
+{"type": "slider-nested", "element_settings": {"perPage": "4", "gap": "var(--content-gap)", "arrows": true, "dots": true, "loop": true}}
+
+{"type": "counter", "element_settings": {"countTo": 500, "prefix": "", "suffix": "+"}}
+
+{"type": "accordion-nested", "element_settings": {"openFirst": true}}
+
+{"type": "countdown", "element_settings": {"targetDate": "2026-12-31", "format": "dHMS"}}
 ```
 
-### Important notes
+### Notes
 
-- The validator REJECTS `element_settings` on disallowed element types or unknown keys.
-- Defaults exist when `element_settings` is omitted: counter `countTo`=100, pie-chart `percent`=75, rating `rating`=5.
-- Auto-fixes applied: counter `"500+"` extracts to `countTo: 500` with `suffix: "+"`. Pie-chart `"92%"` extracts to `percent: 92`. YouTube watch URLs convert to embed format (`ytId` extraction). Rating values are clamped to the scale range.
+- Defaults exist when `element_settings` is omitted: counter `countTo`=100, pie-chart `percent`=75, rating `rating`=5, slider-nested `perPage`="3" + `gap`="var(--content-gap)".
+- Auto-fixes: counter `"500+"` → `countTo: 500` + `suffix: "+"`. Pie-chart `"92%"` → `percent: 92`. YouTube URLs → `ytId` extraction. Rating clamped to scale range.
+- Underscore-prefixed keys inside `element_settings` are validated against the settings key registry — use `style_overrides` for CSS properties instead.
 
 ## Composite Key Format
 

@@ -147,6 +147,9 @@ final class VerifyHandler {
 			}
 		}
 
+		// Content extraction — lets AI verify actual text was set, not placeholders.
+		$content_sample = $this->extract_content_sample( $elements );
+
 		return [
 			'page_id'           => $page_id,
 			'page_description'  => $page_description,
@@ -157,8 +160,9 @@ final class VerifyHandler {
 			'labels'            => $labels,
 			'last_section'      => $hierarchy,
 			'section_count'     => count( $sections ),
+			'content_sample'    => $content_sample,
 			'status'            => 'ok',
-			'verification'      => 'Compare page_description and sections[*].description with your design intent. Compare type_counts and classes_used against your design_plan to verify structural match.',
+			'verification'      => 'Compare page_description and sections[*].description with your design intent. Check content_sample.headings and .buttons for actual text. If has_placeholder_content is true, replace [PLACEHOLDER] text. Compare type_counts and classes_used against your design_plan.',
 		];
 	}
 
@@ -262,5 +266,69 @@ final class VerifyHandler {
 			array( $this, 'handle' ),
 			array( 'readOnlyHint' => true )
 		);
+	}
+
+	/**
+	 * Extract content sample from elements for verification.
+	 *
+	 * Returns actual text content from headings, buttons, and text elements
+	 * so the AI can verify real content was set. Also detects placeholder text.
+	 *
+	 * @param array<int, array<string, mixed>> $elements Flat element array.
+	 * @return array<string, mixed> Content sample with placeholder detection.
+	 */
+	private function extract_content_sample( array $elements ): array {
+		$registry = \BricksMCP\MCP\Services\ElementSettingsGenerator::get_element_registry();
+		$headings = [];
+		$buttons  = [];
+		$texts    = [];
+		$has_placeholder = false;
+
+		$placeholder_patterns = [ '[PLACEHOLDER', '[placeholder', 'Lorem ipsum', 'lorem ipsum', '[YOUR', '[TITLE', '[HEADING', '[DESCRIPTION', '[CONTENT' ];
+
+		foreach ( $elements as $el ) {
+			$name     = $el['name'] ?? '';
+			$settings = $el['settings'] ?? [];
+			$key      = $registry[ $name ]['content_key'] ?? null;
+
+			if ( null === $key || ! isset( $settings[ $key ] ) ) {
+				continue;
+			}
+
+			$value = $settings[ $key ];
+			if ( ! is_string( $value ) ) {
+				continue;
+			}
+
+			$clean = strip_tags( $value );
+			if ( '' === $clean ) {
+				continue;
+			}
+
+			// Check for placeholder content.
+			foreach ( $placeholder_patterns as $pattern ) {
+				if ( str_contains( $value, $pattern ) ) {
+					$has_placeholder = true;
+					break;
+				}
+			}
+
+			// Categorize by element type.
+			if ( 'heading' === $name ) {
+				$headings[] = mb_substr( $clean, 0, 80 );
+			} elseif ( 'button' === $name ) {
+				$buttons[] = $clean;
+			} else {
+				$texts[] = mb_substr( $clean, 0, 100 );
+			}
+		}
+
+		return [
+			'headings'              => array_slice( $headings, 0, 10 ),
+			'buttons'               => array_slice( $buttons, 0, 10 ),
+			'texts'                 => array_slice( $texts, 0, 5 ),
+			'text_element_count'    => count( $headings ) + count( $buttons ) + count( $texts ),
+			'has_placeholder_content' => $has_placeholder,
+		];
 	}
 }

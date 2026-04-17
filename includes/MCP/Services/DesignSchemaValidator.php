@@ -34,12 +34,29 @@ final class DesignSchemaValidator {
 	private ?array $element_names = null;
 
 	/**
+	 * Validation warnings collected during validate().
+	 * Warnings are non-blocking — the build continues, but AI sees them in the response.
+	 *
+	 * @var array<int, string>
+	 */
+	private array $validation_warnings = [];
+
+	/**
 	 * Constructor.
 	 *
 	 * @param SchemaGenerator $schema_generator Schema generator for element type validation.
 	 */
 	public function __construct( SchemaGenerator $schema_generator ) {
 		$this->schema_generator = $schema_generator;
+	}
+
+	/**
+	 * Get validation warnings from the last validate() call.
+	 *
+	 * @return array<int, string>
+	 */
+	public function get_warnings(): array {
+		return $this->validation_warnings;
 	}
 
 	/**
@@ -62,6 +79,7 @@ final class DesignSchemaValidator {
 	 */
 	public function validate( array $schema ): true|\WP_Error {
 		$errors = [];
+		$this->validation_warnings = [];
 
 		// Validate target.
 		if ( empty( $schema['target'] ) || ! is_array( $schema['target'] ) ) {
@@ -164,25 +182,23 @@ final class DesignSchemaValidator {
 	];
 
 	/**
-	 * Per-element settings that can be passed via the element_settings escape hatch.
+	 * Dangerous settings that are ALWAYS blocked in element_settings.
 	 *
-	 * Most elements get their settings from style_overrides + content + class_intent,
-	 * but some Bricks elements have type-specific settings that don't fit those
-	 * categories (pie-chart percent, counter count-to, video URL, etc.).
+	 * These keys enable code injection (custom scripts, PHP execution).
+	 * Bricks' own security_check_elements_before_save() provides a second
+	 * layer of protection, but we block them here as defense-in-depth.
 	 *
-	 * The validator allows element_settings ONLY for the element types listed here,
-	 * and only with the keys whitelisted per type. This keeps the attack surface narrow
-	 * while letting AI clients fully use these elements.
+	 * All OTHER element_settings keys are allowed on ANY element type.
+	 * The AI reads domain-specific knowledge (forms, animations, etc.)
+	 * to know what keys each element accepts. The pipeline trusts the
+	 * knowledge system instead of maintaining a per-element whitelist.
 	 */
-	private const ELEMENT_SETTINGS_ALLOWED = [
-		'pie-chart'       => [ 'percent', 'content', 'barColor', 'trackColor', 'size', 'lineWidth' ],
-		'counter'         => [ 'countTo', 'countFrom', 'prefix', 'suffix', 'duration', 'separator' ],
-		'video'           => [ 'videoType', 'ytId', 'vimeoId', 'mp4', 'fileUrl', 'iframeUrl', 'autoplay', 'loop', 'muted', 'controls', 'preload' ],
-		'slider-nested'   => [ 'perPage', 'gap', 'arrows', 'dots', 'autoplay', 'speed', 'loop', 'centeredSlides', 'effect', 'height' ],
-		'form'            => [ 'formFields', 'actions', 'submitButtonText', 'submitButtonStyle' ],
-		'progress-bar'    => [ 'bars', 'showLabel', 'showPercentage', 'animation' ],
-		'rating'          => [ 'rating', 'maxRating', 'icon', 'starColor', 'starColorEmpty' ],
-		'animated-typing' => [ 'strings', 'typeSpeed', 'backSpeed', 'loop' ],
+	private const DANGEROUS_SETTINGS_BLOCKED = [
+		'customScriptsHeader',
+		'customScriptsBodyHeader',
+		'customScriptsBodyFooter',
+		'useQueryEditor',
+		'queryEditor',
 	];
 
 	/**
@@ -253,17 +269,16 @@ final class DesignSchemaValidator {
 		}
 
 		// Validate element_settings if provided.
+		// Any element type can use element_settings. Only dangerous keys (code injection) are blocked.
+		// The AI is expected to read domain-specific knowledge (bricks:get_knowledge) to know
+		// what settings each element accepts. The pipeline trusts correct usage, blocks dangerous keys.
 		if ( isset( $node['element_settings'] ) ) {
 			if ( ! is_array( $node['element_settings'] ) ) {
 				$errors[] = "{$path}.element_settings must be an object.";
-			} elseif ( ! isset( self::ELEMENT_SETTINGS_ALLOWED[ $type ] ) ) {
-				$allowed_types = implode( ', ', array_keys( self::ELEMENT_SETTINGS_ALLOWED ) );
-				$errors[] = "{$path}.element_settings is not allowed on element type \"{$type}\" — only on: {$allowed_types}.";
 			} else {
-				$allowed_keys = self::ELEMENT_SETTINGS_ALLOWED[ $type ];
 				foreach ( array_keys( $node['element_settings'] ) as $es_key ) {
-					if ( ! in_array( $es_key, $allowed_keys, true ) ) {
-						$errors[] = "{$path}.element_settings.{$es_key} is not allowed on element type \"{$type}\". Allowed keys: " . implode( ', ', $allowed_keys ) . '.';
+					if ( in_array( $es_key, self::DANGEROUS_SETTINGS_BLOCKED, true ) ) {
+						$errors[] = "{$path}.element_settings.{$es_key} is blocked — code injection keys are not allowed via design schemas.";
 					}
 				}
 			}
@@ -291,6 +306,29 @@ final class DesignSchemaValidator {
 					$this->validate_structure_node( $child, "{$path}.children[{$child_idx}]", $patterns, $errors, $type );
 				}
 			}
+		}
+
+		// ── Non-blocking validation warnings ──
+		// These don't prevent the build — they surface in the build response so AI can address them.
+
+		// W1: Grid columns vs children count.
+		if ( ( $node['layout'] ?? '' ) === 'grid' && ! empty( $node['columns'] ) ) {
+			$child_count = count( $node['children'] ?? [] );
+			$col_count   = (int) $node['columns'];
+			if ( $child_count > 0 && $col_count > 0 && $child_count !== $col_count && $child_count % $col_count !== 0 ) {
+				$this->validation_warnings[] = "{$path}: grid has {$col_count} columns but {$child_count} children — last row will be incomplete.";
+			}
+		}
+
+		// W2: Empty content on text elements.
+		$text_types = [ 'heading', 'text-basic', 'text', 'button' ];
+		if ( in_array( $type, $text_types, true ) && empty( $node['content'] ) ) {
+			$this->validation_warnings[] = "{$path}: {$type} has no content — will render empty.";
+		}
+
+		// W3: Responsive completeness for grids with 3+ columns.
+		if ( ( $node['layout'] ?? '' ) === 'grid' && (int) ( $node['columns'] ?? 0 ) >= 3 && empty( $node['responsive'] ) ) {
+			$this->validation_warnings[] = "{$path}: grid with {$node['columns']} columns has no responsive overrides — won't collapse on tablet/mobile.";
 		}
 
 		// Validate responsive if provided.

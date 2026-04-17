@@ -123,6 +123,9 @@ final class BuildHandler {
 			return $validation;
 		}
 
+		// Collect non-blocking validation warnings (grid/content/responsive checks).
+		$schema_warnings = $this->validator->get_warnings();
+
 		// Step 2: Check protected page.
 		$page_id = (int) ( $schema['target']['page_id'] ?? $schema['target']['template_id'] ?? 0 );
 		$protect = $this->bricks_service->check_protected_page( $page_id );
@@ -216,7 +219,34 @@ final class BuildHandler {
 		}
 
 		// Initialize pipeline warnings collector (populated by steps below + element-level warnings).
-		$pipeline_warnings = [];
+		$pipeline_warnings = $schema_warnings; // Seed with non-blocking validation warnings (grid, content, responsive).
+
+		// Step 8e: Knowledge nudges — warn when building elements whose domain knowledge wasn't fetched.
+		$fetched_knowledge = \BricksMCP\MCP\Handlers\BricksToolHandler::get_fetched_knowledge();
+		$element_types     = $this->validator->extract_element_types( $schema );
+		$knowledge_map     = [
+			'form'             => 'forms',
+			'slider-nested'    => 'building',
+			'accordion-nested' => 'building',
+			'tabs-nested'      => 'building',
+			'nav-nested'       => 'building',
+			'popup'            => 'popups',
+			'offcanvas'        => 'popups',
+		];
+		$missing_domains = [];
+		foreach ( $element_types as $et ) {
+			$domain = $knowledge_map[ $et ] ?? null;
+			if ( null !== $domain && ! isset( $fetched_knowledge[ $domain ] ) && ! isset( $missing_domains[ $domain ] ) ) {
+				$missing_domains[ $domain ] = $et;
+			}
+		}
+		foreach ( $missing_domains as $domain => $trigger_element ) {
+			$pipeline_warnings[] = sprintf(
+				"Building '%s' without reading domain knowledge. Call bricks:get_knowledge('%s') for correct settings, gotchas, and examples.",
+				$trigger_element,
+				$domain
+			);
+		}
 
 		// Step 9: Build summary.
 		$element_count = $this->count_elements( $all_elements );

@@ -149,10 +149,39 @@ final class BricksToolHandler {
 			return new \WP_Error( 'read_failed', __( 'Failed to read knowledge file.', 'bricks-mcp' ) );
 		}
 
+		// Track that this knowledge domain was fetched (used by build pipeline nudges).
+		self::track_knowledge_fetch( $domain );
+
 		return [
 			'domain'  => $domain,
 			'content' => trim( $content ),
 		];
+	}
+
+	/**
+	 * Record that a knowledge domain was fetched in this session.
+	 *
+	 * @param string $domain Knowledge domain name.
+	 */
+	private static function track_knowledge_fetch( string $domain ): void {
+		$key     = 'bricks_mcp_knowledge_fetched_' . get_current_user_id();
+		$fetched = get_transient( $key );
+		if ( ! is_array( $fetched ) ) {
+			$fetched = [];
+		}
+		$fetched[ $domain ] = true;
+		set_transient( $key, $fetched, 2 * HOUR_IN_SECONDS );
+	}
+
+	/**
+	 * Get which knowledge domains the current user has fetched this session.
+	 *
+	 * @return array<string, true> Domain name => true map.
+	 */
+	public static function get_fetched_knowledge(): array {
+		$key     = 'bricks_mcp_knowledge_fetched_' . get_current_user_id();
+		$fetched = get_transient( $key );
+		return is_array( $fetched ) ? $fetched : [];
 	}
 
 	/**
