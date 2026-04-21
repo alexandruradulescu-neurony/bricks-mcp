@@ -12,6 +12,26 @@ class DesignSystemAdmin {
     private const CONFIG_OPTION = BricksCore::OPTION_DESIGN_SYSTEM_CONFIG;
 
     /**
+     * Default hex fallbacks for color pickers when a shade/value is missing.
+     * Used when rendering color inputs to avoid breaking the picker element.
+     */
+    private const DEFAULT_BLACK = '#000000';
+    private const DEFAULT_WHITE = '#ffffff';
+
+    /**
+     * Default px fallback for the gap-indicator preview. Assumes 1rem = 16px base.
+     * Used when a gap value cannot be resolved to a pixel measurement.
+     */
+    private const DEFAULT_PX_FALLBACK = 16.0;
+
+    /**
+     * Visual clamp range for the gap-indicator preview boxes (px).
+     * Keeps the preview readable regardless of actual gap value.
+     */
+    private const GAP_PREVIEW_MIN = 2;
+    private const GAP_PREVIEW_MAX = 60;
+
+    /**
      * Register AJAX handlers.
      */
     public function init(): void {
@@ -119,8 +139,8 @@ class DesignSystemAdmin {
     }
 
     private function render_panel_spacing( array $config ): void {
-        $s     = $config['spacing'];
-        $steps = $s['steps'];
+        $s     = $config['spacing'] ?? [];
+        $steps = $s['steps'] ?? [];
         ?>
         <section class="bwm-ds-panel bwm-ds-panel-active" data-step="spacing">
             <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Spacing', 'bricks-mcp' ); ?></h2>
@@ -145,7 +165,7 @@ class DesignSystemAdmin {
             </div>
 
             <div class="bwm-ds-steps">
-                <?php foreach ( $steps as $name => $pair ) : ?>
+                <?php foreach ( (array) $steps as $name => $pair ) : ?>
                     <div class="bwm-ds-step-row">
                         <div class="bwm-ds-step-name">--space-<?php echo esc_html( $name ); ?></div>
                         <div class="bwm-ds-step-inputs">
@@ -167,9 +187,9 @@ class DesignSystemAdmin {
     }
 
     private function render_panel_typography( array $config ): void {
-        $head = $config['typography_headings'];
-        $text = $config['typography_text'];
-        $hfs  = (float) $config['html_font_size'];
+        $head = $config['typography_headings'] ?? [];
+        $text = $config['typography_text'] ?? [];
+        $hfs  = (float) ( $config['html_font_size'] ?? 0 );
         ?>
         <section class="bwm-ds-panel" data-step="typography">
             <h2 class="bwm-ds-panel-title"><?php esc_html_e( 'Typography', 'bricks-mcp' ); ?></h2>
@@ -200,7 +220,7 @@ class DesignSystemAdmin {
             </div>
 
             <div class="bwm-ds-steps">
-                <?php foreach ( $head['steps'] as $name => $pair ) : ?>
+                <?php foreach ( (array) ( $head['steps'] ?? [] ) as $name => $pair ) : ?>
                     <div class="bwm-ds-step-row">
                         <div class="bwm-ds-step-name">--<?php echo esc_html( $name ); ?></div>
                         <div class="bwm-ds-step-inputs">
@@ -238,7 +258,7 @@ class DesignSystemAdmin {
             </div>
 
             <div class="bwm-ds-steps">
-                <?php foreach ( $text['steps'] as $name => $pair ) : ?>
+                <?php foreach ( (array) ( $text['steps'] ?? [] ) as $name => $pair ) : ?>
                     <div class="bwm-ds-step-row">
                         <div class="bwm-ds-step-name">--text-<?php echo esc_html( $name ); ?></div>
                         <div class="bwm-ds-step-inputs">
@@ -262,7 +282,7 @@ class DesignSystemAdmin {
             <h3 class="bwm-ds-subsection-title"><?php esc_html_e( 'Text Styles', 'bricks-mcp' ); ?></h3>
             <div class="bwm-ds-text-fields">
                 <?php
-                $ts = $config['text_styles'];
+                $ts = $config['text_styles'] ?? [];
                 $rows = [
                     'text_color'          => [ '--text-color',          'text' ],
                     'heading_color'       => [ '--heading-color',       'text' ],
@@ -284,7 +304,7 @@ class DesignSystemAdmin {
     }
 
     private function render_panel_colors( array $config ): void {
-        $colors = $config['colors'];
+        $colors = $config['colors'] ?? [];
         $families = [
             'primary'   => __( 'Primary',   'bricks-mcp' ),
             'secondary' => __( 'Secondary', 'bricks-mcp' ),
@@ -339,7 +359,7 @@ class DesignSystemAdmin {
 
             <div class="bwm-ds-color-shades">
                 <?php foreach ( $shade_order as $shade ) : ?>
-                    <?php $hex = $shades[ $shade ] ?? '#000000'; ?>
+                    <?php $hex = $shades[ $shade ] ?? self::DEFAULT_BLACK; ?>
                     <div class="bwm-ds-color-shade">
                         <input type="color" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.shades.<?php echo esc_attr( $shade ); ?>" <?php echo ( $shade === 'base' ) ? 'data-recompute="colors.' . esc_attr( $key ) . '"' : ''; ?> aria-label="<?php echo esc_attr( $key . ' ' . str_replace( '_', '-', $shade ) . ' color picker' ); ?>">
                         <input type="text" class="bwm-ds-hex" value="<?php echo esc_attr( $hex ); ?>" data-field="colors.<?php echo esc_attr( $key ); ?>.shades.<?php echo esc_attr( $shade ); ?>" maxlength="7" aria-label="<?php echo esc_attr( $key . ' ' . str_replace( '_', '-', $shade ) . ' hex value' ); ?>">
@@ -362,7 +382,7 @@ class DesignSystemAdmin {
     }
 
     private function render_color_bw( string $key, string $label, array $fam ): void {
-        $hex            = $fam['hex'] ?? ( $key === 'white' ? '#ffffff' : '#000000' );
+        $hex            = $fam['hex'] ?? ( $key === 'white' ? self::DEFAULT_WHITE : self::DEFAULT_BLACK );
         $transparencies = ! empty( $fam['transparencies'] );
         ?>
         <div class="bwm-ds-color-family" data-family="<?php echo esc_attr( $key ); ?>">
@@ -387,7 +407,7 @@ class DesignSystemAdmin {
     }
 
     private function render_panel_gaps( array $config ): void {
-        $g = $config['gaps'];
+        $g = $config['gaps'] ?? [];
         $map = [
             'grid_gap'        => __( '--grid-gap',        'bricks-mcp' ),
             'grid_gap_s'      => __( '--grid-gap-s',      'bricks-mcp' ),
@@ -407,9 +427,9 @@ class DesignSystemAdmin {
             if ( preg_match( '/var\(\s*--space-([a-z]+)\s*\)/', $value, $m ) ) {
                 $step = $m[1];
                 $px   = $config['spacing']['steps'][ $step ]['desktop'] ?? null;
-                return $px !== null ? (float) $px : 16.0;
+                return $px !== null ? (float) $px : self::DEFAULT_PX_FALLBACK;
             }
-            return 16.0;
+            return self::DEFAULT_PX_FALLBACK;
         };
         ?>
         <section class="bwm-ds-panel" data-step="gaps">
@@ -425,7 +445,7 @@ class DesignSystemAdmin {
                     <div class="bwm-ds-gap-row">
                         <label class="bwm-ds-gap-label"><?php echo esc_html( $label ); ?></label>
                         <input type="text" value="<?php echo esc_attr( $val ); ?>" data-field="gaps.<?php echo esc_attr( $key ); ?>" data-gap-input="<?php echo esc_attr( $key ); ?>">
-                        <div class="bwm-ds-gap-indicator" data-gap-key="<?php echo esc_attr( $key ); ?>" data-px="<?php echo esc_attr( $px ); ?>" style="gap: <?php echo esc_attr( min( 60, max( 2, $px ) ) ); ?>px;">
+                        <div class="bwm-ds-gap-indicator" data-gap-key="<?php echo esc_attr( $key ); ?>" data-px="<?php echo esc_attr( $px ); ?>" style="gap: <?php echo esc_attr( min( self::GAP_PREVIEW_MAX, max( self::GAP_PREVIEW_MIN, $px ) ) ); ?>px;">
                             <div class="bwm-ds-gap-box"></div>
                             <div class="bwm-ds-gap-box"></div>
                         </div>
@@ -437,9 +457,9 @@ class DesignSystemAdmin {
     }
 
     private function render_panel_radius( array $config ): void {
-        $r      = $config['radius'];
-        $values = $r['values'];
-        $ts     = $config['text_styles'];
+        $r      = $config['radius'] ?? [];
+        $values = $r['values'] ?? [];
+        $ts     = $config['text_styles'] ?? [];
         $rows = [
             'radius'         => '--radius',
             'radius_inside'  => '--radius-inside',
@@ -583,7 +603,7 @@ class DesignSystemAdmin {
     }
 
     private function render_panel_sizes( array $config ): void {
-        $s = $config['sizes'];
+        $s = $config['sizes'] ?? [];
         $rows = [
             'container_width'    => [ __( 'Container Width (px)',     'bricks-mcp' ), 'number' ],
             'container_min'      => [ __( 'Container Min Width (px)', 'bricks-mcp' ), 'number' ],
@@ -660,7 +680,8 @@ class DesignSystemAdmin {
         ];
 
         foreach ( $auto as $key => $value ) {
-            if ( empty( $existing[ $key ] ) ) {
+            // Explicit "truly unset or empty string" — avoids overwriting a user value of "0" or "false".
+            if ( ! isset( $existing[ $key ] ) || '' === $existing[ $key ] ) {
                 $existing[ $key ] = $value;
             }
         }
@@ -676,11 +697,13 @@ class DesignSystemAdmin {
 
         if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( 'Unauthorized', 403 );
+            return;
         }
 
         $config = json_decode( wp_unslash( $_POST['config'] ?? '{}' ), true );
         if ( ! is_array( $config ) ) {
             wp_send_json_error( 'Invalid config' );
+            return;
         }
 
         // Normalize through migrator before storing (defensive — guarantees v2 shape).
@@ -698,11 +721,13 @@ class DesignSystemAdmin {
 
         if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( 'Unauthorized', 403 );
+            return;
         }
 
         $config = json_decode( wp_unslash( $_POST['config'] ?? '{}' ), true );
         if ( ! is_array( $config ) ) {
             wp_send_json_error( 'Invalid config' );
+            return;
         }
 
         // Normalize through migrator (defensive).
@@ -734,6 +759,7 @@ class DesignSystemAdmin {
 
         if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( 'Unauthorized', 403 );
+            return;
         }
 
         $default = DesignSystemGenerator::get_default_config();
@@ -776,7 +802,8 @@ class DesignSystemAdmin {
         ];
 
         if ( ! isset( $methods[ $panel ] ) || ! method_exists( $this, $methods[ $panel ] ) ) {
-            wp_send_json_error( 'Unknown panel: ' . $panel );
+            // Do NOT echo $panel back — keep error shape consistent with the rest of the plugin.
+            wp_send_json_error( [ 'message' => __( 'Unknown panel.', 'bricks-mcp' ) ] );
             return;
         }
 
