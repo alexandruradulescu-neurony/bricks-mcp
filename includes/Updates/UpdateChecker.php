@@ -112,7 +112,7 @@ final class UpdateChecker {
 	 * @param array<string>        $locales     Installed locales.
 	 * @return mixed Update data array if update available, original value otherwise.
 	 */
-	public function check_update( $update, array $plugin_data, string $plugin_file, array $locales ) {
+	public function check_update( $update, array $plugin_data, string $plugin_file, array $locales ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$remote = $this->get_update_data();
 
 		if ( empty( $remote['version'] ) ) {
@@ -122,8 +122,17 @@ final class UpdateChecker {
 		// Cache expected hash so verify_download() can use it when WP downloads the ZIP.
 		$this->expected_sha256 = $remote['sha256'] ?? '';
 
+		// Guard against corrupt plugin headers or malformed remote versions — without
+		// this, version_compare('', '3.x.y', '>=') returns false and triggers a
+		// phantom-update notice for a version the user is already running.
+		$local_version  = (string) ( $plugin_data['Version'] ?? '' );
+		$remote_version = (string) ( $remote['version'] ?? '' );
+		if ( '' === $local_version || '' === $remote_version ) {
+			return $update;
+		}
+
 		// Only return update data if remote version is newer.
-		if ( version_compare( $plugin_data['Version'], $remote['version'], '>=' ) ) {
+		if ( version_compare( $local_version, $remote_version, '>=' ) ) {
 			return $update;
 		}
 
@@ -171,6 +180,8 @@ final class UpdateChecker {
 			]
 		);
 
+		// PHP short-circuit evaluates is_wp_error() first, so wp_remote_retrieve_response_code()
+		// never sees a WP_Error. Do NOT reorder these two checks without adding an explicit guard.
 		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
 			// Cache empty result briefly to avoid hammering on failure.
 			set_transient( self::TRANSIENT_KEY, [], 5 * MINUTE_IN_SECONDS );
@@ -184,14 +195,21 @@ final class UpdateChecker {
 			return [];
 		}
 
-		// Strip leading "v" from tag name (e.g. "v1.2.3" → "1.2.3").
-		$version = ltrim( $release['tag_name'], 'v' );
+		// Strip a single leading "v" from tag name (e.g. "v1.2.3" → "1.2.3").
+		// ltrim() would strip ALL leading 'v' chars — preg_replace anchors to exactly one.
+		$version = (string) preg_replace( '/^v/', '', (string) $release['tag_name'] );
 
 		// Scan assets for the plugin ZIP and a matching .sha256 checksum file.
 		$package = '';
 		$sha256  = '';
 		if ( ! empty( $release['assets'] ) && is_array( $release['assets'] ) ) {
 			foreach ( $release['assets'] as $asset ) {
+				// Guard: a misbehaving proxy or 3rd-party filter could yield scalar/null
+				// entries inside the assets list. Without this guard $asset['name']
+				// raises an E_WARNING ("array offset on value of type ...").
+				if ( ! is_array( $asset ) ) {
+					continue;
+				}
 				$name = $asset['name'] ?? '';
 				if ( str_ends_with( $name, '.zip' ) && empty( $package ) ) {
 					$package = $asset['browser_download_url'] ?? '';
@@ -213,6 +231,13 @@ final class UpdateChecker {
 							$sha256 = substr( $raw, 0, 64 );
 						}
 					}
+				}
+
+				// Once both artifacts are found, stop iterating — a release with many
+				// assets (source archives, per-platform builds, etc.) otherwise triggers
+				// a blocking wp_remote_get() for each .sha256-suffixed file.
+				if ( '' !== $package && '' !== $sha256 ) {
+					break;
 				}
 			}
 		}
@@ -281,9 +306,20 @@ final class UpdateChecker {
 
 		if ( $actual_hash !== $this->expected_sha256 ) {
 			wp_delete_file( $temp_file );
+			// Expose short hash prefixes so admins/support can tell whether the
+			// sidecar is out of date vs. the ZIP was tampered in transit.
 			return new \WP_Error(
 				'checksum_mismatch',
-				__( 'Update integrity check failed: SHA-256 checksum does not match expected value.', 'bricks-mcp' )
+				sprintf(
+					/* translators: 1: Expected hash prefix (8 chars). 2: Actual hash prefix (8 chars). */
+					__( 'Update integrity check failed: SHA-256 checksum does not match expected value (expected %1$s…, got %2$s…).', 'bricks-mcp' ),
+					substr( (string) $this->expected_sha256, 0, 8 ),
+					substr( (string) $actual_hash, 0, 8 )
+				),
+				array(
+					'expected' => $this->expected_sha256,
+					'actual'   => $actual_hash,
+				)
 			);
 		}
 
