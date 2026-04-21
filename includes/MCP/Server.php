@@ -273,7 +273,7 @@ final class Server {
 		}
 
 		// Check if plugin is enabled.
-		if ( empty( $settings['enabled'] ) ) {
+		if ( empty( $settings[ BricksCore::SETTING_ENABLED ] ) ) {
 			return new \WP_Error(
 				'bricks_mcp_disabled',
 				__( 'The Bricks MCP server is currently disabled.', 'bricks-mcp' ),
@@ -282,7 +282,7 @@ final class Server {
 		}
 
 		// Check if authentication is required.
-		if ( ! empty( $settings['require_auth'] ) ) {
+		if ( ! empty( $settings[ BricksCore::SETTING_REQUIRE_AUTH ] ) ) {
 			if ( ! is_user_logged_in() ) {
 				return new \WP_Error(
 					'bricks_mcp_unauthorized',
