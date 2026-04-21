@@ -146,7 +146,11 @@ final class BricksToolHandler {
 		if ( ! file_exists( $path ) ) {
 			return new \WP_Error(
 				'knowledge_not_found',
-				sprintf( __( 'Knowledge file for domain "%s" not found.', 'bricks-mcp' ), $domain )
+				sprintf(
+					/* translators: %s: Knowledge domain name */
+					__( 'Knowledge file for domain "%s" not found.', 'bricks-mcp' ),
+					$domain
+				)
 			);
 		}
 
