@@ -42,6 +42,26 @@ final class Activator {
 	private const ACTIVATION_CHECK_TTL = HOUR_IN_SECONDS;
 
 	/**
+	 * Pattern System v2 — one-time wipe of legacy pattern data.
+	 *
+	 * Deletes v1 DB options. Guarded by OPTION_PATTERNS_V2_WIPED so it
+	 * only fires once per install even across downgrade/upgrade cycles.
+	 * Sets the v2-wiped flag + schedules a one-time admin notice.
+	 *
+	 * @return void
+	 */
+	private static function maybe_wipe_v1_patterns(): void {
+		$flag = BricksCore::OPTION_PATTERNS_V2_WIPED;
+		if ( get_option( $flag ) ) {
+			return;
+		}
+		delete_option( 'bricks_mcp_custom_patterns' );
+		delete_option( 'bricks_mcp_patterns_migrated' );
+		update_option( $flag, time(), false );
+		set_transient( 'bricks_mcp_show_patterns_v2_notice', 1, DAY_IN_SECONDS );
+	}
+
+	/**
 	 * Run activation tasks.
 	 *
 	 * This method is called when the plugin is activated.
@@ -49,6 +69,9 @@ final class Activator {
 	 * @return void
 	 */
 	public static function activate(): void {
+		// Wipe legacy v1 pattern options if this is the first v2 activation.
+		self::maybe_wipe_v1_patterns();
+
 		// Store activation timestamp.
 		if ( ! get_option( BricksCore::OPTION_ACTIVATED_AT ) ) {
 			update_option( BricksCore::OPTION_ACTIVATED_AT, time() );
