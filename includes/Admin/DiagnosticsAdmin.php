@@ -81,7 +81,7 @@ class DiagnosticsAdmin {
      * AJAX handler: Run all diagnostic checks and return structured results.
      */
     public function ajax_run_diagnostics(): void {
-        check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+        check_ajax_referer( BricksCore::ADMIN_NONCE_ACTION, 'nonce' );
 
         if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
