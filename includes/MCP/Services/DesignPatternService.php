@@ -161,39 +161,41 @@ final class DesignPatternService {
 	/**
 	 * Create a new pattern in the database.
 	 *
-	 * If a pattern with the same ID already exists, auto-suffixes (-v2, -v3, ...).
+	 * Runs the input through PatternValidator against current site context
+	 * (variables + classes). Rejects on hardcoded values, missing refs, etc.
 	 *
-	 * @param array $pattern Pattern data. Required: id, name, category, tags.
-	 * @return array|\WP_Error The saved pattern (with final ID) or error.
+	 * @param array $pattern Raw pattern input. Required: id, name, category.
+	 * @return array|\WP_Error The saved pattern OR error.
 	 */
 	public static function create( array $pattern ): array|\WP_Error {
-		// Validate required fields.
-		foreach ( [ 'id', 'name', 'category' ] as $required ) {
-			if ( empty( $pattern[ $required ] ) ) {
-				return new \WP_Error( 'missing_field', sprintf( 'Pattern field "%s" is required.', $required ) );
+		// If already validated (came from PatternCapture which validates internally),
+		// skip re-validation: presence of `checksum` is the validated marker.
+		$needs_validation = empty( $pattern['checksum'] );
+
+		if ( $needs_validation ) {
+			$validator    = new PatternValidator();
+			$site_context = self::build_site_context();
+			$pattern      = $validator->validate_with_context( $pattern, $site_context );
+			if ( isset( $pattern['error'] ) ) {
+				return new \WP_Error( $pattern['error'], $pattern['message'] ?? 'Validation failed.', $pattern );
 			}
 		}
 
 		if ( ! isset( $pattern['tags'] ) || ! is_array( $pattern['tags'] ) ) {
 			$pattern['tags'] = [];
 		}
-
-		// Validate ID format.
 		if ( ! preg_match( '/^[a-z0-9-]+$/', $pattern['id'] ) ) {
 			return new \WP_Error( 'invalid_id', 'Pattern ID must be lowercase alphanumeric with hyphens only.' );
 		}
 
-		// Auto-suffix on conflict.
-		$base_id  = $pattern['id'];
-		$suffix   = 2;
+		// Auto-suffix on ID conflict.
+		$base_id = $pattern['id'];
+		$suffix  = 2;
 		while ( null !== self::get( $pattern['id'] ) ) {
 			$pattern['id'] = $base_id . '-v' . $suffix;
 			$suffix++;
 		}
 
-		$pattern['source'] = 'database';
-
-		// Save to DB.
 		$db_patterns   = get_option( self::DB_OPTION, [] );
 		$db_patterns   = is_array( $db_patterns ) ? $db_patterns : [];
 		$db_patterns[] = $pattern;
@@ -205,8 +207,25 @@ final class DesignPatternService {
 		if ( $pattern['id'] !== $base_id ) {
 			$result['_note'] = sprintf( 'ID auto-suffixed from "%s" to "%s" to avoid conflict.', $base_id, $pattern['id'] );
 		}
-
 		return $result;
+	}
+
+	/**
+	 * Build site context (variables + classes maps) for validator.
+	 *
+	 * Uses instance-bound services via BricksCore, wrapped through a static adapter
+	 * so create() can be called statically without requiring the caller to inject services.
+	 */
+	private static function build_site_context(): array {
+		// Instantiate services directly — BricksCore requires an ElementNormalizer.
+		$core      = new BricksCore( new ElementNormalizer( new ElementIdGenerator() ) );
+		$classes   = new GlobalClassService( $core );
+		$variables = new GlobalVariableService( $core );
+
+		return [
+			'variables' => $variables->get_all_with_values(),
+			'classes'   => $classes->get_all_by_name(),
+		];
 	}
 
 	/**
