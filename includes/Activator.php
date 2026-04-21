@@ -27,11 +27,12 @@ final class Activator {
 	/**
 	 * Transient key where activation-check results are stored for admin-notice display.
 	 *
-	 * Read by Admin\Settings::render_activation_notice(); keep both sides in sync if changed.
+	 * Read/deleted by Admin\Settings::render_settings_page() via this constant —
+	 * single source of truth so the producer and consumer cannot drift.
 	 *
 	 * @var string
 	 */
-	private const ACTIVATION_CHECK_TRANSIENT = 'bricks_mcp_activation_checks';
+	public const ACTIVATION_CHECK_TRANSIENT = 'bricks_mcp_activation_checks';
 
 	/**
 	 * TTL for the activation-check transient.
