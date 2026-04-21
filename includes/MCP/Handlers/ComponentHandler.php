@@ -36,6 +36,16 @@ final class ComponentHandler {
 	private const COMPONENTS_OPTION = BricksCore::OPTION_COMPONENTS;
 
 	/**
+	 * Upper bound on ID-collision retries when generating a component ID that
+	 * does not clash with a registered Bricks element name.
+	 *
+	 * 6-char alphanumeric IDs have 36^6 ≈ 2.2B possibilities. With ~80 registered
+	 * Bricks elements, per-attempt collision probability is ~80/2.2B ≈ 4e-8, so
+	 * 50 attempts give a combined probability of ~2e-6 — effectively zero.
+	 */
+	private const ID_COLLISION_MAX_RETRIES = 50;
+
+	/**
 	 * Bricks service instance.
 	 *
 	 * @var BricksService
@@ -206,16 +216,12 @@ final class ComponentHandler {
 		$id_generator = new ElementIdGenerator();
 		$component_id = $id_generator->generate_unique( $components );
 
-		// Prevent collision with registered Bricks element names.
-		// MAX_ID_RETRIES: 6-char alphanumeric IDs have 36^6 ≈ 2.2B possibilities.
-		// With ~80 registered Bricks elements, collision probability per attempt is
-		// ~80/2.2B ≈ 4e-8. 50 retries gives a combined collision probability of ~2e-6
-		// in the worst case — effectively zero. No reason to configure this at runtime.
-		$max_retries = 50;
+		// Prevent collision with registered Bricks element names. See
+		// self::ID_COLLISION_MAX_RETRIES for the probability math behind the cap.
 		if ( class_exists( '\Bricks\Elements' ) && isset( \Bricks\Elements::$elements ) ) {
 			$registered_names = array_keys( \Bricks\Elements::$elements );
 			$retries          = 0;
-			while ( in_array( $component_id, $registered_names, true ) && $retries < $max_retries ) {
+			while ( in_array( $component_id, $registered_names, true ) && $retries < self::ID_COLLISION_MAX_RETRIES ) {
 				$component_id = $id_generator->generate_unique( $components );
 				++$retries;
 			}
