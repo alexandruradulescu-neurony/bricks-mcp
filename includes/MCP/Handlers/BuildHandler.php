@@ -31,6 +31,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class BuildHandler {
 
 	/**
+	 * Element-type → knowledge-domain map used to emit pipeline warnings when a
+	 * build uses an element whose domain-knowledge file has not been fetched in
+	 * the current session. Keep in sync with `data/knowledge/*.md` filenames.
+	 */
+	private const KNOWLEDGE_NUDGE_MAP = [
+		'form'             => 'forms',
+		'slider-nested'    => 'building',
+		'accordion-nested' => 'building',
+		'tabs-nested'      => 'building',
+		'nav-nested'       => 'building',
+		'popup'            => 'popups',
+		'offcanvas'        => 'popups',
+	];
+
+	/**
 	 * @var BricksService
 	 */
 	private BricksService $bricks_service;
@@ -240,18 +255,9 @@ final class BuildHandler {
 		// Step 8e: Knowledge nudges — warn when building elements whose domain knowledge wasn't fetched.
 		$fetched_knowledge = BricksToolHandler::get_fetched_knowledge();
 		$element_types     = $this->validator->extract_element_types( $schema );
-		$knowledge_map     = [
-			'form'             => 'forms',
-			'slider-nested'    => 'building',
-			'accordion-nested' => 'building',
-			'tabs-nested'      => 'building',
-			'nav-nested'       => 'building',
-			'popup'            => 'popups',
-			'offcanvas'        => 'popups',
-		];
-		$missing_domains = [];
+		$missing_domains   = [];
 		foreach ( $element_types as $et ) {
-			$domain = $knowledge_map[ $et ] ?? null;
+			$domain = self::KNOWLEDGE_NUDGE_MAP[ $et ] ?? null;
 			if ( null !== $domain && ! isset( $fetched_knowledge[ $domain ] ) && ! isset( $missing_domains[ $domain ] ) ) {
 				$missing_domains[ $domain ] = $et;
 			}
