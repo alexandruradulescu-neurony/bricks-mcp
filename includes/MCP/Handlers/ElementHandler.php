@@ -724,13 +724,23 @@ final class ElementHandler {
 		if ( null === $source ) {
 			return new \WP_Error(
 				'source_not_found',
-				sprintf( __( 'Source element "%s" not found on post %d.', 'bricks-mcp' ), $source_id, $post_id )
+				sprintf(
+					/* translators: 1: Source element ID, 2: Post ID */
+					__( 'Source element "%1$s" not found on post %2$d.', 'bricks-mcp' ),
+					$source_id,
+					$post_id
+				)
 			);
 		}
 		if ( null === $target ) {
 			return new \WP_Error(
 				'target_not_found',
-				sprintf( __( 'Target element "%s" not found on post %d.', 'bricks-mcp' ), $target_id, $post_id )
+				sprintf(
+					/* translators: 1: Target element ID, 2: Post ID */
+					__( 'Target element "%1$s" not found on post %2$d.', 'bricks-mcp' ),
+					$target_id,
+					$post_id
+				)
 			);
 		}
 
