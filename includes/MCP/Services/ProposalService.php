@@ -332,14 +332,17 @@ final class ProposalService {
 		$existing_sections = $this->analyze_existing_sections( $page_id );
 		$style_hints       = $this->aggregate_site_style_hints( $existing_sections );
 
-		$next_step = 'You now have the site context, available building blocks, and REFERENCE PATTERNS showing proven compositions. '
-			. 'Think as a DESIGNER: pick the closest reference_pattern that matches the user\'s request, '
+		$next_step = 'You now have the site context, available building blocks, and a PATTERN CATALOG scoped to the detected section type. '
+			. 'Think as a DESIGNER: browse the pattern_catalog, pick the composition that best fits the user\'s request, '
 			. 'then adapt it into a design_plan. The pattern shows the correct composition — you adjust the content. '
 			. 'Call propose_design again with the same description PLUS a design_plan object.';
 
 		if ( ! empty( $existing_sections ) ) {
 			$next_step .= ' IMPORTANT: This page already has ' . count( $existing_sections ) . ' section(s). Study existing_page_sections and site_style_hints — reuse the same classes, layout patterns, and background treatments for visual consistency. Only deviate if the user explicitly asks for a different style.';
 		}
+
+		$detected = $this->detect_section_type( $description );
+		$catalog  = ( new PatternCatalog() )->build( $detected['type'], $detected['confidence'] );
 
 		$response = [
 			'phase'       => 'discovery',
@@ -348,7 +351,9 @@ final class ProposalService {
 
 			'next_step' => $next_step,
 
-			'reference_patterns' => $this->find_reference_patterns( $description ),
+			'section_type_detected'   => $detected['type'],
+			'section_type_confidence' => $detected['confidence'],
+			'pattern_catalog'         => $catalog,
 		];
 
 		if ( ! empty( $existing_sections ) ) {
@@ -385,9 +390,12 @@ final class ProposalService {
 
 		// If site_context is unchanged from a previous discovery (this request OR prior one), return slim response.
 		if ( ! $context_changed ) {
-			$response['site_context_hash']    = $context_hash;
-			$response['site_context_changed'] = false;
-			$response['site_context_note']    = 'Unchanged from previous discovery — use cached context. Only reference_patterns are new (matched to your description).';
+			$response['site_context_hash']      = $context_hash;
+			$response['site_context_changed']   = false;
+			$response['site_context_note']      = 'Unchanged from previous discovery — use cached context. Only pattern_catalog is new (scoped to your description).';
+			$response['section_type_detected']  = $detected['type'];
+			$response['section_type_confidence'] = $detected['confidence'];
+			$response['pattern_catalog']        = $catalog;
 			$response['next_step'] .= ' For subsequent sections, you can skip Phase 1 and call propose_design directly with a design_plan.';
 			$response['available_layouts']  = self::VALID_LAYOUTS;
 			$response['section_types']      = self::VALID_SECTION_TYPES;
@@ -812,19 +820,16 @@ final class ProposalService {
 	}
 
 	/**
-	 * Find reference patterns matching a description.
+	 * Detect the section type from a free-text description.
 	 *
-	 * Extracts section type and mood tags from the description text,
-	 * then queries the DesignPatternService for matching patterns.
+	 * Returns ['type' => string, 'confidence' => 'high' | 'low'].
+	 * 'high' when a single category regex matches; 'low' when none or multiple match.
 	 *
 	 * @param string $description Free-text description.
-	 * @return array<int, array> Matching patterns (up to 3).
+	 * @return array{type: string, confidence: string}
 	 */
-	private function find_reference_patterns( string $description ): array {
+	private function detect_section_type( string $description ): array {
 		$desc = strtolower( $description );
-
-		// Detect section type.
-		$section_type = 'generic';
 		$type_map = [
 			'hero'         => '/\bhero\b/',
 			'features'     => '/feature|service|benefit/',
@@ -833,41 +838,19 @@ final class ProposalService {
 			'testimonials' => '/testimonial|review|quote/',
 			'split'        => '/split|login|signup|register|form.*image|image.*form/',
 		];
+		$matches = [];
 		foreach ( $type_map as $type => $regex ) {
 			if ( preg_match( $regex, $desc ) ) {
-				$section_type = $type;
-				break;
+				$matches[] = $type;
 			}
 		}
-
-		// Detect mood/style tags.
-		$tags = [];
-		if ( preg_match( '/dark|gradient|overlay/', $desc ) ) {
-			$tags[] = 'dark';
+		if ( count( $matches ) === 1 ) {
+			return [ 'type' => $matches[0], 'confidence' => 'high' ];
 		}
-		if ( preg_match( '/light|white|clean|minimal/', $desc ) ) {
-			$tags[] = 'light';
+		if ( count( $matches ) > 1 ) {
+			return [ 'type' => $matches[0], 'confidence' => 'low' ];
 		}
-		if ( preg_match( '/center|centred/', $desc ) ) {
-			$tags[] = 'centered';
-		}
-		if ( preg_match( '/split|column|left.*right/', $desc ) ) {
-			$tags[] = 'split';
-		}
-		if ( preg_match( '/image|photo|picture/', $desc ) ) {
-			$tags[] = 'image';
-		}
-		if ( preg_match( '/card|grid/', $desc ) ) {
-			$tags[] = 'cards';
-		}
-		if ( preg_match( '/form|login|signup|contact/', $desc ) ) {
-			$tags[] = 'form';
-		}
-		if ( preg_match( '/icon/', $desc ) ) {
-			$tags[] = 'icons';
-		}
-
-		return DesignPatternService::find( $section_type, $tags, 3 );
+		return [ 'type' => 'generic', 'confidence' => 'low' ];
 	}
 
 	/**
