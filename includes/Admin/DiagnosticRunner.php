@@ -131,7 +131,24 @@ class DiagnosticRunner {
 					'category'  => $check->category(),
 				);
 			} else {
-				$result             = $check->run();
+				try {
+					$result = $check->run();
+				} catch ( \Throwable $e ) {
+					// Synthesize a fail result so a broken third-party check doesn't
+					// swallow its error and mark itself as passed.
+					$result = array(
+						'id'        => $check_id,
+						'label'     => $check->label(),
+						'status'    => 'fail',
+						'message'   => sprintf(
+							/* translators: %s is the exception message from a misbehaving check. */
+							__( 'Check threw an exception: %s', 'bricks-mcp' ),
+							$e->getMessage()
+						),
+						'fix_steps' => array(),
+						'category'  => $check->category(),
+					);
+				}
 				$results[ $check_id ] = $result;
 
 				if ( 'fail' === ( $result['status'] ?? '' ) ) {
@@ -266,17 +283,34 @@ class DiagnosticRunner {
 		}
 
 		$parts = array(
-			sprintf( '%d/%d checks passed', $passed, $total ),
+			sprintf(
+				/* translators: 1: number of checks that passed, 2: total number of checks. */
+				__( '%1$d/%2$d checks passed', 'bricks-mcp' ),
+				$passed,
+				$total
+			),
 		);
 
 		if ( $failed > 0 ) {
-			$parts[] = sprintf( '%d failed', $failed );
+			$parts[] = sprintf(
+				/* translators: %d is the number of failed checks. */
+				_n( '%d failed', '%d failed', $failed, 'bricks-mcp' ),
+				$failed
+			);
 		}
 		if ( $warned > 0 ) {
-			$parts[] = sprintf( '%d warned', $warned );
+			$parts[] = sprintf(
+				/* translators: %d is the number of warned checks. */
+				_n( '%d warned', '%d warned', $warned, 'bricks-mcp' ),
+				$warned
+			);
 		}
 		if ( $skipped > 0 ) {
-			$parts[] = sprintf( '%d skipped', $skipped );
+			$parts[] = sprintf(
+				/* translators: %d is the number of skipped checks. */
+				_n( '%d skipped', '%d skipped', $skipped, 'bricks-mcp' ),
+				$skipped
+			);
 		}
 
 		return implode( ', ', $parts );
