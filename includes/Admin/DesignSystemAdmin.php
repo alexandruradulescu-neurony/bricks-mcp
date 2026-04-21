@@ -32,6 +32,24 @@ class DesignSystemAdmin {
     private const GAP_PREVIEW_MAX = 60;
 
     /**
+     * Map of panel slug to render method.
+     *
+     * Single source of truth used by ajax_render_panel() to dispatch
+     * a panel-slug from JS back to its render_panel_* method.  The
+     * corresponding render() method calls the same render_panel_*
+     * methods directly for initial page load.
+     */
+    private const PANEL_METHODS = [
+        'spacing'    => 'render_panel_spacing',
+        'typography' => 'render_panel_typography',
+        'colors'     => 'render_panel_colors',
+        'gaps'       => 'render_panel_gaps',
+        'radius'     => 'render_panel_radius',
+        'effects'    => 'render_panel_effects',
+        'sizes'      => 'render_panel_sizes',
+    ];
+
+    /**
      * Register AJAX handlers.
      */
     public function init(): void {
@@ -790,25 +808,14 @@ class DesignSystemAdmin {
         }
         $config = ConfigMigrator::migrate( $config );
 
-        // Map panel slug to render method.
-        $methods = [
-            'spacing'     => 'render_panel_spacing',
-            'typography'  => 'render_panel_typography',
-            'colors'      => 'render_panel_colors',
-            'gaps'        => 'render_panel_gaps',
-            'radius'      => 'render_panel_radius',
-            'effects'     => 'render_panel_effects',
-            'sizes'       => 'render_panel_sizes',
-        ];
-
-        if ( ! isset( $methods[ $panel ] ) || ! method_exists( $this, $methods[ $panel ] ) ) {
+        if ( ! isset( self::PANEL_METHODS[ $panel ] ) || ! method_exists( $this, self::PANEL_METHODS[ $panel ] ) ) {
             // Do NOT echo $panel back — keep error shape consistent with the rest of the plugin.
             wp_send_json_error( [ 'message' => __( 'Unknown panel.', 'bricks-mcp' ) ] );
             return;
         }
 
         ob_start();
-        $this->{$methods[ $panel ]}( $config );
+        $this->{self::PANEL_METHODS[ $panel ]}( $config );
         $html = ob_get_clean();
 
         wp_send_json_success( [ 'html' => $html ] );
