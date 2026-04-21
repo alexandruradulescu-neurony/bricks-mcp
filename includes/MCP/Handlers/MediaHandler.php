@@ -217,7 +217,7 @@ final class MediaHandler {
 		$response = array(
 			'post_id'       => $post_id,
 			'attachment_id' => $attachment_id,
-			'url'           => wp_get_attachment_url( $attachment_id ) ? wp_get_attachment_url( $attachment_id ) : '',
+			'url'           => wp_get_attachment_url( $attachment_id ) ?: '',
 			'title'         => get_the_title( $post_id ),
 		);
 
