@@ -70,6 +70,13 @@ final class Settings {
 	private const REACHABLE_HTTP_CODES = array( 200, 401, 403, 405 );
 
 	/**
+	 * Transient key for the cached connection-status probe result.
+	 * Short TTL (1 minute) so the admin reflects server-state changes
+	 * within a minute of toggling the "Enable MCP server" setting.
+	 */
+	private const CONNECTION_STATUS_TRANSIENT = 'bricks_mcp_connection_status';
+
+	/**
 	 * Rate-limit RPM input bounds + default.
 	 * Values outside these bounds clamp on save.
 	 */
@@ -418,7 +425,7 @@ final class Settings {
 			return false;
 		}
 
-		$cached = get_transient( 'bricks_mcp_connection_status' );
+		$cached = get_transient( self::CONNECTION_STATUS_TRANSIENT );
 		if ( false !== $cached ) {
 			return '1' === $cached;
 		}
@@ -437,7 +444,7 @@ final class Settings {
 		$code        = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
 		$is_reachable = in_array( $code, self::REACHABLE_HTTP_CODES, true );
 
-		set_transient( 'bricks_mcp_connection_status', $is_reachable ? '1' : '0', MINUTE_IN_SECONDS );
+		set_transient( self::CONNECTION_STATUS_TRANSIENT, $is_reachable ? '1' : '0', MINUTE_IN_SECONDS );
 
 		return $is_reachable;
 	}
