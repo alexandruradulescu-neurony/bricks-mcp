@@ -278,7 +278,11 @@ final class PageReadSubHandler {
 		if ( ! $this->bricks_service->is_bricks_page( $post_id ) ) {
 			return new \WP_Error(
 				'not_bricks_page',
-				sprintf( __( 'Post %d is not using the Bricks editor.', 'bricks-mcp' ), $post_id )
+				sprintf(
+					/* translators: %d: Post ID */
+					__( 'Post %d is not using the Bricks editor.', 'bricks-mcp' ),
+					$post_id
+				)
 			);
 		}
 
@@ -299,7 +303,12 @@ final class PageReadSubHandler {
 		if ( ! isset( $by_id[ $section_id ] ) ) {
 			return new \WP_Error(
 				'element_not_found',
-				sprintf( __( 'Element "%1$s" not found on post %2$d.', 'bricks-mcp' ), $section_id, $post_id )
+				sprintf(
+					/* translators: 1: Section element ID, 2: Post ID */
+					__( 'Element "%1$s" not found on post %2$d.', 'bricks-mcp' ),
+					$section_id,
+					$post_id
+				)
 			);
 		}
 
