@@ -557,6 +557,7 @@ final class TemplateHandler {
 
 		// Return the updated conditions via format_conditions() for confirmation.
 		$settings  = get_post_meta( $template_id, BricksCore::META_TEMPLATE_SETTINGS, true );
+		$settings  = is_array( $settings ) ? $settings : array();
 		$formatted = $this->bricks_service->format_conditions( $settings );
 
 		return array(
