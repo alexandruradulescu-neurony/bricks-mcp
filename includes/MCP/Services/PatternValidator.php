@@ -130,6 +130,118 @@ final class PatternValidator {
     }
 
     /**
+     * Snap threshold for color distance (ΔE CIE76).
+     * ΔE < 1 = imperceptible, < 10 = close, > 10 = clearly different.
+     */
+    private const COLOR_DELTA_E_THRESHOLD = 10.0;
+
+    /**
+     * Snap a raw color to the nearest site color variable by perceptual distance.
+     *
+     * @param string                $value     Raw color (#hex, rgba, hsl) or var().
+     * @param array<string, string> $site_vars Map of var name → color value.
+     * @return array{snapped: ?string, delta_e: float, raw: string}
+     */
+    public function snap_color( string $value, array $site_vars ): array {
+        $trimmed = trim( $value );
+
+        if ( preg_match( '/^var\(\s*(--[a-z0-9-]+)\s*\)$/i', $trimmed, $m ) ) {
+            return [ 'snapped' => 'var(' . $m[1] . ')', 'delta_e' => 0.0, 'raw' => $value ];
+        }
+
+        $rgb = $this->parse_rgb( $trimmed );
+        if ( null === $rgb ) {
+            return [ 'snapped' => null, 'delta_e' => 999.0, 'raw' => $value ];
+        }
+        $lab = $this->rgb_to_lab( $rgb );
+
+        $best_name  = null;
+        $best_delta = PHP_FLOAT_MAX;
+        foreach ( $site_vars as $name => $raw ) {
+            $var_rgb = $this->parse_rgb( $raw );
+            if ( null === $var_rgb ) {
+                continue;
+            }
+            $var_lab = $this->rgb_to_lab( $var_rgb );
+            $delta   = $this->delta_e( $lab, $var_lab );
+            if ( $delta < $best_delta ) {
+                $best_delta = $delta;
+                $best_name  = $name;
+            }
+        }
+
+        if ( null === $best_name || $best_delta > self::COLOR_DELTA_E_THRESHOLD ) {
+            return [ 'snapped' => null, 'delta_e' => round( $best_delta, 2 ), 'raw' => $value ];
+        }
+
+        return [ 'snapped' => 'var(' . $best_name . ')', 'delta_e' => round( $best_delta, 2 ), 'raw' => $value ];
+    }
+
+    /**
+     * Parse hex/rgb/rgba into [r,g,b] 0-255 or null.
+     */
+    private function parse_rgb( string $v ): ?array {
+        $v = strtolower( trim( $v ) );
+        if ( preg_match( '/^#([0-9a-f]{6})$/i', $v, $m ) ) {
+            return [
+                hexdec( substr( $m[1], 0, 2 ) ),
+                hexdec( substr( $m[1], 2, 2 ) ),
+                hexdec( substr( $m[1], 4, 2 ) ),
+            ];
+        }
+        if ( preg_match( '/^#([0-9a-f]{3})$/i', $v, $m ) ) {
+            return [
+                hexdec( str_repeat( $m[1][0], 2 ) ),
+                hexdec( str_repeat( $m[1][1], 2 ) ),
+                hexdec( str_repeat( $m[1][2], 2 ) ),
+            ];
+        }
+        if ( preg_match( '/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/', $v, $m ) ) {
+            return [ (int) $m[1], (int) $m[2], (int) $m[3] ];
+        }
+        return null;
+    }
+
+    /**
+     * Convert RGB 0-255 to CIELAB (CIE76 distance input).
+     */
+    private function rgb_to_lab( array $rgb ): array {
+        $linear = array_map( static function ( $c ) {
+            $c /= 255.0;
+            return $c <= 0.04045 ? $c / 12.92 : pow( ( $c + 0.055 ) / 1.055, 2.4 );
+        }, $rgb );
+
+        $x = $linear[0] * 0.4124 + $linear[1] * 0.3576 + $linear[2] * 0.1805;
+        $y = $linear[0] * 0.2126 + $linear[1] * 0.7152 + $linear[2] * 0.0722;
+        $z = $linear[0] * 0.0193 + $linear[1] * 0.1192 + $linear[2] * 0.9505;
+
+        $xn = $x / 0.95047;
+        $yn = $y / 1.00000;
+        $zn = $z / 1.08883;
+
+        $f = static function ( $t ) {
+            return $t > 0.008856 ? pow( $t, 1 / 3 ) : 7.787 * $t + 16 / 116;
+        };
+
+        return [
+            116 * $f( $yn ) - 16,
+            500 * ( $f( $xn ) - $f( $yn ) ),
+            200 * ( $f( $yn ) - $f( $zn ) ),
+        ];
+    }
+
+    /**
+     * CIE76 ΔE distance between two LAB colors.
+     */
+    private function delta_e( array $a, array $b ): float {
+        return sqrt(
+            pow( $a[0] - $b[0], 2 ) +
+            pow( $a[1] - $b[1], 2 ) +
+            pow( $a[2] - $b[2], 2 )
+        );
+    }
+
+    /**
      * Validate and transform a pattern input through the full pipeline.
      *
      * @param array<string, mixed> $input Raw pattern input.
