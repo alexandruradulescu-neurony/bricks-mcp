@@ -467,6 +467,62 @@ final class PatternValidator {
     }
 
     /**
+     * Compute a deterministic SHA-256 checksum over the pattern.
+     *
+     * Canonicalizes by sorting keys recursively before JSON encoding.
+     * Excludes the `checksum` field itself if present.
+     *
+     * @param array<string, mixed> $pattern Pattern object.
+     * @return string "sha256:<hex>".
+     */
+    public function checksum( array $pattern ): string {
+        unset( $pattern['checksum'] );
+        $canon = $this->canonicalize( $pattern );
+        return 'sha256:' . hash( 'sha256', wp_json_encode( $canon ) );
+    }
+
+    private function canonicalize( $value ) {
+        if ( ! is_array( $value ) ) {
+            return $value;
+        }
+        $out  = [];
+        $keys = array_keys( $value );
+        sort( $keys );
+        foreach ( $keys as $k ) {
+            $out[ $k ] = $this->canonicalize( $value[ $k ] );
+        }
+        return $out;
+    }
+
+    /**
+     * Verify every class_refs and var(--*) in structure has a matching payload.
+     *
+     * @param array<string, mixed> $pattern Pattern with structure/classes/variables maps.
+     * @return array<int, string> Error messages (empty = valid).
+     */
+    public function integrity_check( array $pattern ): array {
+        $errors = [];
+
+        $class_refs  = $this->collect_class_refs( $pattern['structure'] ?? [] );
+        $classes_map = $pattern['classes'] ?? [];
+        foreach ( $class_refs as $name ) {
+            if ( ! isset( $classes_map[ $name ] ) ) {
+                $errors[] = sprintf( 'class_ref "%s" referenced in structure has no matching entry in classes map.', $name );
+            }
+        }
+
+        $var_refs = $this->collect_variable_refs( $pattern['structure'] ?? [] );
+        $vars_map = $pattern['variables'] ?? [];
+        foreach ( $var_refs as $name ) {
+            if ( ! isset( $vars_map[ $name ] ) ) {
+                $errors[] = sprintf( 'var(%s) referenced in structure has no matching entry in variables map.', $name );
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
      * Validate and transform a pattern input through the full pipeline.
      *
      * @param array<string, mixed> $input Raw pattern input.
