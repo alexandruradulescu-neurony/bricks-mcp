@@ -52,6 +52,15 @@ final class Settings {
 	private const CONNECTION_PROBE_TIMEOUT = 3;
 
 	/**
+	 * Nonce action for the design+business brief save form.  Paired with the
+	 * 'bricks_mcp_briefs_nonce' field name.  Constants so the producer
+	 * (wp_nonce_field in render) and consumer (wp_verify_nonce on submit)
+	 * cannot silently drift.
+	 */
+	private const BRIEFS_NONCE_ACTION = 'bricks_mcp_save_briefs';
+	private const BRIEFS_NONCE_FIELD  = 'bricks_mcp_briefs_nonce';
+
+	/**
 	 * HTTP status codes that indicate the MCP endpoint is reachable.
 	 *
 	 * 200 is a successful GET; 401/403 mean auth is required (server is
@@ -626,7 +635,7 @@ final class Settings {
 	 */
 	private function render_tab_briefs(): void {
 		// Handle save.
-		if ( isset( $_POST['bricks_mcp_briefs_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bricks_mcp_briefs_nonce'] ) ), 'bricks_mcp_save_briefs' ) ) {
+		if ( isset( $_POST[ self::BRIEFS_NONCE_FIELD ] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST[ self::BRIEFS_NONCE_FIELD ] ) ), self::BRIEFS_NONCE_ACTION ) ) {
 			$briefs = [
 				'design_brief'   => isset( $_POST['design_brief'] ) ? wp_kses_post( wp_unslash( $_POST['design_brief'] ) ) : '',
 				'business_brief' => isset( $_POST['business_brief'] ) ? wp_kses_post( wp_unslash( $_POST['business_brief'] ) ) : '',
@@ -640,7 +649,7 @@ final class Settings {
 		$business_brief = $briefs['business_brief'] ?? '';
 		?>
 		<form method="post">
-			<?php wp_nonce_field( 'bricks_mcp_save_briefs', 'bricks_mcp_briefs_nonce' ); ?>
+			<?php wp_nonce_field( self::BRIEFS_NONCE_ACTION, self::BRIEFS_NONCE_FIELD ); ?>
 
 			<div class="bricks-mcp-config-section">
 				<h3><?php esc_html_e( 'Design Brief', 'bricks-mcp' ); ?></h3>
