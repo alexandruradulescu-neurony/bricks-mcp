@@ -334,8 +334,11 @@ final class TemplateHandler {
 		if ( ! $trashed ) {
 			return new \WP_Error(
 				'trash_failed',
-				/* translators: %d: Template ID */
-				sprintf( __( 'Failed to trash template %d. Check WordPress error logs for details.', 'bricks-mcp' ), $template_id )
+				sprintf(
+					/* translators: %d: Template ID */
+					__( 'Failed to trash template %d. Check WordPress error logs for details.', 'bricks-mcp' ),
+					$template_id
+				)
 			);
 		}
 
