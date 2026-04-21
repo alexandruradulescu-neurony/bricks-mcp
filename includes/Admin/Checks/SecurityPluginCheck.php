@@ -119,7 +119,7 @@ class SecurityPluginCheck implements DiagnosticCheck {
 	/**
 	 * Run the security plugin check.
 	 *
-	 * @return array<string, mixed>
+	 * @return array{id: string, label: string, status: string, message: string, fix_steps: array<string>, category: string}
 	 */
 	public function run(): array {
 		if ( ! function_exists( 'is_plugin_active' ) ) {
