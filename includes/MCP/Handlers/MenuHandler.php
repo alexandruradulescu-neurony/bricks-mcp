@@ -158,7 +158,8 @@ final class MenuHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
-					__( 'You are about to delete menu "%s" (ID: %d) with %d item(s). This is a permanent delete and cannot be undone. Set confirm: true to proceed.', 'bricks-mcp' ),
+					/* translators: 1: Menu name, 2: Menu ID, 3: Number of menu items */
+					__( 'You are about to delete menu "%1$s" (ID: %2$d) with %3$d item(s). This is a permanent delete and cannot be undone. Set confirm: true to proceed.', 'bricks-mcp' ),
 					$menu ? $menu->name : "ID $menu_id",
 					$menu_id,
 					$count
