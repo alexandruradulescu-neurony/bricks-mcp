@@ -46,6 +46,20 @@ final class Settings {
 	private const OPTION_GROUP = 'bricks_mcp_settings_group';
 
 	/**
+	 * Timeout for the settings-page connection-status probe (seconds).
+	 * Short so admin page load isn't blocked by an unreachable endpoint.
+	 */
+	private const CONNECTION_PROBE_TIMEOUT = 3;
+
+	/**
+	 * Rate-limit RPM input bounds + default.
+	 * Values outside these bounds clamp on save.
+	 */
+	private const RATE_LIMIT_RPM_MIN     = 10;
+	private const RATE_LIMIT_RPM_MAX     = 1000;
+	private const RATE_LIMIT_RPM_DEFAULT = 120;
+
+	/**
 	 * Design System admin handler.
 	 */
 	private DesignSystemAdmin $design_system_admin;
@@ -193,7 +207,7 @@ final class Settings {
 			'require_auth'      => true,
 			'custom_base_url'   => '',
 			'dangerous_actions' => false,
-			'rate_limit_rpm'    => 120,
+			'rate_limit_rpm'    => self::RATE_LIMIT_RPM_DEFAULT,
 			'protected_pages'   => '',
 		];
 	}
@@ -214,7 +228,10 @@ final class Settings {
 			: '';
 
 		$sanitized['dangerous_actions'] = ! empty( $input['dangerous_actions'] );
-		$sanitized['rate_limit_rpm']    = max( 10, min( 1000, (int) ( $input['rate_limit_rpm'] ?? 120 ) ) );
+		$sanitized['rate_limit_rpm']    = max(
+			self::RATE_LIMIT_RPM_MIN,
+			min( self::RATE_LIMIT_RPM_MAX, (int) ( $input['rate_limit_rpm'] ?? self::RATE_LIMIT_RPM_DEFAULT ) )
+		);
 		$sanitized['protected_pages']   = isset( $input['protected_pages'] )
 			? sanitize_text_field( $input['protected_pages'] )
 			: '';
@@ -388,10 +405,13 @@ final class Settings {
 			return '1' === $cached;
 		}
 
+		// Short 3-second timeout: settings-page connection indicator should not block
+		// admin rendering if the endpoint is slow/unreachable — the indicator shows
+		// "unknown/unreachable" and the user can still navigate the page.
 		$response = wp_remote_get(
 			rest_url( 'bricks-wp-mcp/v1/mcp' ),
 			[
-				'timeout'   => 3,
+				'timeout'   => self::CONNECTION_PROBE_TIMEOUT,
 				'sslverify' => false,
 			]
 		);
@@ -730,10 +750,13 @@ final class Settings {
 	 */
 	public function render_rate_limit_rpm_field(): void {
 		$settings = get_option( self::OPTION_NAME, $this->get_defaults() );
-		$value    = (int) ( $settings['rate_limit_rpm'] ?? 120 );
+		$value    = (int) ( $settings['rate_limit_rpm'] ?? self::RATE_LIMIT_RPM_DEFAULT );
 		?>
 		<input type="number" id="bricks-mcp-rate-limit-rpm" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[rate_limit_rpm]"
-			value="<?php echo esc_attr( (string) $value ); ?>" min="10" max="1000" step="10" class="small-text">
+			value="<?php echo esc_attr( (string) $value ); ?>"
+			min="<?php echo esc_attr( (string) self::RATE_LIMIT_RPM_MIN ); ?>"
+			max="<?php echo esc_attr( (string) self::RATE_LIMIT_RPM_MAX ); ?>"
+			step="10" class="small-text">
 		<span><?php esc_html_e( 'requests per minute per user', 'bricks-mcp' ); ?></span>
 		<p class="description">
 			<?php esc_html_e( 'Maximum number of MCP requests allowed per authenticated user per minute. Default: 120. Increase to 300 for intensive AI building sessions. Applies only when authentication is required.', 'bricks-mcp' ); ?>

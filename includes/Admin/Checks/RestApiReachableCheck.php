@@ -26,6 +26,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 class RestApiReachableCheck implements DiagnosticCheck {
 
 	/**
+	 * HTTP timeout for the reachability probe (seconds).
+	 */
+	private const HTTP_TIMEOUT_SECONDS = 5;
+
+	/**
 	 * Get the check ID.
 	 *
 	 * @return string
@@ -85,7 +90,7 @@ class RestApiReachableCheck implements DiagnosticCheck {
 		$response = wp_remote_get(
 			$rest_url,
 			array(
-				'timeout'   => 5,
+				'timeout'   => self::HTTP_TIMEOUT_SECONDS,
 				'sslverify' => false,
 			)
 		);

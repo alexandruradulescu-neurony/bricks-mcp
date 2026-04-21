@@ -4,6 +4,27 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.25.6] — 2026-04-21
+
+### Phase 9 of repair roadmap: MEDIUM sweep part 1
+
+#### Data integrity
+
+- **`BricksService::remove_element(cascade)` stale child-ID scrub.** Before: cascade removed the target + all descendants but surviving elements' `children` arrays could still contain gone IDs. On save, the linkage validator rejected the result with "element X lists child Y which doesn't exist". Fix: after building `$remove_set`, the survivors loop also prunes each element's children array of any ID in the remove set.
+- **`Plugin::migrate_settings` update_option return check.** `update_option` can return false when the DB rejects the write (filter, transaction conflict). Previously silent — migration appeared successful, `db_version` bumped, retry never happened. Now throws RuntimeException; the outer try/catch in `init()` leaves version un-bumped so migration retries on next load.
+
+#### Magic-number extraction
+
+- `Admin/Settings`:
+  - `RATE_LIMIT_RPM_MIN = 10`, `RATE_LIMIT_RPM_MAX = 1000`, `RATE_LIMIT_RPM_DEFAULT = 120` — replaces 3 sites with inline literals.
+  - `CONNECTION_PROBE_TIMEOUT = 3` — documented intent for settings-page probe.
+- `Admin/Checks/McpEndpointCheck::HTTP_TIMEOUT_SECONDS = 5`
+- `Admin/Checks/RestApiReachableCheck::HTTP_TIMEOUT_SECONDS = 5`
+
+### Risk
+
+LOW — defensive + refactor.
+
 ## [3.25.5] — 2026-04-21
 
 ### Phase 8 of repair roadmap: Core + Admin HIGH items

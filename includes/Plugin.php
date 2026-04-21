@@ -198,7 +198,13 @@ final class Plugin {
 		}
 
 		if ( $dirty ) {
-			update_option( MCP\Services\BricksCore::OPTION_SETTINGS, $settings );
+			// Check update_option return — false on failure (DB issue, filter rejection).
+			// Surface via exception so the outer try/catch in init() keeps the db_version
+			// un-bumped and migration retries next load.
+			$ok = update_option( MCP\Services\BricksCore::OPTION_SETTINGS, $settings );
+			if ( false === $ok ) {
+				throw new \RuntimeException( 'migrate_settings: update_option returned false; retry on next load.' );
+			}
 		}
 	}
 

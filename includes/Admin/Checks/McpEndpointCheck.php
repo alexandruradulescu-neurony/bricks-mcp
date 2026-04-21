@@ -27,6 +27,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 class McpEndpointCheck implements DiagnosticCheck {
 
 	/**
+	 * HTTP timeout for the reachability probe (seconds).
+	 * Short enough to not block admin page rendering; long enough for typical
+	 * REST roundtrips on slow-but-healthy hosts.
+	 */
+	private const HTTP_TIMEOUT_SECONDS = 5;
+
+	/**
 	 * Get the check ID.
 	 *
 	 * @return string
@@ -73,7 +80,7 @@ class McpEndpointCheck implements DiagnosticCheck {
 		$response = wp_remote_get(
 			$endpoint_url,
 			array(
-				'timeout'   => 5,
+				'timeout'   => self::HTTP_TIMEOUT_SECONDS,
 				'sslverify' => false,
 			)
 		);

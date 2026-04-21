@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.25.5
+Stable tag: 3.25.6
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,12 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.25.6 =
+* Fix: `BricksService::remove_element(cascade: true)` now scrubs stale child-ID references from surviving elements. Previously the cascade removed the target + descendants but left parent.children arrays pointing at gone IDs, which the linkage validator flagged on save. Also adds is_array guards per element.
+* Fix: `Plugin::migrate_settings` now checks `update_option` return value — false triggers a RuntimeException so outer try/catch leaves `db_version` un-bumped and retry happens on next load. Previously silent success on DB rejection led to permanent half-migrated state.
+* Refactor: `Admin/Settings::RATE_LIMIT_RPM_{MIN,MAX,DEFAULT}` constants replace 3 `max(10, min(1000, ... ?? 120))` magic numbers. `CONNECTION_PROBE_TIMEOUT` constant replaces hardcoded `3`.
+* Refactor: `McpEndpointCheck::HTTP_TIMEOUT_SECONDS` + `RestApiReachableCheck::HTTP_TIMEOUT_SECONDS` constants replace hardcoded `5`-second timeouts with documented intent.
 
 = 3.25.5 =
 * Fix: `StreamableHttpHandler::handle_get` SSE keepalive loop gains an iteration cap (default 360, filterable via `bricks_mcp_sse_max_iterations`). Previously unbounded — wedged PHP-FPM workers when clients held connections open.

@@ -1090,17 +1090,23 @@ class BricksService {
 			$remove_set = array_flip( $remove_ids );
 
 			// Filter out all removed elements and update parent's children.
+			// Additionally scrub stale child references from any SURVIVING element whose
+			// children array contained a removed descendant. Without this, the linkage
+			// validator in save_elements() flags the survivors for pointing at gone IDs.
 			$updated_elements = [];
 			foreach ( $elements as $element ) {
-				if ( isset( $remove_set[ $element['id'] ] ) ) {
+				if ( ! is_array( $element ) ) {
 					continue;
 				}
-				// Update parent's children array to remove the target.
-				if ( $element['id'] === (string) $target_parent ) {
+				if ( isset( $remove_set[ $element['id'] ?? '' ] ) ) {
+					continue;
+				}
+				// Prune any children references that point to removed elements.
+				if ( ! empty( $element['children'] ) && is_array( $element['children'] ) ) {
 					$element['children'] = array_values(
 						array_filter(
 							$element['children'],
-							static fn( string $cid ) => $cid !== $element_id
+							static fn( $cid ) => is_string( $cid ) && ! isset( $remove_set[ $cid ] )
 						)
 					);
 				}
