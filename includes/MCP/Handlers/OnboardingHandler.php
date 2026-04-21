@@ -61,7 +61,7 @@ final class OnboardingHandler {
 	/**
 	 * Get workflow guide only.
 	 *
-	 * @return array<string, array> Workflow guide.
+	 * @return array<string, mixed> Workflow guide wrapper: section + data.
 	 */
 	private function get_workflows(): array {
 		return [
@@ -73,7 +73,7 @@ final class OnboardingHandler {
 	/**
 	 * Get quick-start examples only.
 	 *
-	 * @return array<int, array> Quick-start examples.
+	 * @return array<string, mixed> Examples wrapper: section + data.
 	 */
 	private function get_examples(): array {
 		return [
@@ -85,7 +85,7 @@ final class OnboardingHandler {
 	/**
 	 * Get site context only.
 	 *
-	 * @return array<string, mixed> Site context.
+	 * @return array<string, mixed> Site context wrapper: section + data.
 	 */
 	private function get_site_context(): array {
 		return [
@@ -97,7 +97,7 @@ final class OnboardingHandler {
 	/**
 	 * Get briefs only.
 	 *
-	 * @return array<string, string> Design and business briefs.
+	 * @return array<string, mixed> Briefs wrapper: section + data.
 	 */
 	private function get_briefs(): array {
 		return [
