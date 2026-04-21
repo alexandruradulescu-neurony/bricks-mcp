@@ -22,6 +22,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class VerifyHandler {
 
+	/**
+	 * Max number of heading content samples returned in verify response.
+	 */
+	private const CONTENT_SAMPLE_HEADINGS_LIMIT = 10;
+
+	/**
+	 * Max number of button content samples returned in verify response.
+	 */
+	private const CONTENT_SAMPLE_BUTTONS_LIMIT = 10;
+
+	/**
+	 * Max number of generic text content samples returned in verify response.
+	 */
+	private const CONTENT_SAMPLE_TEXTS_LIMIT = 5;
+
 	private BricksService $bricks_service;
 
 	/** @var callable */
@@ -134,7 +149,7 @@ final class VerifyHandler {
 		}
 
 		// Build hierarchy tree for last section (most recently built).
-		$sections = array_filter( $elements, fn( $el ) => ( $el['name'] ?? '' ) === 'section' && empty( $el['parent'] ) );
+		$sections = array_filter( $elements, fn( $el ) => is_array( $el ) && ( $el['name'] ?? '' ) === 'section' && empty( $el['parent'] ) );
 		$last_section = ! empty( $sections ) ? end( $sections ) : null;
 		$hierarchy = null;
 
@@ -362,9 +377,9 @@ final class VerifyHandler {
 		}
 
 		return [
-			'headings'              => array_slice( $headings, 0, 10 ),
-			'buttons'               => array_slice( $buttons, 0, 10 ),
-			'texts'                 => array_slice( $texts, 0, 5 ),
+			'headings'              => array_slice( $headings, 0, self::CONTENT_SAMPLE_HEADINGS_LIMIT ),
+			'buttons'               => array_slice( $buttons, 0, self::CONTENT_SAMPLE_BUTTONS_LIMIT ),
+			'texts'                 => array_slice( $texts, 0, self::CONTENT_SAMPLE_TEXTS_LIMIT ),
 			'text_element_count'    => count( $headings ) + count( $buttons ) + count( $texts ),
 			'has_placeholder_content' => $has_placeholder,
 		];
