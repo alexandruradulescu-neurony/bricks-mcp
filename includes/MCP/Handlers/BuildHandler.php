@@ -238,7 +238,7 @@ final class BuildHandler {
 		$pipeline_warnings = $schema_warnings; // Seed with non-blocking validation warnings (grid, content, responsive).
 
 		// Step 8e: Knowledge nudges — warn when building elements whose domain knowledge wasn't fetched.
-		$fetched_knowledge = \BricksMCP\MCP\Handlers\BricksToolHandler::get_fetched_knowledge();
+		$fetched_knowledge = BricksToolHandler::get_fetched_knowledge();
 		$element_types     = $this->validator->extract_element_types( $schema );
 		$knowledge_map     = [
 			'form'             => 'forms',
