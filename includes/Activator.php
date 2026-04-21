@@ -25,6 +25,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Activator {
 
 	/**
+	 * Transient key where activation-check results are stored for admin-notice display.
+	 *
+	 * Read by Admin\Settings::render_activation_notice(); keep both sides in sync if changed.
+	 *
+	 * @var string
+	 */
+	private const ACTIVATION_CHECK_TRANSIENT = 'bricks_mcp_activation_checks';
+
+	/**
+	 * TTL for the activation-check transient.
+	 *
+	 * @var int
+	 */
+	private const ACTIVATION_CHECK_TTL = HOUR_IN_SECONDS;
+
+	/**
 	 * Run activation tasks.
 	 *
 	 * This method is called when the plugin is activated.
@@ -33,12 +49,12 @@ final class Activator {
 	 */
 	public static function activate(): void {
 		// Store activation timestamp.
-		if ( ! get_option( 'bricks_mcp_activated_at' ) ) {
-			update_option( 'bricks_mcp_activated_at', time() );
+		if ( ! get_option( BricksCore::OPTION_ACTIVATED_AT ) ) {
+			update_option( BricksCore::OPTION_ACTIVATED_AT, time() );
 		}
 
 		// Store plugin version.
-		update_option( 'bricks_mcp_version', BRICKS_MCP_VERSION );
+		update_option( BricksCore::OPTION_VERSION, BRICKS_MCP_VERSION );
 
 		// Set default options if they don't exist.
 		self::set_default_options();
@@ -62,6 +78,9 @@ final class Activator {
 		$results = [];
 
 		// Check 1: Application Passwords available.
+		// wp_is_application_passwords_available() has existed since WP 5.6 and the plugin
+		// requires WP 6.4+, so the function is always defined here. The function_exists()
+		// guard is kept only as a cheap belt-and-braces for unusual hosting overrides.
 		if ( function_exists( 'wp_is_application_passwords_available' ) ) {
 			$app_pw_available = wp_is_application_passwords_available();
 			$results[]        = [
@@ -95,7 +114,7 @@ final class Activator {
 		}
 
 		if ( $has_issues ) {
-			set_transient( 'bricks_mcp_activation_checks', $results, 3600 ); // 1 hour TTL.
+			set_transient( self::ACTIVATION_CHECK_TRANSIENT, $results, self::ACTIVATION_CHECK_TTL );
 		}
 	}
 
