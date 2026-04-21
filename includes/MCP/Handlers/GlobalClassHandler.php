@@ -289,7 +289,7 @@ final class GlobalClassHandler {
 				sprintf(
 					/* translators: %s: Class name */
 					__( "Class '%s' not found. Use global_class:list to list available classes.", 'bricks-mcp' ),
-					$args['class_name']
+					esc_html( (string) $args['class_name'] )
 				)
 			);
 		}
@@ -332,7 +332,7 @@ final class GlobalClassHandler {
 				sprintf(
 					/* translators: %s: Class name */
 					__( "Class '%s' not found. Use global_class:list to list available classes.", 'bricks-mcp' ),
-					$args['class_name']
+					esc_html( (string) $args['class_name'] )
 				)
 			);
 		}
@@ -342,6 +342,7 @@ final class GlobalClassHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
+					/* translators: %s: Class name */
 					__( 'You are about to delete global class "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
 					$class['name']
 				)
