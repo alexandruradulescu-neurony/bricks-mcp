@@ -1928,6 +1928,52 @@ class GlobalClassService {
 		];
 	}
 
+	// -------------------------------------------------------------------------
+	// Pattern capture helpers
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Return a map of class name → full class definition.
+	 * Used by PatternCapture to build self-contained pattern payloads.
+	 *
+	 * @return array<string, array>
+	 */
+	public function get_all_by_name(): array {
+		$classes = $this->get_global_classes();
+		$map     = [];
+		foreach ( $classes as $cls ) {
+			$name = $cls['name'] ?? '';
+			if ( $name !== '' ) {
+				$map[ $name ] = $cls;
+			}
+		}
+		return $map;
+	}
+
+	/**
+	 * Convert an array of class IDs to their corresponding names.
+	 * IDs that don't resolve are dropped.
+	 *
+	 * @param array<int, string> $ids Class IDs.
+	 * @return array<int, string> Class names.
+	 */
+	public function ids_to_names( array $ids ): array {
+		$classes    = $this->get_global_classes();
+		$id_to_name = [];
+		foreach ( $classes as $cls ) {
+			if ( isset( $cls['id'], $cls['name'] ) ) {
+				$id_to_name[ $cls['id'] ] = $cls['name'];
+			}
+		}
+		$out = [];
+		foreach ( $ids as $id ) {
+			if ( isset( $id_to_name[ $id ] ) ) {
+				$out[] = $id_to_name[ $id ];
+			}
+		}
+		return $out;
+	}
+
 	/**
 	 * Build a Bricks composite key suffix.
 	 *

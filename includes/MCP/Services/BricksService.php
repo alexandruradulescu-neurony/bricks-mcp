@@ -2058,4 +2058,54 @@ class BricksService {
 		return $this->notes_service->delete_note( $note_id );
 	}
 
+	// -------------------------------------------------------------------------
+	// Pattern capture helpers
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Get a single element subtree from a page by its element ID.
+	 *
+	 * Walks the page's element tree, finds the element with matching id,
+	 * and returns its subtree (element + descendants reconstructed from the flat list).
+	 *
+	 * @param int    $post_id  Page ID.
+	 * @param string $block_id Target element ID.
+	 * @return array|null Element subtree with nested children, or null if not found.
+	 */
+	public function get_element_subtree( int $post_id, string $block_id ): ?array {
+		$elements = $this->get_elements( $post_id );
+		if ( empty( $elements ) ) {
+			return null;
+		}
+
+		// Build id → element lookup and parent → children index.
+		$by_id       = [];
+		$children_of = [];
+		foreach ( $elements as $el ) {
+			$id = $el['id'] ?? '';
+			if ( $id === '' ) continue;
+			$by_id[ $id ] = $el;
+			$parent       = $el['parent'] ?? '0';
+			$children_of[ $parent ][] = $id;
+		}
+
+		if ( ! isset( $by_id[ $block_id ] ) ) {
+			return null;
+		}
+
+		// Recursive reconstruction.
+		$build = static function ( string $id ) use ( &$build, $by_id, $children_of ) {
+			$el = $by_id[ $id ];
+			if ( isset( $children_of[ $id ] ) ) {
+				$el['children'] = [];
+				foreach ( $children_of[ $id ] as $child_id ) {
+					$el['children'][] = $build( $child_id );
+				}
+			}
+			return $el;
+		};
+
+		return $build( $block_id );
+	}
+
 }

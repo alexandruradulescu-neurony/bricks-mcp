@@ -622,6 +622,37 @@ class GlobalVariableService {
 		];
 	}
 
+	// -------------------------------------------------------------------------
+	// Pattern capture helpers
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Return a map of variable name (including leading --) → definition with value.
+	 *
+	 * Reads the raw flat option directly (not the structured get_global_variables()
+	 * result) so we get a simple iterable list of variable records.
+	 *
+	 * @return array<string, array>
+	 */
+	public function get_all_with_values(): array {
+		$vars = get_option( 'bricks_global_variables', [] );
+		if ( ! is_array( $vars ) ) {
+			$vars = [];
+		}
+		$map = [];
+		foreach ( $vars as $v ) {
+			$name = $v['name'] ?? '';
+			// Ensure name starts with --.
+			if ( $name !== '' && ! str_starts_with( $name, '--' ) ) {
+				$name = '--' . $name;
+			}
+			if ( $name !== '' ) {
+				$map[ $name ] = $v;
+			}
+		}
+		return $map;
+	}
+
 	/**
 	 * Search global variables by name and/or value substring.
 	 *
