@@ -23,6 +23,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Response {
 
 	/**
+	 * Apply the MCP server identification header to a REST response.
+	 *
+	 * Centralized so all three factory methods (success/error/validation_error)
+	 * cannot drift on the header name or value format.
+	 *
+	 * @param \WP_REST_Response $response Response to decorate.
+	 * @return void
+	 */
+	private static function add_server_header( \WP_REST_Response $response ): void {
+		$response->header( 'X-MCP-Server', 'bricks-mcp/' . BRICKS_MCP_VERSION );
+	}
+
+	/**
 	 * Create a success response.
 	 *
 	 * @param mixed $data    Response data.
@@ -31,7 +44,7 @@ final class Response {
 	 */
 	public static function success( mixed $data, int $status = 200 ): \WP_REST_Response {
 		$response = new \WP_REST_Response( $data, $status );
-		$response->header( 'X-MCP-Server', 'bricks-mcp/' . BRICKS_MCP_VERSION );
+		self::add_server_header( $response );
 
 		return $response;
 	}
@@ -69,7 +82,7 @@ final class Response {
 			$status
 		);
 
-		$response->header( 'X-MCP-Server', 'bricks-mcp/' . BRICKS_MCP_VERSION );
+		self::add_server_header( $response );
 
 		return $response;
 	}
@@ -145,7 +158,7 @@ final class Response {
 			400
 		);
 
-		$response->header( 'X-MCP-Server', 'bricks-mcp/' . BRICKS_MCP_VERSION );
+		self::add_server_header( $response );
 
 		return $response;
 	}
