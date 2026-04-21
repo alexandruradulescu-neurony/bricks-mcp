@@ -26,19 +26,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 class NotesService {
 
 	/**
-	 * WordPress option name for storing notes.
-	 *
-	 * @var string
-	 */
-	private const OPTION_NAME = 'bricks_mcp_notes';
-
-	/**
 	 * Get all stored notes.
 	 *
 	 * @return array<int, array{id: string, text: string, created_at: string}> List of notes.
 	 */
 	public function get_notes(): array {
-		$notes = get_option( self::OPTION_NAME, [] );
+		$notes = get_option( BricksCore::OPTION_NOTES, [] );
 		return is_array( $notes ) ? $notes : [];
 	}
 
@@ -57,7 +50,7 @@ class NotesService {
 			'created_at' => current_time( 'mysql' ),
 		];
 		$notes[] = $note;
-		update_option( self::OPTION_NAME, $notes, false );
+		update_option( BricksCore::OPTION_NOTES, $notes, false );
 		return $note;
 	}
 
@@ -73,7 +66,7 @@ class NotesService {
 		if ( count( $filtered ) === count( $notes ) ) {
 			return false; // Not found.
 		}
-		update_option( self::OPTION_NAME, $filtered, false );
+		update_option( BricksCore::OPTION_NOTES, $filtered, false );
 		return true;
 	}
 }
