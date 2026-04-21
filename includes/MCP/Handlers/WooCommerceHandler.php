@@ -211,6 +211,10 @@ final class WooCommerceHandler {
 		$catalog       = $this->schema_generator->get_element_catalog();
 		$category      = $args['category'] ?? '';
 		$woo_elements  = array();
+		// `products` has no trailing dash intentionally — it maps to Bricks' WC
+		// archive element whose name is literal `products` (no namespace suffix).
+		// All other WC elements use `<namespace>-` naming (e.g. `product-price`,
+		// `cart-totals`) so the dash-suffixed prefixes are correct for them.
 		$woo_prefixes  = array( 'product-', 'cart-', 'checkout-', 'account-', 'woocommerce-', 'products' );
 
 		foreach ( $catalog as $element ) {
