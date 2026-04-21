@@ -35,7 +35,12 @@ final class ConditionSchemaCatalog {
 	 */
 	public static function data(): array {
 		$data = array(
-			'description'    => 'Element visibility conditions — show/hide elements based on runtime context. Stored in element settings[\'_conditions\']. Distinct from template conditions (which control page targeting).',
+			// sprintf avoids the backslash-escaped-quote readability wart inside a
+			// single-quoted PHP literal ('settings[\'_conditions\']').
+			'description'    => sprintf(
+				"Element visibility conditions — show/hide elements based on runtime context. Stored in element %s. Distinct from template conditions (which control page targeting).",
+				"settings['_conditions']"
+			),
 			'data_structure' => array(
 				'description' => '_conditions is an array of condition SETS. Outer array = OR logic (any set passing renders element). Inner arrays = AND logic (all conditions in a set must pass).',
 				'format'      => '[[{key, compare, value}, {key, compare, value}], [{key, compare, value}]]',
