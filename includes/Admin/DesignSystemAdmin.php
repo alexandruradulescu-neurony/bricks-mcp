@@ -12,6 +12,14 @@ class DesignSystemAdmin {
     private const CONFIG_OPTION = BricksCore::OPTION_DESIGN_SYSTEM_CONFIG;
 
     /**
+     * Nonce action for Design System AJAX endpoints (save, apply, reset,
+     * render_panel).  Single source of truth so the producer (wp_create_nonce
+     * in enqueue_assets) and each consumer (check_ajax_referer in ajax_*
+     * handlers) cannot drift.
+     */
+    private const NONCE_ACTION = 'bricks_mcp_design_system';
+
+    /**
      * Default hex fallbacks for color pickers when a shade/value is missing.
      * Used when rendering color inputs to avoid breaking the picker element.
      */
@@ -88,7 +96,7 @@ class DesignSystemAdmin {
         );
 
         wp_localize_script( 'bricks-mcp-admin-design-system', 'bricksMcpDesignSystem', [
-            'nonce'         => wp_create_nonce( 'bricks_mcp_design_system' ),
+            'nonce'         => wp_create_nonce( self::NONCE_ACTION ),
             'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
             'config'        => $this->get_config(),
             'defaultConfig' => DesignSystemGenerator::get_default_config(),
@@ -727,7 +735,7 @@ class DesignSystemAdmin {
      * Save config via debounced AJAX.
      */
     public function ajax_save_config(): void {
-        check_ajax_referer( 'bricks_mcp_design_system', 'nonce' );
+        check_ajax_referer( self::NONCE_ACTION, 'nonce' );
 
         if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( 'Unauthorized', 403 );
@@ -751,7 +759,7 @@ class DesignSystemAdmin {
      * Apply design system to site.
      */
     public function ajax_apply(): void {
-        check_ajax_referer( 'bricks_mcp_design_system', 'nonce' );
+        check_ajax_referer( self::NONCE_ACTION, 'nonce' );
 
         if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( 'Unauthorized', 403 );
@@ -789,7 +797,7 @@ class DesignSystemAdmin {
      * Reset config to defaults.
      */
     public function ajax_reset(): void {
-        check_ajax_referer( 'bricks_mcp_design_system', 'nonce' );
+        check_ajax_referer( self::NONCE_ACTION, 'nonce' );
 
         if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( 'Unauthorized', 403 );
@@ -806,7 +814,7 @@ class DesignSystemAdmin {
      * Render a single panel HTML string (used by JS to refresh after structural toggles).
      */
     public function ajax_render_panel(): void {
-        check_ajax_referer( 'bricks_mcp_design_system', 'nonce' );
+        check_ajax_referer( self::NONCE_ACTION, 'nonce' );
 
         // wp_send_json_* calls wp_die() internally, but filters in test/headless
         // environments may skip wp_die — explicit `return` ensures we don't fall
