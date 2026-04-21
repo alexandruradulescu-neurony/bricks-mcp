@@ -405,7 +405,7 @@ final class Settings {
 	 */
 	private function get_connection_status(): bool {
 		$settings = get_option( self::OPTION_NAME, $this->get_defaults() );
-		if ( empty( $settings['enabled'] ) ) {
+		if ( empty( $settings[ BricksCore::SETTING_ENABLED ] ) ) {
 			return false;
 		}
 
@@ -484,7 +484,7 @@ final class Settings {
 	 */
 	private function render_getting_started(): void {
 		$settings       = get_option( self::OPTION_NAME, $this->get_defaults() );
-		$is_enabled     = ! empty( $settings['enabled'] );
+		$is_enabled     = ! empty( $settings[ BricksCore::SETTING_ENABLED ] );
 		$app_passwords  = $this->get_bricks_mcp_app_passwords();
 		$has_credentials = ! empty( $app_passwords );
 		$all_done       = $is_enabled && $has_credentials;
@@ -686,7 +686,7 @@ final class Settings {
 		$settings = get_option( self::OPTION_NAME, $this->get_defaults() );
 		?>
 		<label for="bricks-mcp-enabled">
-			<input type="checkbox" id="bricks-mcp-enabled" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[enabled]" value="1" <?php checked( ! empty( $settings['enabled'] ) ); ?>>
+			<input type="checkbox" id="bricks-mcp-enabled" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[enabled]" value="1" <?php checked( ! empty( $settings[ BricksCore::SETTING_ENABLED ] ) ); ?>>
 			<?php esc_html_e( 'Enable the MCP server endpoints', 'bricks-mcp' ); ?>
 		</label>
 		<p class="description">
@@ -704,7 +704,7 @@ final class Settings {
 		$settings = get_option( self::OPTION_NAME, $this->get_defaults() );
 		?>
 		<label for="bricks-mcp-require-auth">
-			<input type="checkbox" id="bricks-mcp-require-auth" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[require_auth]" value="1" <?php checked( ! empty( $settings['require_auth'] ) ); ?>>
+			<input type="checkbox" id="bricks-mcp-require-auth" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[require_auth]" value="1" <?php checked( ! empty( $settings[ BricksCore::SETTING_REQUIRE_AUTH ] ) ); ?>>
 			<?php esc_html_e( 'Require user authentication for MCP endpoints', 'bricks-mcp' ); ?>
 		</label>
 		<p class="description">
