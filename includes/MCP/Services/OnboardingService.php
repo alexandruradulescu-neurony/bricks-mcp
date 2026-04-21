@@ -154,6 +154,13 @@ final class OnboardingService {
     private const CACHE_TTL          = 1800; // 30 minutes.
 
     /**
+     * Word-count cap for the brief summaries surfaced during onboarding.
+     * Keeps payloads compact without truncating mid-sentence (wp_trim_words
+     * handles word boundaries and ellipsis).
+     */
+    private const BRIEF_SUMMARY_WORD_LIMIT = 50;
+
+    /**
      * Register the invalidation hooks. Called once from the constructor.
      */
     private static function register_cache_invalidation(): void {
@@ -436,7 +443,7 @@ final class OnboardingService {
             return __( 'No design brief set. Go to Bricks MCP > Briefs to add visual guidelines.', 'bricks-mcp' );
         }
 
-        return wp_trim_words( $design_brief, 50, '...' );
+        return wp_trim_words( $design_brief, self::BRIEF_SUMMARY_WORD_LIMIT, '...' );
     }
 
     /**
@@ -459,6 +466,6 @@ final class OnboardingService {
             return __( 'No business brief set. Go to Bricks MCP > Briefs to add business context.', 'bricks-mcp' );
         }
 
-        return wp_trim_words( $business_brief, 50, '...' );
+        return wp_trim_words( $business_brief, self::BRIEF_SUMMARY_WORD_LIMIT, '...' );
     }
 }
