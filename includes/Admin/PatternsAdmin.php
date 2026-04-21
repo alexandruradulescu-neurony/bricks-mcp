@@ -22,7 +22,6 @@ class PatternsAdmin {
 		add_action( 'wp_ajax_bricks_mcp_delete_pattern', [ $this, 'ajax_delete_pattern' ] );
 		add_action( 'wp_ajax_bricks_mcp_export_patterns', [ $this, 'ajax_export_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_import_patterns', [ $this, 'ajax_import_patterns' ] );
-		add_action( 'wp_ajax_bricks_mcp_reseed_patterns', [ $this, 'ajax_reseed_patterns' ] );
 		add_action( 'admin_notices', [ $this, 'maybe_render_patterns_v2_notice' ] );
 	}
 
@@ -83,7 +82,6 @@ class PatternsAdmin {
 				<button type="button" class="button button-secondary" id="bricks-mcp-export-patterns"><?php esc_html_e( 'Export', 'bricks-mcp' ); ?></button>
 				<button type="button" class="button button-secondary" id="bricks-mcp-import-patterns-btn"><?php esc_html_e( 'Import', 'bricks-mcp' ); ?></button>
 				<input type="file" id="bricks-mcp-import-file" accept=".json" style="display:none;">
-				<button type="button" class="button button-link-delete" id="bricks-mcp-reseed-patterns" title="<?php esc_attr_e( 'Overwrite shipped pattern IDs from data/design-patterns.json. Custom patterns with unique IDs are preserved.', 'bricks-mcp' ); ?>"><?php esc_html_e( 'Reset to plugin defaults', 'bricks-mcp' ); ?></button>
 				<span class="bwm-patterns-count" style="margin-left:auto;color:#666;">
 					<?php
 					printf(
@@ -379,35 +377,4 @@ class PatternsAdmin {
 		wp_send_json_success( $result );
 	}
 
-	/**
-	 * AJAX: Re-seed plugin-shipped patterns from data/design-patterns.json.
-	 *
-	 * Overwrites DB entries whose IDs match a seed pattern. Custom patterns
-	 * with unique IDs are preserved untouched.
-	 */
-	public function ajax_reseed_patterns(): void {
-		check_ajax_referer( BricksCore::ADMIN_NONCE_ACTION, 'nonce' );
-		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
-			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
-			return;
-		}
-
-		$result = DesignPatternService::reseed_plugin_patterns();
-
-		// Defensive: align error shape with other handlers. Service may return WP_Error
-		// or an array with an 'error' key; anything else is an unexpected response.
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
-			return;
-		}
-		if ( ! is_array( $result ) ) {
-			wp_send_json_error( [ 'message' => __( 'Unexpected service response.', 'bricks-mcp' ) ] );
-			return;
-		}
-		if ( isset( $result['error'] ) ) {
-			wp_send_json_error( [ 'message' => $result['error'] ] );
-			return;
-		}
-		wp_send_json_success( $result );
-	}
 }
