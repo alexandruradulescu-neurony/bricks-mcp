@@ -22,6 +22,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class FilterSchemaCatalog {
 
 	/**
+	 * Filter hook applied to the returned schema so integrators can extend it.
+	 *
+	 * @var string
+	 */
+	public const FILTER_HOOK = 'bricks_mcp_filter_schema';
+
+	/**
 	 * Return the reference data array.
 	 *
 	 * @return array<string, mixed>
@@ -147,7 +154,7 @@ final class FilterSchemaCatalog {
 		 * Filter: bricks_mcp_filter_schema
 		 * Validate filtered result — third-party filters may return non-array.
 		 */
-		$filtered = apply_filters( 'bricks_mcp_filter_schema', $data );
+		$filtered = apply_filters( self::FILTER_HOOK, $data );
 		return is_array( $filtered ) ? $filtered : $data;
 	}
 }

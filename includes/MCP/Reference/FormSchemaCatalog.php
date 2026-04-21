@@ -22,6 +22,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class FormSchemaCatalog {
 
 	/**
+	 * Filter hook applied to the returned schema so integrators can extend it.
+	 *
+	 * @var string
+	 */
+	public const FILTER_HOOK = 'bricks_mcp_form_schema';
+
+	/**
 	 * Return the reference data array.
 	 *
 	 * @return array<string, mixed>
@@ -284,7 +291,7 @@ final class FormSchemaCatalog {
 		 * Filter: bricks_mcp_form_schema
 		 * Third-party filters may misbehave and return non-array. Validate before returning.
 		 */
-		$filtered = apply_filters( 'bricks_mcp_form_schema', $data );
+		$filtered = apply_filters( self::FILTER_HOOK, $data );
 		return is_array( $filtered ) ? $filtered : $data;
 	}
 }
