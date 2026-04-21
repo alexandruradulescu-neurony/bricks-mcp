@@ -299,7 +299,8 @@ final class TemplateHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
-					__( 'You are about to delete %s template "%s" (ID: %d). Set confirm: true to proceed.', 'bricks-mcp' ),
+					/* translators: 1: Template type, 2: Template title, 3: Template ID */
+					__( 'You are about to delete %1$s template "%2$s" (ID: %3$d). Set confirm: true to proceed.', 'bricks-mcp' ),
 					$template_type ?: 'unknown',
 					$post->post_title,
 					$template_id
@@ -313,7 +314,11 @@ final class TemplateHandler {
 			if ( ! $deleted ) {
 				return new \WP_Error(
 					'delete_failed',
-					sprintf( __( 'Failed to permanently delete template %d.', 'bricks-mcp' ), $template_id )
+					sprintf(
+						/* translators: %d: Template ID */
+						__( 'Failed to permanently delete template %d.', 'bricks-mcp' ),
+						$template_id
+					)
 				);
 			}
 			return array(
