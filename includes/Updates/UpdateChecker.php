@@ -268,7 +268,7 @@ final class UpdateChecker {
 	 * @param array<string,mixed>    $hook_extra Extra data about the update (includes 'plugin' key).
 	 * @return false|string|\WP_Error
 	 */
-	public function verify_download( $reply, string $package, $upgrader, array $hook_extra ) {
+	public function verify_download( $reply, string $package, $upgrader, array $hook_extra ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		// If an earlier filter already handled the download, pass through.
 		if ( false !== $reply ) {
 			return $reply;
