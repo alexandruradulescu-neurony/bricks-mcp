@@ -63,7 +63,7 @@ class AppPasswordsUserCheck implements DiagnosticCheck {
 	/**
 	 * Run the per-user Application Passwords check.
 	 *
-	 * @return array<string, mixed>
+	 * @return array{id: string, label: string, status: string, message: string, fix_steps: array<string>, category: string}
 	 */
 	public function run(): array {
 		$user = wp_get_current_user();
