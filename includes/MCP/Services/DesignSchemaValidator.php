@@ -22,6 +22,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class DesignSchemaValidator {
 
 	/**
+	 * Column count at or above which a grid without responsive overrides
+	 * triggers a W3 warning. Calibrated for common 1920px layouts collapsing
+	 * 3-col to 2 or 1 on tablet/mobile; adjust if design system changes.
+	 */
+	private const GRID_RESPONSIVE_COL_THRESHOLD = 3;
+
+	/**
 	 * @var SchemaGenerator
 	 */
 	private SchemaGenerator $schema_generator;
@@ -343,8 +350,8 @@ final class DesignSchemaValidator {
 			$this->validation_warnings[] = "{$path}: {$type} has no content — will render empty.";
 		}
 
-		// W3: Responsive completeness for grids with 3+ columns.
-		if ( ( $node['layout'] ?? '' ) === 'grid' && (int) ( $node['columns'] ?? 0 ) >= 3 && empty( $node['responsive'] ) ) {
+		// W3: Responsive completeness for grids at/above the threshold column count.
+		if ( ( $node['layout'] ?? '' ) === 'grid' && (int) ( $node['columns'] ?? 0 ) >= self::GRID_RESPONSIVE_COL_THRESHOLD && empty( $node['responsive'] ) ) {
 			$this->validation_warnings[] = "{$path}: grid with {$node['columns']} columns has no responsive overrides — won't collapse on tablet/mobile.";
 		}
 
