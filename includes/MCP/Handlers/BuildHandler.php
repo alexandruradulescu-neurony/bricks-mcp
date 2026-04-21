@@ -596,7 +596,9 @@ final class BuildHandler {
 		$this->collect_style_fingerprints( $elements, $style_keys, $fingerprints );
 
 		// Filter to fingerprints shared by 2+ elements with no existing class.
-		$shared = array_filter( $fingerprints, fn( $group ) => count( $group['refs'] ) >= 2 );
+		// Coalesce refs with array{} in case a future caller seeds fingerprints
+		// pre-populated without the 'refs' key, keeping count() safe.
+		$shared = array_filter( $fingerprints, fn( $group ) => count( $group['refs'] ?? [] ) >= 2 );
 
 		if ( empty( $shared ) ) {
 			return [ 'classes_created' => [] ];
