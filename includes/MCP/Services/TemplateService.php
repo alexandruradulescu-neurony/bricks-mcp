@@ -23,6 +23,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 class TemplateService {
 
 	/**
+	 * Maximum allowed body size for remote template imports (10 MB).
+	 * Applied to wp_remote_retrieve_body() output after a successful fetch.
+	 *
+	 * @var int
+	 */
+	private const MAX_IMPORT_BODY_BYTES = 10 * 1024 * 1024;
+
+	/**
 	 * Core infrastructure.
 	 *
 	 * @var BricksCore
@@ -822,7 +830,7 @@ class TemplateService {
 		}
 
 		$body = wp_remote_retrieve_body( $response );
-		if ( strlen( $body ) > 10485760 ) {
+		if ( strlen( $body ) > self::MAX_IMPORT_BODY_BYTES ) {
 			return new \WP_Error( 'bricks_mcp_response_too_large', __( 'Remote response exceeds 10MB size limit.', 'bricks-mcp' ) );
 		}
 
