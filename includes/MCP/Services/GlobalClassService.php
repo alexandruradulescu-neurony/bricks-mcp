@@ -250,11 +250,19 @@ class GlobalClassService {
 		$warnings = [];
 
 		// Rule 1: _border.style — per-side object → string.
+		// Collapse deterministically: top > right > bottom > left, falling back to
+		// 'solid' when none of the four canonical sides carry a usable string.
+		// Previously this used reset() which depends on insertion order and could
+		// pick 'dashed' when the caller meant 'solid'.
 		if ( isset( $styles['_border']['style'] ) && is_array( $styles['_border']['style'] ) ) {
 			$style_array = $styles['_border']['style'];
-			$first_value = is_string( $style_array['top'] ?? '' ) && '' !== $style_array['top']
-				? $style_array['top']
-				: ( is_string( reset( $style_array ) ) ? reset( $style_array ) : 'solid' );
+			$first_value = 'solid';
+			foreach ( [ 'top', 'right', 'bottom', 'left' ] as $side ) {
+				if ( is_string( $style_array[ $side ] ?? null ) && '' !== $style_array[ $side ] ) {
+					$first_value = $style_array[ $side ];
+					break;
+				}
+			}
 
 			$styles['_border']['style'] = $first_value;
 			$warnings[] = 'Border style must be a string (e.g., "solid", "dashed"). Array value was converted to "' . esc_attr( $first_value ) . '". Use a string format in future requests.';
