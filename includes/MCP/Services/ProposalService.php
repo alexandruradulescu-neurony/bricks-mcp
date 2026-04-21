@@ -299,7 +299,9 @@ final class ProposalService {
 			];
 
 			$desc_lower = strtolower( $description );
-			$name_parts = preg_split( '/[-_]/', strtolower( $name ) );
+			// preg_split can return false on regex error (rare); fall back to empty list
+			// so the foreach never trips an "Invalid argument" warning under PHP 8.2+.
+			$name_parts = preg_split( '/[-_]/', strtolower( $name ) ) ?: [];
 			foreach ( $name_parts as $part ) {
 				if ( strlen( $part ) > 2 && str_contains( $desc_lower, $part ) ) {
 					$suggested_classes[ $name ] = $class['id'] ?? '';
@@ -311,10 +313,12 @@ final class ProposalService {
 		// Get scoped variables.
 		$scoped_variables = $this->get_scoped_variables( $description );
 
-		// Load briefs.
+		// Load briefs. Briefs are stored as an assoc array of string values, but
+		// defensively guard the element accesses so a corrupt option (non-string
+		// value) does not trigger "Array to string conversion" in trim().
 		$briefs         = get_option( BricksCore::OPTION_BRIEFS, [] );
-		$design_brief   = is_array( $briefs ) ? trim( $briefs['design_brief'] ?? '' ) : '';
-		$business_brief = is_array( $briefs ) ? trim( $briefs['business_brief'] ?? '' ) : '';
+		$design_brief   = ( is_array( $briefs ) && is_string( $briefs['design_brief'] ?? null ) ) ? trim( $briefs['design_brief'] ) : '';
+		$business_brief = ( is_array( $briefs ) && is_string( $briefs['business_brief'] ?? null ) ) ? trim( $briefs['business_brief'] ) : '';
 
 		// Analyze existing page sections (site-aware design).
 		$existing_sections = $this->analyze_existing_sections( $page_id );
