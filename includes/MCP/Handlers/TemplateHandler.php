@@ -711,7 +711,8 @@ final class TemplateHandler {
 				return new \WP_Error(
 					'bricks_mcp_confirm_required',
 					sprintf(
-						__( 'You are about to permanently delete tag "%s" (ID: %d) assigned to %d template(s). This cannot be undone. Set confirm: true to proceed.', 'bricks-mcp' ),
+						/* translators: 1: Tag name, 2: Tag term ID, 3: Number of templates using the tag */
+						__( 'You are about to permanently delete tag "%1$s" (ID: %2$d) assigned to %3$d template(s). This cannot be undone. Set confirm: true to proceed.', 'bricks-mcp' ),
 						$term->name,
 						$term_id,
 						$term->count
@@ -770,7 +771,8 @@ final class TemplateHandler {
 				return new \WP_Error(
 					'bricks_mcp_confirm_required',
 					sprintf(
-						__( 'You are about to permanently delete bundle "%s" (ID: %d) assigned to %d template(s). This cannot be undone. Set confirm: true to proceed.', 'bricks-mcp' ),
+						/* translators: 1: Bundle name, 2: Bundle term ID, 3: Number of templates in the bundle */
+						__( 'You are about to permanently delete bundle "%1$s" (ID: %2$d) assigned to %3$d template(s). This cannot be undone. Set confirm: true to proceed.', 'bricks-mcp' ),
 						$term->name,
 						$term_id,
 						$term->count
