@@ -23,10 +23,7 @@ final class DesignPatternService {
 	private static ?array $all_patterns = null;
 
 	/** WP option key for database-tier patterns. */
-	private const DB_OPTION = BricksCore::OPTION_CUSTOM_PATTERNS;
-
-	/** WP option key for the one-time migration flag. */
-	private const MIGRATION_FLAG = BricksCore::OPTION_PATTERNS_MIGRATED;
+	private const DB_OPTION = BricksCore::OPTION_PATTERNS;
 
 	// ──────────────────────────────────────────────
 	// Loading — database only
@@ -332,106 +329,4 @@ final class DesignPatternService {
 		return [ 'imported' => $imported, 'errors' => $errors ];
 	}
 
-	// ──────────────────────────────────────────────
-	// Seed from plugin-shipped file (one-time on activation)
-	// ──────────────────────────────────────────────
-
-	/**
-	 * Seed the database with plugin-shipped patterns on first activation.
-	 *
-	 * Reads data/design-patterns.json and inserts each pattern into the
-	 * bricks_mcp_custom_patterns option. Only runs once per install (guarded
-	 * by the MIGRATION_FLAG option). Non-destructive: patterns already in the
-	 * DB (by ID) are skipped, so the seed does not clobber user edits if
-	 * somehow re-triggered.
-	 *
-	 * Called from Activator::activate() and on admin-triggered re-seeding
-	 * via reseed_plugin_patterns().
-	 *
-	 * @return array{seeded: int, skipped: int}
-	 */
-	public static function migrate_plugin_patterns(): array {
-		if ( get_option( self::MIGRATION_FLAG ) ) {
-			return [ 'seeded' => 0, 'skipped' => 0 ];
-		}
-
-		$result = self::load_and_merge_seed( false );
-		update_option( self::MIGRATION_FLAG, time(), false );
-		return $result;
-	}
-
-	/**
-	 * Admin-triggered re-seed.
-	 *
-	 * Re-reads data/design-patterns.json and upserts each pattern — OVERWRITES
-	 * DB entries whose ID matches a seed pattern, preserves user-created
-	 * patterns with unique IDs. Use to restore plugin defaults after edits.
-	 *
-	 * @return array{seeded: int, skipped: int, overwritten: int}
-	 */
-	public static function reseed_plugin_patterns(): array {
-		return self::load_and_merge_seed( true );
-	}
-
-	/**
-	 * Read the seed file and merge into DB.
-	 *
-	 * @param bool $overwrite When true, replace DB entries whose ID matches a seed pattern.
-	 * @return array{seeded: int, skipped: int, overwritten?: int}
-	 */
-	private static function load_and_merge_seed( bool $overwrite ): array {
-		$path = BricksCore::data_path( 'design-patterns.json' );
-		if ( ! is_readable( $path ) ) {
-			return [ 'seeded' => 0, 'skipped' => 0, 'error' => 'Seed file not readable: ' . $path ];
-		}
-
-		$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		$data = is_string( $json ) ? json_decode( $json, true ) : null;
-		if ( ! is_array( $data ) || ! isset( $data['patterns'] ) || ! is_array( $data['patterns'] ) ) {
-			return [ 'seeded' => 0, 'skipped' => 0, 'error' => 'Seed file malformed.' ];
-		}
-
-		$db_patterns = get_option( self::DB_OPTION, [] );
-		$db_patterns = is_array( $db_patterns ) ? $db_patterns : [];
-
-		// Index DB patterns by ID for lookup + mutation.
-		$by_id = [];
-		foreach ( $db_patterns as $p ) {
-			if ( is_array( $p ) && ! empty( $p['id'] ) ) {
-				$by_id[ $p['id'] ] = $p;
-			}
-		}
-
-		$seeded      = 0;
-		$skipped     = 0;
-		$overwritten = 0;
-
-		foreach ( $data['patterns'] as $pattern ) {
-			if ( ! is_array( $pattern ) || empty( $pattern['id'] ) ) {
-				continue;
-			}
-			$id = $pattern['id'];
-
-			if ( isset( $by_id[ $id ] ) ) {
-				if ( $overwrite ) {
-					$by_id[ $id ] = $pattern;
-					$overwritten++;
-				} else {
-					$skipped++;
-				}
-			} else {
-				$by_id[ $id ] = $pattern;
-				$seeded++;
-			}
-		}
-
-		update_option( self::DB_OPTION, array_values( $by_id ), false );
-		self::clear_cache();
-
-		$result = [ 'seeded' => $seeded, 'skipped' => $skipped ];
-		if ( $overwrite ) {
-			$result['overwritten'] = $overwritten;
-		}
-		return $result;
-	}
 }
