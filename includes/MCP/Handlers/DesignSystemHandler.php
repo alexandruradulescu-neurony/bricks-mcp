@@ -513,6 +513,7 @@ final class DesignSystemHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
+					/* translators: %s: Typography scale / category ID */
 					__( 'You are about to delete typography scale "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
 					sanitize_text_field( $args['category_id'] )
 				)
@@ -624,6 +625,7 @@ final class DesignSystemHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
+					/* translators: %s: Color palette ID */
 					__( 'You are about to delete color palette "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
 					sanitize_text_field( $args['palette_id'] )
 				)
@@ -768,7 +770,8 @@ final class DesignSystemHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
-					__( 'You are about to delete color "%s" from palette "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
+					/* translators: 1: Color ID, 2: Palette ID */
+					__( 'You are about to delete color "%1$s" from palette "%2$s". Set confirm: true to proceed.', 'bricks-mcp' ),
 					sanitize_text_field( $args['color_id'] ),
 					sanitize_text_field( $args['palette_id'] )
 				)
@@ -855,6 +858,7 @@ final class DesignSystemHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
+					/* translators: %s: Variable category ID */
 					__( 'You are about to delete variable category "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
 					sanitize_text_field( $args['category_id'] )
 				)
@@ -949,6 +953,7 @@ final class DesignSystemHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
+					/* translators: %s: Global variable ID */
 					__( 'You are about to delete global variable "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
 					sanitize_text_field( $args['variable_id'] )
 				)
@@ -996,6 +1001,7 @@ final class DesignSystemHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
+					/* translators: %d: Number of global variables pending delete */
 					__( 'You are about to delete %d global variable(s). Set confirm: true to proceed.', 'bricks-mcp' ),
 					count( $variable_ids )
 				)
