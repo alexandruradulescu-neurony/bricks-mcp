@@ -23,6 +23,7 @@ class PatternsAdmin {
 		add_action( 'wp_ajax_bricks_mcp_export_patterns', [ $this, 'ajax_export_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_import_patterns', [ $this, 'ajax_import_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_reseed_patterns', [ $this, 'ajax_reseed_patterns' ] );
+		add_action( 'admin_notices', [ $this, 'maybe_render_patterns_v2_notice' ] );
 	}
 
 	/**
@@ -216,6 +217,28 @@ class PatternsAdmin {
 					<button type="button" class="button button-primary" id="bricks-mcp-creator-save"><?php esc_html_e( 'Save Pattern', 'bricks-mcp' ); ?></button>
 				</div>
 			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render one-time admin notice for Pattern System v2 migration.
+	 *
+	 * Consumes the 'bricks_mcp_show_patterns_v2_notice' transient set by
+	 * the Activator. Displays notice and deletes the transient.
+	 */
+	public function maybe_render_patterns_v2_notice(): void {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
+			return;
+		}
+		if ( ! get_transient( 'bricks_mcp_show_patterns_v2_notice' ) ) {
+			return;
+		}
+		delete_transient( 'bricks_mcp_show_patterns_v2_notice' );
+		?>
+		<div class="notice notice-info is-dismissible">
+			<p><strong><?php esc_html_e( 'Bricks MCP — Pattern system redesigned.', 'bricks-mcp' ); ?></strong></p>
+			<p><?php esc_html_e( 'Previous patterns wiped. Capture new patterns from your built sections via MCP or paste JSON through the design_pattern tool.', 'bricks-mcp' ); ?></p>
 		</div>
 		<?php
 	}
