@@ -539,4 +539,95 @@ final class PatternValidator {
         // Placeholder — filled in by subsequent tasks.
         return $input;
     }
+
+    /**
+     * Full validation pipeline against a prepared site context.
+     *
+     * Pipeline order:
+     *   1. Required field check (id, name, category)
+     *   2. Strip content (§4A)
+     *   3. Tokenize raw values (§4B)
+     *   4. Build classes map from class_refs (§4C)
+     *   5. Build variables map from var() refs (§4D)
+     *   6. Integrity check (§4E)
+     *   7. Compute checksum
+     *
+     * @param array<string, mixed> $input        Raw pattern input.
+     * @param array<string, mixed> $site_context ['variables' => map, 'classes' => map].
+     * @return array<string, mixed> Valid pattern OR {error, ...} structure.
+     */
+    public function validate_with_context( array $input, array $site_context ): array {
+        foreach ( [ 'id', 'name', 'category' ] as $required ) {
+            if ( empty( $input[ $required ] ) ) {
+                return [
+                    'error'   => 'missing_field',
+                    'message' => sprintf( 'Pattern field "%s" is required.', $required ),
+                ];
+            }
+        }
+
+        $site_vars    = $site_context['variables'] ?? [];
+        $site_classes = $site_context['classes'] ?? [];
+
+        // 1. Strip content.
+        $input = $this->strip_content( $input );
+
+        // 2. Tokenize — need raw string values for site_vars map.
+        $site_vars_values = [];
+        foreach ( $site_vars as $name => $def ) {
+            $site_vars_values[ $name ] = is_array( $def ) ? ( $def['value'] ?? '' ) : (string) $def;
+        }
+        $tokenize_result = $this->tokenize( $input, $site_vars_values );
+        if ( ! empty( $tokenize_result['rejections'] ) ) {
+            return [
+                'error'      => 'hardcoded_values',
+                'message'    => sprintf( 'Pattern has %d raw values that cannot be snapped to tokens.', count( $tokenize_result['rejections'] ) ),
+                'issues'     => $tokenize_result['rejections'],
+                'suggestion' => 'Edit the section to use existing tokens, or create new variables for these values.',
+            ];
+        }
+        $input             = $tokenize_result['pattern'];
+        $input['snap_log'] = $tokenize_result['snap_log'];
+
+        // 3. Build classes map from referenced names.
+        $class_refs = $this->collect_class_refs( $input['structure'] ?? [] );
+        $input['classes'] = [];
+        foreach ( $class_refs as $name ) {
+            if ( ! isset( $site_classes[ $name ] ) ) {
+                return [
+                    'error'   => 'missing_class',
+                    'message' => sprintf( 'Pattern references class "%s" which does not exist on this site.', $name ),
+                ];
+            }
+            $input['classes'][ $name ] = $site_classes[ $name ];
+        }
+
+        // 4. Build variables map from referenced names.
+        $var_refs = $this->collect_variable_refs( $input['structure'] ?? [] );
+        $input['variables'] = [];
+        foreach ( $var_refs as $name ) {
+            if ( ! isset( $site_vars[ $name ] ) ) {
+                return [
+                    'error'   => 'missing_variable',
+                    'message' => sprintf( 'Pattern references variable "%s" which does not exist on this site.', $name ),
+                ];
+            }
+            $input['variables'][ $name ] = $site_vars[ $name ];
+        }
+
+        // 5. Integrity check.
+        $integrity_errors = $this->integrity_check( $input );
+        if ( ! empty( $integrity_errors ) ) {
+            return [
+                'error'   => 'integrity_failure',
+                'message' => 'Pattern integrity check failed.',
+                'issues'  => $integrity_errors,
+            ];
+        }
+
+        // 6. Checksum.
+        $input['checksum'] = $this->checksum( $input );
+
+        return $input;
+    }
 }
