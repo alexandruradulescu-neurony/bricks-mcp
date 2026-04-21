@@ -1369,7 +1369,17 @@ final class Settings {
 		}
 
 		$current_user = wp_get_current_user();
-		$username     = $current_user->user_login;
+
+		// Guard against WP_User(0) — possible under hook filters that skip auth or
+		// malformed request state. current_user_can() already rejected here, but
+		// defence-in-depth: WP_Application_Passwords::create_new_application_password()
+		// with user_id=0 would otherwise create an orphan password row.
+		if ( 0 === (int) $current_user->ID ) {
+			wp_send_json_error( [ 'message' => __( 'No current user.', 'bricks-mcp' ) ], 403 );
+			return;
+		}
+
+		$username = $current_user->user_login;
 
 		// Create Application Password.
 		// Client identifier is filter-overridable so sites using multiple MCP clients
