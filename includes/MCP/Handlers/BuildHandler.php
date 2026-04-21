@@ -372,7 +372,11 @@ final class BuildHandler {
 		} catch ( \Throwable $e ) {
 			return new \WP_Error(
 				'build_write_error',
-				sprintf( __( 'Failed to write elements: %s', 'bricks-mcp' ), $e->getMessage() ),
+				sprintf(
+					/* translators: %s: Throwable message */
+					__( 'Failed to write elements: %s', 'bricks-mcp' ),
+					$e->getMessage()
+				),
 				[
 					'partial_result'  => true,
 					'classes_created' => $class_result['classes_created'],
