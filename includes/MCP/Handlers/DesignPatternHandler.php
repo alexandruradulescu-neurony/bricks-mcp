@@ -78,14 +78,20 @@ final class DesignPatternHandler {
 		// Filter by category.
 		$category = $args['category'] ?? '';
 		if ( '' !== $category ) {
-			$all = array_values( array_filter( $all, fn( $p ) => ( $p['category'] ?? '' ) === $category ) );
+			$all = array_values( array_filter( $all, fn( $p ) => is_array( $p ) && ( $p['category'] ?? '' ) === $category ) );
 		}
 
 		// Filter by tags (pattern must have ALL specified tags).
 		$tags = $args['tags'] ?? [];
 		if ( is_array( $tags ) && ! empty( $tags ) ) {
 			$all = array_values( array_filter( $all, function ( $p ) use ( $tags ) {
+				if ( ! is_array( $p ) ) {
+					return false;
+				}
 				$ptags = $p['tags'] ?? [];
+				if ( ! is_array( $ptags ) ) {
+					return false;
+				}
 				foreach ( $tags as $t ) {
 					if ( ! in_array( $t, $ptags, true ) ) {
 						return false;
