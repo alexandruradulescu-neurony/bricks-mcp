@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP\Handlers;
 
+use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\ToolRegistry;
 
@@ -294,7 +295,7 @@ final class TemplateHandler {
 
 		// Confirm check.
 		if ( empty( $args['confirm'] ) ) {
-			$template_type = get_post_meta( $template_id, '_bricks_template_type', true );
+			$template_type = get_post_meta( $template_id, BricksCore::META_TEMPLATE_TYPE, true );
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
@@ -555,7 +556,7 @@ final class TemplateHandler {
 		}
 
 		// Return the updated conditions via format_conditions() for confirmation.
-		$settings  = get_post_meta( $template_id, '_bricks_template_settings', true );
+		$settings  = get_post_meta( $template_id, BricksCore::META_TEMPLATE_SETTINGS, true );
 		$formatted = $this->bricks_service->format_conditions( $settings );
 
 		return array(

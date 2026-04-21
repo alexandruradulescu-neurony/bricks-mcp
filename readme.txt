@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.25.1
+Stable tag: 3.25.2
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,11 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.25.2 =
+* Refactor: 4 new `BricksCore` constants for Bricks core option/meta keys: `OPTION_COMPONENTS`, `OPTION_GLOBAL_QUERIES`, `META_TEMPLATE_TYPE`, `META_TEMPLATE_SETTINGS`. Replaced ~20 literal usages across `BricksToolHandler` (5×), `ComponentHandler`, `TemplateHandler` (7×), `WooCommerceHandler` (3×), `SettingsService` (6×), `TemplateService` (13×).
+* Fix: `BuildHandler` no longer calls `error_log()` on every build. Now gated on `WP_DEBUG`. Previously bloated production error logs.
+* Fix: `MediaHandler::tool_get_media_library` accepts integer-strings for `per_page`/`page` (previously `is_int()` strictly rejected `"20"`). HTTP-decoded JSON sometimes lands pagination params as strings.
 
 = 3.25.1 =
 * Security: `PatternsAdmin::ajax_create_pattern` now boundary-sanitizes pattern metadata (`id`, `name`, `description`, `category`, `tags`) at ingest. Stored XSS in downstream render paths is now a depth-2 bug, not a depth-1 bug.

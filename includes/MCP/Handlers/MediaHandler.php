@@ -135,8 +135,9 @@ final class MediaHandler {
 	private function tool_get_media_library( array $args ): array|\WP_Error {
 		$search    = isset( $args['search'] ) && is_string( $args['search'] ) ? $args['search'] : '';
 		$mime_type = isset( $args['mime_type'] ) && is_string( $args['mime_type'] ) ? $args['mime_type'] : 'image';
-		$per_page  = isset( $args['per_page'] ) && is_int( $args['per_page'] ) ? $args['per_page'] : 20;
-		$page      = isset( $args['page'] ) && is_int( $args['page'] ) ? $args['page'] : 1;
+		// Accept integer OR integer-string (HTTP-transport-decoded JSON sometimes lands as string).
+		$per_page  = isset( $args['per_page'] ) && is_numeric( $args['per_page'] ) ? max( 1, (int) $args['per_page'] ) : 20;
+		$page      = isset( $args['page'] ) && is_numeric( $args['page'] ) ? max( 1, (int) $args['page'] ) : 1;
 
 		return $this->media_service->get_media_library_items( $search, $mime_type, $per_page, $page );
 	}

@@ -277,9 +277,12 @@ final class BuildHandler {
 				$element_count
 			);
 		}
-		// Log counts for diagnostics regardless of mismatch direction.
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( sprintf( 'BricksMCP build: intended=%d, generated=%d elements.', $intended_count, $element_count ) );
+		// Log counts for diagnostics — only when WP_DEBUG is active. Previously this
+		// fired on every production build, bloating error logs.
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( sprintf( 'BricksMCP build: intended=%d, generated=%d elements.', $intended_count, $element_count ) );
+		}
 
 		// Extract and strip _pipeline_warnings from element settings.
 		// These are internal markers from ElementSettingsGenerator for problems

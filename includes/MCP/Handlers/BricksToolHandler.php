@@ -374,7 +374,7 @@ final class BricksToolHandler {
 	 * @return array<string, mixed>|\WP_Error Global queries data or error.
 	 */
 	private function tool_get_global_queries( array $args ): array|\WP_Error { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-		$queries = get_option( 'bricks_global_queries', array() );
+		$queries = get_option( BricksCore::OPTION_GLOBAL_QUERIES, array() );
 		$queries = is_array( $queries ) ? $queries : array();
 
 		return array(
@@ -391,7 +391,7 @@ final class BricksToolHandler {
 	 * @return array<string, mixed>|\WP_Error Result data or error.
 	 */
 	private function tool_set_global_query( array $args ): array|\WP_Error {
-		$queries  = get_option( 'bricks_global_queries', array() );
+		$queries  = get_option( BricksCore::OPTION_GLOBAL_QUERIES, array() );
 		$queries  = is_array( $queries ) ? $queries : array();
 		$query_id = isset( $args['query_id'] ) ? sanitize_text_field( (string) $args['query_id'] ) : '';
 		$name     = sanitize_text_field( $args['name'] ?? '' );
@@ -442,7 +442,7 @@ final class BricksToolHandler {
 			$action_taken = 'created';
 		}
 
-		update_option( 'bricks_global_queries', $queries );
+		update_option( BricksCore::OPTION_GLOBAL_QUERIES, $queries );
 
 		return array(
 			'action'     => $action_taken,
@@ -484,7 +484,7 @@ final class BricksToolHandler {
 			return new \WP_Error( 'missing_query_id', __( 'query_id is required for delete_global_query.', 'bricks-mcp' ) );
 		}
 
-		$queries = get_option( 'bricks_global_queries', array() );
+		$queries = get_option( BricksCore::OPTION_GLOBAL_QUERIES, array() );
 		$queries = is_array( $queries ) ? $queries : array();
 
 		$found_index = false;
@@ -521,7 +521,7 @@ final class BricksToolHandler {
 		}
 
 		array_splice( $queries, $found_index, 1 );
-		update_option( 'bricks_global_queries', $queries );
+		update_option( BricksCore::OPTION_GLOBAL_QUERIES, $queries );
 
 		return array(
 			'deleted'  => true,

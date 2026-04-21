@@ -61,6 +61,16 @@ class BricksCore {
 	public const OPTION_SETTINGS             = 'bricks_mcp_settings';
 	public const OPTION_NOTES                = 'bricks_mcp_notes';
 	public const OPTION_GLOBAL_SETTINGS      = 'bricks_global_settings';
+	public const OPTION_COMPONENTS           = 'bricks_components';
+	public const OPTION_GLOBAL_QUERIES       = 'bricks_global_queries';
+
+	/**
+	 * Bricks-template meta keys. Used on posts of type `bricks_template`.
+	 * Previously scattered as literal strings across TemplateHandler,
+	 * WooCommerceHandler, SchemaHandler, and other handlers (5+ duplicates).
+	 */
+	public const META_TEMPLATE_TYPE     = '_bricks_template_type';
+	public const META_TEMPLATE_SETTINGS = '_bricks_template_settings';
 
 	/**
 	 * Required WordPress capability for MCP operations.

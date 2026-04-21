@@ -98,7 +98,7 @@ class TemplateService {
 
 		$this->core->unhook_bricks_meta_filters();
 		try {
-			update_post_meta( $post_id, '_bricks_template_type', $type );
+			update_post_meta( $post_id, BricksCore::META_TEMPLATE_TYPE, $type );
 		} finally {
 			$this->core->rehook_bricks_meta_filters();
 		}
@@ -117,10 +117,10 @@ class TemplateService {
 		if ( ! empty( $args['conditions'] ) && is_array( $args['conditions'] ) ) {
 			$this->core->unhook_bricks_meta_filters();
 			try {
-				$settings               = get_post_meta( $post_id, '_bricks_template_settings', true );
+				$settings               = get_post_meta( $post_id, BricksCore::META_TEMPLATE_SETTINGS, true );
 				$settings               = is_array( $settings ) ? $settings : [];
 				$settings['conditions'] = $args['conditions'];
-				update_post_meta( $post_id, '_bricks_template_settings', $settings );
+				update_post_meta( $post_id, BricksCore::META_TEMPLATE_SETTINGS, $settings );
 			} finally {
 				$this->core->rehook_bricks_meta_filters();
 			}
@@ -170,14 +170,14 @@ class TemplateService {
 				return new \WP_Error( 'invalid_template_type', sprintf( __( 'Invalid template type "%1$s". Valid types: %2$s.', 'bricks-mcp' ), $new_type, implode( ', ', $valid_types ) ) );
 			}
 
-			$old_type = get_post_meta( $template_id, '_bricks_template_type', true );
+			$old_type = get_post_meta( $template_id, BricksCore::META_TEMPLATE_TYPE, true );
 			if ( $old_type !== $new_type ) {
 				$warning = sprintf( __( 'Template type changed from "%1$s" to "%2$s". Existing elements may need to be reviewed for compatibility with the new template slot.', 'bricks-mcp' ), $old_type, $new_type );
 			}
 
 			$this->core->unhook_bricks_meta_filters();
 			try {
-				update_post_meta( $template_id, '_bricks_template_type', $new_type );
+				update_post_meta( $template_id, BricksCore::META_TEMPLATE_TYPE, $new_type );
 			} finally {
 				$this->core->rehook_bricks_meta_filters();
 			}
@@ -241,10 +241,10 @@ class TemplateService {
 		// Strip conditions from the copy.
 		$this->core->unhook_bricks_meta_filters();
 		try {
-			$settings = get_post_meta( $new_post_id, '_bricks_template_settings', true );
+			$settings = get_post_meta( $new_post_id, BricksCore::META_TEMPLATE_SETTINGS, true );
 			$settings = is_array( $settings ) ? $settings : [];
 			unset( $settings['conditions'] );
-			update_post_meta( $new_post_id, '_bricks_template_settings', $settings );
+			update_post_meta( $new_post_id, BricksCore::META_TEMPLATE_SETTINGS, $settings );
 		} finally {
 			$this->core->rehook_bricks_meta_filters();
 		}
@@ -271,7 +271,7 @@ class TemplateService {
 
 		$meta_query = [];
 		if ( '' !== $type ) {
-			$meta_query[] = [ 'key' => '_bricks_template_type', 'value' => sanitize_key( $type ) ];
+			$meta_query[] = [ 'key' => BricksCore::META_TEMPLATE_TYPE, 'value' => sanitize_key( $type ) ];
 		}
 		if ( ! empty( $meta_query ) ) {
 			$query_args['meta_query'] = $meta_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -296,8 +296,8 @@ class TemplateService {
 				continue;
 			}
 
-			$template_type = get_post_meta( $post->ID, '_bricks_template_type', true );
-			$settings      = get_post_meta( $post->ID, '_bricks_template_settings', true );
+			$template_type = get_post_meta( $post->ID, BricksCore::META_TEMPLATE_TYPE, true );
+			$settings      = get_post_meta( $post->ID, BricksCore::META_TEMPLATE_SETTINGS, true );
 			$elements      = $this->core->get_elements( $post->ID );
 
 			$tags_terms   = wp_get_object_terms( $post->ID, 'template_tag', [ 'fields' => 'slugs' ] );
@@ -333,8 +333,8 @@ class TemplateService {
 		}
 
 		$elements      = $this->core->get_elements( $template_id );
-		$template_type = get_post_meta( $template_id, '_bricks_template_type', true );
-		$settings      = get_post_meta( $template_id, '_bricks_template_settings', true );
+		$template_type = get_post_meta( $template_id, BricksCore::META_TEMPLATE_TYPE, true );
+		$settings      = get_post_meta( $template_id, BricksCore::META_TEMPLATE_SETTINGS, true );
 
 		$global_classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		$class_map      = [];
@@ -431,10 +431,10 @@ class TemplateService {
 
 		$this->core->unhook_bricks_meta_filters();
 		try {
-			$settings               = get_post_meta( $template_id, '_bricks_template_settings', true );
+			$settings               = get_post_meta( $template_id, BricksCore::META_TEMPLATE_SETTINGS, true );
 			$settings               = is_array( $settings ) ? $settings : [];
 			$settings['conditions'] = $conditions;
-			update_post_meta( $template_id, '_bricks_template_settings', $settings );
+			update_post_meta( $template_id, BricksCore::META_TEMPLATE_SETTINGS, $settings );
 		} finally {
 			$this->core->rehook_bricks_meta_filters();
 		}
@@ -477,9 +477,9 @@ class TemplateService {
 				continue;
 			}
 
-			$tpl_type     = get_post_meta( $tpl_post->ID, '_bricks_template_type', true );
+			$tpl_type     = get_post_meta( $tpl_post->ID, BricksCore::META_TEMPLATE_TYPE, true );
 			$tpl_type     = ! empty( $tpl_type ) ? (string) $tpl_type : 'content';
-			$tpl_settings = get_post_meta( $tpl_post->ID, '_bricks_template_settings', true );
+			$tpl_settings = get_post_meta( $tpl_post->ID, BricksCore::META_TEMPLATE_SETTINGS, true );
 			$conditions   = ( is_array( $tpl_settings ) && ! empty( $tpl_settings['conditions'] ) ) ? $tpl_settings['conditions'] : [];
 
 			if ( empty( $conditions ) ) {
@@ -685,7 +685,7 @@ class TemplateService {
 
 		$content = get_post_meta( $template_id, $this->core->resolve_elements_meta_key( $template_id ), true ) ?: array();
 
-		$template_type_key = defined( 'BRICKS_DB_TEMPLATE_TYPE' ) ? BRICKS_DB_TEMPLATE_TYPE : '_bricks_template_type';
+		$template_type_key = defined( 'BRICKS_DB_TEMPLATE_TYPE' ) ? BRICKS_DB_TEMPLATE_TYPE : BricksCore::META_TEMPLATE_TYPE;
 		$page_settings_key = defined( 'BRICKS_DB_PAGE_SETTINGS' ) ? BRICKS_DB_PAGE_SETTINGS : '_bricks_page_settings';
 
 		$export = array(
@@ -693,7 +693,7 @@ class TemplateService {
 			'templateType'     => get_post_meta( $template_id, $template_type_key, true ) ?: '',
 			'content'          => $content,
 			'pageSettings'     => get_post_meta( $template_id, $page_settings_key, true ) ?: array(),
-			'templateSettings' => get_post_meta( $template_id, '_bricks_template_settings', true ) ?: array(),
+			'templateSettings' => get_post_meta( $template_id, BricksCore::META_TEMPLATE_SETTINGS, true ) ?: array(),
 		);
 
 		if ( $include_classes && is_array( $content ) && ! empty( $content ) ) {
@@ -743,7 +743,7 @@ class TemplateService {
 		$content = $this->core->normalize_elements( $data['content'] );
 
 		$template_type = sanitize_text_field( $data['templateType'] ?? 'section' );
-		update_post_meta( $template_id, '_bricks_template_type', $template_type );
+		update_post_meta( $template_id, BricksCore::META_TEMPLATE_TYPE, $template_type );
 
 		$meta_key = $this->core->resolve_elements_meta_key( $template_id );
 		$this->core->unhook_bricks_meta_filters( $meta_key );
@@ -770,7 +770,7 @@ class TemplateService {
 			$allowed_template_keys = array( 'templateConditions', 'headerPosition', 'headerSticky', 'templateOrder', 'templateIncludeChildren' );
 			$safe_settings = array_intersect_key( $data['templateSettings'], array_flip( $allowed_template_keys ) );
 			if ( ! empty( $safe_settings ) ) {
-				update_post_meta( $template_id, '_bricks_template_settings', $safe_settings );
+				update_post_meta( $template_id, BricksCore::META_TEMPLATE_SETTINGS, $safe_settings );
 			}
 		}
 

@@ -475,7 +475,7 @@ class SettingsService {
 			);
 		}
 
-		$type = get_post_meta( $template_id, '_bricks_template_type', true );
+		$type = get_post_meta( $template_id, BricksCore::META_TEMPLATE_TYPE, true );
 		if ( 'popup' !== $type ) {
 			return new \WP_Error(
 				'wrong_type',
@@ -488,7 +488,7 @@ class SettingsService {
 			);
 		}
 
-		$settings = get_post_meta( $template_id, '_bricks_template_settings', true );
+		$settings = get_post_meta( $template_id, BricksCore::META_TEMPLATE_SETTINGS, true );
 		$settings = is_array( $settings ) ? $settings : [];
 
 		// Extract only popup* keys.
@@ -535,7 +535,7 @@ class SettingsService {
 			);
 		}
 
-		$type = get_post_meta( $template_id, '_bricks_template_type', true );
+		$type = get_post_meta( $template_id, BricksCore::META_TEMPLATE_TYPE, true );
 		if ( 'popup' !== $type ) {
 			return new \WP_Error(
 				'wrong_type',
@@ -573,7 +573,7 @@ class SettingsService {
 		// Read-merge-write pattern — preserve all other settings keys.
 		$this->core->unhook_bricks_meta_filters();
 		try {
-			$settings = get_post_meta( $template_id, '_bricks_template_settings', true );
+			$settings = get_post_meta( $template_id, BricksCore::META_TEMPLATE_SETTINGS, true );
 			$settings = is_array( $settings ) ? $settings : [];
 
 			foreach ( $popup_settings as $key => $value ) {
@@ -588,7 +588,7 @@ class SettingsService {
 				}
 			}
 
-			update_post_meta( $template_id, '_bricks_template_settings', $settings );
+			update_post_meta( $template_id, BricksCore::META_TEMPLATE_SETTINGS, $settings );
 		} finally {
 			$this->core->rehook_bricks_meta_filters();
 		}

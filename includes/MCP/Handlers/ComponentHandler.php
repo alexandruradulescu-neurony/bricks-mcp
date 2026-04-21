@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP\Handlers;
 
+use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\ElementIdGenerator;
 use BricksMCP\MCP\ToolRegistry;
@@ -32,7 +33,7 @@ final class ComponentHandler {
 	 *
 	 * @var string
 	 */
-	private const COMPONENTS_OPTION = 'bricks_components';
+	private const COMPONENTS_OPTION = BricksCore::OPTION_COMPONENTS;
 
 	/**
 	 * Bricks service instance.

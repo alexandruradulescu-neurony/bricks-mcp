@@ -154,7 +154,7 @@ final class WooCommerceHandler {
 				'fields'         => 'ids',
 				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 					array(
-						'key'     => '_bricks_template_type',
+						'key'     => BricksCore::META_TEMPLATE_TYPE,
 						'value'   => 'wc_',
 						'compare' => 'LIKE',
 					),
@@ -1101,7 +1101,7 @@ final class WooCommerceHandler {
 				'fields'         => 'ids',
 				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 					array(
-						'key'   => '_bricks_template_type',
+						'key'   => BricksCore::META_TEMPLATE_TYPE,
 						'value' => $template_type,
 					),
 				),
@@ -1226,7 +1226,7 @@ final class WooCommerceHandler {
 						'fields'         => 'ids',
 						'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 							array(
-								'key'   => '_bricks_template_type',
+								'key'   => BricksCore::META_TEMPLATE_TYPE,
 								'value' => $type,
 							),
 						),

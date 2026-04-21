@@ -4,6 +4,38 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.25.2] — 2026-04-21
+
+### Phase 6 of repair roadmap: remaining HIGH items
+
+#### More BricksCore constants
+
+- `OPTION_COMPONENTS = 'bricks_components'` — replaces `ComponentHandler::COMPONENTS_OPTION` hardcoded literal.
+- `OPTION_GLOBAL_QUERIES = 'bricks_global_queries'` — replaces 5 literal occurrences in `BricksToolHandler`.
+- `META_TEMPLATE_TYPE = '_bricks_template_type'` — replaces literals in:
+  - `TemplateHandler` (2 sites)
+  - `WooCommerceHandler` (3 sites: conditions meta queries)
+  - `SettingsService` (3 sites)
+  - `TemplateService` (5 sites)
+- `META_TEMPLATE_SETTINGS = '_bricks_template_settings'` — replaces literals in:
+  - `TemplateHandler` (1 site)
+  - `SettingsService` (3 sites)
+  - `TemplateService` (8 sites)
+
+Total: ~20 literal → constant replacements across 6 files. Centralizes Bricks core schema identifiers against drift.
+
+#### Noise reduction
+
+- `BuildHandler` unconditional `error_log()` on every build now gated on `WP_DEBUG`. Previously bloated production error logs.
+
+#### Input flexibility
+
+- `MediaHandler::tool_get_media_library` — `per_page` and `page` now accept integer-strings. HTTP-transport-decoded JSON sometimes delivers `"20"` instead of `20`; previous strict `is_int()` check rejected all integer-string inputs and silently defaulted to 20/1.
+
+### Risk
+
+LOW — pure refactor + permissive input parsing. No behavior change on valid input.
+
 ## [3.25.1] — 2026-04-21
 
 ### Phase 5 of repair roadmap: admin + migration hardening
