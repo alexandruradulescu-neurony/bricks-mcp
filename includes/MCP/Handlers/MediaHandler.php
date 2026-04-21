@@ -185,14 +185,22 @@ final class MediaHandler {
 		if ( ! $post ) {
 			return new \WP_Error(
 				'post_not_found',
-				sprintf( __( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ), $post_id )
+				sprintf(
+					/* translators: %d: Post ID */
+					__( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ),
+					$post_id
+				)
 			);
 		}
 
 		if ( ! post_type_supports( $post->post_type, 'thumbnail' ) ) {
 			return new \WP_Error(
 				'thumbnails_not_supported',
-				sprintf( __( 'Post type "%s" does not support featured images (thumbnails).', 'bricks-mcp' ), $post->post_type )
+				sprintf(
+					/* translators: %s: Post type slug */
+					__( 'Post type "%s" does not support featured images (thumbnails).', 'bricks-mcp' ),
+					$post->post_type
+				)
 			);
 		}
 
@@ -200,7 +208,11 @@ final class MediaHandler {
 		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
 			return new \WP_Error(
 				'attachment_not_found',
-				sprintf( __( 'Attachment %d not found in media library. Use media:sideload to upload an image first, or media:list to find existing images.', 'bricks-mcp' ), $attachment_id )
+				sprintf(
+					/* translators: %d: Attachment ID */
+					__( 'Attachment %d not found in media library. Use media:sideload to upload an image first, or media:list to find existing images.', 'bricks-mcp' ),
+					$attachment_id
+				)
 			);
 		}
 
@@ -224,6 +236,7 @@ final class MediaHandler {
 		if ( $old_thumbnail_id && (int) $old_thumbnail_id !== $attachment_id ) {
 			$response['replaced_attachment_id'] = (int) $old_thumbnail_id;
 			$response['warning']                = sprintf(
+				/* translators: %d: Attachment ID */
 				__( 'Previous featured image (attachment ID %d) was replaced.', 'bricks-mcp' ),
 				(int) $old_thumbnail_id
 			);
@@ -252,7 +265,11 @@ final class MediaHandler {
 		if ( ! $post ) {
 			return new \WP_Error(
 				'post_not_found',
-				sprintf( __( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ), $post_id )
+				sprintf(
+					/* translators: %d: Post ID */
+					__( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ),
+					$post_id
+				)
 			);
 		}
 
@@ -303,7 +320,11 @@ final class MediaHandler {
 		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
 			return new \WP_Error(
 				'attachment_not_found',
-				sprintf( __( 'Attachment %d not found in media library. Use media:sideload to upload an image first, or media:list to find existing images.', 'bricks-mcp' ), $attachment_id )
+				sprintf(
+					/* translators: %d: Attachment ID */
+					__( 'Attachment %d not found in media library. Use media:sideload to upload an image first, or media:list to find existing images.', 'bricks-mcp' ),
+					$attachment_id
+				)
 			);
 		}
 
@@ -311,7 +332,11 @@ final class MediaHandler {
 		if ( ! in_array( $target, $valid_targets, true ) ) {
 			return new \WP_Error(
 				'invalid_target',
-				sprintf( __( 'Invalid target "%s". Use "image", "background", or "gallery".', 'bricks-mcp' ), $target )
+				sprintf(
+					/* translators: %s: Target name */
+					__( 'Invalid target "%s". Use "image", "background", or "gallery".', 'bricks-mcp' ),
+					$target
+				)
 			);
 		}
 
