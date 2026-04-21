@@ -354,7 +354,8 @@ final class ComponentHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
-					__( 'You are about to permanently delete component "%s" (ID: %s). Existing instances will render empty. Set confirm: true to proceed.', 'bricks-mcp' ),
+					/* translators: 1: Component label, 2: Component ID */
+					__( 'You are about to permanently delete component "%1$s" (ID: %2$s). Existing instances will render empty. Set confirm: true to proceed.', 'bricks-mcp' ),
 					$label,
 					$component_id
 				)
@@ -473,8 +474,8 @@ final class ComponentHandler {
 				return new \WP_Error(
 					'parent_not_found',
 					sprintf(
-						/* translators: %s: Parent element ID */
-						__( 'Parent element "%s" not found on post %d. Use page:get to inspect elements.', 'bricks-mcp' ),
+						/* translators: 1: Parent element ID, 2: Post ID */
+						__( 'Parent element "%1$s" not found on post %2$d. Use page:get to inspect elements.', 'bricks-mcp' ),
 						$parent_id,
 						$post_id
 					)
@@ -553,8 +554,8 @@ final class ComponentHandler {
 			return new \WP_Error(
 				'instance_not_found',
 				sprintf(
-					/* translators: %s: Instance ID */
-					__( 'Instance element "%s" not found on post %d. Use page:get to inspect elements.', 'bricks-mcp' ),
+					/* translators: 1: Instance element ID, 2: Post ID */
+					__( 'Instance element "%1$s" not found on post %2$d. Use page:get to inspect elements.', 'bricks-mcp' ),
 					$instance_id,
 					$post_id
 				)
@@ -646,8 +647,8 @@ final class ComponentHandler {
 			return new \WP_Error(
 				'instance_not_found',
 				sprintf(
-					/* translators: %s: Instance ID */
-					__( 'Instance element "%s" not found on post %d. Use page:get to inspect elements.', 'bricks-mcp' ),
+					/* translators: 1: Instance element ID, 2: Post ID */
+					__( 'Instance element "%1$s" not found on post %2$d. Use page:get to inspect elements.', 'bricks-mcp' ),
 					$instance_id,
 					$post_id
 				)
