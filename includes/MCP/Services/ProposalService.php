@@ -25,6 +25,14 @@ final class ProposalService {
 	private const TTL = 600; // 10 minutes.
 
 	/**
+	 * Prefix for proposal-scoped WordPress transients.
+	 * WordPress caps transient keys at 172 characters; the full key is
+	 * TRANSIENT_PREFIX + 'prop_' + 16 hex chars = 41 chars total, so there is
+	 * ample headroom for any future ID-format change.
+	 */
+	private const TRANSIENT_PREFIX = 'bricks_mcp_proposal_';
+
+	/**
 	 * Request-scoped cache (first-level).
 	 * @var string|null
 	 */
@@ -602,7 +610,7 @@ final class ProposalService {
 		];
 
 		// Store as transient.
-		set_transient( "bricks_mcp_proposal_{$proposal_id}", $proposal, self::TTL );
+		set_transient( self::TRANSIENT_PREFIX . $proposal_id, $proposal, self::TTL );
 
 		return $proposal;
 	}
@@ -715,18 +723,18 @@ final class ProposalService {
 	 * Validate that a proposal exists and hasn't expired.
 	 */
 	public function validate( string $proposal_id ): bool {
-		return false !== get_transient( "bricks_mcp_proposal_{$proposal_id}" );
+		return false !== get_transient( self::TRANSIENT_PREFIX . $proposal_id );
 	}
 
 	/**
 	 * Consume a proposal — returns stored data and deletes it.
 	 */
 	public function consume( string $proposal_id ): ?array {
-		$proposal = get_transient( "bricks_mcp_proposal_{$proposal_id}" );
+		$proposal = get_transient( self::TRANSIENT_PREFIX . $proposal_id );
 		if ( false === $proposal ) {
 			return null;
 		}
-		delete_transient( "bricks_mcp_proposal_{$proposal_id}" );
+		delete_transient( self::TRANSIENT_PREFIX . $proposal_id );
 		return is_array( $proposal ) ? $proposal : null;
 	}
 
