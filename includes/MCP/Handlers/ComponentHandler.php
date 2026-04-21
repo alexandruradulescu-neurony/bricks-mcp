@@ -103,9 +103,15 @@ final class ComponentHandler {
 	private function tool_list_components( array $args ): array {
 		$components      = get_option( self::COMPONENTS_OPTION, array() );
 		$category_filter = isset( $args['category'] ) ? strtolower( sanitize_text_field( $args['category'] ) ) : '';
+		if ( ! is_array( $components ) ) {
+			$components = array();
+		}
 
 		$result = array();
 		foreach ( $components as $component ) {
+			if ( ! is_array( $component ) ) {
+				continue;
+			}
 			if ( '' !== $category_filter ) {
 				$comp_category = strtolower( $component['category'] ?? '' );
 				if ( $comp_category !== $category_filter ) {
@@ -114,14 +120,17 @@ final class ComponentHandler {
 			}
 
 			$elements = $component['elements'] ?? array();
+			if ( ! is_array( $elements ) ) {
+				$elements = array();
+			}
 			$result[] = array(
-				'id'             => $component['id'],
+				'id'             => $component['id'] ?? '',
 				'label'          => $component['label'] ?? '',
 				'category'       => $component['category'] ?? '',
 				'description'    => $component['description'] ?? '',
 				'element_count'  => count( $elements ),
-				'slot_count'     => count( array_filter( $elements, fn( $el ) => ( $el['name'] ?? '' ) === 'slot' ) ),
-				'property_count' => count( $component['properties'] ?? array() ),
+				'slot_count'     => count( array_filter( $elements, fn( $el ) => is_array( $el ) && ( $el['name'] ?? '' ) === 'slot' ) ),
+				'property_count' => is_array( $component['properties'] ?? null ) ? count( $component['properties'] ) : 0,
 			);
 		}
 
