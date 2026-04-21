@@ -53,6 +53,15 @@ class SchemaGenerator {
 	private const MAX_CONTROLS_PER_ELEMENT = 200;
 
 	/**
+	 * Minimum similar_text() percentage for an element name to be considered a
+	 * "did-you-mean" suggestion. Empirically tuned for common typos like
+	 * "headling" vs "heading" (~87%) and "btn" vs "button" (~54%).
+	 *
+	 * @var int
+	 */
+	private const SIMILAR_NAME_THRESHOLD = 40;
+
+	/**
 	 * Cached Bricks settings key registry loaded from data/settings-keys.json.
 	 *
 	 * @var array<string, mixed>|null
@@ -834,7 +843,7 @@ class SchemaGenerator {
 
 		foreach ( $element_names as $name ) {
 			similar_text( $requested, $name, $percent );
-			if ( $percent > 40 ) {
+			if ( $percent > self::SIMILAR_NAME_THRESHOLD ) {
 				$similar[ $name ] = $percent;
 			}
 		}
