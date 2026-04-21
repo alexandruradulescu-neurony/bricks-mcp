@@ -643,7 +643,7 @@ class BricksCore {
 				);
 			}
 
-			if ( ! preg_match( '/^[a-z0-9]{6}$/', $element['id'] ) ) {
+			if ( ! preg_match( ElementIdGenerator::id_regex(), $element['id'] ) ) {
 				return new \WP_Error(
 					'invalid_element_structure',
 					sprintf( 'Element at index %d has an invalid ID format: "%s".', $index, $element['id'] ),

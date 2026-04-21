@@ -45,6 +45,18 @@ class ElementIdGenerator {
 	private const MAX_ATTEMPTS = 100;
 
 	/**
+	 * Return the canonical regex used to validate an element ID string.
+	 *
+	 * Derived from ALPHABET and ID_LENGTH so BricksCore::validate_element_linkage
+	 * and any other consumer stays in sync if either constant ever changes.
+	 *
+	 * @return string Delimited regex suitable for preg_match().
+	 */
+	public static function id_regex(): string {
+		return '/^[a-z0-9]{' . self::ID_LENGTH . '}$/';
+	}
+
+	/**
 	 * Generate a cryptographically secure 6-character lowercase alphanumeric ID.
 	 *
 	 * Uses random_int() for uniform distribution across the full alphabet.
