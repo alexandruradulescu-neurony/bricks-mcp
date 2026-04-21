@@ -487,10 +487,18 @@ class BricksCore {
 	 * @return string Sanitized CSS string.
 	 */
 	public static function strip_dangerous_css( string $css ): string {
-		// Strip CSS comments and hex escape sequences to prevent obfuscation bypass.
-		$s = (string) preg_replace( '/\/\*.*?\*\//s', '', $css );
-		$s = (string) preg_replace( '/\\\\[0-9a-fA-F]{1,6}\s?/', '', $s );
+		// Obfuscation strip runs first so downstream keyword scrubbers see the
+		// canonical form. Swapping these with payload patterns would let
+		// `javascript\3a ` (hex-escaped colon) survive the keyword match.
+		$obfuscation_patterns = [
+			'/\/\*.*?\*\//s',               // CSS block comments.
+			'/\\\\[0-9a-fA-F]{1,6}\s?/',    // Hex escape sequences like \3a (colon).
+		];
+		$s = (string) preg_replace( $obfuscation_patterns, '', $css );
 
+		// Payload scrubs applied in the original declared order. Four of the five
+		// patterns strip to an empty string. The url(data:) case is rewritten (not
+		// removed) so the surrounding url() wrapper remains syntactically valid.
 		$s = (string) preg_replace( '/\bjavascript\s*:/i', '', $s );
 		$s = (string) preg_replace( '/\bexpression\s*\(/i', '', $s );
 		$s = (string) preg_replace( '/url\s*\(\s*["\']?\s*data\s*:/i', 'url(about:', $s );
