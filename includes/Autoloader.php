@@ -57,6 +57,10 @@ final class Autoloader {
 	/**
 	 * Unregister the autoloader.
 	 *
+	 * Public API — not called by the plugin itself, but kept for test
+	 * harnesses and tooling that need to tear down the loader between
+	 * runs (e.g. PHPUnit bootstrap teardown).
+	 *
 	 * @return void
 	 */
 	public static function unregister(): void {
@@ -98,7 +102,10 @@ final class Autoloader {
 	/**
 	 * Get the class map cache.
 	 *
-	 * Useful for debugging.
+	 * Public API — not called by the plugin itself, but exposed for
+	 * debugging/profiling tools and for diagnostic checks that need
+	 * to inspect which files the autoloader has loaded during a
+	 * request.
 	 *
 	 * @return array<string, string> The class map.
 	 */
