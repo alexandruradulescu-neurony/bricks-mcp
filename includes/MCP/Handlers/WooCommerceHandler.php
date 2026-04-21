@@ -45,6 +45,28 @@ final class WooCommerceHandler {
 	];
 
 	/**
+	 * Bricks-core WooCommerce-integration setting keys surfaced by the `status`
+	 * action. Lifted from `get_option( OPTION_GLOBAL_SETTINGS )`. Keep aligned
+	 * with Bricks' WooCommerce settings panel — Bricks itself writes these keys
+	 * into the global settings option, and new WC-integration settings need a
+	 * corresponding entry here to be exposed via the MCP status endpoint.
+	 */
+	private const WC_INTEGRATION_SETTING_KEYS = [
+		'woocommerceEnableAjaxAddToCart',
+		'woocommerceDisableBuilder',
+		'woocommerceAjaxAddedText',
+		'woocommerceAjaxAddingText',
+		'woocommerceAjaxHideViewCart',
+		'woocommerceAjaxShowNotice',
+		'woocommerceBadgeNew',
+		'woocommerceBadgeSale',
+		'woocommerceUseQtyInLoop',
+		'woocommerceUseVariationSwatches',
+		'woocommerceDisableProductGalleryLightbox',
+		'woocommerceDisableProductGalleryZoom',
+	];
+
+	/**
 	 * Bricks service instance.
 	 *
 	 * @var BricksService
@@ -127,22 +149,8 @@ final class WooCommerceHandler {
 	private function tool_woocommerce_status(): array {
 		$global_settings = get_option( BricksCore::OPTION_GLOBAL_SETTINGS, array() );
 		$woo_settings    = array();
-		$woo_keys        = array(
-			'woocommerceEnableAjaxAddToCart',
-			'woocommerceDisableBuilder',
-			'woocommerceAjaxAddedText',
-			'woocommerceAjaxAddingText',
-			'woocommerceAjaxHideViewCart',
-			'woocommerceAjaxShowNotice',
-			'woocommerceBadgeNew',
-			'woocommerceBadgeSale',
-			'woocommerceUseQtyInLoop',
-			'woocommerceUseVariationSwatches',
-			'woocommerceDisableProductGalleryLightbox',
-			'woocommerceDisableProductGalleryZoom',
-		);
 
-		foreach ( $woo_keys as $key ) {
+		foreach ( self::WC_INTEGRATION_SETTING_KEYS as $key ) {
 			if ( isset( $global_settings[ $key ] ) ) {
 				$woo_settings[ $key ] = $global_settings[ $key ];
 			}
