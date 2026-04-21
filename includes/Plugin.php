@@ -24,6 +24,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Plugin {
 
 	/**
+	 * Orphaned settings keys from previous plugin versions that migrate_settings()
+	 * strips on version bump. Kept as a constant so future developers can see the
+	 * deprecation history at a glance and not re-introduce them.
+	 *
+	 * @var array<int, string>
+	 */
+	private const LEGACY_SETTING_KEYS = [ 'rate_limit', 'rate_limit_window', 'allowed_endpoints' ];
+
+	/**
 	 * Plugin instance.
 	 *
 	 * @var self|null
@@ -196,7 +205,7 @@ final class Plugin {
 
 		$dirty = false;
 
-		foreach ( [ 'rate_limit', 'rate_limit_window', 'allowed_endpoints' ] as $key ) {
+		foreach ( self::LEGACY_SETTING_KEYS as $key ) {
 			if ( array_key_exists( $key, $settings ) ) {
 				unset( $settings[ $key ] );
 				$dirty = true;
