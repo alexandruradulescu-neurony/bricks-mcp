@@ -70,9 +70,13 @@ function bricks_mcp_delete_user_meta(): void {
 	global $wpdb;
 
 	// Delete all user meta with the plugin prefix.
+	// Use $wpdb->usermeta (not $wpdb->prefix . 'usermeta') — on multisite the
+	// usermeta table is shared across sites and lives at {base_prefix}usermeta,
+	// not {site_prefix}usermeta. Concatenating $wpdb->prefix yields a
+	// nonexistent table and the DELETE silently no-ops.
 	$wpdb->query(
 		$wpdb->prepare(
-			"DELETE FROM {$wpdb->prefix}usermeta WHERE meta_key LIKE %s",
+			"DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE %s",
 			$wpdb->esc_like( 'bricks_mcp_' ) . '%'
 		)
 	);
