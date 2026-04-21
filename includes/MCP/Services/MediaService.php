@@ -38,6 +38,22 @@ class MediaService {
 	private const UTM_PARAMS = 'utm_source=bricks_mcp&utm_medium=referral';
 
 	/**
+	 * Post meta key for tracking Unsplash photo ID on sideloaded attachments.
+	 * Used for dedup checks so a single Unsplash photo is not downloaded twice.
+	 *
+	 * @var string
+	 */
+	private const UNSPLASH_META_KEY = '_unsplash_photo_id';
+
+	/**
+	 * Maximum downloaded image file size in bytes (20 MB).
+	 * Applied after download to reject oversized sideloads.
+	 *
+	 * @var int
+	 */
+	private const MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024;
+
+	/**
 	 * Search Unsplash photos using the Bricks-stored API key.
 	 *
 	 * @param string $query    Search query for photos.
@@ -153,7 +169,7 @@ class MediaService {
 				array(
 					'post_type'      => 'attachment',
 					'post_status'    => 'inherit',
-					'meta_key'       => '_unsplash_photo_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+					'meta_key'       => self::UNSPLASH_META_KEY, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 					'meta_value'     => sanitize_text_field( $unsplash_id ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 					'posts_per_page' => 1,
 					'fields'         => 'ids',
@@ -170,9 +186,9 @@ class MediaService {
 			return $tmp;
 		}
 
-		// Reject files over 20MB to prevent disk/memory exhaustion.
+		// Reject files over MAX_DOWNLOAD_BYTES to prevent disk/memory exhaustion.
 		$file_size = filesize( $tmp );
-		if ( false === $file_size || $file_size > 20 * 1024 * 1024 ) {
+		if ( false === $file_size || $file_size > self::MAX_DOWNLOAD_BYTES ) {
 			wp_delete_file( $tmp );
 			return new \WP_Error( 'bricks_mcp_file_too_large', __( 'Downloaded file exceeds 20MB size limit.', 'bricks-mcp' ) );
 		}
@@ -227,7 +243,7 @@ class MediaService {
 
 		// Store Unsplash photo ID for duplicate detection.
 		if ( null !== $unsplash_id && '' !== $unsplash_id ) {
-			update_post_meta( $attachment_id, '_unsplash_photo_id', sanitize_text_field( $unsplash_id ) );
+			update_post_meta( $attachment_id, self::UNSPLASH_META_KEY, sanitize_text_field( $unsplash_id ) );
 		}
 
 		// Fire Unsplash download tracking (required by API guidelines).
