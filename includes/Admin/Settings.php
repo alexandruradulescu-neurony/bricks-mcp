@@ -259,9 +259,9 @@ final class Settings {
 		}
 
 		// Display activation notice if issues were detected on plugin activation.
-		$activation_results = get_transient( 'bricks_mcp_activation_checks' );
+		$activation_results = get_transient( \BricksMCP\Activator::ACTIVATION_CHECK_TRANSIENT );
 		if ( false !== $activation_results && is_array( $activation_results ) ) {
-			delete_transient( 'bricks_mcp_activation_checks' );
+			delete_transient( \BricksMCP\Activator::ACTIVATION_CHECK_TRANSIENT );
 			$has_issues = false;
 			foreach ( $activation_results as $check ) {
 				if ( 'fail' === ( $check['status'] ?? '' ) ) {
