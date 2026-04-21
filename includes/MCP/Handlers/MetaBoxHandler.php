@@ -87,8 +87,11 @@ final class MetaBoxHandler {
 		if ( null === $registry ) {
 			return array( 'field_groups' => array(), 'message' => 'Meta Box registry returned null.' );
 		}
-		$all      = $registry->all();
-		$groups   = array();
+		$all = $registry->all();
+		if ( ! is_iterable( $all ) ) {
+			return array( 'field_groups' => array(), 'message' => 'Meta Box registry returned a non-iterable value.' );
+		}
+		$groups = array();
 
 		foreach ( $all as $meta_box ) {
 			$fields = array();
@@ -154,8 +157,11 @@ final class MetaBoxHandler {
 		if ( null === $registry ) {
 			return array( 'fields' => array() );
 		}
-		$all      = $registry->all();
-		$fields   = array();
+		$all = $registry->all();
+		if ( ! is_iterable( $all ) ) {
+			return array( 'fields' => array() );
+		}
+		$fields = array();
 
 		foreach ( $all as $meta_box ) {
 			$box_post_types = $meta_box->post_types ?? array();
@@ -242,8 +248,11 @@ final class MetaBoxHandler {
 		if ( null === $registry ) {
 			return array( 'tags' => array(), 'message' => 'Meta Box registry returned null.' );
 		}
-		$all      = $registry->all();
-		$tags     = array();
+		$all = $registry->all();
+		if ( ! is_iterable( $all ) ) {
+			return array( 'tags' => array(), 'message' => 'Meta Box registry returned a non-iterable value.' );
+		}
+		$tags = array();
 
 		foreach ( $all as $meta_box ) {
 			if ( ! empty( $post_type ) ) {
