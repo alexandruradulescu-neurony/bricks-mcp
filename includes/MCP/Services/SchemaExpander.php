@@ -37,12 +37,35 @@ final class SchemaExpander {
 	public function expand( array $schema ): array {
 		$patterns = $schema['patterns'] ?? [];
 
-		foreach ( $schema['sections'] as &$section ) {
-			if ( ! empty( $section['structure'] ) ) {
-				$section['structure'] = $this->expand_node( $section['structure'], $patterns, [] );
+		// Expand each section. If a section's top-level structure is a ref with
+		// repeat > 1, expand_node returns a `_expanded_multi` wrapper. Without
+		// unwrapping here, downstream sees an invalid structure shape and silently
+		// drops the section. Unwrap into multiple sections at the same position.
+		$new_sections = [];
+		foreach ( $schema['sections'] ?? [] as $section ) {
+			if ( ! is_array( $section ) ) {
+				continue;
 			}
+			if ( empty( $section['structure'] ) ) {
+				$new_sections[] = $section;
+				continue;
+			}
+			$expanded = $this->expand_node( $section['structure'], $patterns, [] );
+
+			// Top-level multi-expansion: fan out into multiple sections.
+			if ( is_array( $expanded ) && isset( $expanded['_expanded_multi'] ) && is_array( $expanded['_expanded_multi'] ) ) {
+				foreach ( $expanded['_expanded_multi'] as $multi_structure ) {
+					$cloned              = $section;
+					$cloned['structure'] = $multi_structure;
+					$new_sections[]      = $cloned;
+				}
+				continue;
+			}
+
+			$section['structure'] = $expanded;
+			$new_sections[]       = $section;
 		}
-		unset( $section );
+		$schema['sections'] = $new_sections;
 
 		// Patterns are resolved — remove from schema.
 		unset( $schema['patterns'] );

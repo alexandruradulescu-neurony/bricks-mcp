@@ -4,6 +4,58 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.24.5] — 2026-04-21
+
+### Phase 3 of repair roadmap: pipeline data integrity
+
+Fixes seven silent-data-corruption bugs in the tree-mutation pipeline.
+
+#### `ElementNormalizer::parent_refs_to_tree` — tree corruption via reference aliasing
+
+Previous code used `foreach ($by_id as $id => &$el)` with `$tree[] = &$el` / `$by_id[$parent]['children'][] = &$el`. Every stored aliased reference pointed at the same PHP variable slot — subsequent iterations overwrote the target, silently duplicating the last-iterated element throughout the output tree.
+
+**Fix:** Rewrote with value semantics. A two-pass approach builds a `parent → [child_ids]` map, then recursively assembles the tree via a closure that returns child nodes by value. No references, no aliasing hazard.
+
+#### `BricksCore::save_elements` — delete-then-add data-loss window
+
+When `update_post_meta` returned false (indistinguishable from "unchanged value"), the previous code fell through to `delete_post_meta` + `add_post_meta` with a backup restore. During that window, concurrent readers saw empty meta.
+
+**Fix:** Removed the destructive fallback. On genuine mismatch (value differs), return a `save_elements_failed` error. Caller retries at the next write. Data integrity preserved; visibility window closed.
+
+#### `BricksCore::rehook_bricks_meta_filters` — filter state loss
+
+Previous code stashed the entire `WP_Hook` object via `$wp_filter[$key] = $filter` on rehook. Any other plugin that registered callbacks during the unhook window had its callbacks wiped when the original hook was wholesale-restored.
+
+**Fix:** Per-callback recording at unhook time (hook name, priority, id, callback). On rehook, re-add each callback via `add_filter()` — preserves concurrent registrations from other plugins.
+
+#### `BricksService::duplicate_element` — wrong root insert index
+
+`array_splice( $elements, $position * ( count( $subtree_ids ) + 1 ), 0, $cloned )` assumed every root sibling has the same subtree size as the one being duplicated. On varied trees (common), the splice landed inside another subtree, corrupting hierarchy.
+
+**Fix:** Walk root siblings in flat order, counting each toward `$position`. Insert at the flat index of the target sibling — correct for any tree shape.
+
+#### `BricksService::move_element` — parent comparison drift
+
+Used strict `0 === $elem['parent']` which missed root elements stored with string `'0'` (some Bricks migrations store numeric strings). Result: move-to-root inserted in the wrong slot on mixed-parent-type pages.
+
+**Fix:** Use `BricksCore::is_root_element()` (added in v3.24.3) — normalizes `'0'`/`0`/`null`/`''` uniformly. Same comparison logic across Router, StreamableHttpHandler, and now BricksService.
+
+#### `SchemaExpander::expand` — top-level `_expanded_multi` leak
+
+When a section's top-level structure was a ref with `repeat > 1`, `expand_node` returned a `_expanded_multi` wrapper, but nothing unwrapped it at the section level. Downstream read the wrapper as an invalid structure and silently dropped the section.
+
+**Fix:** `expand()` now detects top-level `_expanded_multi` and fans out into multiple sections at the same position, each carrying one expanded structure. `repeat > 1` on section-level refs now works.
+
+#### `Plugin::maybe_migrate` — unsafe version bump
+
+Version was written unconditionally after migrations. Uncaught `\Throwable` in a migration left the db_version bumped anyway — migration skipped forever on next load, plugin in permanent half-migrated state.
+
+**Fix:** Each migration step wrapped in try/catch. Version bumped only when all steps succeed. Failures logged via `error_log` for diagnostics.
+
+### Risk
+
+MEDIUM — touches pipeline core. Silent-data-corruption bugs have subtle test surfaces; wider integration testing recommended.
+
 ## [3.24.4] — 2026-04-21
 
 ### Phase 2 of repair roadmap: auth + protocol correctness

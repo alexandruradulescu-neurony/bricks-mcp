@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.24.4
+Stable tag: 3.24.5
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,15 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.24.5 =
+* Fix: `ElementNormalizer::parent_refs_to_tree` no longer corrupts trees silently. Previous reference-in-foreach pattern (`foreach ($by_id as &$el) { $tree[] = &$el; }`) aliased every stored entry to the loop variable — every child in the output tree ended up pointing at the last source element. Rewritten with pure value semantics using a recursive builder.
+* Fix: `BricksCore::save_elements` removed the delete-then-add fallback on `update_post_meta` failure. Concurrent readers previously saw empty meta during the window. Now returns a `save_elements_failed` error; caller can retry at the next write.
+* Fix: `BricksCore::rehook_bricks_meta_filters` now re-adds sanitize_post_meta_* callbacks via `add_filter()` per-callback instead of wholesale-assigning the stashed WP_Hook object. Other plugins that registered callbacks during the unhook window are preserved.
+* Fix: `BricksService::duplicate_element` root-level flat insert no longer uses `$position * (count($subtree_ids) + 1)` math that assumed equal subtree sizes. Walks root siblings in flat order instead — correct for varied trees.
+* Fix: `BricksService::move_element` root-level insertion now uses `BricksCore::is_root_element()` for parent comparison (consistent with v3.24.3 root check) and guards against non-array rows.
+* Fix: `SchemaExpander::expand` now unwraps top-level `_expanded_multi` wrappers. Previously a section whose structure was a ref with repeat > 1 returned a `_expanded_multi` wrapper that nothing unwrapped — downstream saw empty output. Now the section fans out into multiple sections at the same position.
+* Fix: `Plugin::maybe_migrate` wraps each migration in try/catch. Previously an uncaught Throwable bumped the db_version anyway, leaving the plugin permanently half-migrated. Version now bumps only when all migrations succeed; failures logged via error_log.
 
 = 3.24.4 =
 * Security: `tool_confirm_destructive_action` now re-checks capability on confirm. Previously it bypassed `execute_tool()` entirely, including the capability check. A user demoted between original call and confirm could still execute via a pre-demotion token. Tokens now prove intent, not current authorization.

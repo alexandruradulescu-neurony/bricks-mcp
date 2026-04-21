@@ -1267,12 +1267,38 @@ class BricksService {
 			$last_subtree_index = $target_index;
 			$subtree_set        = array_flip( $subtree_ids );
 			foreach ( $elements as $idx => $el ) {
-				if ( isset( $subtree_set[ $el['id'] ] ) && $idx > $last_subtree_index ) {
+				if ( ! is_array( $el ) ) {
+					continue;
+				}
+				if ( isset( $subtree_set[ $el['id'] ?? '' ] ) && $idx > $last_subtree_index ) {
 					$last_subtree_index = $idx;
 				}
 			}
 			if ( null !== $position && $is_root_level ) {
-				array_splice( $elements, $position * ( count( $subtree_ids ) + 1 ), 0, $cloned );
+				// Resolve root-level flat insert index. Previously:
+				//   array_splice( $elements, $position * (count($subtree_ids) + 1), 0, $cloned );
+				// ...which assumed every root sibling's subtree is the same size as this
+				// one's — false in practice. For varied trees the splice landed in the
+				// middle of another subtree, corrupting the tree.
+				// Correct approach: walk root siblings in flat order, count each sibling
+				// (including its descendants) toward the requested position.
+				$insert_index   = count( $elements );
+				$roots_seen     = 0;
+				foreach ( $elements as $idx => $el ) {
+					if ( ! is_array( $el ) ) {
+						continue;
+					}
+					// Only root siblings contribute to the position counter.
+					if ( ! BricksCore::is_root_element( $el ) ) {
+						continue;
+					}
+					if ( $roots_seen === $position ) {
+						$insert_index = $idx;
+						break;
+					}
+					$roots_seen++;
+				}
+				array_splice( $elements, $insert_index, 0, $cloned );
 			} else {
 				array_splice( $elements, $last_subtree_index + 1, 0, $cloned );
 			}
@@ -1405,16 +1431,28 @@ class BricksService {
 			$el = array_splice( $elements, $id_map[ $element_id ], 1 )[0];
 
 			// Rebuild id_map since indices shifted.
+			// Guard against non-array rows so a corrupt input doesn't throw on subscript.
 			$id_map = [];
 			foreach ( $elements as $idx => $elem ) {
-				$id_map[ $elem['id'] ] = $idx;
+				if ( ! is_array( $elem ) ) {
+					continue;
+				}
+				$id_map[ $elem['id'] ?? '' ] = $idx;
 			}
 
+			// Use BricksCore::is_root_element() for parent comparison. Previously this
+			// code used strict `0 === $elem['parent']`, which missed root siblings
+			// stored with string '0' (Bricks stores numeric strings after certain
+			// migrations). Caller-visible effect: `move_element` to root inserted in
+			// the wrong slot on mixed-parent-type pages.
 			if ( null === $position ) {
 				// Append after the last root element.
 				$last_root_idx = -1;
 				foreach ( $elements as $idx => $elem ) {
-					if ( 0 === $elem['parent'] ) {
+					if ( ! is_array( $elem ) ) {
+						continue;
+					}
+					if ( BricksCore::is_root_element( $elem ) ) {
 						$last_root_idx = $idx;
 					}
 				}
@@ -1424,7 +1462,10 @@ class BricksService {
 				$root_count      = 0;
 				$insertion_point = count( $elements ); // Default: append.
 				foreach ( $elements as $idx => $elem ) {
-					if ( 0 === $elem['parent'] ) {
+					if ( ! is_array( $elem ) ) {
+						continue;
+					}
+					if ( BricksCore::is_root_element( $elem ) ) {
 						if ( $root_count === $position ) {
 							$insertion_point = $idx;
 							break;

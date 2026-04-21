@@ -235,19 +235,20 @@ class BricksCore {
 
 			if ( false === $updated ) {
 				// update_post_meta returns false both on failure AND when value is unchanged.
+				// Compare against current value to distinguish.
+				// Previously this branch fell through to delete_post_meta + add_post_meta,
+				// which opened a window where concurrent readers saw empty meta. We now
+				// surface a failure instead of trying to recover via destructive fallback —
+				// the caller can retry at the next write attempt, and data integrity is
+				// preserved.
 				$existing = get_post_meta( $post_id, $meta_key, true );
 				if ( $existing !== $elements ) {
-					// Genuine failure — try delete+add with backup.
-					$backup = $existing;
-					delete_post_meta( $post_id, $meta_key );
-					$added = add_post_meta( $post_id, $meta_key, $elements, true );
-
-					// Restore backup if add also failed to prevent data loss.
-					if ( false === $added && is_array( $backup ) && count( $backup ) > 0 ) {
-						add_post_meta( $post_id, $meta_key, $backup, true );
-					}
+					return new \WP_Error(
+						'save_elements_failed',
+						__( 'update_post_meta returned false and the stored value does not match the intended elements. Refusing delete-then-add fallback to prevent a visibility window where readers see empty meta. Retry the write.', 'bricks-mcp' )
+					);
 				}
-				// else: value already matches, no action needed.
+				// else: value already matches, benign no-op.
 			}
 
 			update_post_meta( $post_id, self::EDITOR_MODE_KEY, 'bricks' );
@@ -281,7 +282,10 @@ class BricksCore {
 	public function unhook_bricks_meta_filters( string $meta_key = '' ): void {
 		global $wp_filter;
 
-		$stored = [];
+		$stored = [
+			'sanitize_meta_callbacks' => [],
+			'update_post_metadata_bricks' => [],
+		];
 
 		$keys_to_unhook = array_unique( array_filter( [
 			$meta_key,
@@ -290,16 +294,33 @@ class BricksCore {
 			defined( 'BRICKS_DB_PAGE_FOOTER' ) ? BRICKS_DB_PAGE_FOOTER : '_bricks_page_footer_2',
 		] ) );
 
+		// Record each sanitize_post_meta_* callback individually so rehook can
+		// re-add them via add_filter() without overwriting any new callbacks that
+		// other plugins may have registered during the unhook window.
 		foreach ( $keys_to_unhook as $key ) {
 			$sanitize_key = 'sanitize_post_meta_' . $key;
-			if ( isset( $wp_filter[ $sanitize_key ] ) ) {
-				$stored[ $sanitize_key ] = $wp_filter[ $sanitize_key ];
-				unset( $wp_filter[ $sanitize_key ] );
+			if ( ! isset( $wp_filter[ $sanitize_key ] ) ) {
+				continue;
 			}
+			$hook = $wp_filter[ $sanitize_key ];
+			if ( ! is_object( $hook ) || ! isset( $hook->callbacks ) ) {
+				continue;
+			}
+			foreach ( $hook->callbacks as $priority => $callbacks ) {
+				foreach ( $callbacks as $id => $callback ) {
+					$stored['sanitize_meta_callbacks'][] = [
+						'hook'     => $sanitize_key,
+						'priority' => $priority,
+						'id'       => $id,
+						'callback' => $callback,
+					];
+				}
+			}
+			// Clear the hook entirely — we restore callback-by-callback on rehook.
+			unset( $wp_filter[ $sanitize_key ] );
 		}
 
 		if ( isset( $wp_filter['update_post_metadata'] ) ) {
-			$stored['update_post_metadata_bricks'] = [];
 			foreach ( $wp_filter['update_post_metadata']->callbacks as $priority => $callbacks ) {
 				foreach ( $callbacks as $id => $callback ) {
 					if ( is_array( $callback['function'] ) && is_object( $callback['function'][0] ) && $callback['function'][0] instanceof \Bricks\Ajax ) {
@@ -326,14 +347,19 @@ class BricksCore {
 		global $wp_filter;
 
 		$stored = array_pop( $this->filter_stack );
-		if ( null === $stored ) {
+		if ( ! is_array( $stored ) ) {
 			return;
 		}
 
-		foreach ( $stored as $key => $filter ) {
-			if ( str_starts_with( $key, 'sanitize_post_meta_' ) ) {
-				$wp_filter[ $key ] = $filter;
-			}
+		// Restore sanitize_post_meta_* callbacks one at a time. Previously this
+		// method assigned the stashed WP_Hook object wholesale (`$wp_filter[$key] = $filter`),
+		// which wiped out any callbacks that other plugins registered during the
+		// unhook window. Per-callback add_filter() preserves concurrent registrations.
+		foreach ( $stored['sanitize_meta_callbacks'] ?? [] as $entry ) {
+			$hook     = $entry['hook'];
+			$priority = (int) $entry['priority'];
+			$callback = $entry['callback'];
+			add_filter( $hook, $callback['function'], $priority, (int) ( $callback['accepted_args'] ?? 1 ) );
 		}
 
 		if ( ! empty( $stored['update_post_metadata_bricks'] ) && isset( $wp_filter['update_post_metadata'] ) ) {

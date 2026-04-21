@@ -185,29 +185,57 @@ class ElementNormalizer {
 				continue;
 			}
 			$id = (string) ( $el['id'] ?? 'auto_' . $idx );
-			$el['_orig_id'] = $id;
 			// Reset children to build from parent refs.
 			$el['children'] = $el['children'] ?? [];
 			// Only keep children if they're nested element objects (not ID strings).
 			if ( ! empty( $el['children'] ) && isset( $el['children'][0] ) && ! is_array( $el['children'][0] ) ) {
 				$el['children'] = [];
 			}
-			$by_id[ $id ]   = $el;
+			$by_id[ $id ] = $el;
 		}
 
-		$tree = [];
-		foreach ( $by_id as $id => &$el ) {
+		// Build parent → [child_ids] map (value semantics, no references).
+		$parent_to_children = [];
+		$roots              = [];
+		foreach ( $by_id as $id => $el ) {
 			$parent = isset( $el['parent'] ) ? (string) $el['parent'] : '0';
-			// Remove flat-format keys before passing to tree converter.
-			unset( $el['id'], $el['parent'], $el['_orig_id'] );
-
 			if ( '0' === $parent || '' === $parent || ! isset( $by_id[ $parent ] ) ) {
-				$tree[] = &$el;
+				$roots[] = $id;
 			} else {
-				$by_id[ $parent ]['children'][] = &$el;
+				$parent_to_children[ $parent ][] = $id;
 			}
 		}
-		unset( $el );
+
+		// Recursively assemble tree by value. The previous implementation used
+		// `foreach ( $by_id as $id => &$el )` with `$tree[] = &$el` / `[...]['children'][] = &$el`,
+		// which aliased every written entry to the loop's `$el` variable. Subsequent
+		// iterations overwrote `$el` — every stored reference ended up pointing at
+		// the last element in the source array, silently duplicating it throughout
+		// the tree. Value-semantic rebuild eliminates the aliasing hazard.
+		$build = function ( string $id ) use ( &$build, $by_id, $parent_to_children ): array {
+			$el = $by_id[ $id ] ?? null;
+			if ( ! is_array( $el ) ) {
+				return [];
+			}
+			$el['children'] = [];
+			foreach ( $parent_to_children[ $id ] ?? [] as $child_id ) {
+				$child_node = $build( $child_id );
+				if ( ! empty( $child_node ) ) {
+					$el['children'][] = $child_node;
+				}
+			}
+			// Strip flat-format metadata.
+			unset( $el['id'], $el['parent'] );
+			return $el;
+		};
+
+		$tree = [];
+		foreach ( $roots as $root_id ) {
+			$node = $build( $root_id );
+			if ( ! empty( $node ) ) {
+				$tree[] = $node;
+			}
+		}
 
 		return $tree;
 	}

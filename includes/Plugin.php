@@ -94,11 +94,31 @@ final class Plugin {
 	 */
 	private function init(): void {
 		// Run migrations only when plugin version changes.
+		// Previously the version was written unconditionally AFTER migrations; if a
+		// migration threw an uncaught Throwable the version bump happened anyway,
+		// leaving the plugin in a permanently-skipped half-migrated state on the
+		// next page load. Now each migration step is wrapped in try/catch, and the
+		// version is only bumped when ALL steps succeed.
 		$stored_version = get_option( 'bricks_mcp_db_version', '' );
 		if ( $stored_version !== BRICKS_MCP_VERSION ) {
-			$this->migrate_settings();
-			MCP\Services\DesignPatternService::migrate_plugin_patterns();
-			update_option( 'bricks_mcp_db_version', BRICKS_MCP_VERSION, true );
+			$migration_ok = true;
+			try {
+				$this->migrate_settings();
+			} catch ( \Throwable $e ) {
+				$migration_ok = false;
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'BricksMCP migrate_settings failed: ' . $e->getMessage() );
+			}
+			try {
+				MCP\Services\DesignPatternService::migrate_plugin_patterns();
+			} catch ( \Throwable $e ) {
+				$migration_ok = false;
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'BricksMCP migrate_plugin_patterns failed: ' . $e->getMessage() );
+			}
+			if ( $migration_ok ) {
+				update_option( 'bricks_mcp_db_version', BRICKS_MCP_VERSION, true );
+			}
 		}
 
 		// Initialize internationalization.
