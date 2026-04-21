@@ -414,6 +414,59 @@ final class PatternValidator {
     }
 
     /**
+     * Walk a pattern tree and collect every class name referenced in class_refs arrays.
+     *
+     * @param array<string, mixed> $node Pattern tree.
+     * @return array<int, string> Unique class names (unsorted).
+     */
+    public function collect_class_refs( array $node ): array {
+        $names = [];
+        $this->walk_collect_classes( $node, $names );
+        return array_values( array_unique( $names ) );
+    }
+
+    private function walk_collect_classes( array $node, array &$names ): void {
+        if ( isset( $node['class_refs'] ) && is_array( $node['class_refs'] ) ) {
+            foreach ( $node['class_refs'] as $name ) {
+                if ( is_string( $name ) && $name !== '' ) {
+                    $names[] = $name;
+                }
+            }
+        }
+        foreach ( $node as $value ) {
+            if ( is_array( $value ) ) {
+                $this->walk_collect_classes( $value, $names );
+            }
+        }
+    }
+
+    /**
+     * Walk a pattern tree and collect every --variable referenced in any string value.
+     *
+     * @param array<string, mixed> $node Pattern tree.
+     * @return array<int, string> Unique variable names (unsorted, including leading --).
+     */
+    public function collect_variable_refs( array $node ): array {
+        $names = [];
+        $this->walk_collect_vars( $node, $names );
+        return array_values( array_unique( $names ) );
+    }
+
+    private function walk_collect_vars( array $node, array &$names ): void {
+        foreach ( $node as $value ) {
+            if ( is_string( $value ) ) {
+                if ( preg_match_all( '/var\(\s*(--[a-z0-9-]+)\s*\)/i', $value, $matches ) ) {
+                    foreach ( $matches[1] as $name ) {
+                        $names[] = $name;
+                    }
+                }
+            } elseif ( is_array( $value ) ) {
+                $this->walk_collect_vars( $value, $names );
+            }
+        }
+    }
+
+    /**
      * Validate and transform a pattern input through the full pipeline.
      *
      * @param array<string, mixed> $input Raw pattern input.
