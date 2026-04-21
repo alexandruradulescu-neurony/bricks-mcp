@@ -100,6 +100,17 @@ class BricksCore {
 	public const ADMIN_NONCE_ACTION = 'bricks_mcp_settings_nonce';
 
 	/**
+	 * Keys inside the OPTION_SETTINGS array.
+	 *
+	 * Previously duplicated as string literals across Activator
+	 * (defaults), Settings (admin form + readers), and Server
+	 * (permission check). Centralized so the producer and every
+	 * consumer reference the same symbol.
+	 */
+	public const SETTING_ENABLED      = 'enabled';
+	public const SETTING_REQUIRE_AUTH = 'require_auth';
+
+	/**
 	 * Maximum items per batch across bulk operations (element:bulk_add, bulk_update,
 	 * bricks:get_element_schemas batch, class batch_create/batch_delete).
 	 * Centralized to prevent drift between validator caps and handler caps.
