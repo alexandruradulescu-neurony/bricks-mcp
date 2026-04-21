@@ -25,6 +25,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class MetaBoxHandler {
 
 	/**
+	 * Dynamic-tag prefix used by the MetaBox-Bricks integration.
+	 * Centralized so tag generation stays consistent across list/detail/usage renderers.
+	 */
+	private const DYNAMIC_TAG_PREFIX = 'mb_';
+
+	/**
+	 * Build a MetaBox dynamic tag for a given field ID.
+	 *
+	 * @param string $field_id Field ID.
+	 * @return string Dynamic tag (e.g. "{mb_contact_email}").
+	 */
+	private static function mb_tag( string $field_id ): string {
+		return '{' . self::DYNAMIC_TAG_PREFIX . $field_id . '}';
+	}
+
+	/**
 	 * Handle MetaBox tool actions.
 	 *
 	 * @param array<string, mixed> $args Tool arguments including 'action'.
@@ -86,6 +102,10 @@ final class MetaBoxHandler {
 				continue;
 			}
 			foreach ( $meta_box->fields as $field ) {
+				// MetaBox can deliver fields as stdClass in some edge cases (custom hooks).
+				if ( ! is_array( $field ) ) {
+					continue;
+				}
 				$field_info = array(
 					'id'   => $field['id'] ?? '',
 					'name' => $field['name'] ?? '',
@@ -146,12 +166,15 @@ final class MetaBoxHandler {
 				continue;
 			}
 			foreach ( $meta_box->fields as $field ) {
+				if ( ! is_array( $field ) ) {
+					continue;
+				}
 				$fields[] = array(
 					'id'          => $field['id'] ?? '',
 					'name'        => $field['name'] ?? '',
 					'type'        => $field['type'] ?? '',
 					'group'       => $meta_box->title,
-					'dynamic_tag' => '{mb_' . ( $field['id'] ?? '' ) . '}',
+					'dynamic_tag' => self::mb_tag( (string) ( $field['id'] ?? '' ) ),
 				);
 			}
 		}
@@ -233,23 +256,27 @@ final class MetaBoxHandler {
 				continue;
 			}
 			foreach ( $meta_box->fields as $field ) {
-				$fid  = $field['id'] ?? '';
+				if ( ! is_array( $field ) ) {
+					continue;
+				}
+				$fid  = (string) ( $field['id'] ?? '' );
 				$type = $field['type'] ?? 'text';
+				$tag  = self::mb_tag( $fid );
 
 				$tag_info = array(
 					'field_id'    => $fid,
 					'field_name'  => $field['name'] ?? '',
 					'field_type'  => $type,
-					'dynamic_tag' => '{mb_' . $fid . '}',
+					'dynamic_tag' => $tag,
 				);
 
 				// Add usage hints based on field type.
 				if ( in_array( $type, array( 'image', 'image_advanced', 'image_upload', 'single_image', 'file', 'file_advanced', 'file_upload' ), true ) ) {
-					$tag_info['usage'] = 'Use in image element: {"useDynamicData": "{mb_' . $fid . '}"}';
+					$tag_info['usage'] = 'Use in image element: {"useDynamicData": "' . $tag . '"}';
 				} elseif ( in_array( $type, array( 'url', 'post', 'taxonomy' ), true ) ) {
-					$tag_info['usage'] = 'Use in link: {"type": "dynamic", "dynamicData": "{mb_' . $fid . '}"}';
+					$tag_info['usage'] = 'Use in link: {"type": "dynamic", "dynamicData": "' . $tag . '"}';
 				} else {
-					$tag_info['usage'] = 'Use in text elements: {mb_' . $fid . '}';
+					$tag_info['usage'] = 'Use in text elements: ' . $tag;
 				}
 
 				$tags[] = $tag_info;

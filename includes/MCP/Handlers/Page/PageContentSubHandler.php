@@ -94,11 +94,18 @@ final class PageContentSubHandler {
 		$elements = $this->bricks_service->normalize_elements( $args['elements'] );
 
 		// Element count safety check.
-		$current_elements = get_post_meta( $post_id, BricksCore::META_KEY, true );
+		// Use the service resolver so header/footer template writes see the correct
+		// current count. Previously BricksCore::META_KEY hardcoded the page key.
+		$meta_key         = $this->bricks_service->resolve_elements_meta_key( $post_id );
+		$current_elements = get_post_meta( $post_id, $meta_key, true );
 		$old_count        = is_array( $current_elements ) ? count( $current_elements ) : 0;
 		$new_count        = count( $elements );
 
-		if ( $old_count > 0 && $new_count < (int) ( $old_count * 0.5 ) && empty( $args['confirm'] ) ) {
+		// Integer-math comparison avoids floating-point rounding errors on odd counts.
+		// Previously `$new_count < (int)($old_count * 0.5)` with $old_count=5 gave
+		// (int)(2.5)=2, so reducing 5→2 (60% reduction) was below the "50%" threshold
+		// and bypassed confirm. Use doubled new_count against old_count instead.
+		if ( $old_count > 0 && ( $new_count * 2 ) < $old_count && empty( $args['confirm'] ) ) {
 			$reduction_pct = (int) round( ( 1 - ( $new_count / $old_count ) ) * 100 );
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',

@@ -658,7 +658,11 @@ final class PageReadSubHandler {
 		$has_bricks = $this->bricks_service->is_bricks_page( $post->ID );
 
 		// Read raw meta directly to avoid full BricksService deserialization per post (N+1).
-		$raw_elements  = get_post_meta( $post->ID, BricksService::META_KEY, true );
+		// Use the service resolver so template posts with bricks_template types (header,
+		// footer, archive, single, popup) read from their dedicated meta key, not the
+		// default page-content key. Without this, element_count was always 0 for templates.
+		$meta_key      = $this->bricks_service->resolve_elements_meta_key( $post->ID );
+		$raw_elements  = get_post_meta( $post->ID, $meta_key, true );
 		$element_count = is_array( $raw_elements ) ? count( $raw_elements ) : 0;
 
 		return array(

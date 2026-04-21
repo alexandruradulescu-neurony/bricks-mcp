@@ -4,6 +4,41 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.25.3] — 2026-04-21
+
+### Phase 7 of repair roadmap: remaining HIGH items (continued)
+
+#### Correctness fixes
+
+- **Meta-key resolver bypass (3 handlers).** `PageCrudSubHandler::delete`, `PageReadSubHandler::format_post_for_list`, and `PageContentSubHandler::update_content` used `BricksService::META_KEY` directly, which is the page-content meta key. For `bricks_template` posts (headers, footers, popups, archives, etc.), the element count and reduction checks read from the wrong key. Element counts in list views always showed 0 for templates. Write-safety threshold used wrong "current" count. **Fix:** added `BricksService::resolve_elements_meta_key( int $post_id ): string` as a public passthrough to `BricksCore::resolve_elements_meta_key`, and updated all three handlers to use it.
+- **PageContentSubHandler element reduction threshold.** Previously `$new_count < (int) ( $old_count * 0.5 )` — on odd `$old_count`, rounding produced wrong results. Example: `old=5, new=2` gives `2 < (int)(2.5) = 2 < 2 = false`, so a 60% reduction bypassed the confirm prompt. **Fix:** `$new_count * 2 < $old_count` — integer math, correct for all inputs.
+
+#### MetaBoxHandler hardening
+
+- `DYNAMIC_TAG_PREFIX = 'mb_'` constant + `mb_tag( string $field_id ): string` helper. Replaced 6 sites that constructed `'{mb_' . $fid . '}'` inline.
+- `is_array()` guards added on `$meta_box->fields` iteration. MetaBox can deliver field definitions as stdClass in edge cases (custom hooks, third-party extensions), which previously crashed subscript access.
+
+#### ElementHandler constants extraction
+
+- `KNOWN_CONDITION_KEYS` — the 31 known Bricks condition keys (post, user, date, request, WooCommerce) now live as a named class constant with source link and category grouping.
+- `VALID_CONDITION_COMPARE` — 10 compare operators (`==`, `!=`, `contains`, etc.) as named constant.
+
+#### BricksToolHandler + SchemaHandler + MediaHandler + ComponentHandler refactor
+
+- `BricksToolHandler::KNOWLEDGE_FETCH_TTL = 2 * HOUR_IN_SECONDS` — replaces inline literal.
+- `SchemaHandler::MAX_ELEMENT_SCHEMAS_PER_BATCH = 20` — replaces inline `> 20` check. Error message now interpolates constant.
+- `SchemaHandler::tool_get_dynamic_tags` — queryEditor/useQueryEditor stripping uses `in_array()` exact match, not `stripos()` substring. Previously blocked legitimate third-party tags containing those substrings. Also adds `is_array( $tag )` guard.
+- `MediaHandler::SMART_SEARCH_DEFAULT_PER_PAGE = 5`, `SMART_SEARCH_MAX_PER_PAGE = 30`, `MEDIA_LIBRARY_DEFAULT_PER_PAGE = 20` — replaces 3 magic numbers.
+- `ComponentHandler` ID-collision retry count (50) now annotated with probability math explaining the value.
+
+#### TemplateHandler
+
+- `> 50 / array_slice(-50)` trash cap → `BricksCore::BATCH_SIZE`. Single source of truth.
+
+### Risk
+
+LOW–MEDIUM. Meta-key resolver fix changes behavior for template post types (element counts will now be correct). No change for page posts.
+
 ## [3.25.2] — 2026-04-21
 
 ### Phase 6 of repair roadmap: remaining HIGH items

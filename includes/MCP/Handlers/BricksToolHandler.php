@@ -29,6 +29,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class BricksToolHandler {
 
 	/**
+	 * TTL for the knowledge-fetch tracking transient (per-user, per-domain).
+	 * Two hours balances "AI session scope" with "don't hammer storage".
+	 */
+	private const KNOWLEDGE_FETCH_TTL = 2 * HOUR_IN_SECONDS;
+
+	/**
 	 * @var BricksService
 	 */
 	private BricksService $bricks_service;
@@ -170,7 +176,7 @@ final class BricksToolHandler {
 			$fetched = [];
 		}
 		$fetched[ $domain ] = true;
-		set_transient( $key, $fetched, 2 * HOUR_IN_SECONDS );
+		set_transient( $key, $fetched, self::KNOWLEDGE_FETCH_TTL );
 	}
 
 	/**

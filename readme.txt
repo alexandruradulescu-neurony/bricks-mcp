@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.25.2
+Stable tag: 3.25.3
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,17 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.25.3 =
+* Fix: Meta-key resolver bypass in three page sub-handlers. `PageCrudSubHandler::delete`, `PageReadSubHandler::format_post_for_list`, and `PageContentSubHandler::update_content` used the hardcoded page-content meta key directly — for `bricks_template` posts (headers, footers, popups, etc.) this meant element counts read from the wrong key. Now use `BricksService::resolve_elements_meta_key()` (new public passthrough to BricksCore resolver).
+* Fix: `PageContentSubHandler` element reduction threshold uses integer math (`new_count * 2 < old_count`) instead of floating-point (`new_count < (int)($old_count * 0.5)`). Previously a 5→2 reduction (60%) bypassed the confirm prompt because `(int)(5 * 0.5) = 2`.
+* Refactor: `MetaBoxHandler` adds `DYNAMIC_TAG_PREFIX` constant + `mb_tag()` helper. Replaced 6 `'{mb_' . $fid . '}'` literal concatenations. Also adds `is_array()` guards on `$meta_box->fields` iteration (MetaBox can deliver stdClass in edge cases).
+* Refactor: `ElementHandler` extracts 31 condition keys + 10 compare operators into class constants (`KNOWN_CONDITION_KEYS`, `VALID_CONDITION_COMPARE`).
+* Refactor: `BricksToolHandler` extracts knowledge-fetch TTL into `KNOWLEDGE_FETCH_TTL` constant.
+* Refactor: `SchemaHandler` extracts 20-element batch limit into `MAX_ELEMENT_SCHEMAS_PER_BATCH` constant. Fix: `tool_get_dynamic_tags` uses exact tag-name match for queryEditor/useQueryEditor stripping instead of substring `stripos`, preventing false-positive blocking of third-party tags.
+* Refactor: `ComponentHandler` documents the 50-retry ID-collision constant with probability math.
+* Refactor: `MediaHandler` extracts smart_search 30/5 and media_library 20 magic numbers into named constants.
+* Refactor: `TemplateHandler` replaces `> 50` / `array_slice(-50)` with `BricksCore::BATCH_SIZE`.
 
 = 3.25.2 =
 * Refactor: 4 new `BricksCore` constants for Bricks core option/meta keys: `OPTION_COMPONENTS`, `OPTION_GLOBAL_QUERIES`, `META_TEMPLATE_TYPE`, `META_TEMPLATE_SETTINGS`. Replaced ~20 literal usages across `BricksToolHandler` (5×), `ComponentHandler`, `TemplateHandler` (7×), `WooCommerceHandler` (3×), `SettingsService` (6×), `TemplateService` (13×).

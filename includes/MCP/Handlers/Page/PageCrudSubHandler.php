@@ -149,7 +149,10 @@ final class PageCrudSubHandler {
 
 		// Confirm check.
 		if ( empty( $args['confirm'] ) ) {
-			$raw_elements  = get_post_meta( $post_id, BricksService::META_KEY, true );
+			// Resolve meta key via the service so template-type posts (headers/footers)
+			// read from the correct key, not the default page-content key.
+			$meta_key      = $this->bricks_service->resolve_elements_meta_key( $post_id );
+			$raw_elements  = get_post_meta( $post_id, $meta_key, true );
 			$element_count = is_array( $raw_elements ) ? count( $raw_elements ) : 0;
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',

@@ -33,6 +33,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class SchemaHandler {
 
 	/**
+	 * Maximum number of element types per batch `get_element_schemas` request.
+	 * Keeps response sizes bounded; larger batches should use the no-filter full catalog.
+	 */
+	private const MAX_ELEMENT_SCHEMAS_PER_BATCH = 20;
+
+	/**
 	 * Schema generator instance.
 	 *
 	 * @var SchemaGenerator
@@ -162,8 +168,15 @@ final class SchemaHandler {
 				: array_map( 'trim', explode( ',', $elements_param ) );
 			$element_names = array_filter( array_map( 'sanitize_text_field', $element_names ) );
 
-			if ( count( $element_names ) > 20 ) {
-				return new \WP_Error( 'too_many_elements', 'Maximum 20 elements per batch request. Use get_element_schemas without filters for the full catalog.' );
+			if ( count( $element_names ) > self::MAX_ELEMENT_SCHEMAS_PER_BATCH ) {
+				return new \WP_Error(
+					'too_many_elements',
+					sprintf(
+						/* translators: %d: Max batch size */
+						__( 'Maximum %d elements per batch request. Use get_element_schemas without filters for the full catalog.', 'bricks-mcp' ),
+						self::MAX_ELEMENT_SCHEMAS_PER_BATCH
+					)
+				);
 			}
 
 			$schemas = [];
@@ -251,10 +264,16 @@ final class SchemaHandler {
 		$total_count = 0;
 
 		foreach ( $all_tags as $tag ) {
-			$name = $tag['name'] ?? '';
+			if ( ! is_array( $tag ) ) {
+				continue;
+			}
+			$name = (string) ( $tag['name'] ?? '' );
 
-			// Security: strip any tags related to query editor PHP execution.
-			if ( stripos( $name, 'queryEditor' ) !== false || stripos( $name, 'useQueryEditor' ) !== false ) {
+			// Security: strip Bricks-core query-editor PHP-execution tags.
+			// Use exact match on known tag names instead of substring containment — previous
+			// stripos() would also block legitimate third-party tags that happened to have
+			// "queryEditor" anywhere in their identifier.
+			if ( in_array( $name, [ 'queryEditor', 'useQueryEditor' ], true ) ) {
 				continue;
 			}
 

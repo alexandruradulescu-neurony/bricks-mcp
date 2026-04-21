@@ -720,8 +720,8 @@ final class TemplateHandler {
 				'count'      => $term->count,
 				'deleted_at' => current_time( 'mysql' ),
 			);
-			if ( count( $trash ) > 50 ) {
-				$trash = array_slice( $trash, -50 );
+			if ( count( $trash ) > BricksCore::BATCH_SIZE ) {
+				$trash = array_slice( $trash, -BricksCore::BATCH_SIZE );
 			}
 			update_option( 'bricks_mcp_term_trash', $trash, false );
 		}
@@ -779,8 +779,8 @@ final class TemplateHandler {
 				'count'      => $term->count,
 				'deleted_at' => current_time( 'mysql' ),
 			);
-			if ( count( $trash ) > 50 ) {
-				$trash = array_slice( $trash, -50 );
+			if ( count( $trash ) > BricksCore::BATCH_SIZE ) {
+				$trash = array_slice( $trash, -BricksCore::BATCH_SIZE );
 			}
 			update_option( 'bricks_mcp_term_trash', $trash, false );
 		}

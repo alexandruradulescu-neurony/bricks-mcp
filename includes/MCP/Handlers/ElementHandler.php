@@ -26,6 +26,36 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class ElementHandler {
 
 	/**
+	 * Known condition keys from Bricks core conditions.php.
+	 * Source: https://github.com/bricksbuilder/bricks/blob/main/includes/conditions.php
+	 * Third-party plugins may register additional keys — unknown keys produce a warning, not an error.
+	 */
+	private const KNOWN_CONDITION_KEYS = [
+		// WordPress post keys.
+		'post_id', 'post_title', 'post_parent', 'post_status', 'post_author', 'post_date', 'featured_image',
+		// User keys.
+		'user_logged_in', 'user_id', 'user_registered', 'user_role',
+		// Date/time keys.
+		'weekday', 'date', 'time', 'datetime',
+		// Request / environment keys.
+		'dynamic_data', 'browser', 'operating_system', 'current_url', 'referer',
+		// WooCommerce product keys.
+		'woo_product_type', 'woo_product_sale', 'woo_product_new', 'woo_product_stock_status',
+		'woo_product_stock_quantity', 'woo_product_stock_management', 'woo_product_sold_individually',
+		'woo_product_purchased_by_user', 'woo_product_featured', 'woo_product_rating',
+		'woo_product_category', 'woo_product_tag',
+	];
+
+	/**
+	 * Valid condition compare operators, per Bricks core.
+	 */
+	private const VALID_CONDITION_COMPARE = [
+		'==', '!=', '>=', '<=', '>', '<',
+		'contains', 'contains_not',
+		'empty', 'empty_not',
+	];
+
+	/**
 	 * Bricks service instance.
 	 *
 	 * @var BricksService
@@ -494,19 +524,8 @@ final class ElementHandler {
 
 		$warnings = array();
 
-		// Known condition keys from Bricks conditions.php.
-		$known_keys = array(
-			'post_id', 'post_title', 'post_parent', 'post_status', 'post_author', 'post_date', 'featured_image',
-			'user_logged_in', 'user_id', 'user_registered', 'user_role',
-			'weekday', 'date', 'time', 'datetime',
-			'dynamic_data', 'browser', 'operating_system', 'current_url', 'referer',
-			'woo_product_type', 'woo_product_sale', 'woo_product_new', 'woo_product_stock_status',
-			'woo_product_stock_quantity', 'woo_product_stock_management', 'woo_product_sold_individually',
-			'woo_product_purchased_by_user', 'woo_product_featured', 'woo_product_rating',
-			'woo_product_category', 'woo_product_tag',
-		);
-
-		$valid_compare = array( '==', '!=', '>=', '<=', '>', '<', 'contains', 'contains_not', 'empty', 'empty_not' );
+		$known_keys    = self::KNOWN_CONDITION_KEYS;
+		$valid_compare = self::VALID_CONDITION_COMPARE;
 
 		// Validate condition structure: must be array of arrays of condition objects.
 		foreach ( $conditions as $set_index => $condition_set ) {

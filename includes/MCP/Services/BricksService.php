@@ -195,6 +195,20 @@ class BricksService {
 	}
 
 	/**
+	 * Resolve the correct elements meta key for a post.
+	 *
+	 * Wraps BricksCore::resolve_elements_meta_key for handlers that need raw
+	 * get_post_meta for performance (e.g. list views where full deserialization
+	 * would cause N+1) but still want correct template-header/footer key routing.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return string Meta key.
+	 */
+	public function resolve_elements_meta_key( int $post_id ): string {
+		return $this->core->resolve_elements_meta_key( $post_id );
+	}
+
+	/**
 	 * Save Bricks elements for a post.
 	 *
 	 * @param int                              $post_id  The post ID.

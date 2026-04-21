@@ -26,6 +26,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class MediaHandler {
 
 	/**
+	 * Default page size for smart_search when caller supplies none.
+	 */
+	private const SMART_SEARCH_DEFAULT_PER_PAGE = 5;
+
+	/**
+	 * Hard cap on smart_search per_page. Prevents expensive Unsplash/WP queries.
+	 */
+	private const SMART_SEARCH_MAX_PER_PAGE = 30;
+
+	/**
+	 * Default page size for get_media_library when caller supplies none.
+	 */
+	private const MEDIA_LIBRARY_DEFAULT_PER_PAGE = 20;
+
+	/**
 	 * @var MediaService
 	 */
 	private MediaService $media_service;
@@ -136,7 +151,7 @@ final class MediaHandler {
 		$search    = isset( $args['search'] ) && is_string( $args['search'] ) ? $args['search'] : '';
 		$mime_type = isset( $args['mime_type'] ) && is_string( $args['mime_type'] ) ? $args['mime_type'] : 'image';
 		// Accept integer OR integer-string (HTTP-transport-decoded JSON sometimes lands as string).
-		$per_page  = isset( $args['per_page'] ) && is_numeric( $args['per_page'] ) ? max( 1, (int) $args['per_page'] ) : 20;
+		$per_page  = isset( $args['per_page'] ) && is_numeric( $args['per_page'] ) ? max( 1, (int) $args['per_page'] ) : self::MEDIA_LIBRARY_DEFAULT_PER_PAGE;
 		$page      = isset( $args['page'] ) && is_numeric( $args['page'] ) ? max( 1, (int) $args['page'] ) : 1;
 
 		return $this->media_service->get_media_library_items( $search, $mime_type, $per_page, $page );
@@ -352,7 +367,9 @@ final class MediaHandler {
 			);
 		}
 
-		$per_page = isset( $args['per_page'] ) ? min( (int) $args['per_page'], 30 ) : 5;
+		$per_page = isset( $args['per_page'] )
+			? min( (int) $args['per_page'], self::SMART_SEARCH_MAX_PER_PAGE )
+			: self::SMART_SEARCH_DEFAULT_PER_PAGE;
 
 		return $this->media_service->smart_search(
 			sanitize_text_field( $args['query'] ),
