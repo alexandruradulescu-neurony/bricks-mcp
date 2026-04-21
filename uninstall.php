@@ -22,20 +22,25 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
  * @return void
  */
 function bricks_mcp_delete_options(): void {
+	// NOTE: These literals must stay in sync with the BricksCore::OPTION_* class
+	// constants. The uninstall handler runs in a bare WordPress context where the
+	// plugin autoloader is not available, so referencing BricksCore::OPTION_* here
+	// would produce a fatal on uninstall. When you add a new OPTION_* constant to
+	// BricksCore, mirror the literal value here by hand — there is no other path.
 	$options = [
-		'bricks_mcp_settings',
-		'bricks_mcp_version',
-		'bricks_mcp_activated_at',
-		'bricks_mcp_custom_patterns',
-		'bricks_mcp_hidden_patterns',
-		'bricks_mcp_pattern_categories',
-		'bricks_mcp_patterns_migrated',
-		'bricks_mcp_briefs',
-		'bricks_mcp_notes',
-		'bricks_mcp_design_system_config',
-		'bricks_mcp_ds_last_applied',
-		'bricks_mcp_structured_brief',
-		'bricks_mcp_db_version',
+		'bricks_mcp_settings',              // BricksCore::OPTION_SETTINGS
+		'bricks_mcp_version',               // BricksCore::OPTION_VERSION
+		'bricks_mcp_activated_at',          // BricksCore::OPTION_ACTIVATED_AT
+		'bricks_mcp_custom_patterns',       // BricksCore::OPTION_CUSTOM_PATTERNS
+		'bricks_mcp_hidden_patterns',       // BricksCore::OPTION_HIDDEN_PATTERNS
+		'bricks_mcp_pattern_categories',    // BricksCore::OPTION_PATTERN_CATEGORIES
+		'bricks_mcp_patterns_migrated',     // BricksCore::OPTION_PATTERNS_MIGRATED
+		'bricks_mcp_briefs',                // BricksCore::OPTION_BRIEFS
+		'bricks_mcp_notes',                 // BricksCore::OPTION_NOTES
+		'bricks_mcp_design_system_config',  // BricksCore::OPTION_DESIGN_SYSTEM_CONFIG
+		'bricks_mcp_ds_last_applied',       // BricksCore::OPTION_DS_LAST_APPLIED
+		'bricks_mcp_structured_brief',      // BricksCore::OPTION_STRUCTURED_BRIEF
+		'bricks_mcp_db_version',            // BricksCore::OPTION_DB_VERSION
 	];
 
 	foreach ( $options as $option ) {
