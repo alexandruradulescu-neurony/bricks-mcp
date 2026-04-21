@@ -29,6 +29,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class WooCommerceHandler {
 
 	/**
+	 * Canonical list of WooCommerce template types accepted by scaffold_template
+	 * and scaffold_store. Keep in sync with the schema enum at the bottom of
+	 * register() — both sites should stay in lockstep to avoid client-side drift.
+	 */
+	private const WC_TEMPLATE_TYPES = [
+		'wc_product',
+		'wc_archive',
+		'wc_cart',
+		'wc_cart_empty',
+		'wc_checkout',
+		'wc_account_form',
+		'wc_account_page',
+		'wc_thankyou',
+	];
+
+	/**
 	 * Bricks service instance.
 	 *
 	 * @var BricksService
@@ -1063,25 +1079,26 @@ final class WooCommerceHandler {
 	 */
 	private function tool_woocommerce_scaffold_template( array $args ): array|\WP_Error {
 		$template_type = $args['template_type'] ?? '';
-		$valid_types   = array( 'wc_product', 'wc_archive', 'wc_cart', 'wc_cart_empty', 'wc_checkout', 'wc_account_form', 'wc_account_page', 'wc_thankyou' );
 
 		if ( '' === $template_type ) {
 			return new \WP_Error(
 				'missing_template_type',
 				sprintf(
+					/* translators: %s: Comma-separated list of valid WooCommerce template types */
 					__( 'template_type is required. Valid types: %s', 'bricks-mcp' ),
-					implode( ', ', $valid_types )
+					implode( ', ', self::WC_TEMPLATE_TYPES )
 				)
 			);
 		}
 
-		if ( ! in_array( $template_type, $valid_types, true ) ) {
+		if ( ! in_array( $template_type, self::WC_TEMPLATE_TYPES, true ) ) {
 			return new \WP_Error(
 				'invalid_template_type',
 				sprintf(
-					__( 'Invalid template_type "%s". Valid types: %s', 'bricks-mcp' ),
+					/* translators: 1: Invalid template type, 2: Comma-separated list of valid types */
+					__( 'Invalid template_type "%1$s". Valid types: %2$s', 'bricks-mcp' ),
 					$template_type,
-					implode( ', ', $valid_types )
+					implode( ', ', self::WC_TEMPLATE_TYPES )
 				)
 			);
 		}
@@ -1192,19 +1209,19 @@ final class WooCommerceHandler {
 	 * @return array<string, mixed>|\WP_Error Summary of created/skipped templates.
 	 */
 	private function tool_woocommerce_scaffold_store( array $args ): array|\WP_Error {
-		$all_types     = array( 'wc_product', 'wc_archive', 'wc_cart', 'wc_cart_empty', 'wc_checkout', 'wc_account_form', 'wc_account_page', 'wc_thankyou' );
-		$types         = $args['types'] ?? $all_types;
+		$types         = $args['types'] ?? self::WC_TEMPLATE_TYPES;
 		$skip_existing = $args['skip_existing'] ?? true;
 
 		// Validate types.
 		foreach ( $types as $type ) {
-			if ( ! in_array( $type, $all_types, true ) ) {
+			if ( ! in_array( $type, self::WC_TEMPLATE_TYPES, true ) ) {
 				return new \WP_Error(
 					'invalid_template_type',
 					sprintf(
-						__( 'Invalid template type "%s" in types array. Valid types: %s', 'bricks-mcp' ),
+						/* translators: 1: Invalid template type, 2: Comma-separated list of valid types */
+						__( 'Invalid template type "%1$s" in types array. Valid types: %2$s', 'bricks-mcp' ),
 						$type,
-						implode( ', ', $all_types )
+						implode( ', ', self::WC_TEMPLATE_TYPES )
 					)
 				);
 			}
@@ -1307,7 +1324,7 @@ final class WooCommerceHandler {
 					),
 					'template_type' => array(
 						'type'        => 'string',
-						'enum'        => array( 'wc_product', 'wc_archive', 'wc_cart', 'wc_cart_empty', 'wc_checkout', 'wc_account_form', 'wc_account_page', 'wc_thankyou' ),
+						'enum'        => self::WC_TEMPLATE_TYPES,
 						'description' => __( 'WooCommerce template type (scaffold_template: required)', 'bricks-mcp' ),
 					),
 					'title'         => array(
