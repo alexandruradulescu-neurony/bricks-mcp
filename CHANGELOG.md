@@ -4,6 +4,102 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.26.0] — 2026-04-21
+
+### Phase 12: Consolidated MEDIUM/LOW/NIT sweep across all 4 layers
+
+57 commits from parallel agent sweep (Core, Admin, Handlers, Services). All PHP files pass `php -l`. Zero behavior change on valid input.
+
+#### Defensive guards
+
+`is_array` / `is_iterable` added across:
+- `MetaBoxHandler` — registry iteration, field loops, tag renderer
+- `ComponentHandler` — list paths, foreach inside array_filter
+- `VerifyHandler` — sections filter, content-sample extraction
+- `PageReadSubHandler` — BFS in `collect_subtree`
+- `TemplateHandler` — settings meta before `format_conditions`
+- `Router` — prerequisite transient reads, input guards
+- `StreamableHttpHandler` — keepalive + body-size bounds
+- `Server` — `is_string` guard on parsed path, idempotent `init()`
+- `ProposalService` — brief reads + `preg_split` fallback
+- `DesignPatternHandler` — array_filter lambdas
+- `Updates\UpdateChecker` — asset-loop guards, version guard
+- `BricksCore::resolve_elements_meta_key` — uses new header/footer helpers
+
+#### Constants extracted (~20 sites)
+
+`ProposalService::TRANSIENT_PREFIX`; `Plugin::LEGACY_SETTING_KEYS`;
+`ElementSettingsGenerator::NON_STRUCTURAL_ELEMENT_TYPES`, `CSS_WARN_EXCERPT_LEN`;
+`SchemaGenerator::MAX_CONTROLS_PER_ELEMENT`, `SIMILAR_NAME_THRESHOLD`;
+`WordPressHandler::GENERATED_PASSWORD_LENGTH`;
+`Activator` activation-check TTL + transient key;
+`PageOperationsService::MAX_TREE_DEPTH` + snapshot constants;
+`GlobalClassService::BP_DIFF_TOLERANCE`;
+`TemplateService::MAX_IMPORT_BODY_BYTES`;
+`MediaService::UNSPLASH_META_KEY`, `MAX_DOWNLOAD_BYTES`;
+`RateLimiter::SETTING_KEY_RPM`;
+`VerifyHandler::CONTENT_SAMPLE_*_LIMIT` (3);
+`DesignSchemaValidator::GRID_RESPONSIVE_COL_THRESHOLD`;
+`DesignSystemAdmin::DEFAULT_BLACK`, `DEFAULT_WHITE`, `DEFAULT_PX_FALLBACK`, `GAP_PREVIEW_MIN/MAX`;
+`Settings::RATE_LIMIT_RPM_*`, `CONNECTION_PROBE_TIMEOUT`;
+Admin Checks `HTTP_TIMEOUT_SECONDS`.
+
+#### i18n hardening
+
+Translator comments + numbered placeholders added across 11 files:
+`ElementHandler`, `TemplateHandler`, `BuildHandler`, `MediaHandler`,
+`PageCrudSubHandler`, `PageContentSubHandler`, `PageReadSubHandler`,
+`BricksToolHandler`, `DesignSystemHandler`, `GlobalClassHandler`,
+`Admin/Checks/DesignPipelineCheck`. `DiagnosticRunner` summary strings
+now wrap in `__()` + `_n()` so translators can reach them.
+
+#### Correctness fixes
+
+- `uninstall.php` uses `$wpdb->usermeta` for multisite correctness (previously could miss sites on subdomain setups)
+- Deterministic border-style collapse in `normalize_bricks_styles` (was insertion-order-dependent via `reset()`)
+- `Plugin` + `Activator` throw on clone
+- `OPTION_SETTINGS` writes use explicit `autoload=true` — two writers previously disagreed, flipping the option out of autoload cache and hammering DB
+- `Server::init` is idempotent — no stacked filter/action registrations on re-entry
+- `StreamableHttpHandler` body-size bounds: `MAX_BODY_FLOOR = 1024`, `MAX_BODY_HARD_LIMIT = 10MB` — filter can't DoS with a tiny cap or exceed the hard ceiling
+- `StreamableHttpHandler` keepalive bounds `KEEPALIVE_MIN/MAX_SECONDS = 5/55` named
+- `Response::add_server_header` DRYs the `X-MCP-Server` header
+- `ElementIdGenerator::id_regex()` centralizer — other services share one regex
+- `SchemaGenerator` logs malformed registry context instead of silent empty fallback
+- `ConditionSchemaCatalog` uses `sprintf` for backslash-escaped quotes in description (readability)
+- `Reference\*Catalog::FILTER_HOOK` constants — each catalog exposes its filter name
+
+#### Safety + flow control
+
+- `DiagnosticsAdmin` + 5 admin AJAX handlers add missing `return` after `wp_send_json_error` (filtered-`wp_die` defense)
+- `DiagnosticRunner::run()` wraps `$check->run()` in `try/catch ( \Throwable )` — third-party broken check can no longer silently swallow its own exception
+- `DesignSystemHandler` sanitizes `style_id` at handler boundary (was relied on downstream)
+- `GlobalClassHandler` `esc_html` on user-controlled error-message interpolation
+- `DesignPatternHandler` array_filter lambdas guard `is_array($p)` (stdClass from third-party filters)
+- `ProposalService` hardens brief reads + `preg_split` `false`-return fallback (PHP 8.2 warning on foreach(false))
+- `TemplateHandler` guards template settings meta as array before `format_conditions`
+- `PageReadSubHandler` guards `children` array during BFS in `collect_subtree`
+- `MediaHandler` dedupes duplicate `wp_get_attachment_url` call in set_featured response
+- `Settings` note ID entropy bumped from `random_bytes(4)` (8 hex chars, 32 bits) to `random_bytes(8)` (16 hex chars, 64 bits)
+- `BricksToolHandler` translator comment on `knowledge_not_found`
+- `uninstall.php` uses correct $wpdb table reference
+
+#### Documentation fixes
+
+- `OnboardingHandler` return type annotations corrected to match actual shape
+- `BuildHandler` orphan register docblock removed, `@var` added for `$proposal_service`
+- `NotesService` uses `BricksCore::OPTION_NOTES` instead of literal
+- `WooCommerceHandler` whitespace normalized around action dispatch
+- `SchemaSkeletonGenerator` dead legacy-generation comment block removed
+- Admin Checks `sslverify => false` now commented (loopback probe intentional)
+
+### Risk
+
+LOW — defensive additions + refactor. Zero behavior change on valid input.
+
+### Files touched
+
+40+ files across all 4 layers. See 57 individual commits from `5c8efe5..HEAD` for per-file breakdown.
+
 ## [3.25.8] — 2026-04-21
 
 ### Phase 11 of repair roadmap: final MEDIUM/LOW cleanup

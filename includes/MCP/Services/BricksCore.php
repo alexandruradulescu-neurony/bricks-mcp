@@ -570,7 +570,9 @@ class BricksCore {
 
 			$this->regenerate_style_manager_css();
 		} catch ( \Throwable $e ) {
-			error_log( 'BricksMCP: CSS regen failed for post ' . $post_id . ': ' . $e->getMessage() );
+			// Log message + first frames of the trace so the root cause of a
+			// regen failure is discoverable without reproducing the issue live.
+			error_log( 'BricksMCP: CSS regen failed for post ' . $post_id . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString() );
 		}
 	}
 

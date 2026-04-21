@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.25.8
+Stable tag: 3.26.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,15 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.26.0 =
+* 57 commits from parallel MEDIUM/LOW/NIT sweep across 4 layers (Core, Admin, Handlers, Services). Consolidated release.
+* Defensive: is_array/is_iterable guards added across MetaBoxHandler registry iteration, ComponentHandler list paths, VerifyHandler sections filter, PageReadSubHandler BFS, TemplateHandler settings meta, Router, StreamableHttpHandler, Server, ProposalService, DesignPatternHandler, Update checker.
+* Constants extracted: ProposalService::TRANSIENT_PREFIX, Plugin::LEGACY_SETTING_KEYS, ElementSettingsGenerator::NON_STRUCTURAL_ELEMENT_TYPES + CSS_WARN_EXCERPT_LEN, SchemaGenerator::MAX_CONTROLS_PER_ELEMENT + SIMILAR_NAME_THRESHOLD, WordPressHandler::GENERATED_PASSWORD_LENGTH, Activator activation-check TTL, PageOperationsService::MAX_TREE_DEPTH + snapshot constants, GlobalClassService::BP_DIFF_TOLERANCE, TemplateService::MAX_IMPORT_BODY_BYTES, MediaService UNSPLASH_META_KEY + MAX_DOWNLOAD_BYTES, RateLimiter::SETTING_KEY_RPM, VerifyHandler content-sample limits, DesignSchemaValidator::GRID_RESPONSIVE_COL_THRESHOLD, DesignSystemAdmin DEFAULT_BLACK/WHITE/PX_FALLBACK + GAP_PREVIEW_MIN/MAX, Settings RATE_LIMIT_RPM + CONNECTION_PROBE_TIMEOUT, Admin Checks HTTP_TIMEOUT_SECONDS.
+* i18n: translator comments + numbered placeholders added across ElementHandler, TemplateHandler, BuildHandler, MediaHandler, PageCrudSubHandler, PageContentSubHandler, PageReadSubHandler, BricksToolHandler, DesignSystemHandler, GlobalClassHandler, DesignPipelineCheck. DiagnosticRunner summary strings now translatable.
+* Correctness: uninstall.php uses `$wpdb->usermeta` for multisite; deterministic border-style collapse in normalize_bricks_styles; Plugin + Activator throw on clone, explicit autoload=true on OPTION_SETTINGS; idempotent Server::init; StreamableHttpHandler body-size + keepalive bounds; Response::add_server_header DRY; ElementIdGenerator::id_regex centralizer; SchemaGenerator log context; ConditionSchemaCatalog sprintf for backslash-escaped quotes; Reference catalogs FILTER_HOOK constants.
+* Safety: DiagnosticsAdmin + 5 admin AJAX handlers add missing `return` after `wp_send_json_error`; DiagnosticRunner wraps check->run() in try/catch\Throwable; DesignSystemHandler sanitizes style_id at boundary; GlobalClassHandler esc_html on user input in error messages; DesignPatternHandler array_filter lambdas guard is_array; ProposalService hardens brief reads + preg_split fallback; TemplateHandler guards template settings meta; PageReadSubHandler guards children in BFS; MediaHandler dedupes wp_get_attachment_url; BricksToolHandler translator comment on knowledge_not_found; Settings note ID entropy bumped to 16 hex chars (was 8).
+* Docs: OnboardingHandler return types corrected; BuildHandler orphan docblock removed + @var added; NotesService uses BricksCore::OPTION_NOTES; WooCommerceHandler whitespace normalized; SchemaSkeletonGenerator dead legacy comment block removed.
 
 = 3.25.8 =
 * Fix: App password generator client-name now filterable via `bricks_mcp_app_password_client_name`. Default remains "Bricks MCP - Claude Code" but sites using multiple MCP clients (ChatGPT, Cursor, Aider) can override per-context to distinguish WP admin sessions.
