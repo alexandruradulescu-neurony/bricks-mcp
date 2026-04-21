@@ -71,12 +71,24 @@ final class ElementSettingsGenerator {
 	public static function get_element_registry(): array {
 		if ( null === self::$element_registry ) {
 			$path = BricksCore::data_path( 'elements.json' );
-			if ( file_exists( $path ) ) {
+			// Integrity check: file must exist AND be readable AND decode to an array
+			// AND contain the expected shape. On any failure, fall back to empty
+			// registry — downstream code already handles missing elements gracefully.
+			self::$element_registry = [];
+			if ( file_exists( $path ) && is_readable( $path ) ) {
 				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-				$data = is_string( $json ) ? json_decode( $json, true ) : [];
-				self::$element_registry = $data['elements'] ?? [];
-			} else {
-				self::$element_registry = [];
+				if ( is_string( $json ) && '' !== $json ) {
+					$data = json_decode( $json, true );
+					if ( is_array( $data ) && isset( $data['elements'] ) && is_array( $data['elements'] ) ) {
+						self::$element_registry = $data['elements'];
+					} else {
+						// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+						error_log( 'BricksMCP ElementSettingsGenerator: elements.json missing or malformed "elements" key. Falling back to empty registry.' );
+					}
+				} else {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+					error_log( 'BricksMCP ElementSettingsGenerator: elements.json empty or unreadable. Falling back to empty registry.' );
+				}
 			}
 		}
 		return self::$element_registry;

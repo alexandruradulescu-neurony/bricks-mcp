@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.25.0
+Stable tag: 3.25.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,13 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.25.1 =
+* Security: `PatternsAdmin::ajax_create_pattern` now boundary-sanitizes pattern metadata (`id`, `name`, `description`, `category`, `tags`) at ingest. Stored XSS in downstream render paths is now a depth-2 bug, not a depth-1 bug.
+* Fix: `DesignSystemAdmin::ajax_render_panel` adds `return` after every `wp_send_json_error`. Previously fell through to a dynamic method call on a null method name when `wp_die` was filtered (test/headless environments).
+* Fix: `ProposalService` proposal ID generation switched from `substr(md5(time()+password), 0, 12)` (48 bits) to `wp_generate_uuid4()` (122 bits). Concurrent-microsecond collisions now cryptographically negligible.
+* Fix: `SchemaGenerator::get_settings_keys` + `ElementSettingsGenerator::get_element_registry` added integrity checks on data/*.json reads. Missing/unreadable/malformed files no longer produce `undefined index` warnings or silently-empty registries — they log via `error_log` for diagnostics.
+* Fix: `PatternsAdmin::ajax_create_pattern` + `::ajax_delete_pattern` add `return` after every `wp_send_json_*` call (same class of bug as DesignSystemAdmin).
 
 = 3.25.0 =
 * Refactor: Pure extraction release — no behavior change. Centralizes magic strings and numbers into `BricksCore` constants and helpers.

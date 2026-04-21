@@ -557,7 +557,11 @@ final class ProposalService {
 		);
 
 		// Generate proposal ID.
-		$proposal_id = 'prop_' . substr( md5( (string) time() . wp_generate_password( 8 ) ), 0, 12 );
+		// Previously: substr(md5(...), 0, 12) = 48 bits of entropy. Concurrent requests
+		// within the same microsecond could collide; second proposal would overwrite
+		// the first in the transient store. UUIDv4 = 122 bits, collision odds become
+		// cryptographically negligible.
+		$proposal_id = 'prop_' . wp_generate_uuid4();
 
 		$proposal = [
 			'phase'            => 'proposal',

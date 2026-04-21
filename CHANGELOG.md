@@ -4,6 +4,36 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.25.1] — 2026-04-21
+
+### Phase 5 of repair roadmap: admin + migration hardening
+
+Most Phase 5 items already shipped in Phase 3 (migration try/catch). This release covers the remaining admin-layer findings.
+
+#### Security: pattern ingest sanitization
+
+- `PatternsAdmin::ajax_create_pattern` previously accepted raw JSON and handed it to `DesignPatternService::create()` with no handler-level key-level sanitization, relying entirely on downstream escaping discipline.
+- **Fix:** boundary-sanitize `id` (sanitize_key), `name` (sanitize_text_field), `description` (wp_kses_post), `category` (sanitize_text_field), and `tags` (per-element sanitize_text_field). Stored XSS in any pattern-render path is now a depth-2 bug requiring both ingest AND escape failures.
+
+#### Flow-control: missing returns after wp_send_json_*
+
+- `DesignSystemAdmin::ajax_render_panel` and `PatternsAdmin::ajax_create_pattern/ajax_delete_pattern` previously relied on `wp_send_json_error` calling `wp_die` internally to halt. In test/headless environments where `wp_die` is filtered to not exit, execution fell through into the dynamic method call (`$this->{null}($config)`).
+- **Fix:** explicit `return` after every `wp_send_json_*` call.
+
+#### Cryptographic: proposal ID collision space
+
+- `ProposalService` generated proposal IDs via `substr(md5(time() . wp_generate_password(8)), 0, 12)` — 48 bits of entropy. Concurrent requests within the same microsecond could collide; second proposal overwrites first in the transient store.
+- **Fix:** switched to `wp_generate_uuid4()` — 122 bits. Collision odds now cryptographically negligible.
+
+#### Data integrity: JSON file reads
+
+- `SchemaGenerator::get_settings_keys` and `ElementSettingsGenerator::get_element_registry` only checked `file_exists` before `file_get_contents` + `json_decode`. Missing `properties`/`elements` keys produced silent empty registries (hard to diagnose) or `undefined index` warnings.
+- **Fix:** layered integrity check — file_exists + is_readable + non-empty content + json_decode succeeds + expected shape present. Any failure logs via `error_log` with a diagnostic message.
+
+### Risk
+
+LOW — defensive additions, no behavior change on valid input.
+
 ## [3.25.0] — 2026-04-21
 
 ### Phase 4 of repair roadmap: magic strings/numbers extraction

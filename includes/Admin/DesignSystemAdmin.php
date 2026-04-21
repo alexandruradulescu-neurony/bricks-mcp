@@ -748,14 +748,19 @@ class DesignSystemAdmin {
     public function ajax_render_panel(): void {
         check_ajax_referer( 'bricks_mcp_design_system', 'nonce' );
 
+        // wp_send_json_* calls wp_die() internally, but filters in test/headless
+        // environments may skip wp_die — explicit `return` ensures we don't fall
+        // through into the dynamic method call on a null method name.
         if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( 'Unauthorized', 403 );
+            return;
         }
 
         $panel  = isset( $_POST['panel'] ) ? sanitize_key( wp_unslash( $_POST['panel'] ) ) : '';
         $config = json_decode( wp_unslash( $_POST['config'] ?? '{}' ), true );
         if ( ! is_array( $config ) ) {
             wp_send_json_error( 'Invalid config' );
+            return;
         }
         $config = ConfigMigrator::migrate( $config );
 
@@ -772,6 +777,7 @@ class DesignSystemAdmin {
 
         if ( ! isset( $methods[ $panel ] ) || ! method_exists( $this, $methods[ $panel ] ) ) {
             wp_send_json_error( 'Unknown panel: ' . $panel );
+            return;
         }
 
         ob_start();

@@ -234,17 +234,42 @@ class PatternsAdmin {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
 		}
 
 		$json = isset( $_POST['pattern_json'] ) ? wp_unslash( $_POST['pattern_json'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$pattern = json_decode( $json, true );
 		if ( ! is_array( $pattern ) ) {
 			wp_send_json_error( [ 'message' => __( 'Invalid JSON.', 'bricks-mcp' ) ] );
+			return;
+		}
+
+		// Boundary-sanitize the top-level pattern metadata so stored XSS in downstream
+		// render paths isn't a single-escape-miss away. DesignPatternService::create
+		// still validates structural shape; this layer guards the human-facing strings.
+		if ( isset( $pattern['id'] ) ) {
+			$pattern['id'] = sanitize_key( (string) $pattern['id'] );
+		}
+		if ( isset( $pattern['name'] ) ) {
+			$pattern['name'] = sanitize_text_field( (string) $pattern['name'] );
+		}
+		if ( isset( $pattern['description'] ) ) {
+			$pattern['description'] = wp_kses_post( (string) $pattern['description'] );
+		}
+		if ( isset( $pattern['category'] ) ) {
+			$pattern['category'] = sanitize_text_field( (string) $pattern['category'] );
+		}
+		if ( isset( $pattern['tags'] ) && is_array( $pattern['tags'] ) ) {
+			$pattern['tags'] = array_values( array_filter( array_map(
+				static fn( $t ) => is_scalar( $t ) ? sanitize_text_field( (string) $t ) : '',
+				$pattern['tags']
+			) ) );
 		}
 
 		$result = DesignPatternService::create( $pattern );
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+			return;
 		}
 
 		wp_send_json_success( $result );
@@ -257,16 +282,19 @@ class PatternsAdmin {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
 		}
 
 		$id = isset( $_POST['pattern_id'] ) ? sanitize_text_field( wp_unslash( $_POST['pattern_id'] ) ) : '';
 		if ( '' === $id ) {
 			wp_send_json_error( [ 'message' => __( 'Missing pattern ID.', 'bricks-mcp' ) ] );
+			return;
 		}
 
 		$result = DesignPatternService::delete( $id );
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+			return;
 		}
 
 		wp_send_json_success( $result );
