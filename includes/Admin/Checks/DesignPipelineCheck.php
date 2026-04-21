@@ -57,7 +57,11 @@ class DesignPipelineCheck implements DiagnosticCheck {
 				$problems[] = __( 'No design patterns found in the database. Bundled patterns should seed on first activation.', 'bricks-mcp' );
 			}
 		} catch ( \Throwable $e ) {
-			$problems[] = sprintf( __( 'DesignPatternService threw: %s', 'bricks-mcp' ), $e->getMessage() );
+			$problems[] = sprintf(
+				/* translators: %s is the exception message from DesignPatternService. */
+				__( 'DesignPatternService threw: %s', 'bricks-mcp' ),
+				$e->getMessage()
+			);
 		}
 
 		// 2. Core JSON data files load and parse.
@@ -68,13 +72,21 @@ class DesignPipelineCheck implements DiagnosticCheck {
 		foreach ( $required_files as $rel ) {
 			$path = $base . $rel;
 			if ( ! is_readable( $path ) ) {
-				$problems[] = sprintf( __( 'Required data file missing or unreadable: %s', 'bricks-mcp' ), $rel );
+				$problems[] = sprintf(
+					/* translators: %s is the relative path of the missing data file. */
+					__( 'Required data file missing or unreadable: %s', 'bricks-mcp' ),
+					$rel
+				);
 				continue;
 			}
 			$contents = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 			$parsed   = is_string( $contents ) ? json_decode( $contents, true ) : null;
 			if ( ! is_array( $parsed ) ) {
-				$problems[] = sprintf( __( 'Data file failed to parse as JSON: %s', 'bricks-mcp' ), $rel );
+				$problems[] = sprintf(
+					/* translators: %s is the relative path of the unparseable data file. */
+					__( 'Data file failed to parse as JSON: %s', 'bricks-mcp' ),
+					$rel
+				);
 			}
 		}
 
