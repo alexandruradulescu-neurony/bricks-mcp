@@ -42,6 +42,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Router {
 
 	/**
+	 * Error code raised by handlers when a destructive action requires user confirmation.
+	 *
+	 * Handlers raise WP_Error with this code; Router intercepts and mints a token.
+	 * Extracted from a magic string so the interceptor and every handler share one identity.
+	 *
+	 * @var string
+	 */
+	public const ERROR_CONFIRM_REQUIRED = 'bricks_mcp_confirm_required';
+
+	/**
+	 * Transient prefix used by maybe_set_site_context() to track per-user prerequisite flags.
+	 *
+	 * Suffixed with get_current_user_id() at call time. Kept as a constant so the
+	 * uninstall sweep (LIKE 'bricks_mcp_%') and the composite-flag logic agree.
+	 *
+	 * @var string
+	 */
+	private const PREREQS_TRANSIENT_PREFIX = 'bricks_mcp_prereqs_';
+
+	/**
 	 * Tool registry instance.
 	 *
 	 * @var ToolRegistry
@@ -392,7 +412,7 @@ final class Router {
 
 			if ( is_wp_error( $result ) ) {
 				// Intercept confirmation-required errors to generate a token.
-				if ( 'bricks_mcp_confirm_required' === $result->get_error_code() ) {
+				if ( self::ERROR_CONFIRM_REQUIRED === $result->get_error_code() ) {
 					return $this->create_confirmation_response( $name, $arguments, $result->get_error_message() );
 				}
 				return Response::tool_error( $result );
@@ -400,6 +420,9 @@ final class Router {
 
 			// Set prerequisite flags for gate tracking.
 			// site_context requires BOTH get_site_info and global_class:list.
+			// A non-string 'action' from the JSON body yields strict !== 'list' (never
+			// matches), so ValidationService must reject those upstream; this branch
+			// only runs on validated string values.
 			if ( 'global_class' === $name && ( $arguments['action'] ?? '' ) === 'list' ) {
 				$this->maybe_set_site_context( 'classes_done' );
 			} elseif ( 'propose_design' === $name && is_array( $result ) ) {
@@ -507,12 +530,22 @@ final class Router {
 		}
 
 		// Page ID for the suggested next call (if available).
-		$page_id     = (int) ( $arguments['post_id'] ?? $arguments['page_id'] ?? 0 );
+		// Guard against non-scalar post_id/page_id from malformed input — (int) cast
+		// on an array would silently collapse to 1 and put the wrong page id into the
+		// suggested-next message that the AI follows.
+		$raw_page_id = $arguments['post_id'] ?? $arguments['page_id'] ?? 0;
+		$page_id     = is_scalar( $raw_page_id ) ? (int) $raw_page_id : 0;
 		$next_target = $page_id > 0 ? sprintf( 'page_id=%d', $page_id ) : 'page_id=<your_page_id>';
 
 		// Gate: section elements must use the design build pipeline.
 		// Non-section elements of any count are allowed for instructed builds.
 		foreach ( $elements as $el ) {
+			// Guard against malformed input — an element entry that's a string/int
+			// would otherwise emit E_WARNING on subscript access AND silently bypass
+			// the design gate (no name match → no section → fallthrough).
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
 			$el_name = $el['name'] ?? '';
 			if ( 'section' === $el_name ) {
 				return Response::error(
@@ -545,13 +578,15 @@ final class Router {
 	private function create_confirmation_response( string $tool_name, array $arguments, string $description ): \WP_REST_Response {
 		$token = $this->pending_action_service->create( $tool_name, $arguments, $description );
 
-		// Strip the old "Set confirm: true to proceed" instruction.
+		// LEGACY: strip the pre-token "Set confirm: true to proceed" instruction from
+		// handler descriptions that still carry it. Safe to remove this substitution
+		// once all handler messages have been migrated (>= v4.0).
 		$clean_description = preg_replace(
 			'/\s*Set confirm: true to proceed[^.]*\.?/',
 			'',
 			$description
 		);
-		$clean_description = rtrim( $clean_description, '. ' );
+		$clean_description = rtrim( (string) $clean_description, '. ' );
 
 		$message = sprintf(
 			/* translators: 1: Action description, 2: Confirmation token */
@@ -561,7 +596,7 @@ final class Router {
 		);
 
 		$error = new \WP_Error(
-			'bricks_mcp_confirm_required',
+			self::ERROR_CONFIRM_REQUIRED,
 			$message,
 			array( 'token' => $token )
 		);
@@ -603,7 +638,11 @@ final class Router {
 	 * @return array<string, mixed>|\WP_Error Result of the confirmed action.
 	 */
 	public function tool_confirm_destructive_action( array $args ): array|\WP_Error {
-		$token = sanitize_text_field( $args['token'] ?? '' );
+		// Defensive string cast: the schema enforces the hex pattern via ValidationService
+		// upstream, but if this handler is ever called outside execute_tool() (e.g.
+		// direct PHP test harness), a non-string token must not reach the consumer.
+		$raw   = $args['token'] ?? '';
+		$token = is_string( $raw ) ? sanitize_text_field( $raw ) : '';
 
 		$pending = $this->pending_action_service->validate_and_consume( $token );
 		if ( false === $pending ) {
@@ -807,7 +846,12 @@ final class Router {
 		// Include AI notes so they are visible on the first mandatory call.
 		$ai_notes = $this->bricks_service->get_notes();
 		if ( ! empty( $ai_notes ) ) {
-			$info['ai_notes']      = array_map( fn( array $n ) => $n['text'] ?? '', $ai_notes );
+			// Relax type hint: a future notes payload with mixed shapes (string entries,
+			// null, etc.) would TypeError with `array $n`. Fall back to '' for non-arrays.
+			$info['ai_notes']      = array_map(
+				fn( $n ) => is_array( $n ) ? ( $n['text'] ?? '' ) : '',
+				$ai_notes
+			);
 			$info['ai_notes_note'] = 'These are persistent instructions from the site owner. You MUST follow them.';
 		}
 
@@ -871,7 +915,7 @@ final class Router {
 	 * @param string $sub_key One of 'site_info_done', 'classes_done'.
 	 */
 	private function maybe_set_site_context( string $sub_key ): void {
-		$transient_key = 'bricks_mcp_prereqs_' . get_current_user_id();
+		$transient_key = self::PREREQS_TRANSIENT_PREFIX . get_current_user_id();
 		$flags         = get_transient( $transient_key );
 		if ( ! is_array( $flags ) ) {
 			$flags = [];
@@ -884,7 +928,10 @@ final class Router {
 			$flags['site_context'] = true;
 		}
 
-		$ttl = (int) apply_filters( 'bricks_mcp_prerequisite_ttl', 7200 );
+		// Floor TTL at 60s: a misconfigured filter that returns 0 would store forever
+		// on some cache backends and evaporate immediately on others — neither is
+		// desirable for prerequisite tracking.
+		$ttl = max( 60, (int) apply_filters( 'bricks_mcp_prerequisite_ttl', 7200 ) );
 		set_transient( $transient_key, $flags, $ttl );
 	}
 
