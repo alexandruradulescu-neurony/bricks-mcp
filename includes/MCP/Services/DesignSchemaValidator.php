@@ -318,9 +318,19 @@ final class DesignSchemaValidator {
 		// These don't prevent the build — they surface in the build response so AI can address them.
 
 		// W1: Grid columns vs children count.
+		// When children include a pattern ref, count the ref's expanded repeat toward
+		// the effective child count — the pre-expansion raw count is misleading.
 		if ( ( $node['layout'] ?? '' ) === 'grid' && ! empty( $node['columns'] ) ) {
-			$child_count = count( $node['children'] ?? [] );
-			$col_count   = (int) $node['columns'];
+			$children    = $node['children'] ?? [];
+			$child_count = 0;
+			foreach ( $children as $child ) {
+				if ( is_array( $child ) && isset( $child['ref'] ) ) {
+					$child_count += max( 1, (int) ( $child['repeat'] ?? 1 ) );
+				} else {
+					$child_count++;
+				}
+			}
+			$col_count = (int) $node['columns'];
 			if ( $child_count > 0 && $col_count > 0 && $child_count !== $col_count && $child_count % $col_count !== 0 ) {
 				$this->validation_warnings[] = "{$path}: grid has {$col_count} columns but {$child_count} children — last row will be incomplete.";
 			}

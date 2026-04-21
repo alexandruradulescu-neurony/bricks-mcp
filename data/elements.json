@@ -143,7 +143,7 @@
       }
     },
     "block": {
-      "valid_parents": ["container", "div", "block"],
+      "valid_parents": ["container", "div", "block", "tabs-nested", "accordion-nested", "slider-nested"],
       "accepts_children": true,
       "typical_children": ["heading", "text", "text-basic", "button", "image", "icon", "div", "block"],
       "structural": true,
@@ -271,7 +271,7 @@
       }
     },
     "div": {
-      "valid_parents": ["container", "div", "block", "tabs-nested", "accordion-nested"],
+      "valid_parents": ["container", "div", "block", "tabs-nested", "accordion-nested", "slider-nested"],
       "accepts_children": true,
       "typical_children": ["heading", "text", "text-basic", "button", "image", "icon", "div", "block"],
       "structural": true,
@@ -900,7 +900,7 @@
     "slider-nested": {
       "valid_parents": ["container", "block", "div"],
       "accepts_children": true,
-      "typical_children": ["div"],
+      "typical_children": ["div", "block"],
       "skip_auto_flex": true,
       "nestable": true,
       "purpose": "Image or content carousel/slideshow (Splide.js under the hood)",

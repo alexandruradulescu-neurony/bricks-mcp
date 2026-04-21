@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.24.1
+Stable tag: 3.24.2
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,11 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.24.2 =
+* Fix: `div` and `block` registry entries now list `slider-nested` as a valid parent. Previously schema validator rejected slider-nested → div/block slide panes even though slider-nested declares them as typical_children — data inconsistency surfaced on any slider build.
+* Fix: `slider-nested` typical_children now includes `block` in addition to `div`.
+* Fix: Grid columns-vs-children validation warning no longer fires as a false positive when grid children include a pattern ref. Validator now counts `ref.repeat` toward the effective child count instead of treating the ref as a single child.
 
 = 3.24.1 =
 * Fix: `build_from_schema` no longer crashes with `Cannot use object of type stdClass as array` when schema contains elements without explicit settings (most commonly `form` with no `element_settings.fields`). Root cause: ElementSettingsGenerator converted empty settings to `stdClass` for JSON `{}` serialization, but downstream subscript access (`$el['settings']['_pipeline_warnings']`) errored on object. Settings now stay as arrays throughout the pipeline; PHP `serialize()` at DB write handles empty arrays correctly.

@@ -4,6 +4,14 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.24.2] — 2026-04-21
+
+### Bugfix: slider-nested schema validation
+
+- **`slider-nested` schema validation fixed.** `div` and `block` registry entries (`data/elements.json`) now list `slider-nested` as a valid parent. Previously, schema validator rejected `slider-nested → div` and `slider-nested → block` structures even though `slider-nested.typical_children` already declared them — a data inconsistency surfaced on any slider build.
+- **`slider-nested.typical_children`** expanded from `["div"]` to `["div", "block"]` — matches real Bricks usage where slide panes commonly use `block` for flex-row layouts.
+- **Grid columns-vs-children false-positive warning.** `DesignSchemaValidator` W1 rule no longer fires incorrectly when grid children include a pattern `ref`. Validator now counts `ref.repeat` toward the effective child count instead of treating the ref as a single child. Previously, a 3-col grid with `{ref: "card", repeat: 6}` would warn "grid has 3 columns but 1 children" despite producing 6 expanded cards.
+
 ## [3.24.1] — 2026-04-21
 
 ### Bugfix: form element crash in build_from_schema
