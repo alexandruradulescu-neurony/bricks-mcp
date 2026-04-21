@@ -264,10 +264,10 @@ class BricksCore {
 	 * @return string The meta key to use for reading element content.
 	 */
 	public function resolve_elements_meta_key( int $post_id ): string {
-		$template_type = get_post_meta( $post_id, '_bricks_template_type', true );
+		$template_type = get_post_meta( $post_id, self::META_TEMPLATE_TYPE, true );
 		return match ( $template_type ) {
-			'header' => defined( 'BRICKS_DB_PAGE_HEADER' ) ? BRICKS_DB_PAGE_HEADER : '_bricks_page_header_2',
-			'footer' => defined( 'BRICKS_DB_PAGE_FOOTER' ) ? BRICKS_DB_PAGE_FOOTER : '_bricks_page_footer_2',
+			'header' => self::header_meta_key(),
+			'footer' => self::footer_meta_key(),
 			default  => self::META_KEY,
 		};
 	}
