@@ -23,6 +23,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 class PageOperationsService {
 
 	/**
+	 * Maximum tree depth traversed when rendering page summaries / contexts.
+	 * Guards against stack overflow on circular references; the Bricks editor
+	 * does not enforce this, so the cap is intentionally generous.
+	 *
+	 * @var int
+	 */
+	private const MAX_TREE_DEPTH = 50;
+
+	/**
+	 * Maximum characters kept from a text field when rendering get_page_context.
+	 * Longer values are truncated with an ellipsis so the AI payload stays small.
+	 *
+	 * @var int
+	 */
+	private const CONTEXT_EXCERPT_CHARS = 120;
+
+	/**
+	 * Maximum number of auto-pruned snapshots retained per page.
+	 * Oldest snapshots are removed once this cap is exceeded.
+	 *
+	 * @var int
+	 */
+	private const MAX_SNAPSHOTS = 10;
+
+	/**
 	 * Core infrastructure.
 	 *
 	 * @var BricksCore
@@ -279,8 +304,8 @@ class PageOperationsService {
 			'element_count' => $element_count,
 		];
 
-		// Auto-prune: keep max 10 snapshots (remove oldest).
-		while ( count( $index ) > 10 ) {
+		// Auto-prune: keep max MAX_SNAPSHOTS snapshots (remove oldest).
+		while ( count( $index ) > self::MAX_SNAPSHOTS ) {
 			$oldest = array_shift( $index );
 			delete_post_meta( $post_id, '_bricks_mcp_snapshot_' . $oldest['id'] );
 		}
@@ -457,7 +482,7 @@ class PageOperationsService {
 		];
 
 		// Prevent stack overflow on circular references.
-		if ( $depth > 50 ) {
+		if ( $depth > self::MAX_TREE_DEPTH ) {
 			return $node;
 		}
 
@@ -545,8 +570,8 @@ class PageOperationsService {
 		foreach ( $content_keys as $key ) {
 			if ( ! empty( $settings[ $key ] ) && is_string( $settings[ $key ] ) ) {
 				$text = wp_strip_all_tags( $settings[ $key ] );
-				if ( strlen( $text ) > 120 ) {
-					$text = mb_substr( $text, 0, 120 ) . '...';
+				if ( strlen( $text ) > self::CONTEXT_EXCERPT_CHARS ) {
+					$text = mb_substr( $text, 0, self::CONTEXT_EXCERPT_CHARS ) . '...';
 				}
 				$node['text'] = $text;
 				break;
@@ -558,7 +583,7 @@ class PageOperationsService {
 		}
 
 		// Prevent stack overflow on circular references.
-		if ( $depth > 50 ) {
+		if ( $depth > self::MAX_TREE_DEPTH ) {
 			return $node;
 		}
 
@@ -588,7 +613,12 @@ class PageOperationsService {
 			return null;
 		}
 
-		$protected_ids = array_map( 'intval', array_filter( array_map( 'trim', explode( ',', $protected_raw ) ) ) );
+		// Split, trim, cast to int, then drop zeros so a stray non-numeric entry
+		// cannot match post_id 0 (which would never exist, but keeps the list clean).
+		$protected_ids = array_values( array_filter(
+			array_map( 'intval', array_map( 'trim', explode( ',', $protected_raw ) ) ),
+			static fn( int $id ) => $id > 0
+		) );
 
 		if ( in_array( $post_id, $protected_ids, true ) ) {
 			$post  = get_post( $post_id );
