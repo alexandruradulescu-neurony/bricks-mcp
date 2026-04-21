@@ -29,6 +29,13 @@ class GlobalClassService {
 	private const MAX_REFERENCE_POSTS = 200;
 
 	/**
+	 * Tolerance in pixels for fuzzy-matching a CSS media-query width to a
+	 * named Bricks breakpoint. A difference strictly less than this value wins;
+	 * used as the initial sentinel, i.e. "no match is yet closer than this".
+	 */
+	private const BP_DIFF_TOLERANCE = 50;
+
+	/**
 	 * Static cache of all global classes. Loaded once per PHP request.
 	 * @var array<int, array<string, mixed>>|null
 	 */
@@ -1474,7 +1481,7 @@ class GlobalClassService {
 			}
 
 			$best_key  = '';
-			$best_diff = 51;
+			$best_diff = self::BP_DIFF_TOLERANCE + 1;
 			foreach ( $max_width_map as $px => $bp ) {
 				$diff = abs( $width - $px );
 				if ( $diff < $best_diff ) {
@@ -1498,7 +1505,7 @@ class GlobalClassService {
 			}
 
 			$best_key  = '';
-			$best_diff = 51;
+			$best_diff = self::BP_DIFF_TOLERANCE + 1;
 			foreach ( $min_width_map as $px => $bp ) {
 				$diff = abs( $width - $px );
 				if ( $diff < $best_diff ) {
