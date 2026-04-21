@@ -9,7 +9,7 @@ use BricksMCP\MCP\Services\DesignSystem\ConfigMigrator;
 
 class DesignSystemAdmin {
 
-    private const CONFIG_OPTION = 'bricks_mcp_design_system_config';
+    private const CONFIG_OPTION = BricksCore::OPTION_DESIGN_SYSTEM_CONFIG;
 
     /**
      * Register AJAX handlers.
@@ -54,7 +54,7 @@ class DesignSystemAdmin {
             'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
             'config'        => $this->get_config(),
             'defaultConfig' => DesignSystemGenerator::get_default_config(),
-            'lastApplied'   => get_option( 'bricks_mcp_ds_last_applied', '' ),
+            'lastApplied'   => get_option( BricksCore::OPTION_DS_LAST_APPLIED, '' ),
         ] );
     }
 
@@ -641,7 +641,7 @@ class DesignSystemAdmin {
      * Only fills fields that are currently empty — never overwrites user customizations.
      */
     private function auto_fill_structured_brief( array $config ): void {
-        $existing = get_option( 'bricks_mcp_structured_brief', [] );
+        $existing = get_option( BricksCore::OPTION_STRUCTURED_BRIEF, [] );
         if ( ! is_array( $existing ) ) {
             $existing = [];
         }
@@ -665,7 +665,7 @@ class DesignSystemAdmin {
             }
         }
 
-        update_option( 'bricks_mcp_structured_brief', $existing );
+        update_option( BricksCore::OPTION_STRUCTURED_BRIEF, $existing );
     }
 
     /**
@@ -719,7 +719,7 @@ class DesignSystemAdmin {
 
         // Store last-applied timestamp.
         $timestamp = current_time( 'mysql' );
-        update_option( 'bricks_mcp_ds_last_applied', $timestamp );
+        update_option( BricksCore::OPTION_DS_LAST_APPLIED, $timestamp );
 
         $summary['last_applied'] = $timestamp;
 

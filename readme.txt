@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.25.4
+Stable tag: 3.25.5
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,15 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.25.5 =
+* Fix: `StreamableHttpHandler::handle_get` SSE keepalive loop gains an iteration cap (default 360, filterable via `bricks_mcp_sse_max_iterations`). Previously unbounded — wedged PHP-FPM workers when clients held connections open.
+* Fix: `Server::resolve_client_ip()` adds proxy-awareness for rate-limit IP extraction. Consults `X-Forwarded-For`, `CF-Connecting-IP`, `X-Real-IP` ONLY when `bricks_mcp_trust_proxy` filter returns true (opt-in to prevent spoofing). Without this, all traffic behind a reverse proxy/CDN shared one rate-limit bucket.
+* Fix: `StreamableHttpHandler::handle_tools_call` type-checks the `name` parameter. Non-string values previously caused `TypeError` crashes in `Router::execute_tool(string $name)`.
+* Fix: All 4 Reference catalogs (`ConditionSchemaCatalog`, `FilterSchemaCatalog`, `FormSchemaCatalog`, `InteractionSchemaCatalog`) now validate `apply_filters()` return values. Third-party filters returning non-array would crash downstream callers; now fall back to unfiltered defaults.
+* Fix: `InteractionSchemaCatalog::image_gallery_load_more` example was structurally misplaced OUTSIDE the `examples` array at top level of `$data`. Moved inside `examples` where it belongs alongside other examples.
+* Breaking change (prerequisites): `BRICKS_MCP_MIN_BRICKS_VERSION` bumped from 1.6 to 1.12. Earlier versions passed the gate but failed at first write — 1.12 is the true minimum.
+* Refactor: 10 more option names extracted into `BricksCore::OPTION_*` constants (OPTION_CUSTOM_PATTERNS, OPTION_HIDDEN_PATTERNS, OPTION_PATTERN_CATEGORIES, OPTION_PATTERNS_MIGRATED, OPTION_STRUCTURED_BRIEF, OPTION_DS_LAST_APPLIED, OPTION_DESIGN_SYSTEM_CONFIG, OPTION_TERM_TRASH, OPTION_DB_VERSION, OPTION_VERSION, OPTION_ACTIVATED_AT). Applied across DesignPatternService, BriefResolver, TemplateHandler, Plugin, DesignSystemAdmin, Settings.
 
 = 3.25.4 =
 * Fix: `GlobalClassService::create_global_class` — duplicate-name check now case-insensitive (previously "heroButton" + "HeroButton" both succeeded). Unbounded `do-while` collision retry loop capped at 100 attempts with `id_generation_failed` error on exhaustion.

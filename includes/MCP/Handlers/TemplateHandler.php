@@ -711,7 +711,7 @@ final class TemplateHandler {
 			}
 
 			// Backup term data before deletion.
-			$trash   = get_option( 'bricks_mcp_term_trash', array() );
+			$trash   = get_option( BricksCore::OPTION_TERM_TRASH, array() );
 			$trash[] = array(
 				'term_id'    => $term_id,
 				'name'       => $term->name,
@@ -723,7 +723,7 @@ final class TemplateHandler {
 			if ( count( $trash ) > BricksCore::BATCH_SIZE ) {
 				$trash = array_slice( $trash, -BricksCore::BATCH_SIZE );
 			}
-			update_option( 'bricks_mcp_term_trash', $trash, false );
+			update_option( BricksCore::OPTION_TERM_TRASH, $trash, false );
 		}
 
 		$result = $this->bricks_service->delete_template_term( 'template_tag', $term_id );
@@ -770,7 +770,7 @@ final class TemplateHandler {
 			}
 
 			// Backup term data before deletion.
-			$trash   = get_option( 'bricks_mcp_term_trash', array() );
+			$trash   = get_option( BricksCore::OPTION_TERM_TRASH, array() );
 			$trash[] = array(
 				'term_id'    => $term_id,
 				'name'       => $term->name,
@@ -782,7 +782,7 @@ final class TemplateHandler {
 			if ( count( $trash ) > BricksCore::BATCH_SIZE ) {
 				$trash = array_slice( $trash, -BricksCore::BATCH_SIZE );
 			}
-			update_option( 'bricks_mcp_term_trash', $trash, false );
+			update_option( BricksCore::OPTION_TERM_TRASH, $trash, false );
 		}
 
 		$result = $this->bricks_service->delete_template_term( 'template_bundle', $term_id );

@@ -216,7 +216,14 @@ final class StreamableHttpHandler {
 	 */
 	public function handle_get( \WP_REST_Request $request ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
 		$this->emit_sse_headers();
-		while ( true ) {
+
+		// Iteration cap protects against wedged PHP-FPM workers when clients hold
+		// SSE connections open indefinitely. Default: (timeout / min-keepalive) = 360
+		// iterations worst case. Filter-adjustable.
+		$max_iterations = (int) apply_filters( 'bricks_mcp_sse_max_iterations', 360 );
+		$iter           = 0;
+
+		while ( $iter < $max_iterations ) {
 			if ( connection_aborted() ) {
 				break;
 			}
@@ -230,6 +237,7 @@ final class StreamableHttpHandler {
 			if ( connection_aborted() ) {
 				break;
 			}
+			$iter++;
 		}
 		exit;
 	}
@@ -389,8 +397,11 @@ final class StreamableHttpHandler {
 		$name      = $params['name'] ?? '';
 		$arguments = $params['arguments'] ?? [];
 
-		if ( empty( $name ) ) {
-			return $this->jsonrpc_error( $id, self::INVALID_PARAMS, 'Missing required parameter: name' );
+		// Router::execute_tool is typed `string $name`. A non-string from the JSON body
+		// (array, object, bool) would throw TypeError and crash the whole request.
+		// Surface a JSON-RPC error instead.
+		if ( ! is_string( $name ) || '' === $name ) {
+			return $this->jsonrpc_error( $id, self::INVALID_PARAMS, 'Missing or invalid required parameter: name (must be a non-empty string)' );
 		}
 
 		$result = $this->router->execute_tool( $name, is_array( $arguments ) ? $arguments : [] );

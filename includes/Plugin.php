@@ -99,7 +99,7 @@ final class Plugin {
 		// leaving the plugin in a permanently-skipped half-migrated state on the
 		// next page load. Now each migration step is wrapped in try/catch, and the
 		// version is only bumped when ALL steps succeed.
-		$stored_version = get_option( 'bricks_mcp_db_version', '' );
+		$stored_version = get_option( MCP\Services\BricksCore::OPTION_DB_VERSION, '' );
 		if ( $stored_version !== BRICKS_MCP_VERSION ) {
 			$migration_ok = true;
 			try {
@@ -117,7 +117,7 @@ final class Plugin {
 				error_log( 'BricksMCP migrate_plugin_patterns failed: ' . $e->getMessage() );
 			}
 			if ( $migration_ok ) {
-				update_option( 'bricks_mcp_db_version', BRICKS_MCP_VERSION, true );
+				update_option( MCP\Services\BricksCore::OPTION_DB_VERSION, BRICKS_MCP_VERSION, true );
 			}
 		}
 

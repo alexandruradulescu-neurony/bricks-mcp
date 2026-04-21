@@ -175,8 +175,10 @@ final class InteractionSchemaCatalog {
 						array( 'id' => 'mm3nn4', 'trigger' => 'contentLoaded', 'action' => 'javascript', 'jsFunction' => 'brxGsap.parallax', 'jsFunctionArgs' => array( array( 'id' => 'oo5pp6', 'jsFunctionArg' => '%brx%' ) ), 'target' => 'self' ),
 					),
 				),
-			),
-			'image_gallery_load_more' => array(
+				// image_gallery_load_more was previously misplaced OUTSIDE the 'examples'
+				// array key, making it a sibling of 'notes' at the top level of $data.
+				// Moved inside 'examples' where it belongs alongside the other examples.
+				'image_gallery_load_more' => array(
 					'description'               => 'Image Gallery with load more + infinite scroll (Bricks 2.3+). Step 1: Set load more settings on the Image Gallery element. Step 2: Add a button with loadMoreGallery interaction targeting the gallery.',
 					'step_1_gallery_settings'   => array(
 						'note'                          => 'Set these on the Image Gallery element settings (not in _interactions)',
@@ -198,6 +200,7 @@ final class InteractionSchemaCatalog {
 						),
 					),
 				),
+			),
 			'notes'             => array(
 				'Each interaction id must be unique — 6-char lowercase alphanumeric (same format as element IDs).',
 				'Animation types containing "In" (case-sensitive) automatically hide the element on page load and reveal on animation.',
@@ -208,6 +211,11 @@ final class InteractionSchemaCatalog {
 			),
 		);
 
-		return apply_filters( 'bricks_mcp_interaction_schema', $data );
+		/**
+		 * Filter: bricks_mcp_interaction_schema
+		 * Validate filtered result — third-party filters may return non-array.
+		 */
+		$filtered = apply_filters( 'bricks_mcp_interaction_schema', $data );
+		return is_array( $filtered ) ? $filtered : $data;
 	}
 }

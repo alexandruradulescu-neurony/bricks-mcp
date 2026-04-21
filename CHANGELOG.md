@@ -4,6 +4,37 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.25.5] — 2026-04-21
+
+### Phase 8 of repair roadmap: Core + Admin HIGH items
+
+#### Correctness
+
+- **SSE loop cap.** `StreamableHttpHandler::handle_get` was `while ( true )` with no iteration bound. 10 clients holding connections open → 10 wedged PHP-FPM workers. Now capped at 360 iterations (filterable via `bricks_mcp_sse_max_iterations`).
+- **Proxy-aware IP resolution.** `Server::resolve_client_ip()` consults `X-Forwarded-For`, `CF-Connecting-IP`, `X-Real-IP` — but only when `bricks_mcp_trust_proxy` filter returns true (opt-in). Previously, traffic behind Cloudflare/nginx shared a single rate-limit bucket.
+- **Tool-name type check.** `StreamableHttpHandler::handle_tools_call` now verifies `$name` is a non-empty string before calling `Router::execute_tool(string $name)`. Non-string values previously crashed with `TypeError` (fatal 500).
+- **Reference catalog filter guards.** All 4 catalogs (Condition, Filter, Form, Interaction) now validate `apply_filters()` return before returning. Third-party filter misuse no longer propagates non-arrays downstream.
+- **InteractionSchemaCatalog misplaced example.** `image_gallery_load_more` was structurally a sibling of `notes` at the top level of `$data` instead of a child of `examples`. Moved into `examples`.
+
+#### Version gate
+
+- `BRICKS_MCP_MIN_BRICKS_VERSION` bumped from `1.6` to `1.12`. 1.12 introduced the element-tree APIs and meta-filter surface this plugin depends on. Users on 1.6–1.11 previously passed the gate but failed at first write with obscure errors — 1.12 is the true floor.
+
+#### Option-name extraction
+
+10 more option names consolidated into `BricksCore::OPTION_*` constants, applied across:
+
+- `DesignPatternService` — `OPTION_CUSTOM_PATTERNS`, `OPTION_PATTERNS_MIGRATED`
+- `BriefResolver` — `OPTION_STRUCTURED_BRIEF`
+- `TemplateHandler` — `OPTION_TERM_TRASH` (2 sites)
+- `Plugin` — `OPTION_DB_VERSION` (2 sites)
+- `DesignSystemAdmin` — `OPTION_DESIGN_SYSTEM_CONFIG`, `OPTION_DS_LAST_APPLIED`, `OPTION_STRUCTURED_BRIEF`
+- `Settings` — `OPTION_STRUCTURED_BRIEF` (4 sites including nonce action)
+
+### Risk
+
+LOW–MEDIUM. The Bricks version bump may block installs on pre-1.12 Bricks; affected users will see the standard activation gate, not a broken plugin.
+
 ## [3.25.4] — 2026-04-21
 
 ### Phase 7B of repair roadmap: remaining Services HIGH items

@@ -63,6 +63,17 @@ class BricksCore {
 	public const OPTION_GLOBAL_SETTINGS      = 'bricks_global_settings';
 	public const OPTION_COMPONENTS           = 'bricks_components';
 	public const OPTION_GLOBAL_QUERIES       = 'bricks_global_queries';
+	public const OPTION_CUSTOM_PATTERNS      = 'bricks_mcp_custom_patterns';
+	public const OPTION_HIDDEN_PATTERNS      = 'bricks_mcp_hidden_patterns';
+	public const OPTION_PATTERN_CATEGORIES   = 'bricks_mcp_pattern_categories';
+	public const OPTION_PATTERNS_MIGRATED    = 'bricks_mcp_patterns_migrated';
+	public const OPTION_STRUCTURED_BRIEF     = 'bricks_mcp_structured_brief';
+	public const OPTION_DS_LAST_APPLIED      = 'bricks_mcp_ds_last_applied';
+	public const OPTION_DESIGN_SYSTEM_CONFIG = 'bricks_mcp_design_system_config';
+	public const OPTION_TERM_TRASH           = 'bricks_mcp_term_trash';
+	public const OPTION_DB_VERSION           = 'bricks_mcp_db_version';
+	public const OPTION_VERSION              = 'bricks_mcp_version';
+	public const OPTION_ACTIVATED_AT         = 'bricks_mcp_activated_at';
 
 	/**
 	 * Bricks-template meta keys. Used on posts of type `bricks_template`.

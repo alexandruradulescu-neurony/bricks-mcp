@@ -303,7 +303,11 @@ final class Server {
 		}
 
 		// Rate limit all requests (authenticated by user ID, anonymous by IP).
-		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
+		// Resolve client IP with proxy awareness: X-Forwarded-For / CF-Connecting-IP
+		// headers are consulted ONLY when a bricks_mcp_trust_proxy filter returns true
+		// (opt-in to prevent spoofing in default configurations). Without the filter,
+		// all traffic behind Cloudflare/nginx shares the same rate-limit bucket.
+		$remote_addr = self::resolve_client_ip();
 		$identifier  = is_user_logged_in()
 			? 'user_' . get_current_user_id()
 			: 'ip_' . $remote_addr;
@@ -334,5 +338,43 @@ final class Server {
 	 */
 	public function get_namespace(): string {
 		return self::API_NAMESPACE;
+	}
+
+	/**
+	 * Resolve the client IP address for rate-limiting purposes.
+	 *
+	 * Consults proxy headers (X-Forwarded-For, CF-Connecting-IP, X-Real-IP) ONLY
+	 * when the `bricks_mcp_trust_proxy` filter returns true. Without the filter,
+	 * any proxy deployment would share a single rate-limit bucket across all
+	 * clients behind the proxy.
+	 *
+	 * Trusting proxy headers on an open internet-facing WP install allows rate-limit
+	 * evasion via spoofed headers, so this is explicitly opt-in.
+	 *
+	 * @return string Client IP or 'unknown' if unresolvable.
+	 */
+	private static function resolve_client_ip(): string {
+		$trust_proxy = (bool) apply_filters( 'bricks_mcp_trust_proxy', false );
+
+		if ( $trust_proxy ) {
+			// Preferred order: Cloudflare connecting IP > X-Forwarded-For > X-Real-IP > REMOTE_ADDR.
+			foreach ( [ 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP' ] as $header ) {
+				if ( empty( $_SERVER[ $header ] ) ) {
+					continue;
+				}
+				$raw = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
+				// X-Forwarded-For can be a comma-separated list; take the leftmost (originating) entry.
+				$first = trim( (string) strtok( $raw, ',' ) );
+				if ( '' !== $first && false !== filter_var( $first, FILTER_VALIDATE_IP ) ) {
+					return $first;
+				}
+			}
+		}
+
+		if ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
+			$addr = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+			return false !== filter_var( $addr, FILTER_VALIDATE_IP ) ? $addr : 'unknown';
+		}
+		return 'unknown';
 	}
 }

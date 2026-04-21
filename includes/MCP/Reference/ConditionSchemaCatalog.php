@@ -319,6 +319,11 @@ final class ConditionSchemaCatalog {
 			),
 		);
 
-		return apply_filters( 'bricks_mcp_condition_schema', $data );
+		/**
+		 * Filter: bricks_mcp_condition_schema
+		 * Validate filtered result — third-party filters may return non-array.
+		 */
+		$filtered = apply_filters( 'bricks_mcp_condition_schema', $data );
+		return is_array( $filtered ) ? $filtered : $data;
 	}
 }

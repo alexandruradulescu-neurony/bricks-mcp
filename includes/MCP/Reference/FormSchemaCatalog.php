@@ -280,6 +280,11 @@ final class FormSchemaCatalog {
 			),
 		);
 
-		return apply_filters( 'bricks_mcp_form_schema', $data );
+		/**
+		 * Filter: bricks_mcp_form_schema
+		 * Third-party filters may misbehave and return non-array. Validate before returning.
+		 */
+		$filtered = apply_filters( 'bricks_mcp_form_schema', $data );
+		return is_array( $filtered ) ? $filtered : $data;
 	}
 }

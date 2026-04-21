@@ -31,7 +31,7 @@ final class BriefResolver {
 	 *
 	 * @var string
 	 */
-	public const OPTION_KEY = 'bricks_mcp_structured_brief';
+	public const OPTION_KEY = BricksCore::OPTION_STRUCTURED_BRIEF;
 
 	/**
 	 * Loaded brief values from wp_option.

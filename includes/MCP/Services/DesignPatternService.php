@@ -23,10 +23,10 @@ final class DesignPatternService {
 	private static ?array $all_patterns = null;
 
 	/** WP option key for database-tier patterns. */
-	private const DB_OPTION = 'bricks_mcp_custom_patterns';
+	private const DB_OPTION = BricksCore::OPTION_CUSTOM_PATTERNS;
 
 	/** WP option key for the one-time migration flag. */
-	private const MIGRATION_FLAG = 'bricks_mcp_patterns_migrated';
+	private const MIGRATION_FLAG = BricksCore::OPTION_PATTERNS_MIGRATED;
 
 	// ──────────────────────────────────────────────
 	// Loading — database only

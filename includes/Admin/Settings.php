@@ -1613,7 +1613,7 @@ final class Settings {
 	 * Render the structured Design Rules brief form.
 	 *
 	 * Machine-readable fields that feed directly into the build pipeline.
-	 * Saved as wp_option 'bricks_mcp_structured_brief'.
+	 * Saved as wp_option BricksCore::OPTION_STRUCTURED_BRIEF.
 	 *
 	 * @return void
 	 */
@@ -1623,7 +1623,7 @@ final class Settings {
 			isset( $_POST['bricks_mcp_structured_brief_nonce'] )
 			&& wp_verify_nonce(
 				sanitize_text_field( wp_unslash( $_POST['bricks_mcp_structured_brief_nonce'] ) ),
-				'bricks_mcp_structured_brief'
+				BricksCore::OPTION_STRUCTURED_BRIEF
 			)
 		) {
 			$fields = [
@@ -1650,11 +1650,11 @@ final class Settings {
 				$data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
 			}
 
-			update_option( 'bricks_mcp_structured_brief', $data );
+			update_option( BricksCore::OPTION_STRUCTURED_BRIEF, $data );
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Design Rules saved.', 'bricks-mcp' ) . '</p></div>';
 		}
 
-		$values        = get_option( 'bricks_mcp_structured_brief', [] );
+		$values        = get_option( BricksCore::OPTION_STRUCTURED_BRIEF, [] );
 		$values        = is_array( $values ) ? $values : [];
 		$global_classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
 		$global_classes = is_array( $global_classes ) ? $global_classes : [];
@@ -1700,7 +1700,7 @@ final class Settings {
 			</div>
 
 			<form method="post">
-				<?php wp_nonce_field( 'bricks_mcp_structured_brief', 'bricks_mcp_structured_brief_nonce' ); ?>
+				<?php wp_nonce_field( BricksCore::OPTION_STRUCTURED_BRIEF, 'bricks_mcp_structured_brief_nonce' ); ?>
 
 				<h4><?php esc_html_e( 'Dark Sections', 'bricks-mcp' ); ?></h4>
 				<table class="form-table" role="presentation">
