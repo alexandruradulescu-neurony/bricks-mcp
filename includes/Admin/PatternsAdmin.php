@@ -84,7 +84,13 @@ class PatternsAdmin {
 				<input type="file" id="bricks-mcp-import-file" accept=".json" style="display:none;">
 				<button type="button" class="button button-link-delete" id="bricks-mcp-reseed-patterns" title="<?php esc_attr_e( 'Overwrite shipped pattern IDs from data/design-patterns.json. Custom patterns with unique IDs are preserved.', 'bricks-mcp' ); ?>"><?php esc_html_e( 'Reset to plugin defaults', 'bricks-mcp' ); ?></button>
 				<span class="bwm-patterns-count" style="margin-left:auto;color:#666;">
-					<?php printf( esc_html__( '%d patterns total', 'bricks-mcp' ), count( $patterns ) ); ?>
+					<?php
+					printf(
+						/* translators: %d is the total number of patterns. */
+						esc_html__( '%d patterns total', 'bricks-mcp' ),
+						(int) count( $patterns )
+					);
+					?>
 				</span>
 			</div>
 
@@ -105,7 +111,7 @@ class PatternsAdmin {
 					<tr data-pattern-id="<?php echo esc_attr( $p['id'] ); ?>" data-category="<?php echo esc_attr( $p['category'] ?? '' ); ?>">
 						<td><input type="checkbox" class="bricks-mcp-pattern-select" value="<?php echo esc_attr( $p['id'] ); ?>"></td>
 						<td>
-							<strong><?php echo esc_html( $p['name'] ?? $p['id'] ); ?></strong>
+							<strong><?php echo esc_html( (string) ( $p['name'] ?? $p['id'] ?? '' ) ); ?></strong>
 							<div class="bwm-pattern-tags" style="margin-top:4px;">
 								<?php foreach ( $p['tags'] ?? [] as $tag ) : ?>
 									<span class="bwm-tag"><?php echo esc_html( $tag ); ?></span>
@@ -223,6 +229,7 @@ class PatternsAdmin {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
 		}
 		wp_send_json_success( DesignPatternService::list_all() );
 	}
@@ -307,12 +314,17 @@ class PatternsAdmin {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
 		}
 
 		$ids = [];
 		if ( ! empty( $_POST['pattern_ids'] ) ) {
 			$raw = wp_unslash( $_POST['pattern_ids'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-			$ids = is_array( $raw ) ? array_map( 'sanitize_text_field', $raw ) : [];
+			if ( is_array( $raw ) ) {
+				// Filter out non-scalar entries first (nested arrays would silently become '' via sanitize_text_field).
+				$scalars = array_filter( $raw, 'is_scalar' );
+				$ids     = array_values( array_filter( array_map( 'sanitize_text_field', $scalars ) ) );
+			}
 		}
 
 		$exported = DesignPatternService::export( $ids );
@@ -330,12 +342,14 @@ class PatternsAdmin {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
 		}
 
 		$json = isset( $_POST['patterns_json'] ) ? wp_unslash( $_POST['patterns_json'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$patterns = json_decode( $json, true );
 		if ( ! is_array( $patterns ) ) {
 			wp_send_json_error( [ 'message' => __( 'Invalid JSON. Expected an array of pattern objects.', 'bricks-mcp' ) ] );
+			return;
 		}
 
 		$result = DesignPatternService::import( $patterns );
@@ -352,11 +366,24 @@ class PatternsAdmin {
 		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
 		}
 
 		$result = DesignPatternService::reseed_plugin_patterns();
+
+		// Defensive: align error shape with other handlers. Service may return WP_Error
+		// or an array with an 'error' key; anything else is an unexpected response.
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+			return;
+		}
+		if ( ! is_array( $result ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unexpected service response.', 'bricks-mcp' ) ] );
+			return;
+		}
 		if ( isset( $result['error'] ) ) {
 			wp_send_json_error( [ 'message' => $result['error'] ] );
+			return;
 		}
 		wp_send_json_success( $result );
 	}
