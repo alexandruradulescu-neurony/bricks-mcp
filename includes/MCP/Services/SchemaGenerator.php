@@ -43,6 +43,16 @@ class SchemaGenerator {
 	private const CACHE_DURATION = DAY_IN_SECONDS;
 
 	/**
+	 * Maximum controls iterated per element before bailing out.
+	 * Complex elements (query-loop, woo-product) can have 150+ controls; this
+	 * cap guards against pathological registrations without truncating typical
+	 * Bricks elements.
+	 *
+	 * @var int
+	 */
+	private const MAX_CONTROLS_PER_ELEMENT = 200;
+
+	/**
 	 * Cached Bricks settings key registry loaded from data/settings-keys.json.
 	 *
 	 * @var array<string, mixed>|null
@@ -350,7 +360,7 @@ class SchemaGenerator {
 			}
 
 			++$control_count;
-			if ( $control_count > 200 ) {
+			if ( $control_count > self::MAX_CONTROLS_PER_ELEMENT ) {
 				// Prevent excessive iteration on complex elements.
 				break;
 			}
@@ -805,7 +815,7 @@ class SchemaGenerator {
 		try {
 			return new $element_class( [] );
 		} catch ( \Throwable $e ) {
-			error_log( 'BricksMCP: Element schema generation failed: ' . $e->getMessage() );
+			error_log( "BricksMCP: Element schema generation failed for {$element_class}: " . $e->getMessage() );
 			return null;
 		}
 	}
