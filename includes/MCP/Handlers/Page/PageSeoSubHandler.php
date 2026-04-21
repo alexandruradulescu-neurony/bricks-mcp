@@ -23,6 +23,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class PageSeoSubHandler {
 
 	/**
+	 * Canonical list of SEO field names accepted by update_seo.
+	 *
+	 * Kept as a single source of truth for the accept-list loop, the error
+	 * message when none is present, and any future schema/validator mirrors.
+	 */
+	private const SEO_FIELD_NAMES = [
+		'title',
+		'description',
+		'robots_noindex',
+		'robots_nofollow',
+		'canonical',
+		'og_title',
+		'og_description',
+		'og_image',
+		'twitter_title',
+		'twitter_description',
+		'twitter_image',
+		'focus_keyword',
+	];
+
+	/**
 	 * Bricks service instance.
 	 *
 	 * @var BricksService
@@ -89,16 +110,9 @@ final class PageSeoSubHandler {
 			return $protected;
 		}
 
-		// Extract all SEO fields from args.
-		$seo_field_names = array(
-			'title', 'description', 'robots_noindex', 'robots_nofollow', 'canonical',
-			'og_title', 'og_description', 'og_image',
-			'twitter_title', 'twitter_description', 'twitter_image',
-			'focus_keyword',
-		);
-
+		// Extract all SEO fields from args. Accept-list lives on self::SEO_FIELD_NAMES.
 		$seo_fields = array();
-		foreach ( $seo_field_names as $field ) {
+		foreach ( self::SEO_FIELD_NAMES as $field ) {
 			if ( array_key_exists( $field, $args ) ) {
 				$seo_fields[ $field ] = $args[ $field ];
 			}
