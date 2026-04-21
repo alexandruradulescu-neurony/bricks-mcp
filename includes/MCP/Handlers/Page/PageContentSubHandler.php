@@ -110,7 +110,8 @@ final class PageContentSubHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
-					__( 'This update would reduce elements from %d to %d (%d%% reduction). Set confirm: true to proceed, or use page:append_content to add without replacing.', 'bricks-mcp' ),
+					/* translators: 1: Old element count, 2: New element count, 3: Reduction percentage */
+					__( 'This update would reduce elements from %1$d to %2$d (%3$d%% reduction). Set confirm: true to proceed, or use page:append_content to add without replacing.', 'bricks-mcp' ),
 					$old_count,
 					$new_count,
 					$reduction_pct
