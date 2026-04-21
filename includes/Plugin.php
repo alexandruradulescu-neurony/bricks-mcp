@@ -124,13 +124,6 @@ final class Plugin {
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				error_log( 'BricksMCP migrate_settings failed: ' . $e->getMessage() );
 			}
-			try {
-				MCP\Services\DesignPatternService::migrate_plugin_patterns();
-			} catch ( \Throwable $e ) {
-				$migration_ok = false;
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( 'BricksMCP migrate_plugin_patterns failed: ' . $e->getMessage() );
-			}
 			if ( $migration_ok ) {
 				update_option( MCP\Services\BricksCore::OPTION_DB_VERSION, BRICKS_MCP_VERSION, true );
 			}
