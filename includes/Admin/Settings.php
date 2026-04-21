@@ -848,7 +848,7 @@ final class Settings {
 			'bricks-mcp-admin-notes',
 			'bricksMcpNotes',
 			[
-				'nonce' => wp_create_nonce( 'bricks_mcp_notes' ),
+				'nonce' => wp_create_nonce( BricksCore::NOTES_NONCE_ACTION ),
 			]
 		);
 
@@ -1575,7 +1575,7 @@ final class Settings {
 	 * @return void
 	 */
 	public function ajax_delete_note(): void {
-		check_ajax_referer( 'bricks_mcp_notes', '_wpnonce' );
+		check_ajax_referer( BricksCore::NOTES_NONCE_ACTION, '_wpnonce' );
 
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ), 403 );
@@ -1609,7 +1609,7 @@ final class Settings {
 	 * @return void
 	 */
 	public function ajax_add_note(): void {
-		check_ajax_referer( 'bricks_mcp_notes', '_wpnonce' );
+		check_ajax_referer( BricksCore::NOTES_NONCE_ACTION, '_wpnonce' );
 
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ), 403 );
@@ -1961,7 +1961,7 @@ final class Settings {
 	 * @return void
 	 */
 	public function ajax_parse_brief(): void {
-		check_ajax_referer( 'bricks_mcp_notes', 'nonce' );
+		check_ajax_referer( BricksCore::NOTES_NONCE_ACTION, 'nonce' );
 
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
