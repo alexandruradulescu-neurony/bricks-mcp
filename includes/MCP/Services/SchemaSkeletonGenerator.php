@@ -714,13 +714,6 @@ final class SchemaSkeletonGenerator {
 		return $item;
 	}
 
-	// ================================================================
-	// Legacy keyword-based generation (kept for backward compatibility)
-	// ================================================================
-
-	// ──────────────────────────────────────────────
-	// detect_section_type(), is_dark(), is_split() removed — only used by deleted generate().
-
 	// ──────────────────────────────────────────────
 	// Class → role mapping
 	// ──────────────────────────────────────────────
