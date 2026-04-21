@@ -1680,10 +1680,14 @@ class BricksService {
 	 * @return array<string, mixed>|\WP_Error Partial result or WP_Error if all fail.
 	 */
 	public function bulk_update_elements( int $post_id, array $updates ): array|\WP_Error {
-		if ( count( $updates ) > 50 ) {
+		if ( count( $updates ) > BricksCore::BATCH_SIZE ) {
 			return new \WP_Error(
 				'batch_too_large',
-				__( 'Maximum 50 element updates per call. Split into multiple calls.', 'bricks-mcp' )
+				sprintf(
+					/* translators: %d: Maximum batch size */
+					__( 'Maximum %d element updates per call. Split into multiple calls.', 'bricks-mcp' ),
+					BricksCore::BATCH_SIZE
+				)
 			);
 		}
 

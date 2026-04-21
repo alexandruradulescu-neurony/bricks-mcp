@@ -25,8 +25,12 @@ final class SchemaExpander {
 	/**
 	 * Maximum allowed repeat count per pattern reference.
 	 * Prevents memory bombs from unbounded expansion (e.g. repeat: 1000).
+	 *
+	 * PUBLIC so DesignSchemaValidator can import the same limit — previously a
+	 * private const here and a literal `> 50` in the validator drifted in
+	 * exactly the way v3.24.2 surfaced for other registry data.
 	 */
-	private const MAX_REPEAT = 50;
+	public const MAX_REPEAT = 50;
 
 	/**
 	 * Expand a full design schema, resolving all patterns and repeats.

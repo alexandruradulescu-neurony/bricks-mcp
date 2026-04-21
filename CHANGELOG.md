@@ -4,6 +4,57 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.25.0] — 2026-04-21
+
+### Phase 4 of repair roadmap: magic strings/numbers extraction
+
+Pure refactor release. Zero behavior change on valid input. Centralizes duplicated literals against the drift class that surfaced in v3.24.2 (data-inconsistency between two files that carried the same "50" constant).
+
+#### New BricksCore constants
+
+- `BATCH_SIZE = 50` — single source for bulk-operation caps. Replaced `count > 50` literals in `BricksService::bulk_update_elements` and `GlobalVariableService::batch_delete_global_variables`. Error messages now interpolate the constant value.
+- `META_KEY_HEADER_FALLBACK = '_bricks_page_header_2'` — fallback when Bricks hasn't defined `BRICKS_DB_PAGE_HEADER`.
+- `META_KEY_FOOTER_FALLBACK = '_bricks_page_footer_2'` — same for footer.
+
+#### New BricksCore helpers
+
+- `data_path( string $filename ): string` — replaces `dirname( __DIR__, 3 ) . '/data/...'` duplicated across 5 sites:
+  - `SchemaGenerator::get_settings_keys` — settings-keys.json
+  - `ElementSettingsGenerator::get_element_registry` — elements.json
+  - `DesignPatternService::load_and_merge_seed` — design-patterns.json
+  - `ProposalService::load_building_rules` — building-rules.json
+  - `ProposalService::get_building_rules` — building-rules.json (second instance)
+- `header_meta_key(): string` — wraps the Bricks `BRICKS_DB_PAGE_HEADER` ternary. Replaces 2 sites in `BricksCore::unhook_bricks_meta_filters` + 3 sites in `GlobalClassService::find_class_references`.
+- `footer_meta_key(): string` — same for footer.
+
+#### Domain-local constants
+
+- `ElementSettingsGenerator::TEXT_ELEMENT_TYPES` — `[ 'heading', 'text-basic', 'text', 'text-link' ]`. Previously duplicated in 2 sites (one named `$text_types`, one `$dark_text_types`) within the same method.
+- `SchemaExpander::MAX_REPEAT` — promoted from `private` to `public`. `DesignSchemaValidator` now imports it via `SchemaExpander::MAX_REPEAT` instead of using a separate `> 50` literal. Change one, both agree.
+
+#### Capability literal replacement
+
+- `'manage_options'` in `Admin/Settings.php:98` and `Router.php:593` replaced with `BricksCore::REQUIRED_CAPABILITY`. Capability rename now requires touching one declaration instead of three literals.
+
+### Risk
+
+LOW — pure refactor, no logic changes. PHP syntax verified on all 12 touched files.
+
+### Files touched
+
+- `MCP/Services/BricksCore.php` — constants added, 2 ternary replacements in `unhook_bricks_meta_filters`
+- `MCP/Services/BricksService.php` — BATCH_SIZE replacement + i18n fix in `bulk_update_elements`
+- `MCP/Services/ElementSettingsGenerator.php` — TEXT_ELEMENT_TYPES constant + 2 deduplications + data_path() call
+- `MCP/Services/SchemaExpander.php` — MAX_REPEAT promoted public
+- `MCP/Services/DesignSchemaValidator.php` — imports SchemaExpander::MAX_REPEAT
+- `MCP/Services/SchemaGenerator.php` — data_path() call
+- `MCP/Services/DesignPatternService.php` — data_path() call
+- `MCP/Services/ProposalService.php` — 2 data_path() calls
+- `MCP/Services/GlobalVariableService.php` — BATCH_SIZE replacement + i18n fix
+- `MCP/Services/GlobalClassService.php` — 3 header/footer ternary replacements
+- `MCP/Router.php` — manage_options replacement
+- `Admin/Settings.php` — manage_options replacement
+
 ## [3.24.5] — 2026-04-21
 
 ### Phase 3 of repair roadmap: pipeline data integrity

@@ -590,7 +590,7 @@ final class Router {
 		}
 
 		// All other tools (bricks, page, element, template, etc.) require manage_options.
-		return 'manage_options';
+		return BricksCore::REQUIRED_CAPABILITY;
 	}
 
 	/**

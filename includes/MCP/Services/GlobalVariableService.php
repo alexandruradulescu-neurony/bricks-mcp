@@ -567,8 +567,15 @@ class GlobalVariableService {
 	 * @return array<string, mixed>|\WP_Error Partial result or WP_Error if all fail.
 	 */
 	public function batch_delete_global_variables( array $variable_ids ): array|\WP_Error {
-		if ( count( $variable_ids ) > 50 ) {
-			return new \WP_Error( 'batch_too_large', __( 'Maximum 50 variable deletions per call.', 'bricks-mcp' ) );
+		if ( count( $variable_ids ) > BricksCore::BATCH_SIZE ) {
+			return new \WP_Error(
+				'batch_too_large',
+				sprintf(
+					/* translators: %d: Maximum batch size */
+					__( 'Maximum %d variable deletions per call.', 'bricks-mcp' ),
+					BricksCore::BATCH_SIZE
+				)
+			);
 		}
 
 		$variables = get_option( 'bricks_global_variables', [] );

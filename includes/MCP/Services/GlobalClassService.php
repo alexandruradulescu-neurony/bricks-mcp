@@ -493,8 +493,8 @@ class GlobalClassService {
 	public function find_class_references( string $class_id ): array {
 		$meta_keys = [
 			BricksCore::META_KEY,
-			defined('BRICKS_DB_PAGE_HEADER') ? BRICKS_DB_PAGE_HEADER : '_bricks_page_header_2',
-			defined('BRICKS_DB_PAGE_FOOTER') ? BRICKS_DB_PAGE_FOOTER : '_bricks_page_footer_2',
+			BricksCore::header_meta_key(),
+			BricksCore::footer_meta_key(),
 		];
 
 		$query = new \WP_Query(
@@ -509,11 +509,11 @@ class GlobalClassService {
 						'compare' => 'EXISTS',
 					],
 					[
-						'key'     => defined('BRICKS_DB_PAGE_HEADER') ? BRICKS_DB_PAGE_HEADER : '_bricks_page_header_2',
+						'key'     => BricksCore::header_meta_key(),
 						'compare' => 'EXISTS',
 					],
 					[
-						'key'     => defined('BRICKS_DB_PAGE_FOOTER') ? BRICKS_DB_PAGE_FOOTER : '_bricks_page_footer_2',
+						'key'     => BricksCore::footer_meta_key(),
 						'compare' => 'EXISTS',
 					],
 				],

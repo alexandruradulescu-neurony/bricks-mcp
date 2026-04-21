@@ -95,7 +95,7 @@ final class Settings {
 			'bricks',
 			__( 'Bricks WP MCP', 'bricks-mcp' ),
 			__( 'Bricks WP MCP', 'bricks-mcp' ),
-			'manage_options',
+			BricksCore::REQUIRED_CAPABILITY,
 			self::PAGE_SLUG,
 			[ $this, 'render_settings_page' ]
 		);

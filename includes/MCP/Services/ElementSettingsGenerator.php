@@ -23,6 +23,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class ElementSettingsGenerator {
 
 	/**
+	 * Element types that carry user-facing text (for text-align/color propagation).
+	 * Single source of truth — previously duplicated in 4 sites within this file.
+	 */
+	private const TEXT_ELEMENT_TYPES = [ 'heading', 'text-basic', 'text', 'text-link' ];
+
+	/**
 	 * @var SchemaGenerator
 	 */
 	private SchemaGenerator $schema_generator;
@@ -64,7 +70,7 @@ final class ElementSettingsGenerator {
 	 */
 	public static function get_element_registry(): array {
 		if ( null === self::$element_registry ) {
-			$path = dirname( __DIR__, 3 ) . '/data/elements.json';
+			$path = BricksCore::data_path( 'elements.json' );
 			if ( file_exists( $path ) ) {
 				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 				$data = is_string( $json ) ? json_decode( $json, true ) : [];
@@ -231,9 +237,8 @@ final class ElementSettingsGenerator {
 					$is_centered = ( $settings['_alignItems'] ?? '' ) === 'center';
 				}
 				if ( $is_centered ) {
-					$text_types = [ 'heading', 'text-basic', 'text', 'text-link' ];
 					foreach ( $children as &$child_el ) {
-						if ( in_array( $child_el['name'] ?? '', $text_types, true ) && is_array( $child_el['settings'] ?? null ) ) {
+						if ( in_array( $child_el['name'] ?? '', self::TEXT_ELEMENT_TYPES, true ) && is_array( $child_el['settings'] ?? null ) ) {
 							if ( ! isset( $child_el['settings']['_typography']['text-align'] ) ) {
 								$child_el['settings']['_typography']['text-align'] = 'center';
 							}
@@ -244,9 +249,8 @@ final class ElementSettingsGenerator {
 
 				// Auto-set white text on direct text children in dark context.
 				if ( $child_is_dark ) {
-					$dark_text_types = [ 'heading', 'text-basic', 'text', 'text-link' ];
 					foreach ( $children as &$child_el ) {
-						if ( in_array( $child_el['name'] ?? '', $dark_text_types, true ) && is_array( $child_el['settings'] ?? null ) ) {
+						if ( in_array( $child_el['name'] ?? '', self::TEXT_ELEMENT_TYPES, true ) && is_array( $child_el['settings'] ?? null ) ) {
 							if ( ! isset( $child_el['settings']['_typography']['color'] ) ) {
 								$child_el['settings']['_typography']['color'] = [ 'raw' => SiteVariableResolver::white_color() ];
 							}

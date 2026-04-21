@@ -380,7 +380,7 @@ final class DesignPatternService {
 	 * @return array{seeded: int, skipped: int, overwritten?: int}
 	 */
 	private static function load_and_merge_seed( bool $overwrite ): array {
-		$path = dirname( __DIR__, 3 ) . '/data/design-patterns.json';
+		$path = BricksCore::data_path( 'design-patterns.json' );
 		if ( ! is_readable( $path ) ) {
 			return [ 'seeded' => 0, 'skipped' => 0, 'error' => 'Seed file not readable: ' . $path ];
 		}

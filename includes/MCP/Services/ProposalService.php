@@ -138,7 +138,7 @@ final class ProposalService {
 	 */
 	private static function load_building_rules(): array {
 		if ( null === self::$building_rules_cache ) {
-			$path = dirname( __DIR__, 3 ) . '/data/building-rules.json';
+			$path = BricksCore::data_path( 'building-rules.json' );
 			if ( file_exists( $path ) ) {
 				$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 				$data = is_string( $json ) ? json_decode( $json, true ) : [];
@@ -158,7 +158,7 @@ final class ProposalService {
 	 * @param bool $has_design_system True if site has meaningful classes/theme styles.
 	 */
 	private static function get_building_rules( bool $has_design_system ): array {
-		$path = dirname( __DIR__, 3 ) . '/data/building-rules.json';
+		$path = BricksCore::data_path( 'building-rules.json' );
 		$data = [];
 		if ( file_exists( $path ) ) {
 			$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents

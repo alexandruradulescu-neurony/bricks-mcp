@@ -37,6 +37,18 @@ class BricksCore {
 	public const EDITOR_MODE_KEY = '_bricks_editor_mode';
 
 	/**
+	 * Fallback meta key for Bricks header template content.
+	 * Used when Bricks has not defined BRICKS_DB_PAGE_HEADER.
+	 */
+	public const META_KEY_HEADER_FALLBACK = '_bricks_page_header_2';
+
+	/**
+	 * Fallback meta key for Bricks footer template content.
+	 * Used when Bricks has not defined BRICKS_DB_PAGE_FOOTER.
+	 */
+	public const META_KEY_FOOTER_FALLBACK = '_bricks_page_footer_2';
+
+	/**
 	 * WordPress option keys used throughout the plugin.
 	 */
 	public const OPTION_GLOBAL_CLASSES       = 'bricks_global_classes';
@@ -54,6 +66,48 @@ class BricksCore {
 	 * Required WordPress capability for MCP operations.
 	 */
 	public const REQUIRED_CAPABILITY = 'manage_options';
+
+	/**
+	 * Maximum items per batch across bulk operations (element:bulk_add, bulk_update,
+	 * bricks:get_element_schemas batch, class batch_create/batch_delete).
+	 * Centralized to prevent drift between validator caps and handler caps.
+	 */
+	public const BATCH_SIZE = 50;
+
+	/**
+	 * Return the canonical path to a file in the plugin's data/ directory.
+	 *
+	 * Replaces `dirname(__DIR__, 3) . '/data/elements.json'` scattered across
+	 * SchemaGenerator, ProposalService, DesignPatternService, and
+	 * ElementSettingsGenerator. Single source of truth for data-file paths.
+	 *
+	 * @param string $filename Relative filename inside data/.
+	 * @return string Absolute path.
+	 */
+	public static function data_path( string $filename ): string {
+		return dirname( __DIR__, 3 ) . '/data/' . ltrim( $filename, '/' );
+	}
+
+	/**
+	 * Return the Bricks header template meta key.
+	 *
+	 * Wraps the `defined(BRICKS_DB_PAGE_HEADER) ? BRICKS_DB_PAGE_HEADER : '_bricks_page_header_2'`
+	 * ternary that was duplicated across BricksCore and GlobalClassService.
+	 *
+	 * @return string Header meta key.
+	 */
+	public static function header_meta_key(): string {
+		return defined( 'BRICKS_DB_PAGE_HEADER' ) ? BRICKS_DB_PAGE_HEADER : self::META_KEY_HEADER_FALLBACK;
+	}
+
+	/**
+	 * Return the Bricks footer template meta key.
+	 *
+	 * @return string Footer meta key.
+	 */
+	public static function footer_meta_key(): string {
+		return defined( 'BRICKS_DB_PAGE_FOOTER' ) ? BRICKS_DB_PAGE_FOOTER : self::META_KEY_FOOTER_FALLBACK;
+	}
 
 	/**
 	 * Element normalizer instance.
@@ -290,8 +344,8 @@ class BricksCore {
 		$keys_to_unhook = array_unique( array_filter( [
 			$meta_key,
 			self::META_KEY,
-			defined( 'BRICKS_DB_PAGE_HEADER' ) ? BRICKS_DB_PAGE_HEADER : '_bricks_page_header_2',
-			defined( 'BRICKS_DB_PAGE_FOOTER' ) ? BRICKS_DB_PAGE_FOOTER : '_bricks_page_footer_2',
+			self::header_meta_key(),
+			self::footer_meta_key(),
 		] ) );
 
 		// Record each sanitize_post_meta_* callback individually so rehook can

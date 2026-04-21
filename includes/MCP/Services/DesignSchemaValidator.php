@@ -243,9 +243,10 @@ final class DesignSchemaValidator {
 			if ( ! isset( $patterns[ $ref_name ] ) ) {
 				$errors[] = "{$path}.ref \"{$ref_name}\" does not match any defined pattern.";
 			}
-			$repeat = (int) ( $node['repeat'] ?? 1 );
-			if ( $repeat > 50 ) {
-				$errors[] = "{$path}.repeat is {$repeat} — maximum allowed is 50. Reduce repeat count.";
+			$repeat     = (int) ( $node['repeat'] ?? 1 );
+			$max_repeat = SchemaExpander::MAX_REPEAT;
+			if ( $repeat > $max_repeat ) {
+				$errors[] = "{$path}.repeat is {$repeat} — maximum allowed is {$max_repeat}. Reduce repeat count.";
 			} elseif ( $repeat < 1 ) {
 				$errors[] = "{$path}.repeat must be at least 1.";
 			}

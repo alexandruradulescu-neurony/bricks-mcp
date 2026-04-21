@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.24.5
+Stable tag: 3.25.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,15 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.25.0 =
+* Refactor: Pure extraction release — no behavior change. Centralizes magic strings and numbers into `BricksCore` constants and helpers.
+* New: `BricksCore::BATCH_SIZE = 50` — single source for bulk-operation limits (bulk_update_elements, batch_delete_global_variables).
+* New: `BricksCore::data_path($filename)` — replaces `dirname(__DIR__, 3) . '/data/...'` duplicated across SchemaGenerator, ProposalService (×2), DesignPatternService, ElementSettingsGenerator.
+* New: `BricksCore::header_meta_key()` / `footer_meta_key()` — replace `defined(BRICKS_DB_PAGE_HEADER) ? : '_bricks_page_header_2'` ternaries in BricksCore + GlobalClassService (×3).
+* New: `ElementSettingsGenerator::TEXT_ELEMENT_TYPES` — single source for the 4 element types that carry user-facing text. Deduplicated 2 inline arrays in same file.
+* New: `SchemaExpander::MAX_REPEAT` promoted to public so `DesignSchemaValidator` imports it. Previously: private constant + separate literal `> 50` in validator. Same drift class as v3.24.2 data inconsistency.
+* Fix: `'manage_options'` literals in Settings.php and Router.php replaced with `BricksCore::REQUIRED_CAPABILITY`. Capability changes now require touching one line, not three.
 
 = 3.24.5 =
 * Fix: `ElementNormalizer::parent_refs_to_tree` no longer corrupts trees silently. Previous reference-in-foreach pattern (`foreach ($by_id as &$el) { $tree[] = &$el; }`) aliased every stored entry to the loop variable — every child in the output tree ended up pointing at the last source element. Rewritten with pure value semantics using a recursive builder.
