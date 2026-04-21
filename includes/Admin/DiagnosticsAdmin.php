@@ -85,6 +85,7 @@ class DiagnosticsAdmin {
 
         if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
             wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+            return;
         }
 
         $runner = new DiagnosticRunner();
