@@ -45,6 +45,12 @@ final class WordPressHandler {
 	private const GENERATED_PASSWORD_LENGTH = 16;
 
 	/**
+	 * Upper cap applied to `posts_per_page` / `number` to protect against runaway
+	 * queries from AI callers. Keeps the default page response bounded.
+	 */
+	private const MAX_POSTS_PER_PAGE = 100;
+
+	/**
 	 * Handle WordPress tool actions.
 	 *
 	 * @param array<string, mixed> $args Tool arguments including 'action'.
@@ -99,7 +105,7 @@ final class WordPressHandler {
 
 		$query_args = array(
 			'post_type'      => isset( $args['post_type'] ) ? sanitize_text_field( (string) $args['post_type'] ) : 'post',
-			'posts_per_page' => isset( $args['posts_per_page'] ) ? min( absint( $args['posts_per_page'] ), 100 ) : 10,
+			'posts_per_page' => isset( $args['posts_per_page'] ) ? min( absint( $args['posts_per_page'] ), self::MAX_POSTS_PER_PAGE ) : 10,
 			'orderby'        => isset( $args['orderby'] ) ? sanitize_text_field( (string) $args['orderby'] ) : 'date',
 			'order'          => $order,
 			'post_status'    => 'publish',
@@ -190,7 +196,7 @@ final class WordPressHandler {
 		$allowed_order   = array( 'ASC', 'DESC' );
 
 		$query_args = array(
-			'number'  => min( isset( $args['number'] ) ? absint( $args['number'] ) : 10, 100 ),
+			'number'  => min( isset( $args['number'] ) ? absint( $args['number'] ) : 10, self::MAX_POSTS_PER_PAGE ),
 			'role'    => isset( $args['role'] ) ? sanitize_text_field( (string) $args['role'] ) : '',
 			'orderby' => isset( $args['orderby'] ) && in_array( $args['orderby'], $allowed_orderby, true )
 				? $args['orderby']
