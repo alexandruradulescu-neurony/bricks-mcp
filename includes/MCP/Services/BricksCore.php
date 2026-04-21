@@ -100,6 +100,17 @@ class BricksCore {
 	public const ADMIN_NONCE_ACTION = 'bricks_mcp_settings_nonce';
 
 	/**
+	 * AI Notes admin AJAX nonce action.
+	 *
+	 * Coincidentally matches OPTION_NOTES as a string, but is semantically
+	 * distinct: this is a nonce-action identifier used by the notes
+	 * UI script, while OPTION_NOTES is the wp_options row key where notes
+	 * are stored. Separated into its own constant so either can change
+	 * without the other silently breaking.
+	 */
+	public const NOTES_NONCE_ACTION = 'bricks_mcp_notes';
+
+	/**
 	 * Keys inside the OPTION_SETTINGS array.
 	 *
 	 * Previously duplicated as string literals across Activator
