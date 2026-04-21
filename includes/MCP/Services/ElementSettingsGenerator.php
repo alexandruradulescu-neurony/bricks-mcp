@@ -29,10 +29,23 @@ final class ElementSettingsGenerator {
 	private const TEXT_ELEMENT_TYPES = [ 'heading', 'text-basic', 'text', 'text-link' ];
 
 	/**
+	 * Element types where element-level `_cssCustom` is unreliable (produces
+	 * "Array to string conversion" frontend errors). Superset of TEXT_ELEMENT_TYPES
+	 * plus button/icon. The pipeline strips _cssCustom on these types with a warning.
+	 */
+	private const NON_STRUCTURAL_ELEMENT_TYPES = [ 'text-basic', 'heading', 'button', 'icon', 'text', 'text-link' ];
+
+	/**
 	 * Default column count when a grid block declares `layout: grid` without `columns`.
 	 * Matches the pattern-discovery default in SchemaSkeletonGenerator for consistency.
 	 */
 	private const DEFAULT_GRID_COLUMNS = 3;
+
+	/**
+	 * Max characters included from a stripped _cssCustom value in pipeline warnings.
+	 * Keeps AI log output compact while giving enough context to identify the rule.
+	 */
+	private const CSS_WARN_EXCERPT_LEN = 80;
 
 	/**
 	 * @var SchemaGenerator
@@ -461,13 +474,13 @@ final class ElementSettingsGenerator {
 		// 10a-ii. Quarantine _cssCustom on non-structural element types.
 		// Element-level _cssCustom on text/heading/button/icon elements is unreliable
 		// and can cause "Array to string conversion" frontend errors.
-		if ( isset( $settings['_cssCustom'] ) && in_array( $type, [ 'text-basic', 'heading', 'button', 'icon', 'text', 'text-link' ], true ) ) {
+		if ( isset( $settings['_cssCustom'] ) && in_array( $type, self::NON_STRUCTURAL_ELEMENT_TYPES, true ) ) {
 			$css = $settings['_cssCustom'];
 			unset( $settings['_cssCustom'] );
 			$settings['_pipeline_warnings'][] = sprintf(
 				'Element-level _cssCustom on a %s element is unreliable (causes "Array to string conversion" frontend errors). The CSS was stripped: %s. Move this CSS into a class_intent instead.',
 				$type,
-				substr( is_string( $css ) ? $css : '', 0, 80 )
+				substr( is_string( $css ) ? $css : '', 0, self::CSS_WARN_EXCERPT_LEN )
 			);
 		}
 
