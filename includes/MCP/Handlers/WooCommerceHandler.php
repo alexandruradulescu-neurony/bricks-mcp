@@ -1169,6 +1169,7 @@ final class WooCommerceHandler {
 			return new \WP_Error(
 				'scaffold_save_failed',
 				sprintf(
+					/* translators: %s: Error message from element save */
 					__( 'Template created but element save failed: %s. Template has been rolled back.', 'bricks-mcp' ),
 					$save_result->get_error_message()
 				)
