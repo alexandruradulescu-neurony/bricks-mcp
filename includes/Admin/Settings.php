@@ -815,7 +815,7 @@ final class Settings {
 			'bricksMcpUpdates',
 			[
 				'ajaxUrl'         => admin_url( 'admin-ajax.php' ),
-				'nonce'           => wp_create_nonce( 'bricks_mcp_settings_nonce' ),
+				'nonce'           => wp_create_nonce( BricksCore::ADMIN_NONCE_ACTION ),
 				'currentVersion'  => BRICKS_MCP_VERSION,
 				'siteUrl'         => get_site_url(),
 				'restBase'        => rest_url( 'bricks-wp-mcp/v1/' ),
@@ -1352,7 +1352,7 @@ final class Settings {
 	 * @return void
 	 */
 	public function ajax_generate_app_password(): void {
-		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+		check_ajax_referer( BricksCore::ADMIN_NONCE_ACTION, 'nonce' );
 
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
@@ -1628,7 +1628,7 @@ final class Settings {
 	 * @return void
 	 */
 	public function ajax_revoke_app_password(): void {
-		check_ajax_referer( 'bricks_mcp_settings_nonce', 'nonce' );
+		check_ajax_referer( BricksCore::ADMIN_NONCE_ACTION, 'nonce' );
 
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
