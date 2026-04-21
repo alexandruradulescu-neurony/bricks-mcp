@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.25.6
+Stable tag: 3.25.7
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,10 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.25.7 =
+* Fix: `SeoService` title/description length thresholds extracted into class constants (`TITLE_MIN_CHARS=30`, `TITLE_MAX_CHARS=60`, `DESCRIPTION_MIN_CHARS=120`, `DESCRIPTION_MAX_CHARS=160`). New `bricks_mcp_seo_length_bounds` filter allows non-English sites to override — Romanian/CJK/Cyrillic content with different character-to-pixel-width ratios no longer false-flags.
+* Fix: `SchemaSkeletonGenerator` pricing featured-card selection. Previously `floor(pat_repeat / 2)` produced nonsensical results for pat_repeat=1 (featured the solo tier) and arbitrary result for pat_repeat=2. Now: repeat=1 → no featured card (sentinel -1), repeat=2 → second card featured, repeat=3+ → middle card featured.
 
 = 3.25.6 =
 * Fix: `BricksService::remove_element(cascade: true)` now scrubs stale child-ID references from surviving elements. Previously the cascade removed the target + descendants but left parent.children arrays pointing at gone IDs, which the linkage validator flagged on save. Also adds is_array guards per element.

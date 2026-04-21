@@ -130,16 +130,31 @@ final class SchemaSkeletonGenerator {
 
 			// Generate placeholder data + pattern refs.
 			if ( null !== $featured_pattern_name ) {
-				// Pricing: emit three sequential refs preserving card order.
-				// Middle card uses the featured pattern variant with yellow accent border.
-				$middle_idx = (int) floor( $pat_repeat / 2 );
+				// Pricing: emit sequential refs preserving card order.
+				// Featured card uses the variant with accent border.
+				//
+				// Featured-index rules:
+				//   repeat=1 → no featured card (solo tier, featured is pointless)
+				//   repeat=2 → second card featured (left = standard, right = upgrade)
+				//   repeat=3+ → middle card featured (center tier is conventional for pricing)
+				//
+				// Previous `floor(pat_repeat / 2)` selected index 0 for repeat=1
+				// (featured solo card — meaningless) and index 1 for repeat=2 (arbitrary
+				// but preserved). The new logic makes the solo case non-featured.
+				if ( 1 === $pat_repeat ) {
+					$middle_idx = -1; // sentinel: no featured card
+				} elseif ( 2 === $pat_repeat ) {
+					$middle_idx = 1;  // second of two
+				} else {
+					$middle_idx = (int) floor( $pat_repeat / 2 );
+				}
 				$before     = [];
 				$middle     = null;
 				$after      = [];
 				for ( $i = 1; $i <= $pat_repeat; $i++ ) {
-					$is_featured = ( $i - 1 === $middle_idx );
+					$is_featured = ( $middle_idx >= 0 && $i - 1 === $middle_idx );
 					$item        = $this->make_pattern_item( $pat_elements, $pat_hint, $i, $section_type, $is_featured );
-					if ( $i - 1 < $middle_idx ) {
+					if ( $middle_idx >= 0 && $i - 1 < $middle_idx ) {
 						$before[] = $item;
 					} elseif ( $is_featured ) {
 						$middle = $item;
@@ -150,7 +165,9 @@ final class SchemaSkeletonGenerator {
 				if ( ! empty( $before ) ) {
 					$pattern_refs[] = [ 'ref' => $pat_name, 'repeat' => count( $before ), 'data' => $before ];
 				}
-				$pattern_refs[] = [ 'ref' => $featured_pattern_name, 'repeat' => 1, 'data' => [ $middle ] ];
+				if ( null !== $middle ) {
+					$pattern_refs[] = [ 'ref' => $featured_pattern_name, 'repeat' => 1, 'data' => [ $middle ] ];
+				}
 				if ( ! empty( $after ) ) {
 					$pattern_refs[] = [ 'ref' => $pat_name, 'repeat' => count( $after ), 'data' => $after ];
 				}

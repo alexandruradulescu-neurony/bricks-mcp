@@ -24,6 +24,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SeoService {
 
 	/**
+	 * SEO length thresholds (character counts).
+	 *
+	 * Google English guidance: titles 30–60, descriptions 120–160 chars.
+	 * These bounds are filterable via `bricks_mcp_seo_length_bounds` for
+	 * non-English content where pixel-width vs. character-count mapping differs
+	 * (e.g. CJK, Cyrillic, Romanian diacritics).
+	 */
+	private const TITLE_MIN_CHARS       = 30;
+	private const TITLE_MAX_CHARS       = 60;
+	private const DESCRIPTION_MIN_CHARS = 120;
+	private const DESCRIPTION_MAX_CHARS = 160;
+
+	/**
 	 * Core infrastructure.
 	 *
 	 * @var BricksCore
@@ -181,13 +194,29 @@ class SeoService {
 		$title_len   = mb_strlen( $title, 'UTF-8' );
 		$desc_len    = mb_strlen( $description, 'UTF-8' );
 
+		// Allow non-English sites to override thresholds via filter.
+		$bounds = apply_filters( 'bricks_mcp_seo_length_bounds', [
+			'title_min'       => self::TITLE_MIN_CHARS,
+			'title_max'       => self::TITLE_MAX_CHARS,
+			'description_min' => self::DESCRIPTION_MIN_CHARS,
+			'description_max' => self::DESCRIPTION_MAX_CHARS,
+		] );
+		// Defensive: filter may return malformed data.
+		if ( ! is_array( $bounds ) ) {
+			$bounds = [];
+		}
+		$title_min = (int) ( $bounds['title_min'] ?? self::TITLE_MIN_CHARS );
+		$title_max = (int) ( $bounds['title_max'] ?? self::TITLE_MAX_CHARS );
+		$desc_min  = (int) ( $bounds['description_min'] ?? self::DESCRIPTION_MIN_CHARS );
+		$desc_max  = (int) ( $bounds['description_max'] ?? self::DESCRIPTION_MAX_CHARS );
+
 		$data['audit'] = array(
 			'title_length'       => $title_len,
-			'title_ok'           => $title_len >= 30 && $title_len <= 60,
-			'title_issue'        => 0 === $title_len ? 'missing' : ( $title_len < 30 ? 'too_short' : ( $title_len > 60 ? 'too_long' : null ) ),
+			'title_ok'           => $title_len >= $title_min && $title_len <= $title_max,
+			'title_issue'        => 0 === $title_len ? 'missing' : ( $title_len < $title_min ? 'too_short' : ( $title_len > $title_max ? 'too_long' : null ) ),
 			'description_length' => $desc_len,
-			'description_ok'     => $desc_len >= 120 && $desc_len <= 160,
-			'description_issue'  => 0 === $desc_len ? 'missing' : ( $desc_len < 120 ? 'too_short' : ( $desc_len > 160 ? 'too_long' : null ) ),
+			'description_ok'     => $desc_len >= $desc_min && $desc_len <= $desc_max,
+			'description_issue'  => 0 === $desc_len ? 'missing' : ( $desc_len < $desc_min ? 'too_short' : ( $desc_len > $desc_max ? 'too_long' : null ) ),
 			'has_og_image'       => ! empty( $data['fields']['og_image'] ),
 		);
 

@@ -4,6 +4,36 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.25.7] — 2026-04-21
+
+### Phase 10 of repair roadmap: MEDIUM sweep part 2
+
+#### i18n: SEO length thresholds
+
+SEO audit previously hardcoded Google's English-optimized character bounds (title 30–60, description 120–160). Non-English content where character-to-pixel-width ratio differs (Romanian, CJK, Cyrillic) false-flagged:
+
+- Constants added: `SeoService::TITLE_MIN_CHARS`, `TITLE_MAX_CHARS`, `DESCRIPTION_MIN_CHARS`, `DESCRIPTION_MAX_CHARS`.
+- New filter `bricks_mcp_seo_length_bounds` lets sites override: `add_filter( 'bricks_mcp_seo_length_bounds', fn() => [ 'title_min' => 25, 'title_max' => 55, ... ] );`
+- Defensive: filter may return malformed data; each bound falls back to the constant when missing.
+
+#### SchemaSkeletonGenerator featured-card logic
+
+Pricing section `middle_idx = floor(pat_repeat / 2)` produced:
+
+- `repeat=1` → index 0 → solo tier marked "featured" (meaningless).
+- `repeat=2` → index 1 → second card featured (arbitrary).
+- `repeat=3+` → middle (correct).
+
+Fix:
+
+- `repeat=1` → no featured card (sentinel `-1`; second pattern_ref entry is skipped).
+- `repeat=2` → second card featured (upgrade tier convention).
+- `repeat=3+` → middle card featured (unchanged).
+
+### Risk
+
+LOW — behavior change on solo-pricing case is strictly better (no longer ships a featured-marker for single-tier pricing).
+
 ## [3.25.6] — 2026-04-21
 
 ### Phase 9 of repair roadmap: MEDIUM sweep part 1
