@@ -81,6 +81,8 @@ class McpEndpointCheck implements DiagnosticCheck {
 			$endpoint_url,
 			array(
 				'timeout'   => self::HTTP_TIMEOUT_SECONDS,
+				// sslverify => false because this is a loopback probe to the same host;
+				// self-signed certs in local dev environments would otherwise false-fail.
 				'sslverify' => false,
 			)
 		);
