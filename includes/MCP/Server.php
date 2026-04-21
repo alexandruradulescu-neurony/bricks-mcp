@@ -57,9 +57,18 @@ final class Server {
 	/**
 	 * Initialize the MCP server.
 	 *
+	 * Idempotent: re-entry (e.g. developer hot-reload or plugin re-activation in
+	 * the same request) must not stack duplicate filter/action registrations.
+	 *
 	 * @return void
 	 */
 	public function init(): void {
+		static $initialized = false;
+		if ( $initialized ) {
+			return;
+		}
+		$initialized = true;
+
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
 		add_filter( 'rest_request_before_callbacks', [ $this, 'intercept_json_parse_error' ], 10, 3 );
 		add_filter( 'rest_post_dispatch', [ $this, 'add_www_authenticate_header' ], 10, 3 );
@@ -112,10 +121,17 @@ final class Server {
 	 * @param \WP $wp The WordPress environment instance.
 	 * @return void
 	 */
-	public function handle_well_known_request( \WP $wp ): void {
+	public function handle_well_known_request( \WP $wp ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- wp_parse_url handles sanitization on next line.
 		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
-		$path        = wp_parse_url( $request_uri, PHP_URL_PATH );
+		$path        = wp_parse_url( (string) $request_uri, PHP_URL_PATH );
+
+		// wp_parse_url() returns null/false on malformed input. Short-circuit rather
+		// than feed a non-string into in_array() — strict-true means non-matches, but
+		// keeping this explicit keeps the intent obvious.
+		if ( ! is_string( $path ) ) {
+			return;
+		}
 
 		$well_known_paths = [
 			'/.well-known/oauth-protected-resource',
