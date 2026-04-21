@@ -154,13 +154,17 @@ final class BuildHandler {
 		// Step 3: Handle replace action — requires confirmation.
 		if ( 'replace' === $schema['target']['action'] && empty( $args['confirm'] ) ) {
 			$existing = $this->bricks_service->get_elements( $page_id );
+			// get_elements() may return WP_Error on upstream failure; treat that as 0
+			// elements in the confirm message rather than triggering count() on a
+			// non-countable object (emits PHP warning in 7.3+, TypeError in 9+).
+			$existing_count = is_array( $existing ) ? count( $existing ) : 0;
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
 					/* translators: 1: Page ID, 2: Existing element count */
 					__( 'This will replace ALL %2$d elements on page %1$d with the design schema output. Set confirm: true to proceed.', 'bricks-mcp' ),
 					$page_id,
-					count( $existing )
+					$existing_count
 				)
 			);
 		}
