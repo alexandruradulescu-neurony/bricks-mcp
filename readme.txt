@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.25.7
+Stable tag: 3.25.8
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,10 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.25.8 =
+* Fix: App password generator client-name now filterable via `bricks_mcp_app_password_client_name`. Default remains "Bricks MCP - Claude Code" but sites using multiple MCP clients (ChatGPT, Cursor, Aider) can override per-context to distinguish WP admin sessions.
+* Fix: `ajax_generate_app_password` adds `return` after `wp_send_json_error` (defense against filtered wp_die).
 
 = 3.25.7 =
 * Fix: `SeoService` title/description length thresholds extracted into class constants (`TITLE_MIN_CHARS=30`, `TITLE_MAX_CHARS=60`, `DESCRIPTION_MIN_CHARS=120`, `DESCRIPTION_MAX_CHARS=160`). New `bricks_mcp_seo_length_bounds` filter allows non-English sites to override — Romanian/CJK/Cyrillic content with different character-to-pixel-width ratios no longer false-flags.

@@ -4,6 +4,13 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.25.8] — 2026-04-21
+
+### Phase 11 of repair roadmap: final MEDIUM/LOW cleanup
+
+- App password generator client-name now filterable: `bricks_mcp_app_password_client_name`. Default unchanged ("Bricks MCP - Claude Code"). Sites using multiple MCP clients can override to distinguish sessions in WP admin.
+- `ajax_generate_app_password` gets missing `return` after `wp_send_json_error`.
+
 ## [3.25.7] — 2026-04-21
 
 ### Phase 10 of repair roadmap: MEDIUM sweep part 2

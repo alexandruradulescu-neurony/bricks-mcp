@@ -1362,16 +1362,20 @@ final class Settings {
 		$username     = $current_user->user_login;
 
 		// Create Application Password.
-		$result = \WP_Application_Passwords::create_new_application_password(
+		// Client identifier is filter-overridable so sites using multiple MCP clients
+		// (Claude, ChatGPT, Cursor, etc.) can distinguish sessions in WP admin.
+		$client_name = (string) apply_filters( 'bricks_mcp_app_password_client_name', 'Bricks MCP - Claude Code' );
+		$result      = \WP_Application_Passwords::create_new_application_password(
 			$current_user->ID,
 			[
-				'name'   => 'Bricks MCP - Claude Code',
+				'name'   => $client_name,
 				'app_id' => wp_generate_uuid4(),
 			]
 		);
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+			return;
 		}
 
 		// $result is [ $password, $item ] -- the raw password is only available at creation time.
