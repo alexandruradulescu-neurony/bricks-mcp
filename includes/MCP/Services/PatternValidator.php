@@ -242,6 +242,178 @@ final class PatternValidator {
     }
 
     /**
+     * CSS property → snap category map.
+     * Properties absent from this map are passed through as raw.
+     */
+    private const PROPERTY_CATEGORY = [
+        '_padding'   => 'spacing',
+        '_margin'    => 'spacing',
+        '_gap'       => 'spacing',
+        '_border'    => 'radius',
+        '_radius'    => 'radius',
+        '_font-size' => 'font-size',
+        '_background' => 'color',
+        '_color'     => 'color',
+    ];
+
+    /**
+     * Walk a pattern tree, snap every raw value in style_tokens to site tokens.
+     *
+     * @param array<string, mixed>  $pattern  Pattern after content stripping.
+     * @param array<string, string> $site_vars Map of var name → raw value.
+     * @return array{pattern: array, snap_log: array, rejections: array}
+     */
+    public function tokenize( array $pattern, array $site_vars ): array {
+        $snap_log   = [];
+        $rejections = [];
+
+        if ( isset( $pattern['structure'] ) && is_array( $pattern['structure'] ) ) {
+            $pattern['structure'] = $this->walk_tokenize(
+                $pattern['structure'],
+                $site_vars,
+                'structure',
+                $snap_log,
+                $rejections
+            );
+        }
+
+        return [
+            'pattern'    => $pattern,
+            'snap_log'   => $snap_log,
+            'rejections' => $rejections,
+        ];
+    }
+
+    /**
+     * Recursive walker for tokenize().
+     */
+    private function walk_tokenize( array $node, array $site_vars, string $path, array &$snap_log, array &$rejections ): array {
+        if ( isset( $node['style_tokens'] ) && is_array( $node['style_tokens'] ) ) {
+            $node['style_tokens'] = $this->snap_style_tokens(
+                $node['style_tokens'],
+                $site_vars,
+                $path . '.style_tokens',
+                $snap_log,
+                $rejections
+            );
+        }
+        if ( isset( $node['children'] ) && is_array( $node['children'] ) ) {
+            foreach ( $node['children'] as $i => $child ) {
+                if ( is_array( $child ) ) {
+                    $node['children'][ $i ] = $this->walk_tokenize(
+                        $child,
+                        $site_vars,
+                        $path . '.children[' . $i . ']',
+                        $snap_log,
+                        $rejections
+                    );
+                }
+            }
+        }
+        return $node;
+    }
+
+    /**
+     * Apply snap recursively to a style_tokens subtree.
+     * String leaf-level values are snap candidates; arrays recurse.
+     */
+    private function snap_style_tokens( array $tokens, array $site_vars, string $path, array &$snap_log, array &$rejections ): array {
+        foreach ( $tokens as $key => $value ) {
+            $category = self::PROPERTY_CATEGORY[ $key ] ?? null;
+            $sub_path = $path . '.' . $key;
+
+            if ( is_array( $value ) ) {
+                // Recurse with inherited category if child has no override.
+                $tokens[ $key ] = $this->snap_style_tokens_inner( $value, $site_vars, $sub_path, $snap_log, $rejections, $category );
+                continue;
+            }
+
+            if ( ! is_string( $value ) || $category === null ) {
+                continue;
+            }
+
+            $result = $category === 'color'
+                ? $this->snap_color( $value, $this->filter_color_vars( $site_vars ) )
+                : $this->snap_value( $value, $site_vars, $category );
+
+            if ( $result['snapped'] !== null ) {
+                $tokens[ $key ] = $result['snapped'];
+                $delta_key = $category === 'color' ? 'delta_e' : 'delta_pct';
+                $snap_log[] = [
+                    'path'     => $sub_path,
+                    'raw'      => $result['raw'],
+                    'snapped'  => $result['snapped'],
+                    $delta_key => $result[ $delta_key ],
+                ];
+            } else {
+                $rejections[] = [
+                    'path'     => $sub_path,
+                    'value'    => $value,
+                    'category' => $category,
+                    'reason'   => 'no_snap_candidate_within_threshold',
+                ];
+            }
+        }
+        return $tokens;
+    }
+
+    /**
+     * Inner recursive snap that inherits category from parent property
+     * (e.g. _padding → spacing applies to .top, .right, .bottom, .left leaves).
+     */
+    private function snap_style_tokens_inner( array $tokens, array $site_vars, string $path, array &$snap_log, array &$rejections, ?string $inherited_category ): array {
+        foreach ( $tokens as $key => $value ) {
+            $category = self::PROPERTY_CATEGORY[ $key ] ?? $inherited_category;
+            $sub_path = $path . '.' . $key;
+
+            if ( is_array( $value ) ) {
+                $tokens[ $key ] = $this->snap_style_tokens_inner( $value, $site_vars, $sub_path, $snap_log, $rejections, $category );
+                continue;
+            }
+
+            if ( ! is_string( $value ) || $category === null ) {
+                continue;
+            }
+
+            $result = $category === 'color'
+                ? $this->snap_color( $value, $this->filter_color_vars( $site_vars ) )
+                : $this->snap_value( $value, $site_vars, $category );
+
+            if ( $result['snapped'] !== null ) {
+                $tokens[ $key ] = $result['snapped'];
+                $delta_key = $category === 'color' ? 'delta_e' : 'delta_pct';
+                $snap_log[] = [
+                    'path'     => $sub_path,
+                    'raw'      => $result['raw'],
+                    'snapped'  => $result['snapped'],
+                    $delta_key => $result[ $delta_key ],
+                ];
+            } else {
+                $rejections[] = [
+                    'path'     => $sub_path,
+                    'value'    => $value,
+                    'category' => $category,
+                    'reason'   => 'no_snap_candidate_within_threshold',
+                ];
+            }
+        }
+        return $tokens;
+    }
+
+    /**
+     * Filter a site_vars map to only color-valued variables.
+     */
+    private function filter_color_vars( array $site_vars ): array {
+        $out = [];
+        foreach ( $site_vars as $name => $value ) {
+            if ( $this->parse_rgb( $value ) !== null ) {
+                $out[ $name ] = $value;
+            }
+        }
+        return $out;
+    }
+
+    /**
      * Validate and transform a pattern input through the full pipeline.
      *
      * @param array<string, mixed> $input Raw pattern input.
