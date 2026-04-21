@@ -137,7 +137,11 @@ final class PageCrudSubHandler {
 		if ( ! $post ) {
 			return new \WP_Error(
 				'post_not_found',
-				sprintf( __( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ), $post_id )
+				sprintf(
+					/* translators: %d: Post ID */
+					__( 'Post %d not found. Use page:list to find valid post IDs.', 'bricks-mcp' ),
+					$post_id
+				)
 			);
 		}
 
@@ -157,7 +161,8 @@ final class PageCrudSubHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
-					__( 'You are about to delete page "%s" (ID: %d) with %d elements. Set confirm: true to proceed.', 'bricks-mcp' ),
+					/* translators: 1: Post title, 2: Post ID, 3: Element count */
+					__( 'You are about to delete page "%1$s" (ID: %2$d) with %3$d elements. Set confirm: true to proceed.', 'bricks-mcp' ),
 					$post->post_title,
 					$post_id,
 					$element_count
@@ -171,7 +176,11 @@ final class PageCrudSubHandler {
 			if ( ! $deleted ) {
 				return new \WP_Error(
 					'delete_failed',
-					sprintf( __( 'Failed to permanently delete post %d.', 'bricks-mcp' ), $post_id )
+					sprintf(
+						/* translators: %d: Post ID */
+						__( 'Failed to permanently delete post %d.', 'bricks-mcp' ),
+						$post_id
+					)
 				);
 			}
 			return array(
