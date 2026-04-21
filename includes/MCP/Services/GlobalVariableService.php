@@ -654,6 +654,32 @@ class GlobalVariableService {
 	}
 
 	/**
+	 * Check whether a variable with the given name exists.
+	 *
+	 * @param string $name Variable name, including leading `--`.
+	 */
+	public function exists( string $name ): bool {
+		$key = str_starts_with( $name, '--' ) ? $name : '--' . $name;
+		return isset( $this->get_all_with_values()[ $key ] );
+	}
+
+	/**
+	 * Create a variable from an exported payload.
+	 *
+	 * @param string $name    Variable name, including leading `--`.
+	 * @param array  $payload { value: string, category?: string }.
+	 * @return bool True on success, false on error.
+	 */
+	public function create_from_payload( string $name, array $payload ): bool {
+		$clean_name = str_starts_with( $name, '--' ) ? substr( $name, 2 ) : $name;
+		$value      = (string) ( $payload['value'] ?? '' );
+		$category   = (string) ( $payload['category'] ?? '' );
+
+		$result = $this->create_global_variable( $clean_name, $value, $category );
+		return ! is_wp_error( $result );
+	}
+
+	/**
 	 * Search global variables by name and/or value substring.
 	 *
 	 * @param string $name        Name substring filter.

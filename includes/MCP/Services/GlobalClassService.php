@@ -1975,6 +1975,53 @@ class GlobalClassService {
 	}
 
 	/**
+	 * Check whether a class with the given name exists on the site.
+	 */
+	public function exists_by_name( string $name ): bool {
+		return isset( $this->get_all_by_name()[ $name ] );
+	}
+
+	/**
+	 * Create a class from an exported payload (name + settings object).
+	 *
+	 * Returns the final class NAME (may be auto-suffixed on name conflict).
+	 *
+	 * @param array $payload { name: string, settings: array, category?: string }.
+	 * @return string Final class name (possibly suffixed).
+	 */
+	public function create_from_payload( array $payload ): string {
+		$base_name = $payload['name'] ?? '';
+		$settings  = $payload['settings'] ?? [];
+		$category  = $payload['category'] ?? '';
+
+		if ( $base_name === '' ) {
+			return '';
+		}
+
+		// Auto-suffix on name conflict.
+		$name   = $base_name;
+		$suffix = 2;
+		while ( $this->exists_by_name( $name ) ) {
+			$name = $base_name . '_imported_v' . $suffix;
+			$suffix++;
+		}
+
+		$args = [
+			'name'     => $name,
+			'settings' => $settings,
+		];
+		if ( $category !== '' ) {
+			$args['category'] = $category;
+		}
+
+		$result = $this->create_global_class( $args );
+		if ( is_wp_error( $result ) ) {
+			return '';
+		}
+		return $name;
+	}
+
+	/**
 	 * Build a Bricks composite key suffix.
 	 *
 	 * @param string $breakpoint Bricks breakpoint key.

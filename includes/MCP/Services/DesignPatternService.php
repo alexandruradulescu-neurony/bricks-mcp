@@ -323,20 +323,61 @@ final class DesignPatternService {
 	/**
 	 * Import patterns from a portable JSON array.
 	 *
-	 * Auto-suffixes conflicting IDs.
+	 * For each pattern: ensure every class in pattern.classes exists on target
+	 * site (auto-create with suffix on name conflict); ensure every variable in
+	 * pattern.variables exists (auto-create if missing); then insert.
 	 *
 	 * @param array<int, array> $patterns Patterns to import.
-	 * @return array{imported: string[], errors: array}
+	 * @return array{imported: string[], errors: array, created_classes: string[], created_variables: string[]}
 	 */
 	public static function import( array $patterns ): array {
-		$imported = [];
-		$errors   = [];
+		$imported          = [];
+		$errors            = [];
+		$created_classes   = [];
+		$created_variables = [];
+
+		// Services for auto-hydration.
+		$core    = new BricksCore( new ElementNormalizer( new ElementIdGenerator() ) );
+		$classes = new GlobalClassService( $core );
+		$vars    = new GlobalVariableService( $core );
 
 		foreach ( $patterns as $idx => $pattern ) {
 			if ( ! is_array( $pattern ) || empty( $pattern['id'] ) ) {
 				$errors[] = [ 'index' => $idx, 'error' => 'Invalid pattern or missing id.' ];
 				continue;
 			}
+
+			// Hydrate missing classes on target site.
+			foreach ( $pattern['classes'] ?? [] as $name => $def ) {
+				if ( ! $classes->exists_by_name( $name ) ) {
+					$new_name = $classes->create_from_payload( $def );
+					if ( $new_name !== '' ) {
+						$created_classes[] = $new_name;
+						if ( $new_name !== $name ) {
+							// Rename refs in structure to match.
+							$pattern = self::rename_class_ref( $pattern, $name, $new_name );
+							$pattern['classes'][ $new_name ] = $pattern['classes'][ $name ];
+							unset( $pattern['classes'][ $name ] );
+						}
+					}
+				}
+			}
+
+			// Hydrate missing variables on target site.
+			foreach ( $pattern['variables'] ?? [] as $name => $def ) {
+				if ( ! $vars->exists( $name ) ) {
+					if ( $vars->create_from_payload( $name, $def ) ) {
+						$created_variables[] = $name;
+					}
+				}
+			}
+
+			// Preserve checksum so create() skips re-validation.
+			// Imported patterns are pre-validated (they have a checksum from export).
+			if ( empty( $pattern['checksum'] ) ) {
+				// No checksum = must validate. Otherwise (has checksum): pass through.
+			}
+
 			$result = self::create( $pattern );
 			if ( is_wp_error( $result ) ) {
 				$errors[] = [ 'index' => $idx, 'id' => $pattern['id'], 'error' => $result->get_error_message() ];
@@ -345,7 +386,32 @@ final class DesignPatternService {
 			}
 		}
 
-		return [ 'imported' => $imported, 'errors' => $errors ];
+		return [
+			'imported'          => $imported,
+			'errors'            => $errors,
+			'created_classes'   => array_values( array_unique( $created_classes ) ),
+			'created_variables' => array_values( array_unique( $created_variables ) ),
+		];
+	}
+
+	/**
+	 * Rename a class_ref inside a pattern's structure tree.
+	 */
+	private static function rename_class_ref( array $pattern, string $old, string $new ): array {
+		$walk = static function ( &$node ) use ( &$walk, $old, $new ) {
+			if ( isset( $node['class_refs'] ) && is_array( $node['class_refs'] ) ) {
+				$node['class_refs'] = array_map( fn( $r ) => $r === $old ? $new : $r, $node['class_refs'] );
+			}
+			foreach ( $node as $k => &$v ) {
+				if ( is_array( $v ) ) {
+					$walk( $v );
+				}
+			}
+		};
+		if ( isset( $pattern['structure'] ) ) {
+			$walk( $pattern['structure'] );
+		}
+		return $pattern;
 	}
 
 }
