@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.24.0
+Stable tag: 3.24.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,10 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.24.1 =
+* Fix: `build_from_schema` no longer crashes with `Cannot use object of type stdClass as array` when schema contains elements without explicit settings (most commonly `form` with no `element_settings.fields`). Root cause: ElementSettingsGenerator converted empty settings to `stdClass` for JSON `{}` serialization, but downstream subscript access (`$el['settings']['_pipeline_warnings']`) errored on object. Settings now stay as arrays throughout the pipeline; PHP `serialize()` at DB write handles empty arrays correctly.
+* Hardening: Added defensive `is_array()` guard in `BuildHandler::collect_and_strip_warnings()` against future stdClass leaks.
 
 = 3.24.0 =
 * New: AI notes included in discovery responses — persistent memory across sessions.

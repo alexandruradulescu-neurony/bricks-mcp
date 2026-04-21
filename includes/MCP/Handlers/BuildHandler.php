@@ -399,7 +399,8 @@ final class BuildHandler {
 	private function collect_and_strip_warnings( array &$elements ): array {
 		$warnings = [];
 		foreach ( $elements as &$el ) {
-			if ( isset( $el['settings']['_pipeline_warnings'] ) && is_array( $el['settings']['_pipeline_warnings'] ) ) {
+			// Defensive: settings should always be array, but guard against stdClass edge cases.
+			if ( isset( $el['settings'] ) && is_array( $el['settings'] ) && isset( $el['settings']['_pipeline_warnings'] ) && is_array( $el['settings']['_pipeline_warnings'] ) ) {
 				foreach ( $el['settings']['_pipeline_warnings'] as $w ) {
 					$warnings[] = $w;
 				}

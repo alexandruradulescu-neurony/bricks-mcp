@@ -186,10 +186,10 @@ final class ElementSettingsGenerator {
 		$type     = $node['type'] ?? 'div';
 		$settings = $this->build_settings( $node, $type, $class_map, $design_context, $classes_with_styles );
 
-		// Ensure settings is never an empty array (would serialize as JSON [] instead of {}).
-		if ( empty( $settings ) ) {
-			$settings = new \stdClass();
-		}
+		// Keep $settings as an array throughout the pipeline — downstream code (BuildHandler::collect_and_strip_warnings,
+		// collect_style_fingerprints, etc.) subscripts settings as array. Empty arrays serialize fine via
+		// PHP's serialize() in update_post_meta; the []-vs-{} JSON concern doesn't apply at the DB layer.
+		// If a specific downstream consumer needs JSON object shape, it should cast to stdClass locally.
 
 		$element = [
 			'name'     => $type,

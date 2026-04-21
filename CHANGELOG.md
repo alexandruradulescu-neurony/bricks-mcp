@@ -4,6 +4,15 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.24.1] — 2026-04-21
+
+### Bugfix: form element crash in build_from_schema
+
+- **`Cannot use object of type stdClass as array`** no longer occurs when building schemas that contain elements with no explicit settings (most commonly `form` without `element_settings.fields`, or any element where the generated settings happen to be empty).
+- **Root cause:** `ElementSettingsGenerator::process_node()` converted empty `$settings` to `new \stdClass()` so the final JSON would serialize as `{}` instead of `[]`. But downstream pipeline code (`BuildHandler::collect_and_strip_warnings()`, `collect_style_fingerprints()`, etc.) subscripts `$el['settings']['...']` as an array. PHP 8+ throws on object subscript access for non-`ArrayAccess` types.
+- **Fix:** Settings now stay as plain arrays throughout the pipeline. Empty arrays round-trip correctly through `update_post_meta`'s PHP `serialize()` — the `[]` vs `{}` JSON concern only applies at JSON-API boundaries, not DB storage.
+- **Hardening:** Added defensive `is_array()` guard in `BuildHandler::collect_and_strip_warnings()` to prevent future regressions if any other code path introduces stdClass settings.
+
 ## [3.24.0] — 2026-04-17
 
 ### System hardening
