@@ -63,7 +63,7 @@ class AppPasswordsAvailableCheck implements DiagnosticCheck {
 	/**
 	 * Run the Application Passwords availability check.
 	 *
-	 * @return array<string, mixed>
+	 * @return array{id: string, label: string, status: string, message: string, fix_steps: array<string>, category: string}
 	 */
 	public function run(): array {
 		if ( ! wp_is_application_passwords_available() ) {
