@@ -27,22 +27,47 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class DesignPipelineCheck implements DiagnosticCheck {
 
+	/**
+	 * Get the check ID.
+	 *
+	 * @return string
+	 */
 	public function id(): string {
 		return 'design_pipeline';
 	}
 
+	/**
+	 * Get the check label.
+	 *
+	 * @return string
+	 */
 	public function label(): string {
 		return __( 'Design Pipeline Health', 'bricks-mcp' );
 	}
 
+	/**
+	 * Get the check category.
+	 *
+	 * @return string
+	 */
 	public function category(): string {
 		return 'pipeline';
 	}
 
+	/**
+	 * Get dependencies.
+	 *
+	 * @return array<string>
+	 */
 	public function dependencies(): array {
 		return array();
 	}
 
+	/**
+	 * Run the design pipeline health check.
+	 *
+	 * @return array{id: string, label: string, status: string, message: string, fix_steps: array<string>, category: string}
+	 */
 	public function run(): array {
 		$base = defined( 'BRICKS_MCP_PLUGIN_DIR' ) ? BRICKS_MCP_PLUGIN_DIR : dirname( __DIR__, 3 ) . '/';
 
