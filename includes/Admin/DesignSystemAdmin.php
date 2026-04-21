@@ -363,7 +363,15 @@ class DesignSystemAdmin {
             <div class="bwm-ds-color-family-header">
                 <label class="bwm-ds-toggle-label">
                     <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.enabled" data-restructure="colors" <?php checked( $enabled ); ?>>
-                    <?php echo esc_html( sprintf( __( 'Enable %s', 'bricks-mcp' ), $label ) ); ?>
+                    <?php
+                    echo esc_html(
+                        sprintf(
+                            /* translators: %s is the color family label (Primary, Secondary, etc.). */
+                            __( 'Enable %s', 'bricks-mcp' ),
+                            $label
+                        )
+                    );
+                    ?>
                 </label>
                 <label class="bwm-ds-toggle-label">
                     <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.transparencies" data-restructure="colors" <?php checked( $transparencies ); ?>>
@@ -407,7 +415,15 @@ class DesignSystemAdmin {
             <div class="bwm-ds-color-family-header">
                 <label class="bwm-ds-toggle-label">
                     <input type="checkbox" data-field="colors.<?php echo esc_attr( $key ); ?>.transparencies" data-restructure="colors" <?php checked( $transparencies ); ?>>
-                    <?php echo esc_html( sprintf( __( '%s Transparencies', 'bricks-mcp' ), $label ) ); ?>
+                    <?php
+                    echo esc_html(
+                        sprintf(
+                            /* translators: %s is the B/W color label (White, Black). */
+                            __( '%s Transparencies', 'bricks-mcp' ),
+                            $label
+                        )
+                    );
+                    ?>
                 </label>
             </div>
             <div class="bwm-ds-color-shades">
