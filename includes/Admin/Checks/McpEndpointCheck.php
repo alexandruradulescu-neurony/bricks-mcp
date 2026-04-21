@@ -72,7 +72,7 @@ class McpEndpointCheck implements DiagnosticCheck {
 	/**
 	 * Run the MCP endpoint check.
 	 *
-	 * @return array<string, mixed>
+	 * @return array{id: string, label: string, status: string, message: string, fix_steps: array<string>, category: string}
 	 */
 	public function run(): array {
 		$endpoint_url = rest_url( 'bricks-wp-mcp/v1/mcp' );
