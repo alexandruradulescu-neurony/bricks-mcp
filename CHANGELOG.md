@@ -4,6 +4,37 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.25.4] — 2026-04-21
+
+### Phase 7B of repair roadmap: remaining Services HIGH items
+
+#### GlobalClassService hardening
+
+- **Case-insensitive duplicate-name check.** Previously "heroButton" and "HeroButton" both succeeded, producing two classes with effectively-identical CSS identifiers. Now rejects on normalized-lowercase match with clearer error message.
+- **Bounded ID-collision retry.** The previous `do { generate_id } while ( in_array )` had no retry cap — a mock generator or system-entropy failure could spin forever. Now capped at 100 attempts with explicit `id_generation_failed` error.
+
+#### ElementSettingsGenerator fixes
+
+- **Dark-color detection tightened.** The previous regex `(?:^|-)(?:ultra-)?dark(?:-|$|\))` produced false positives on tokens like `--dark-blue-500`, `--not-so-dark-bg`, and `--mediumdark-surface`. Replaced with `is_dark_color_token()` helper that matches only:
+  - Exact Bricks variable tokens: `var(--base-dark)`, `var(--primary-ultra-dark)`, etc.
+  - Exact raw tokens: `base-dark`, `accent-ultra-dark`, etc.
+  - CSS `black` keyword
+  - Near-black hex values (0x00–0x33 per channel)
+- **Overlay chain guarded.** `$settings['_background']['overlay']` can be scalar ("black"), array-without-color, or array-with-non-array-color. Previous code short-circuited silently leaving no gradient. Now handles all three shapes correctly.
+- **`DEFAULT_GRID_COLUMNS = 3`** — extracted inline `?? 3` literal.
+
+#### ProposalService
+
+- `create()` now surfaces a separate `page_trashed` error instead of generic `invalid_page` when the post is in the trash. AI clients can suggest a restore flow to the user.
+
+#### BricksService
+
+- `compute_diff()` — settings-diff path now `is_array()`-checks `$old_settings` and `$new_settings` before passing to `array_diff_key` / `array_filter`. Non-array settings previously crashed the diff computation.
+
+### Risk
+
+LOW — defensive guards + helper extractions.
+
 ## [3.25.3] — 2026-04-21
 
 ### Phase 7 of repair roadmap: remaining HIGH items (continued)

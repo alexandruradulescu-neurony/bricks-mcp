@@ -128,12 +128,16 @@ class GlobalClassService {
 			);
 		}
 
-		$existing_names = array_column( $classes, 'name' );
-		if ( in_array( $name, $existing_names, true ) ) {
+		// Case-insensitive duplicate check. Bricks treats class names case-sensitive
+		// internally but CSS class rendering often collapses/mangles case, so
+		// "heroButton" and "HeroButton" would produce visually-identical classes
+		// with separate underlying IDs. Reject on normalized match.
+		$existing_names_ci = array_map( 'strtolower', array_column( $classes, 'name' ) );
+		if ( in_array( strtolower( $name ), $existing_names_ci, true ) ) {
 			return new \WP_Error(
 				'duplicate_name',
 				sprintf(
-					__( 'A global class named "%s" already exists. Use update_global_class to modify it.', 'bricks-mcp' ),
+					__( 'A global class named "%s" already exists (case-insensitive match). Use update_global_class to modify it.', 'bricks-mcp' ),
 					$name
 				)
 			);
@@ -141,9 +145,22 @@ class GlobalClassService {
 
 		$id_generator = new ElementIdGenerator();
 		$existing_ids = array_column( $classes, 'id' );
+		// Bounded retry loop: protects against mock ID generators or pathological
+		// randomness that could spin forever. 36^6 = 2.2B possibilities, so even
+		// 100 retries is effectively "never collide under normal operation".
+		$max_retries = 100;
+		$retries     = 0;
 		do {
 			$new_id = $id_generator->generate();
-		} while ( in_array( $new_id, $existing_ids, true ) );
+			$retries++;
+		} while ( in_array( $new_id, $existing_ids, true ) && $retries < $max_retries );
+
+		if ( in_array( $new_id, $existing_ids, true ) ) {
+			return new \WP_Error(
+				'id_generation_failed',
+				__( 'Could not generate a unique class ID after 100 attempts. This indicates a broken ID generator or system-level entropy issue.', 'bricks-mcp' )
+			);
+		}
 
 		// Sanitize + normalize styles. Normalization collapses per-side structures
 		// that Bricks expects as scalars (e.g. _border.style must be "dashed",

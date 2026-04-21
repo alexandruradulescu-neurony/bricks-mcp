@@ -245,7 +245,25 @@ final class ProposalService {
 	public function create( int $page_id, string $description, ?array $design_plan = null ): array|\WP_Error {
 		$post = get_post( $page_id );
 		if ( ! $post ) {
-			return new \WP_Error( 'invalid_page', sprintf( 'Page %d not found.', $page_id ) );
+			return new \WP_Error(
+				'invalid_page',
+				sprintf(
+					/* translators: %d: Page ID */
+					__( 'Page %d not found. Check the page_id is correct, or use page:list to discover available pages.', 'bricks-mcp' ),
+					$page_id
+				)
+			);
+		}
+		// Distinguish trashed posts so the AI gets a clearer signal.
+		if ( 'trash' === $post->post_status ) {
+			return new \WP_Error(
+				'page_trashed',
+				sprintf(
+					/* translators: %d: Page ID */
+					__( 'Page %d is in the trash. Restore it via WP admin before running propose_design.', 'bricks-mcp' ),
+					$page_id
+				)
+			);
 		}
 
 		// ── Phase 1: Discovery (no design_plan) ──────────────────

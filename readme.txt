@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.25.3
+Stable tag: 3.25.4
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,14 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.25.4 =
+* Fix: `GlobalClassService::create_global_class` — duplicate-name check now case-insensitive (previously "heroButton" + "HeroButton" both succeeded). Unbounded `do-while` collision retry loop capped at 100 attempts with `id_generation_failed` error on exhaustion.
+* Fix: `ElementSettingsGenerator::is_dark_color_token()` replaces the overly-broad regex `(?:^|-)(?:ultra-)?dark(?:-|$|\))` that produced false positives on any token with "-dark" anywhere (e.g. `--dark-blue-500`, `--not-so-dark-bg`). New helper matches only exact base/primary/secondary/accent (-ultra)-dark tokens, black keyword, and near-black hex values.
+* Fix: `ElementSettingsGenerator::_background.overlay` chain now guards intermediate values — scalar overlay strings (`"black"`) and malformed array shapes no longer silently produce empty gradients.
+* Fix: `ElementSettingsGenerator::DEFAULT_GRID_COLUMNS = 3` extracted from inline `?? 3` literal.
+* Fix: `ProposalService::create()` now distinguishes trashed pages from missing pages. Separate `page_trashed` error code with "restore it" guidance instead of generic "not found".
+* Hardening: `BricksService::compute_diff()` — settings array-helpers now defensively `is_array()`-check `$old_settings`/`$new_settings` before `array_diff_key`/`array_filter`. Non-array settings (from legacy data or upstream non-strict inputs) previously crashed the diff path.
 
 = 3.25.3 =
 * Fix: Meta-key resolver bypass in three page sub-handlers. `PageCrudSubHandler::delete`, `PageReadSubHandler::format_post_for_list`, and `PageContentSubHandler::update_content` used the hardcoded page-content meta key directly — for `bricks_template` posts (headers, footers, popups, etc.) this meant element counts read from the wrong key. Now use `BricksService::resolve_elements_meta_key()` (new public passthrough to BricksCore resolver).

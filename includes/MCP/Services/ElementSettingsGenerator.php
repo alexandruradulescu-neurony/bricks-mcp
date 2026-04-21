@@ -29,6 +29,12 @@ final class ElementSettingsGenerator {
 	private const TEXT_ELEMENT_TYPES = [ 'heading', 'text-basic', 'text', 'text-link' ];
 
 	/**
+	 * Default column count when a grid block declares `layout: grid` without `columns`.
+	 * Matches the pattern-discovery default in SchemaSkeletonGenerator for consistency.
+	 */
+	private const DEFAULT_GRID_COLUMNS = 3;
+
+	/**
 	 * @var SchemaGenerator
 	 */
 	private SchemaGenerator $schema_generator;
@@ -103,6 +109,44 @@ final class ElementSettingsGenerator {
 	private static function get_element_meta( string $type ): array {
 		$registry = self::get_element_registry();
 		return $registry[ $type ] ?? [];
+	}
+
+	/**
+	 * Determine whether a background-color token indicates a dark background.
+	 *
+	 * Recognizes exact Bricks variable tokens (var(--base-dark), var(--primary-ultra-dark),
+	 * etc.) without matching incidental substrings like `--dark-blue` or `--not-so-dark`.
+	 *
+	 * The previous regex `(?:^|-)(?:ultra-)?dark(?:-|$|\))` produced false positives on
+	 * any token ending with `-dark-*)` or containing `-dark-` anywhere — e.g. light
+	 * colors named `--not-so-dark-bg` or the named color `--dark-blue-500`.
+	 *
+	 * @param string $token Color value (raw Bricks token or CSS var()).
+	 * @return bool True when the token is semantically a dark background.
+	 */
+	private static function is_dark_color_token( string $token ): bool {
+		$token = strtolower( trim( $token ) );
+		if ( '' === $token ) {
+			return false;
+		}
+		// Exact CSS-variable suffixes that mean "dark" or "ultra-dark" on a base/primary/secondary/accent palette.
+		// Matches: var(--base-dark), var(--base-ultra-dark), var(--primary-dark), etc.
+		if ( preg_match( '/var\(--(base|primary|secondary|accent)(?:-ultra)?-dark\)/', $token ) ) {
+			return true;
+		}
+		// Exact tokens without var() wrapper (Bricks sometimes stores raw token names).
+		if ( preg_match( '/^(base|primary|secondary|accent)(?:-ultra)?-dark$/', $token ) ) {
+			return true;
+		}
+		// CSS `black` keyword or near-black hex values.
+		if ( 'black' === $token ) {
+			return true;
+		}
+		// Hex: very-dark colors (shorthand #000..#333 or full-form equivalents).
+		if ( preg_match( '/^#(?:[0-2][0-9a-f])(?:[0-2][0-9a-f]){2}(?:[0-9a-f]{2})?$/i', $token ) ) {
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -223,7 +267,7 @@ final class ElementSettingsGenerator {
 			$bg       = $settings['_background'] ?? null;
 			$bg_color = is_array( $bg ) ? ( $bg['color'] ?? null ) : null;
 			$bg_raw   = is_array( $bg_color ) ? (string) ( $bg_color['raw'] ?? '' ) : '';
-			if ( '' !== $bg_raw && preg_match( '/(?:^|-)(?:ultra-)?dark(?:-|$|\))/', $bg_raw ) ) {
+			if ( '' !== $bg_raw && self::is_dark_color_token( $bg_raw ) ) {
 				$child_is_dark = true;
 			}
 		}
@@ -367,7 +411,7 @@ final class ElementSettingsGenerator {
 
 		// 8. Handle grid layout on block/div.
 		if ( in_array( $type, [ 'block', 'div' ], true ) && ! empty( $node['layout'] ) && 'grid' === $node['layout'] ) {
-			$columns = $node['columns'] ?? 3;
+			$columns = $node['columns'] ?? self::DEFAULT_GRID_COLUMNS;
 			$settings['_display']             = 'grid';
 			$settings['_gridTemplateColumns'] = "repeat({$columns}, 1fr)";
 			$settings['_gap']                 = $this->get_spacing_value( 'gap', $design_context );
@@ -517,10 +561,18 @@ final class ElementSettingsGenerator {
 
 		// 12. Convert _background.overlay to Bricks _gradient overlay format.
 		// Bricks uses _gradient with applyTo: "overlay" for background overlays.
+		// Guard each step of the chain: overlay may be scalar ("black"), array-without-color,
+		// or array-with-non-array-color. Previously short-circuited silently leaving a
+		// dangling empty gradient.
 		if ( isset( $settings['_background']['overlay'] ) ) {
-			$overlay_color = $settings['_background']['overlay']['color']['raw']
-				?? $settings['_background']['overlay']['color']['hex']
-				?? '';
+			$overlay = $settings['_background']['overlay'];
+			$overlay_color = '';
+			if ( is_string( $overlay ) && '' !== $overlay ) {
+				// Scalar shorthand — treat as the raw color value directly.
+				$overlay_color = $overlay;
+			} elseif ( is_array( $overlay ) && isset( $overlay['color'] ) && is_array( $overlay['color'] ) ) {
+				$overlay_color = (string) ( $overlay['color']['raw'] ?? $overlay['color']['hex'] ?? '' );
+			}
 			if ( '' !== $overlay_color ) {
 				$settings['_gradient'] = [
 					'colors'  => [

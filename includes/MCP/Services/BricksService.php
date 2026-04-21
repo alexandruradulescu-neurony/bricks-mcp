@@ -1632,8 +1632,16 @@ class BricksService {
 				$change_detail = [];
 
 				// Check if settings changed.
+				// Defensive: settings may be non-array (stdClass or null) from legacy data
+				// or upstream non-strict inputs — the array_* helpers throw on non-arrays.
 				$old_settings = $before_map[ $id ]['settings'] ?? [];
 				$new_settings = $el['settings'] ?? [];
+				if ( ! is_array( $old_settings ) ) {
+					$old_settings = [];
+				}
+				if ( ! is_array( $new_settings ) ) {
+					$new_settings = [];
+				}
 				if ( $old_settings !== $new_settings ) {
 					$changed_keys = array_unique( array_merge(
 						array_keys( array_diff_key( $new_settings, $old_settings ) ),
