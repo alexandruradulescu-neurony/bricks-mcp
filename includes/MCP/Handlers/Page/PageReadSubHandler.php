@@ -703,12 +703,13 @@ final class PageReadSubHandler {
 
 		// BFS to collect all descendants.
 		$result_ids = [ $root_id ];
-		$queue      = $by_id[ $root_id ]['children'] ?? [];
+		$root_children = $by_id[ $root_id ]['children'] ?? [];
+		$queue         = is_array( $root_children ) ? $root_children : [];
 
 		while ( ! empty( $queue ) ) {
 			$cid = array_shift( $queue );
 			$result_ids[] = $cid;
-			if ( isset( $by_id[ $cid ] ) && ! empty( $by_id[ $cid ]['children'] ) ) {
+			if ( isset( $by_id[ $cid ]['children'] ) && is_array( $by_id[ $cid ]['children'] ) ) {
 				foreach ( $by_id[ $cid ]['children'] as $grandchild ) {
 					$queue[] = $grandchild;
 				}
