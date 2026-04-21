@@ -73,9 +73,15 @@ final class Plugin {
 	/**
 	 * Prevent cloning.
 	 *
+	 * Symmetric with __wakeup(): cloning a singleton via ReflectionClass would
+	 * otherwise silently produce a second instance. Throw to keep the invariant.
+	 *
+	 * @throws \Exception When attempting to clone the singleton.
 	 * @return void
 	 */
-	private function __clone() {}
+	private function __clone() {
+		throw new \Exception( 'Cannot clone singleton.' );
+	}
 
 	/**
 	 * Prevent unserialization.
@@ -201,7 +207,10 @@ final class Plugin {
 			// Check update_option return — false on failure (DB issue, filter rejection).
 			// Surface via exception so the outer try/catch in init() keeps the db_version
 			// un-bumped and migration retries next load.
-			$ok = update_option( MCP\Services\BricksCore::OPTION_SETTINGS, $settings );
+			// Explicit autoload=true matches Activator::set_default_options() — both writers
+			// must agree or the option silently flips out of the autoload cache, hammering
+			// the DB on every request.
+			$ok = update_option( MCP\Services\BricksCore::OPTION_SETTINGS, $settings, true );
 			if ( false === $ok ) {
 				throw new \RuntimeException( 'migrate_settings: update_option returned false; retry on next load.' );
 			}

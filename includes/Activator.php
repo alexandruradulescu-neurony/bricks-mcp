@@ -138,6 +138,9 @@ final class Activator {
 		// Merge defaults with existing settings.
 		$settings = array_merge( $defaults, $existing );
 
-		update_option( BricksCore::OPTION_SETTINGS, $settings );
+		// Explicit autoload=true: Plugin::migrate_settings() also writes this option and
+		// must agree on autoload semantics, otherwise a future refactor could silently
+		// flip this option off the autoload list and hammer the DB on every request.
+		update_option( BricksCore::OPTION_SETTINGS, $settings, true );
 	}
 }
