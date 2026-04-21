@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.26.0
+Stable tag: 3.26.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,13 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.26.1 =
+* 54 additional commits from Phase 13 parallel agent sweep (Core+Admin, Handlers+Services). Continuation of v3.26.0.
+* Core+Admin: 10 Admin Check classes get correct `run()` return-shape docblocks; `DesignPipelineCheck` adds full interface-method docblocks; `BricksCore` adds `ADMIN_NONCE_ACTION`, `NOTES_NONCE_ACTION`, `SETTING_ENABLED`, `SETTING_REQUIRE_AUTH` constants consumed by Settings/Server/Activator/PatternsAdmin/DiagnosticsAdmin; `DesignSystemAdmin` extracts `PANEL_METHODS` + `NONCE_ACTION` constants; `Settings` extracts `CONNECTION_STATUS_TRANSIENT`, `REACHABLE_HTTP_CODES`, `BRIEFS_NONCE_ACTION/FIELD`; `Activator::ACTIVATION_CHECK_TRANSIENT` promoted public; `uninstall.php` gets `flush_rewrite_rules()` rationale + sync-comments on OPTION_* literals; `UpdateChecker` annotates unused `$upgrader` param; `Settings::ajax_generate_app_password` guards against `WP_User(0)`.
+* Handlers+Services: `WordPressHandler::MAX_POSTS_PER_PAGE`, `OnboardingService::BRIEF_SUMMARY_WORD_LIMIT`, `ComponentHandler::ID_COLLISION_MAX_RETRIES`, `PageSeoSubHandler::SEO_FIELD_NAMES` (12-entry deduplication), `BuildHandler::KNOWLEDGE_NUDGE_MAP` + `EXTRACTABLE_STYLE_KEYS`, `WooCommerceHandler::WC_TEMPLATE_TYPES` + `WC_INTEGRATION_SETTING_KEYS`, `SchemaSkeletonGenerator::PLACEHOLDER_ICONS`. `BuildHandler` guards `count($existing)` against WP_Error in replace-confirm path; defensively coalesces `$group['refs'] ?? []`.
+* i18n: translator comments + numbered placeholders across MenuHandler, ComponentHandler (4 sprintf sites), DesignSystemHandler (6 confirm-delete sprintfs), TemplateHandler (tag/bundle delete), WooCommerceHandler, DesignSystemAdmin color-family sites.
+* Style: `BricksCore` CSS sanitizer collapse to two-phase array-mode sanitation with docstring; `ElementHandler::STYLE_KEYS` moved to top of class; `BuildHandler` drops redundant `\BricksMCP\MCP\Handlers\BricksToolHandler` FQN.
 
 = 3.26.0 =
 * 57 commits from parallel MEDIUM/LOW/NIT sweep across 4 layers (Core, Admin, Handlers, Services). Consolidated release.

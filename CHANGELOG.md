@@ -4,6 +4,49 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.26.1] — 2026-04-21
+
+### Phase 13: continuation sweep after v3.26.0
+
+54 additional commits from 2 parallel agents (Core+Admin, Handlers+Services). All PHP files pass `php -l`. No semantics changes.
+
+#### Core + Admin layer (34 commits, 21 files)
+
+- **BricksCore** — 4 new constants: `ADMIN_NONCE_ACTION`, `NOTES_NONCE_ACTION`, `SETTING_ENABLED`, `SETTING_REQUIRE_AUTH`. Consumed by Settings, Server, Activator, PatternsAdmin, DiagnosticsAdmin (retiring ~15 duplicated nonce/setting-key literals).
+- **Admin Checks × 10** — correct `run()` return-shape docblocks (`array{id, label, status, message, fix_steps, category}` instead of generic `array<string, mixed>`). `DesignPipelineCheck` gets full interface-method docblocks.
+- **DesignSystemAdmin** — `PANEL_METHODS` constant (DRY between `render()` and `ajax_render_panel()`) + `NONCE_ACTION` constant.
+- **Settings** — `CONNECTION_STATUS_TRANSIENT`, `REACHABLE_HTTP_CODES`, `BRIEFS_NONCE_ACTION`, `BRIEFS_NONCE_FIELD` constants. `ajax_generate_app_password` guards against `WP_User(0)` before calling `WP_Application_Passwords::create_new_application_password`.
+- **Activator** — `ACTIVATION_CHECK_TRANSIENT` promoted `public` so Settings can reference it; consumer updated.
+- **uninstall.php** — `flush_rewrite_rules()` rationale documented; per-option sync comments noting `OPTION_*` constants on BricksCore.
+- **Autoloader** — documents `unregister()` / `get_class_map()` as tooling-only API (prevents dead-code removal).
+- **UpdateChecker** — `phpcs:ignore` on unused `$upgrader` param in `verify_download`.
+
+#### Handlers + Services layer (20 commits)
+
+- **WordPressHandler::MAX_POSTS_PER_PAGE** — `100` cap magic number as constant.
+- **OnboardingService::BRIEF_SUMMARY_WORD_LIMIT** — 50-word trim threshold.
+- **ComponentHandler::ID_COLLISION_MAX_RETRIES** — 50-retry cap with probability-math docblock preserved.
+- **PageSeoSubHandler::SEO_FIELD_NAMES** — 12-entry SEO field accept-list deduplication.
+- **BuildHandler::KNOWLEDGE_NUDGE_MAP** + **EXTRACTABLE_STYLE_KEYS** — the 7-entry element→domain map and 7-key extractable style set (distinct from ElementHandler::STYLE_KEYS).
+- **WooCommerceHandler::WC_TEMPLATE_TYPES** + **WC_INTEGRATION_SETTING_KEYS** — single source of truth for the 8 WC template types and 12 integration settings (previously duplicated across scaffold handlers).
+- **SchemaSkeletonGenerator::PLACEHOLDER_ICONS** — 10-entry rotating icon list.
+- **BuildHandler** — guards `count($existing)` against WP_Error in replace-confirm path; defensively coalesces `$group['refs'] ?? []` in shared-styles collector.
+- **BricksCore** CSS sanitizer — collapsed 6-call `preg_replace` chain into documented two-phase array-mode sanitation.
+
+#### i18n
+
+Translator comments + numbered placeholders added across:
+MenuHandler (confirm-delete), ComponentHandler (4 sprintf sites: create, update, delete, instantiate), DesignSystemHandler (6 confirm-delete sites), TemplateHandler (tag/bundle delete), WooCommerceHandler (scaffold_save_failed), DesignSystemAdmin (color-family sprintfs).
+
+#### Style
+
+- `ElementHandler::STYLE_KEYS` moved to top of class (grouped with other constants).
+- `BuildHandler` drops redundant `\BricksMCP\MCP\Handlers\BricksToolHandler` FQN (uses unqualified reference — already in-namespace).
+
+### Risk
+
+LOW — defensive + refactor. Zero behavior change on valid input.
+
 ## [3.26.0] — 2026-04-21
 
 ### Phase 12: Consolidated MEDIUM/LOW/NIT sweep across all 4 layers
