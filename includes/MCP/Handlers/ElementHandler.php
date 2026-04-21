@@ -56,6 +56,22 @@ final class ElementHandler {
 	];
 
 	/**
+	 * Style-relevant settings keys (excludes content, label, semantic tag).
+	 *
+	 * Used by copy_styling to whitelist the settings that move between
+	 * source/target. Distinct from BuildHandler::EXTRACTABLE_STYLE_KEYS
+	 * (which focuses on a narrower "container-level" extraction set).
+	 */
+	private const STYLE_KEYS = [
+		'_cssGlobalClasses', '_background', '_typography', '_color', '_border',
+		'_padding', '_margin', '_width', '_height', '_widthMax', '_heightMax',
+		'_widthMin', '_heightMin', '_minHeight', '_position', '_top', '_right',
+		'_bottom', '_left', '_zIndex', '_display', '_direction', '_alignItems',
+		'_justifyContent', '_flexWrap', '_columnGap', '_rowGap', '_gradient',
+		'_boxShadow', '_cssCustom',
+	];
+
+	/**
 	 * Bricks service instance.
 	 *
 	 * @var BricksService
@@ -648,18 +664,6 @@ final class ElementHandler {
 
 		return $result;
 	}
-
-	/**
-	 * Style-relevant settings keys (excludes content, label, semantic tag).
-	 */
-	private const STYLE_KEYS = [
-		'_cssGlobalClasses', '_background', '_typography', '_color', '_border',
-		'_padding', '_margin', '_width', '_height', '_widthMax', '_heightMax',
-		'_widthMin', '_heightMin', '_minHeight', '_position', '_top', '_right',
-		'_bottom', '_left', '_zIndex', '_display', '_direction', '_alignItems',
-		'_justifyContent', '_flexWrap', '_columnGap', '_rowGap', '_gradient',
-		'_boxShadow', '_cssCustom',
-	];
 
 	/**
 	 * Tool: Copy styling from one element to another.
