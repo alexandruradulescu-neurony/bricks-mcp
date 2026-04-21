@@ -63,7 +63,7 @@ class HttpsCheck implements DiagnosticCheck {
 	/**
 	 * Run the HTTPS check.
 	 *
-	 * @return array<string, mixed>
+	 * @return array{id: string, label: string, status: string, message: string, fix_steps: array<string>, category: string}
 	 */
 	public function run(): array {
 		$is_https = is_ssl()
