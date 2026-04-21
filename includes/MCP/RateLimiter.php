@@ -77,7 +77,18 @@ final class RateLimiter {
 			$count = self::increment_via_transient( $identifier );
 		}
 
-		if ( false === $count || (int) $count > $limit ) {
+		// Cache backend failure: wp_cache_incr returns false on Redis/Memcached outage.
+		// Treating false as "rate limit exceeded" would 429 all traffic during any cache
+		// hiccup — a Redis restart would take down the entire MCP endpoint.
+		// Fail-open policy: allow the request and log a warning. Rate limiting is a
+		// best-effort safety measure, not a security boundary.
+		if ( false === $count ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'BricksMCP RateLimiter: cache backend failure — allowing request (fail-open).' );
+			return true;
+		}
+
+		if ( (int) $count > $limit ) {
 			if ( ! headers_sent() ) {
 				header( 'Retry-After: ' . self::WINDOW );
 			}

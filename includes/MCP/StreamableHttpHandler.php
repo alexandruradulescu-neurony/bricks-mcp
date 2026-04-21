@@ -399,10 +399,22 @@ final class StreamableHttpHandler {
 		$status = $result->get_status();
 
 		// Check for error conditions.
-		if ( $status >= 400 || ( is_array( $data ) && ! empty( $data['error'] ) ) ) {
+		// Three signals of error:
+		//   1. HTTP status >= 400 — Response::error() (validation, capability, etc.)
+		//   2. $data['error'] — legacy flag set by Response::validation_error()
+		//   3. $data['isError'] — MCP tool-result envelope from Response::tool_error()
+		// Previously only #1 and #2 were checked, so tool_error() (which sets isError)
+		// silently surfaced as JSON-RPC success with `isError: true` nested inside —
+		// AI clients that only inspect the JSON-RPC envelope missed it entirely.
+		$is_data_array = is_array( $data );
+		$has_error     = $status >= 400
+			|| ( $is_data_array && ! empty( $data['error'] ) )
+			|| ( $is_data_array && ! empty( $data['isError'] ) );
+
+		if ( $has_error ) {
 			$error_text = '';
-			if ( is_array( $data ) && isset( $data['content'][0]['text'] ) ) {
-				$error_text = wp_strip_all_tags( $data['content'][0]['text'] );
+			if ( $is_data_array && isset( $data['content'][0]['text'] ) ) {
+				$error_text = wp_strip_all_tags( (string) $data['content'][0]['text'] );
 			}
 
 			return $this->jsonrpc_error(

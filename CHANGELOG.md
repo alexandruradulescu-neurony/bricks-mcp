@@ -4,6 +4,37 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.24.4] — 2026-04-21
+
+### Phase 2 of repair roadmap: auth + protocol correctness
+
+#### Security: destructive action confirm bypass closed
+
+- `Router::tool_confirm_destructive_action` previously bypassed `execute_tool()` entirely. No capability re-check. A user demoted between the original call and the confirm could still execute via an unexpired pre-demotion token.
+- **Fix:** capability check added on the confirm path. Tokens now prove intent, not current authorization.
+- **Secondary fix:** handler call wrapped in try/catch. Previously uncaught `\Throwable` crashed the MCP dispatcher with HTTP 500 instead of a JSON-RPC error envelope.
+- **Defensive:** `$tool_args` normalized to array before use (guards against stale transient data).
+
+#### Protocol: tool errors no longer silently look like successes
+
+- `Response::tool_error()` sets `isError: true` in the MCP tool-result envelope (per spec).
+- `StreamableHttpHandler::handle_tools_call` dispatched based on `$data['error']` (JSON-RPC envelope) — completely missed `isError`.
+- Consequence: tool errors from handlers (`return new \WP_Error(...)`) surfaced to AI clients as JSON-RPC **successes** with `isError` buried inside `data.content`. HTTP status 200. AI clients inspecting the outer JSON-RPC envelope never saw the error.
+- **Fix:** dispatcher now checks HTTP status >= 400 OR `$data['error']` OR `$data['isError']`. All three error-signaling paths correctly surface as JSON-RPC errors.
+
+#### Availability: Redis hiccup no longer = 429 for everyone
+
+- `RateLimiter::check` delegates counting to `wp_cache_incr()`, which returns `false` on Redis/Memcached backend failure.
+- Previously `false` was treated as "rate limit exceeded" (same branch as "count > limit"). A Redis restart = all traffic 429'd for the entire WINDOW.
+- **Fix:** explicit `false === $count` branch → fail-open, `error_log()` warning for diagnostics. Rate limiting is a best-effort safety measure, not a security boundary.
+
+### Risk
+
+MEDIUM — touches security-critical paths (capability check) and protocol envelope. Manual verification recommended:
+1. Call a destructive tool (e.g. `page:delete`); receive confirmation token; demote user; try to confirm — should now fail.
+2. Call a tool that returns `WP_Error` (e.g. `page:get` with invalid ID); AI client should receive JSON-RPC error, not success with `isError`.
+3. Stop Redis mid-request; MCP endpoint should continue serving, not 429.
+
 ## [3.24.3] — 2026-04-21
 
 ### Hardening: stdClass guard sweep (Phase 1 of repair roadmap)

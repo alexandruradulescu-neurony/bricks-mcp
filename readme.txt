@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.24.3
+Stable tag: 3.24.4
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,12 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.24.4 =
+* Security: `tool_confirm_destructive_action` now re-checks capability on confirm. Previously it bypassed `execute_tool()` entirely, including the capability check. A user demoted between original call and confirm could still execute via a pre-demotion token. Tokens now prove intent, not current authorization.
+* Security: `tool_confirm_destructive_action` now wraps handler calls in try/catch. Previously an uncaught `\Throwable` crashed the MCP dispatcher with HTTP 500 instead of a JSON-RPC error envelope.
+* Fix: MCP dispatcher now recognizes `isError: true` in tool result data. Previously `Response::tool_error()` set `isError` (MCP tool-result envelope) but the dispatcher only inspected `error` (JSON-RPC envelope) — tool errors silently surfaced to clients as successes with `isError` buried in data. AI clients inspecting the JSON-RPC envelope missed them entirely.
+* Fix: RateLimiter now fails open on cache backend outage. `wp_cache_incr()` returns `false` on Redis/Memcached failure; previously this was treated as "rate limit exceeded" so any Redis hiccup would 429 all traffic site-wide. Fail-open policy with error_log warning — rate limiting is a safety measure, not a security boundary.
 
 = 3.24.3 =
 * Hardening: stdClass guard sweep across the pipeline. v3.24.1 patched one site; this release sweeps the 21+ remaining hot sites in BuildHandler, VerifyHandler, ComponentHandler, ElementHandler, PageReadSubHandler, BricksToolHandler, Router, StreamableHttpHandler, and ElementSettingsGenerator against the `Cannot use object of type stdClass as array` crash class.

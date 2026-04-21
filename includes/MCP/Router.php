@@ -613,8 +613,11 @@ final class Router {
 			);
 		}
 
-		$tool_name = $pending['tool_name'];
-		$tool_args = $pending['args'];
+		$tool_name = $pending['tool_name'] ?? '';
+		$tool_args = $pending['args'] ?? [];
+		if ( ! is_array( $tool_args ) ) {
+			$tool_args = [];
+		}
 
 		$tool = $this->registry->get( $tool_name );
 		if ( null === $tool ) {
@@ -625,11 +628,46 @@ final class Router {
 			);
 		}
 
-		// Re-inject confirm and call the handler directly.
-		// This bypasses execute_tool() which would strip confirm again.
+		// Re-check capability on confirm. The original call went through execute_tool()'s
+		// capability check, but the user may have been demoted between the original call
+		// and the confirmation. Tokens are proof of intent, not proof of current authorization.
+		$capability = $this->get_tool_capability( $tool_name );
+		if ( null !== $capability && ! current_user_can( $capability ) ) {
+			return new \WP_Error(
+				'bricks_mcp_forbidden',
+				/* translators: %s: Required capability */
+				sprintf( __( 'You do not have the required capability (%s) to confirm this action.', 'bricks-mcp' ), $capability )
+			);
+		}
+
+		// Re-inject confirm and call the handler directly. We intentionally bypass
+		// execute_tool() here because it strips the `confirm` key to prevent AI bypass —
+		// but at this point the token has proven intent, so confirm must stay.
 		$tool_args['confirm'] = true;
 
-		return call_user_func( $tool['handler'], $tool_args );
+		// Wrap handler call in try/catch so uncaught exceptions surface as JSON-RPC errors
+		// instead of crashing the MCP dispatcher with a 500.
+		try {
+			$result = call_user_func( $tool['handler'], $tool_args );
+		} catch ( \Throwable $e ) {
+			return new \WP_Error(
+				'tool_execution_error',
+				$e->getMessage()
+			);
+		}
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		if ( ! is_array( $result ) && ! is_string( $result ) ) {
+			return new \WP_Error(
+				'invalid_handler_result',
+				__( 'Confirmed tool returned an unexpected result shape.', 'bricks-mcp' )
+			);
+		}
+
+		return is_array( $result ) ? $result : [ 'result' => $result ];
 	}
 
 	/**
