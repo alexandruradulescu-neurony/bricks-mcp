@@ -89,6 +89,17 @@ class BricksCore {
 	public const REQUIRED_CAPABILITY = 'manage_options';
 
 	/**
+	 * Shared admin AJAX nonce action.
+	 *
+	 * Used by Settings, PatternsAdmin, and DiagnosticsAdmin for
+	 * wp_create_nonce() / check_ajax_referer() calls. Centralized to
+	 * avoid drift between the producer (wp_create_nonce) and each
+	 * consumer (check_ajax_referer) — a typo in one site breaks auth
+	 * silently without any error surface.
+	 */
+	public const ADMIN_NONCE_ACTION = 'bricks_mcp_settings_nonce';
+
+	/**
 	 * Maximum items per batch across bulk operations (element:bulk_add, bulk_update,
 	 * bricks:get_element_schemas batch, class batch_create/batch_delete).
 	 * Centralized to prevent drift between validator caps and handler caps.
