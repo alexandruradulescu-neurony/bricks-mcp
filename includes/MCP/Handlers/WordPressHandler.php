@@ -39,6 +39,12 @@ final class WordPressHandler {
 	];
 
 	/**
+	 * Default length for auto-generated user passwords when caller omits `password`.
+	 * 16 chars + special chars provides >100 bits of entropy with wp_generate_password.
+	 */
+	private const GENERATED_PASSWORD_LENGTH = 16;
+
+	/**
 	 * Handle WordPress tool actions.
 	 *
 	 * @param array<string, mixed> $args Tool arguments including 'action'.
@@ -343,7 +349,7 @@ final class WordPressHandler {
 			return new \WP_Error( 'invalid_email', 'A valid email is required for create_user.' );
 		}
 
-		$password = $args['password'] ?? wp_generate_password( 16, true );
+		$password = $args['password'] ?? wp_generate_password( self::GENERATED_PASSWORD_LENGTH, true );
 		$role     = sanitize_text_field( $args['user_role'] ?? 'subscriber' );
 
 		// Validate role against registered WordPress roles and block administrator creation.
