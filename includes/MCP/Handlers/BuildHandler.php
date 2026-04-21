@@ -46,6 +46,22 @@ final class BuildHandler {
 	];
 
 	/**
+	 * Style-setting keys considered "extractable" into shared global classes
+	 * when the shared-styles pipeline detects duplicate fingerprints across
+	 * elements. Intentionally narrower than ElementHandler::STYLE_KEYS —
+	 * pipeline extraction focuses on high-impact container-level styles.
+	 */
+	private const EXTRACTABLE_STYLE_KEYS = [
+		'_background',
+		'_typography',
+		'_padding',
+		'_margin',
+		'_border',
+		'_boxShadow',
+		'_gradient',
+	];
+
+	/**
 	 * @var BricksService
 	 */
 	private BricksService $bricks_service;
@@ -572,11 +588,8 @@ final class BuildHandler {
 	 * @return array{classes_created: string[]} Created class names.
 	 */
 	private function extract_shared_styles_to_classes( array &$elements ): array {
-		// Style keys worth extracting into classes.
-		$style_keys = [
-			'_background', '_typography', '_padding', '_margin', '_border',
-			'_boxShadow', '_gradient',
-		];
+		// Style keys worth extracting into classes. See self::EXTRACTABLE_STYLE_KEYS.
+		$style_keys = self::EXTRACTABLE_STYLE_KEYS;
 
 		// Collect: fingerprint → [element references, element type, styles].
 		$fingerprints = [];
