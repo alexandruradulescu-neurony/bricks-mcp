@@ -59,6 +59,16 @@ final class RateLimiter {
 	private const DEFAULT_RPM = 120;
 
 	/**
+	 * Settings key for the configurable requests-per-minute limit.
+	 *
+	 * Kept as a constant so Settings.php and any other consumer reference the
+	 * same identifier without a magic-string drift risk.
+	 *
+	 * @var string
+	 */
+	public const SETTING_KEY_RPM = 'rate_limit_rpm';
+
+	/**
 	 * Check whether the given identifier is within the rate limit.
 	 *
 	 * Selects between the persistent object cache path and the transient
@@ -69,7 +79,10 @@ final class RateLimiter {
 	 */
 	public static function check( string $identifier ): true|\WP_Error {
 		$settings = get_option( BricksCore::OPTION_SETTINGS, [] );
-		$limit    = (int) ( $settings['rate_limit_rpm'] ?? self::DEFAULT_RPM );
+		if ( ! is_array( $settings ) ) {
+			$settings = [];
+		}
+		$limit = (int) ( $settings[ self::SETTING_KEY_RPM ] ?? self::DEFAULT_RPM );
 
 		if ( wp_using_ext_object_cache() ) {
 			$count = self::increment_via_object_cache( $identifier );
