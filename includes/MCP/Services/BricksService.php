@@ -459,6 +459,15 @@ class BricksService {
 		return $this->theme_style_service;
 	}
 
+	/**
+	 * Get the GlobalVariableService instance for direct dependency injection.
+	 *
+	 * @return GlobalVariableService
+	 */
+	public function get_global_variable_service(): GlobalVariableService {
+		return $this->global_variable_service;
+	}
+
 	public function get_global_classes( string $search = '', string $category = '' ): array {
 		return $this->global_class_service->get_global_classes( $search, $category );
 	}

@@ -12,7 +12,10 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP\Handlers;
 
+use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\DesignPatternService;
+use BricksMCP\MCP\Services\PatternCapture;
+use BricksMCP\MCP\Services\PatternValidator;
 use BricksMCP\MCP\ToolRegistry;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -25,6 +28,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class DesignPatternHandler {
 
 	/**
+	 * Bricks service instance.
+	 *
+	 * @var BricksService
+	 */
+	private BricksService $bricks_service;
+
+	/**
 	 * Bricks check callback.
 	 *
 	 * @var callable
@@ -34,9 +44,11 @@ final class DesignPatternHandler {
 	/**
 	 * Constructor.
 	 *
-	 * @param callable $require_bricks Callback that returns \WP_Error|null.
+	 * @param BricksService $bricks_service Bricks service instance.
+	 * @param callable      $require_bricks Callback that returns \WP_Error|null.
 	 */
-	public function __construct( callable $require_bricks ) {
+	public function __construct( BricksService $bricks_service, callable $require_bricks ) {
+		$this->bricks_service = $bricks_service;
 		$this->require_bricks = $require_bricks;
 	}
 
@@ -55,18 +67,75 @@ final class DesignPatternHandler {
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
-			'list'   => $this->tool_list( $args ),
-			'get'    => $this->tool_get( $args ),
-			'create' => $this->tool_create( $args ),
-			'update' => $this->tool_update( $args ),
-			'delete' => $this->tool_delete( $args ),
-			'export' => $this->tool_export( $args ),
-			'import' => $this->tool_import( $args ),
-			default  => new \WP_Error(
+			'capture' => $this->tool_capture( $args ),
+			'list'    => $this->tool_list( $args ),
+			'get'     => $this->tool_get( $args ),
+			'create'  => $this->tool_create( $args ),
+			'update'  => $this->tool_update( $args ),
+			'delete'  => $this->tool_delete( $args ),
+			'export'  => $this->tool_export( $args ),
+			'import'  => $this->tool_import( $args ),
+			default   => new \WP_Error(
 				'invalid_action',
-				sprintf( 'Unknown action "%s". Valid: list, get, create, update, delete, export, import.', $action )
+				sprintf( 'Unknown action "%s". Valid: capture, list, get, create, update, delete, export, import.', $action )
 			),
 		};
+	}
+
+	/**
+	 * Capture a pattern from an existing built section.
+	 *
+	 * Required args: page_id, block_id, name, category.
+	 * Optional args: id (auto-generated if missing), tags.
+	 */
+	private function tool_capture( array $args ): array|\WP_Error {
+		$page_id  = (int) ( $args['page_id'] ?? 0 );
+		$block_id = sanitize_text_field( $args['block_id'] ?? '' );
+		$name     = sanitize_text_field( $args['name'] ?? '' );
+		$category = sanitize_text_field( $args['category'] ?? '' );
+
+		foreach ( [ 'page_id' => $page_id, 'block_id' => $block_id, 'name' => $name, 'category' => $category ] as $k => $v ) {
+			if ( empty( $v ) ) {
+				return new \WP_Error( 'missing_field', sprintf( 'Argument "%s" is required.', $k ) );
+			}
+		}
+
+		$meta = [
+			'id'       => sanitize_key( $args['id'] ?? $this->slugify( $name ) ),
+			'name'     => $name,
+			'category' => $category,
+			'tags'     => array_values( array_filter( array_map( 'sanitize_text_field', (array) ( $args['tags'] ?? [] ) ) ) ),
+		];
+
+		$validator = new PatternValidator();
+		$bricks    = $this->bricks_service;
+		$classes   = $this->bricks_service->get_global_class_service();
+		$vars      = $this->bricks_service->get_global_variable_service();
+
+		$capture = new PatternCapture( $validator, $bricks, $classes, $vars );
+		$result  = $capture->capture( $page_id, $block_id, $meta );
+		if ( isset( $result['error'] ) ) {
+			return new \WP_Error( $result['error'], $result['message'] ?? 'Capture failed.', $result );
+		}
+
+		$saved = DesignPatternService::create( $result );
+		if ( is_wp_error( $saved ) ) {
+			return $saved;
+		}
+
+		return [
+			'captured' => true,
+			'pattern'  => $saved,
+		];
+	}
+
+	/**
+	 * Convert a human-readable string to a URL-safe slug.
+	 */
+	private function slugify( string $s ): string {
+		$s = strtolower( $s );
+		$s = preg_replace( '/[^a-z0-9]+/', '-', $s );
+		return trim( (string) $s, '-' );
 	}
 
 	/**
@@ -226,18 +295,30 @@ final class DesignPatternHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'design_pattern',
-			__( "Manage design patterns \u2014 reusable section compositions for the build pipeline.\n\nActions: list, get, create, update, delete, export, import.\n\nAll patterns live in the database (managed via admin UI or MCP). Use export/import for cross-site sharing.", 'bricks-mcp' ),
+			__( "Manage design patterns \u2014 reusable section compositions for the build pipeline.\n\nActions: capture, list, get, create, update, delete, export, import.\n\nUse capture to snapshot an existing built section into the pattern library. All patterns live in the database (managed via admin UI or MCP). Use export/import for cross-site sharing.", 'bricks-mcp' ),
 			[
 				'type'       => 'object',
 				'properties' => [
 					'action'   => [
 						'type'        => 'string',
-						'enum'        => [ 'list', 'get', 'create', 'update', 'delete', 'export', 'import' ],
+						'enum'        => [ 'capture', 'list', 'get', 'create', 'update', 'delete', 'export', 'import' ],
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					],
+					'page_id'  => [
+						'type'        => 'integer',
+						'description' => __( 'Page ID containing the section to capture (capture: required)', 'bricks-mcp' ),
+					],
+					'block_id' => [
+						'type'        => 'string',
+						'description' => __( 'Element ID of the section root (capture: required)', 'bricks-mcp' ),
+					],
+					'name'     => [
+						'type'        => 'string',
+						'description' => __( 'Human-readable pattern name (capture: required)', 'bricks-mcp' ),
 					],
 					'id'       => [
 						'type'        => 'string',
-						'description' => __( 'Pattern ID (get, update, delete: required)', 'bricks-mcp' ),
+						'description' => __( 'Pattern ID (capture: optional auto-slug from name; get, update, delete: required)', 'bricks-mcp' ),
 					],
 					'pattern'  => [
 						'type'        => 'object',
@@ -253,11 +334,11 @@ final class DesignPatternHandler {
 					],
 					'category' => [
 						'type'        => 'string',
-						'description' => __( 'Filter by category (list: optional)', 'bricks-mcp' ),
+						'description' => __( 'Pattern category (capture: required; list: optional filter)', 'bricks-mcp' ),
 					],
 					'tags'     => [
 						'type'        => 'array',
-						'description' => __( 'Filter by tags (list: optional)', 'bricks-mcp' ),
+						'description' => __( 'Pattern tags (capture: optional; list: optional filter)', 'bricks-mcp' ),
 					],
 				],
 				'required'   => [ 'action' ],
