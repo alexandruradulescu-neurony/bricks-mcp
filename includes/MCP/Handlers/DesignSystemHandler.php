@@ -289,7 +289,7 @@ final class DesignSystemHandler {
 			);
 		}
 
-		return $this->bricks_service->get_theme_style( $args['style_id'] );
+		return $this->bricks_service->get_theme_style( sanitize_text_field( (string) $args['style_id'] ) );
 	}
 
 	/**
@@ -335,12 +335,13 @@ final class DesignSystemHandler {
 		// Accept both 'name'/'styles' (schema params) and 'label'/'settings' (legacy).
 		$label    = $args['name'] ?? $args['label'] ?? null;
 		$styles   = $args['styles'] ?? $args['settings'] ?? null;
+		$conditions = isset( $args['conditions'] ) && is_array( $args['conditions'] ) ? $args['conditions'] : null;
 
 		$result = $this->bricks_service->update_theme_style(
-			$args['style_id'],
+			sanitize_text_field( (string) $args['style_id'] ),
 			$label,
 			$styles,
-			isset( $args['conditions'] ) ? $args['conditions'] : null,
+			$conditions,
 			! empty( $args['replace_section'] )
 		);
 
@@ -381,14 +382,15 @@ final class DesignSystemHandler {
 			return new \WP_Error(
 				'bricks_mcp_confirm_required',
 				sprintf(
+					/* translators: %s: Theme style ID */
 					__( 'You are about to delete theme style "%s". Set confirm: true to proceed.', 'bricks-mcp' ),
-					sanitize_text_field( $args['style_id'] )
+					sanitize_text_field( (string) $args['style_id'] )
 				)
 			);
 		}
 
 		return $this->bricks_service->delete_theme_style(
-			$args['style_id'],
+			sanitize_text_field( (string) $args['style_id'] ),
 			! empty( $args['hard_delete'] )
 		);
 	}
