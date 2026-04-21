@@ -93,4 +93,6 @@ bricks_mcp_delete_transients();
 bricks_mcp_delete_user_meta();
 
 // Flush rewrite rules.
+// Kept as defensive cleanup: by uninstall time our routes are already
+// unregistered, so this mostly resets to WP defaults. Harmless extra DB write.
 flush_rewrite_rules();
