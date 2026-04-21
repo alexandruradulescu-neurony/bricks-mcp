@@ -52,6 +52,15 @@ final class Settings {
 	private const CONNECTION_PROBE_TIMEOUT = 3;
 
 	/**
+	 * HTTP status codes that indicate the MCP endpoint is reachable.
+	 *
+	 * 200 is a successful GET; 401/403 mean auth is required (server is
+	 * responding); 405 means the endpoint exists but doesn't allow GET.
+	 * All of these signal the endpoint is alive and routable.
+	 */
+	private const REACHABLE_HTTP_CODES = array( 200, 401, 403, 405 );
+
+	/**
 	 * Rate-limit RPM input bounds + default.
 	 * Values outside these bounds clamp on save.
 	 */
@@ -417,7 +426,7 @@ final class Settings {
 		);
 
 		$code        = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
-		$is_reachable = in_array( $code, [ 200, 401, 403, 405 ], true );
+		$is_reachable = in_array( $code, self::REACHABLE_HTTP_CODES, true );
 
 		set_transient( 'bricks_mcp_connection_status', $is_reachable ? '1' : '0', MINUTE_IN_SECONDS );
 
