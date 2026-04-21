@@ -63,7 +63,7 @@ class BricksActiveCheck implements DiagnosticCheck {
 	/**
 	 * Run the Bricks Builder active check.
 	 *
-	 * @return array<string, mixed>
+	 * @return array{id: string, label: string, status: string, message: string, fix_steps: array<string>, category: string}
 	 */
 	public function run(): array {
 		if ( ! class_exists( '\Bricks\Elements' ) ) {
