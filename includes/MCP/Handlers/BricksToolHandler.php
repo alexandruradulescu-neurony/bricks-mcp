@@ -412,6 +412,9 @@ final class BricksToolHandler {
 		$existing_index = false;
 		if ( ! empty( $query_id ) ) {
 			foreach ( $queries as $idx => $q ) {
+				if ( ! is_array( $q ) ) {
+					continue;
+				}
 				if ( isset( $q['id'] ) && $q['id'] === $query_id ) {
 					$existing_index = $idx;
 					break;

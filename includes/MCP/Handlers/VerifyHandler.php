@@ -95,14 +95,20 @@ final class VerifyHandler {
 		$labels = [];
 
 		foreach ( $elements as $el ) {
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
 			$name = $el['name'] ?? 'unknown';
 			$type_counts[ $name ] = ( $type_counts[ $name ] ?? 0 ) + 1;
 
 			$settings = $el['settings'] ?? [];
+			if ( ! is_array( $settings ) ) {
+				continue;
+			}
 			if ( ! empty( $settings['label'] ) ) {
 				$labels[] = $settings['label'];
 			}
-			if ( ! empty( $settings['_cssGlobalClasses'] ) ) {
+			if ( ! empty( $settings['_cssGlobalClasses'] ) && is_array( $settings['_cssGlobalClasses'] ) ) {
 				foreach ( $settings['_cssGlobalClasses'] as $class_id ) {
 					$classes_used[ $class_id ] = true;
 				}
@@ -111,8 +117,14 @@ final class VerifyHandler {
 
 		// Resolve class IDs to names.
 		$all_classes = $this->bricks_service->get_global_class_service()->get_global_classes();
+		if ( ! is_array( $all_classes ) ) {
+			$all_classes = [];
+		}
 		$class_id_to_name = [];
 		foreach ( $all_classes as $cls ) {
+			if ( ! is_array( $cls ) ) {
+				continue;
+			}
 			$class_id_to_name[ $cls['id'] ?? '' ] = $cls['name'] ?? '';
 		}
 
@@ -177,6 +189,9 @@ final class VerifyHandler {
 		// Build parent → children map.
 		$children_map = [];
 		foreach ( $elements as $el ) {
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
 			$parent = $el['parent'] ?? '0';
 			$children_map[ $parent ][] = $el;
 		}
@@ -186,6 +201,9 @@ final class VerifyHandler {
 		while ( ! empty( $queue ) ) {
 			$current = array_shift( $queue );
 			foreach ( $children_map[ $current ] ?? [] as $child ) {
+				if ( ! is_array( $child ) ) {
+					continue;
+				}
 				$child_id = $child['id'] ?? '';
 				$ids[ $child_id ] = true;
 				$queue[] = $child_id;
@@ -194,6 +212,9 @@ final class VerifyHandler {
 
 		// Filter.
 		foreach ( $elements as $el ) {
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
 			$id = $el['id'] ?? '';
 			if ( isset( $ids[ $id ] ) ) {
 				$result[] = $el;
@@ -209,6 +230,9 @@ final class VerifyHandler {
 	private function build_hierarchy_summary( array $elements, string $root_id, int $depth = 0 ): string {
 		$element = null;
 		foreach ( $elements as $el ) {
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
 			if ( ( $el['id'] ?? '' ) === $root_id ) {
 				$element = $el;
 				break;
@@ -219,12 +243,16 @@ final class VerifyHandler {
 			return '';
 		}
 
-		$name = $element['name'] ?? 'unknown';
-		$label = $element['settings']['label'] ?? '';
-		$display = $label ? "{$name}({$label})" : $name;
+		$name     = $element['name'] ?? 'unknown';
+		$settings = $element['settings'] ?? [];
+		$label    = is_array( $settings ) ? ( $settings['label'] ?? '' ) : '';
+		$display  = $label ? "{$name}({$label})" : $name;
 
 		// Find children.
-		$children = array_filter( $elements, fn( $el ) => ( $el['parent'] ?? '' ) === $root_id );
+		$children = array_filter(
+			$elements,
+			fn( $el ) => is_array( $el ) && ( $el['parent'] ?? '' ) === $root_id
+		);
 
 		if ( empty( $children ) ) {
 			return $display;
@@ -232,7 +260,10 @@ final class VerifyHandler {
 
 		$child_summaries = [];
 		foreach ( $children as $child ) {
-			$child_summaries[] = $this->build_hierarchy_summary( $elements, $child['id'], $depth + 1 );
+			if ( ! is_array( $child ) ) {
+				continue;
+			}
+			$child_summaries[] = $this->build_hierarchy_summary( $elements, $child['id'] ?? '', $depth + 1 );
 		}
 
 		return $display . ' > [' . implode( ', ', $child_summaries ) . ']';
@@ -288,9 +319,15 @@ final class VerifyHandler {
 		$placeholder_patterns = [ '[PLACEHOLDER', '[placeholder', 'Lorem ipsum', 'lorem ipsum', '[YOUR', '[TITLE', '[HEADING', '[DESCRIPTION', '[CONTENT' ];
 
 		foreach ( $elements as $el ) {
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
 			$name     = $el['name'] ?? '';
 			$settings = $el['settings'] ?? [];
-			$key      = $registry[ $name ]['content_key'] ?? null;
+			if ( ! is_array( $settings ) ) {
+				continue;
+			}
+			$key = $registry[ $name ]['content_key'] ?? null;
 
 			if ( null === $key || ! isset( $settings[ $key ] ) ) {
 				continue;

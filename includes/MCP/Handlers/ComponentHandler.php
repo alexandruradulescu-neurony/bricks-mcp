@@ -211,6 +211,9 @@ final class ComponentHandler {
 		if ( empty( $elements ) ) {
 			return new \WP_Error( 'empty_elements', __( 'Elements array is empty after normalization.', 'bricks-mcp' ) );
 		}
+		if ( ! is_array( $elements[0] ) ) {
+			return new \WP_Error( 'invalid_root_element', __( 'Root element has invalid shape — expected array, got non-array.', 'bricks-mcp' ) );
+		}
 		$elements[0]['id']     = $component_id;
 		$elements[0]['parent'] = 0;
 
@@ -372,13 +375,18 @@ final class ComponentHandler {
 		$position     = isset( $args['position'] ) ? (int) $args['position'] : null;
 
 		// Protected page check.
+		// check_protected_page returns WP_Error on protected page, null/void otherwise.
+		// The previous `if ( $protected )` was inverted — it ran only when no error.
 		$protected = $this->bricks_service->check_protected_page( $post_id );
-		if ( $protected ) {
+		if ( is_wp_error( $protected ) ) {
 			return $protected;
 		}
 
 		// Verify component exists.
 		$components = get_option( self::COMPONENTS_OPTION, array() );
+		if ( ! is_array( $components ) ) {
+			$components = array();
+		}
 		$comp_index = array_search( $component_id, array_column( $components, 'id' ), true );
 
 		if ( false === $comp_index ) {
@@ -392,10 +400,13 @@ final class ComponentHandler {
 			);
 		}
 
-		$component_label = $components[ $comp_index ]['label'] ?? '';
+		$component_label = is_array( $components[ $comp_index ] ?? null ) ? ( $components[ $comp_index ]['label'] ?? '' ) : '';
 
 		// Get existing page elements.
 		$elements = $this->bricks_service->get_elements( $post_id );
+		if ( ! is_array( $elements ) ) {
+			$elements = array();
+		}
 
 		// Generate unique instance element ID.
 		$id_generator = new ElementIdGenerator();
@@ -420,7 +431,10 @@ final class ComponentHandler {
 		if ( '0' !== $parent_id ) {
 			$parent_found = false;
 			foreach ( $elements as &$el ) {
-				if ( $el['id'] === $parent_id ) {
+				if ( ! is_array( $el ) ) {
+					continue;
+				}
+				if ( ( $el['id'] ?? '' ) === $parent_id ) {
 					$parent_found = true;
 					if ( ! isset( $el['children'] ) || ! is_array( $el['children'] ) ) {
 						$el['children'] = array();
@@ -662,12 +676,18 @@ final class ComponentHandler {
 		$new_element_ids = array();
 
 		foreach ( $slot_elements as &$slot_el ) {
+			if ( ! is_array( $slot_el ) ) {
+				continue;
+			}
 			// Generate new ID if missing or conflicting.
 			$needs_new_id = empty( $slot_el['id'] ) || ! is_string( $slot_el['id'] );
 			if ( ! $needs_new_id ) {
 				// Check for conflict with existing elements.
 				foreach ( $elements as $existing ) {
-					if ( $existing['id'] === $slot_el['id'] ) {
+					if ( ! is_array( $existing ) ) {
+						continue;
+					}
+					if ( ( $existing['id'] ?? null ) === $slot_el['id'] ) {
 						$needs_new_id = true;
 						break;
 					}

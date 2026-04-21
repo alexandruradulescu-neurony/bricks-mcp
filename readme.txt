@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.24.2
+Stable tag: 3.24.3
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,13 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.24.3 =
+* Hardening: stdClass guard sweep across the pipeline. v3.24.1 patched one site; this release sweeps the 21+ remaining hot sites in BuildHandler, VerifyHandler, ComponentHandler, ElementHandler, PageReadSubHandler, BricksToolHandler, Router, StreamableHttpHandler, and ElementSettingsGenerator against the `Cannot use object of type stdClass as array` crash class.
+* New: `BricksCore::is_element_array()`, `is_subscriptable()`, and `is_root_element()` type-guard helpers. Centralized single source of truth for element-shape and root-parent checks.
+* Fix: `BricksCore::is_root_element()` replaces two contradictory parent-comparison paths (Router string cast vs StreamableHttpHandler integer `!==`). Same data now yields same result in both paths.
+* Fix: `ComponentHandler::get_instance_element` had an inverted null check on `check_protected_page` (ran only when no error). Now correctly blocks writes to protected pages.
+* Fix: `BuildHandler::extract_shared_styles_to_classes` no longer clobbers the class-creation return value with a prior `clear_cache()` assignment. `class_id` extraction now returns `''` for non-array results instead of trying to subscript.
 
 = 3.24.2 =
 * Fix: `div` and `block` registry entries now list `slider-nested` as a valid parent. Previously schema validator rejected slider-nested → div/block slide panes even though slider-nested declares them as typical_children — data inconsistency surfaced on any slider build.

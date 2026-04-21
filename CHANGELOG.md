@@ -4,6 +4,41 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.24.3] — 2026-04-21
+
+### Hardening: stdClass guard sweep (Phase 1 of repair roadmap)
+
+v3.24.1 patched one instance of the `Cannot use object of type stdClass as array` pipeline bug. A full code review across all 97 PHP files in the plugin identified 21+ more locations with the identical failure mode — any upstream source that produces stdClass instead of array (third-party `the_posts` filters, JSON-decode-without-assoc in transient-layer cache plugins, Bricks internal post-filter hooks) could trigger the same crash at any time.
+
+This release sweeps all hot sites with defensive `is_array()` guards, centralized via new type-guard helpers in `BricksCore`.
+
+### New helpers in BricksCore
+
+- `BricksCore::is_element_array( mixed $value ): bool` — true only when value is an array carrying `name` (Bricks element) or `id` (tree node).
+- `BricksCore::is_subscriptable( mixed $value ): bool` — loose sibling, equivalent to `is_array()` but named to document intent.
+- `BricksCore::is_root_element( mixed $element ): bool` — centralized root-parent check. Normalizes `'0'`, `0`, `null`, and `''` uniformly. Previously, Router used string cast (`(string) $p === '0'`) and StreamableHttpHandler used strict integer compare (`$p !== 0`), producing divergent results on the same data.
+
+### Files patched
+
+- `Services/BricksCore.php` — helpers added.
+- `Services/ElementSettingsGenerator.php:201-206` — chained `['_background']['color']['raw']` subscript now guarded at each level.
+- `Handlers/BuildHandler.php` — 7 sites: sections iteration (169, 188), `count_elements`, `build_tree_summary`, `collect_style_fingerprints`, `extract_shared_styles_to_classes`. Also: the `$result = clear_cache(); $result = create_global_class()` clobber bug fixed (separate variables now).
+- `Handlers/VerifyHandler.php` — 4 sites: main elements loop, `get_global_classes` return, `build_hierarchy_summary`, `filter_to_section`, `extract_content_sample`.
+- `Handlers/ComponentHandler.php` — 4 sites: `elements[0]` root access, slot_elements iteration with existing-element conflict check, parent_id lookup. Also: the inverted `check_protected_page` null check fixed — previously ran only when no error.
+- `Handlers/ElementHandler.php` — 2 sites: conditions lookup, copy_styling source/target iteration + target settings mutation.
+- `Handlers/Page/PageReadSubHandler.php` — 2 sites: section-scoped index build, `collect_subtree` index build.
+- `Handlers/BricksToolHandler.php` — 1 site: global queries existing-index lookup.
+- `Router.php` — `tool_get_site_info` pages loop now normalizes `$pages_query->posts` defensively (supports int IDs, WP_Post objects, and mixed arrays from plugin filters). Uses `BricksCore::is_root_element()`.
+- `StreamableHttpHandler.php` — parallel pattern-detection loop in `handle_post` — same defensive normalization + `is_root_element()` usage.
+
+### Risk
+
+LOW — additive defensive checks. No behavior change for well-formed input. The only observable difference: upstream bugs that previously triggered a 500 crash now surface as empty arrays / skipped elements. Call sites that need to know about malformed input should check their returned collections.
+
+### Next phases
+
+See `REPAIR-PLAN.md` for the phased roadmap (v3.24.4 auth + protocol correctness, v3.24.5 pipeline data integrity, v3.25.0 magic-string extraction, etc.).
+
 ## [3.24.2] — 2026-04-21
 
 ### Bugfix: slider-nested schema validation

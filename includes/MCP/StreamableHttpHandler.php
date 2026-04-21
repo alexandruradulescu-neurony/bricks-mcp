@@ -543,16 +543,30 @@ final class StreamableHttpHandler {
 
 		// Detect recurring patterns.
 		$patterns = [];
-		foreach ( $pages_query->posts as $pid ) {
-			$raw = get_post_meta( (int) $pid, BricksService::META_KEY, true );
+		// Guard: $pages_query->posts can be array of IDs, WP_Post objects, or mixed
+		// after plugin filters. Normalize defensively.
+		$post_refs = is_array( $pages_query->posts ?? null ) ? $pages_query->posts : [];
+		foreach ( $post_refs as $post_ref ) {
+			if ( is_object( $post_ref ) && isset( $post_ref->ID ) ) {
+				$pid = (int) $post_ref->ID;
+			} elseif ( is_numeric( $post_ref ) ) {
+				$pid = (int) $post_ref;
+			} else {
+				continue;
+			}
+			$raw = get_post_meta( $pid, BricksService::META_KEY, true );
 			if ( ! is_array( $raw ) ) {
 				continue;
 			}
 			foreach ( $raw as $el ) {
-				if ( 'section' !== ( $el['name'] ?? '' ) || 0 !== ( $el['parent'] ?? 0 ) ) {
+				if ( ! is_array( $el ) ) {
 					continue;
 				}
-				$label = $el['settings']['label'] ?? $el['label'] ?? '';
+				if ( 'section' !== ( $el['name'] ?? '' ) || ! BricksCore::is_root_element( $el ) ) {
+					continue;
+				}
+				$settings = is_array( $el['settings'] ?? null ) ? $el['settings'] : [];
+				$label    = $settings['label'] ?? $el['label'] ?? '';
 				if ( $label && ! in_array( $label, $patterns, true ) ) {
 					$patterns[] = $label;
 				}

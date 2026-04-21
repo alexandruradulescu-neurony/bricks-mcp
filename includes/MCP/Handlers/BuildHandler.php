@@ -166,8 +166,15 @@ final class BuildHandler {
 		$expanded = $this->expander->expand( $schema );
 
 		// Step 7b: Re-validate expanded sections (catches hierarchy violations from expansion).
-		foreach ( $expanded['sections'] as $idx => $section ) {
-			if ( ! empty( $section['structure'] ) ) {
+		$expanded_sections = $expanded['sections'] ?? [];
+		if ( ! is_array( $expanded_sections ) ) {
+			$expanded_sections = [];
+		}
+		foreach ( $expanded_sections as $idx => $section ) {
+			if ( ! is_array( $section ) ) {
+				continue;
+			}
+			if ( ! empty( $section['structure'] ) && is_array( $section['structure'] ) ) {
 				$expansion_errors = [];
 				$this->validator->validate_expanded_node( $section['structure'], "sections[{$idx}].structure", $expansion_errors );
 				if ( ! empty( $expansion_errors ) ) {
@@ -182,10 +189,16 @@ final class BuildHandler {
 
 		// Step 8: Generate Bricks element trees from expanded sections.
 		$design_context = $expanded['design_context'] ?? [];
-		$all_elements   = [];
+		if ( ! is_array( $design_context ) ) {
+			$design_context = [];
+		}
+		$all_elements = [];
 
-		foreach ( $expanded['sections'] as $section ) {
-			if ( ! empty( $section['structure'] ) ) {
+		foreach ( $expanded_sections as $section ) {
+			if ( ! is_array( $section ) ) {
+				continue;
+			}
+			if ( ! empty( $section['structure'] ) && is_array( $section['structure'] ) ) {
 				// Apply section-level background hint to the root structure node.
 				if ( ! empty( $section['background'] ) && empty( $section['structure']['background'] ) ) {
 					$section['structure']['background'] = $section['background'];
@@ -422,8 +435,11 @@ final class BuildHandler {
 	private function count_elements( array $elements ): int {
 		$count = 0;
 		foreach ( $elements as $element ) {
+			if ( ! is_array( $element ) ) {
+				continue;
+			}
 			$count++;
-			if ( ! empty( $element['children'] ) ) {
+			if ( ! empty( $element['children'] ) && is_array( $element['children'] ) ) {
 				$count += $this->count_elements( $element['children'] );
 			}
 		}
@@ -440,8 +456,11 @@ final class BuildHandler {
 	private function build_tree_summary( array $elements, int $depth = 0 ): string {
 		$parts = [];
 		foreach ( $elements as $element ) {
+			if ( ! is_array( $element ) ) {
+				continue;
+			}
 			$name = $element['name'] ?? 'unknown';
-			if ( ! empty( $element['children'] ) ) {
+			if ( ! empty( $element['children'] ) && is_array( $element['children'] ) ) {
 				$children_summary = $this->build_tree_summary( $element['children'], $depth + 1 );
 				$parts[]          = "{$name} > [{$children_summary}]";
 			} else {
@@ -566,14 +585,17 @@ final class BuildHandler {
 				'styles' => $group['styles'],
 			];
 
-			$result = $this->class_resolver->clear_cache();
+			// Clear resolver cache so newly-created class is discoverable on next resolve.
+			// Return value is void/bool — kept separate to avoid clobbering the create result.
+			$this->class_resolver->clear_cache();
+
 			$result = $this->bricks_service->get_global_class_service()->create_global_class( $class_args );
 
 			if ( is_wp_error( $result ) ) {
 				continue;
 			}
 
-			$class_id  = $result['id'] ?? '';
+			$class_id = is_array( $result ) ? ( $result['id'] ?? '' ) : '';
 			if ( '' === $class_id ) {
 				continue;
 			}
@@ -582,6 +604,12 @@ final class BuildHandler {
 
 			// Apply class to all matching elements and remove the inline styles.
 			foreach ( $group['refs'] as &$el_ref ) {
+				if ( ! is_array( $el_ref ) ) {
+					continue;
+				}
+				if ( ! isset( $el_ref['settings'] ) || ! is_array( $el_ref['settings'] ) ) {
+					$el_ref['settings'] = [];
+				}
 				$el_ref['settings']['_cssGlobalClasses'] = array_merge(
 					$el_ref['settings']['_cssGlobalClasses'] ?? [],
 					[ $class_id ]
@@ -606,11 +634,17 @@ final class BuildHandler {
 	 */
 	private function collect_style_fingerprints( array &$elements, array $style_keys, array &$fingerprints ): void {
 		foreach ( $elements as &$el ) {
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
 			$settings = $el['settings'] ?? [];
+			if ( ! is_array( $settings ) ) {
+				$settings = [];
+			}
 
 			// Skip elements that already have a global class.
 			if ( ! empty( $settings['_cssGlobalClasses'] ) ) {
-				if ( ! empty( $el['children'] ) ) {
+				if ( ! empty( $el['children'] ) && is_array( $el['children'] ) ) {
 					$this->collect_style_fingerprints( $el['children'], $style_keys, $fingerprints );
 				}
 				continue;
@@ -641,7 +675,7 @@ final class BuildHandler {
 			}
 
 			// Recurse into children.
-			if ( ! empty( $el['children'] ) ) {
+			if ( ! empty( $el['children'] ) && is_array( $el['children'] ) ) {
 				$this->collect_style_fingerprints( $el['children'], $style_keys, $fingerprints );
 			}
 		}

@@ -722,15 +722,30 @@ final class Router {
 		] );
 
 		$pages_summary = [];
-		foreach ( $pages_query->posts as $pid ) {
-			$elements = get_post_meta( (int) $pid, BricksService::META_KEY, true );
+		// Guard: $pages_query->posts can be an array of IDs (fields=ids), WP_Post objects,
+		// or even arrays of both if a plugin filters the_posts. Normalize defensively.
+		$post_ids = is_array( $pages_query->posts ?? null ) ? $pages_query->posts : [];
+		foreach ( $post_ids as $post_ref ) {
+			// Resolve to integer ID regardless of shape (int, numeric string, WP_Post).
+			if ( is_object( $post_ref ) && isset( $post_ref->ID ) ) {
+				$pid = (int) $post_ref->ID;
+			} elseif ( is_numeric( $post_ref ) ) {
+				$pid = (int) $post_ref;
+			} else {
+				continue;
+			}
+			$elements = get_post_meta( $pid, BricksService::META_KEY, true );
 			$elements = is_array( $elements ) ? $elements : [];
 			$section_count = 0;
 			$section_types = [];
 			foreach ( $elements as $el ) {
-				if ( ( $el['name'] ?? '' ) === 'section' && (string) ( $el['parent'] ?? '0' ) === '0' ) {
+				if ( ! is_array( $el ) ) {
+					continue;
+				}
+				if ( ( $el['name'] ?? '' ) === 'section' && BricksCore::is_root_element( $el ) ) {
 					$section_count++;
-					$label = $el['settings']['label'] ?? $el['label'] ?? '';
+					$settings = is_array( $el['settings'] ?? null ) ? $el['settings'] : [];
+					$label    = $settings['label'] ?? $el['label'] ?? '';
 					if ( $label ) {
 						$section_types[] = $label;
 					}

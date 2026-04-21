@@ -388,6 +388,59 @@ class BricksCore {
 	}
 
 	/**
+	 * Type guard for element shapes used across the build pipeline.
+	 *
+	 * Returns true only when $value is an array carrying either a `name`
+	 * (Bricks element) or `id` (tree node) key. Used to short-circuit
+	 * subscript access in loops that may receive stdClass from
+	 * JSON-without-assoc-decode or third-party filter hooks.
+	 *
+	 * Context: v3.24.1 fixed one instance of `Cannot use object of type
+	 * stdClass as array` in the pipeline. v3.24.3 sweeps all 21+ remaining
+	 * hot sites with this guard.
+	 *
+	 * @param mixed $value Candidate element.
+	 * @return bool True when safe to subscript as array.
+	 */
+	public static function is_element_array( mixed $value ): bool {
+		return is_array( $value ) && ( isset( $value['name'] ) || isset( $value['id'] ) );
+	}
+
+	/**
+	 * Type guard for arbitrary array access in the pipeline.
+	 *
+	 * Loose sibling of is_element_array — use when you don't need the
+	 * element contract (name/id), just array-ness before subscripting.
+	 * Equivalent to `is_array($value)` but named to document intent.
+	 *
+	 * @param mixed $value Candidate value.
+	 * @return bool True when safe to subscript as array.
+	 */
+	public static function is_subscriptable( mixed $value ): bool {
+		return is_array( $value );
+	}
+
+	/**
+	 * Determine whether an element is at the root of the tree.
+	 *
+	 * Centralizes the root-parent check. Bricks stores `parent` as either
+	 * an integer `0` or a string `'0'` depending on the write path;
+	 * contradictory comparisons across Router and StreamableHttpHandler
+	 * produced divergent results before this was centralized.
+	 *
+	 * @param mixed $element Element array (or object — handled defensively).
+	 * @return bool True when the element is root-level (no parent).
+	 */
+	public static function is_root_element( mixed $element ): bool {
+		if ( ! is_array( $element ) ) {
+			return false;
+		}
+		$parent = $element['parent'] ?? 0;
+		// Normalize to int so '0', 0, null, '' all compare uniformly.
+		return 0 === (int) $parent;
+	}
+
+	/**
 	 * Trigger Bricks CSS regeneration for a post after programmatic save.
 	 *
 	 * @param int $post_id The post ID.

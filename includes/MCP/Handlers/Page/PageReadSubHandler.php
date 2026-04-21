@@ -290,6 +290,9 @@ final class PageReadSubHandler {
 		// Index by ID.
 		$by_id = [];
 		foreach ( $elements as $el ) {
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
 			$by_id[ $el['id'] ?? '' ] = $el;
 		}
 
@@ -684,6 +687,9 @@ final class PageReadSubHandler {
 		// Index by ID.
 		$by_id = [];
 		foreach ( $elements as $el ) {
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
 			$by_id[ $el['id'] ?? '' ] = $el;
 		}
 

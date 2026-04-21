@@ -197,10 +197,15 @@ final class ElementSettingsGenerator {
 		];
 
 		// Determine if children inherit a dark context.
+		// Chained `['_background']['color']['raw']` access is guarded at each level —
+		// intermediate keys can be non-array values (string, bool, int) from upstream
+		// non-strict inputs, which would crash `?? ''` in PHP 8+.
 		$child_is_dark = $is_dark_context;
 		if ( is_array( $settings ) ) {
-			$bg_raw = $settings['_background']['color']['raw'] ?? '';
-			if ( $bg_raw && preg_match( '/(?:^|-)(?:ultra-)?dark(?:-|$|\))/', $bg_raw ) ) {
+			$bg       = $settings['_background'] ?? null;
+			$bg_color = is_array( $bg ) ? ( $bg['color'] ?? null ) : null;
+			$bg_raw   = is_array( $bg_color ) ? (string) ( $bg_color['raw'] ?? '' ) : '';
+			if ( '' !== $bg_raw && preg_match( '/(?:^|-)(?:ultra-)?dark(?:-|$|\))/', $bg_raw ) ) {
 				$child_is_dark = true;
 			}
 		}

@@ -465,9 +465,15 @@ final class ElementHandler {
 		}
 
 		$elements = $this->bricks_service->get_elements( $post_id );
+		if ( ! is_array( $elements ) ) {
+			$elements = array();
+		}
 		$target_index = null;
 
 		foreach ( $elements as $index => $element ) {
+			if ( ! is_array( $element ) ) {
+				continue;
+			}
 			if ( ( $element['id'] ?? '' ) === $element_id ) {
 				$target_index = $index;
 				break;
@@ -670,16 +676,22 @@ final class ElementHandler {
 
 		// Protected page check.
 		$protected = $this->bricks_service->check_protected_page( $post_id );
-		if ( $protected ) {
+		if ( is_wp_error( $protected ) ) {
 			return $protected;
 		}
 
 		$elements = $this->bricks_service->get_elements( $post_id );
+		if ( ! is_array( $elements ) ) {
+			$elements = [];
+		}
 		$source   = null;
 		$target   = null;
 		$target_index = null;
 
 		foreach ( $elements as $index => $el ) {
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
 			$eid = $el['id'] ?? '';
 			if ( $eid === $source_id ) {
 				$source = $el;
@@ -704,8 +716,16 @@ final class ElementHandler {
 		}
 
 		$source_settings = $source['settings'] ?? [];
-		$copied_keys     = [];
-		$warnings        = [];
+		if ( ! is_array( $source_settings ) ) {
+			$source_settings = [];
+		}
+		$copied_keys = [];
+		$warnings    = [];
+
+		// Ensure target settings is array before mutation (guards against stdClass leak).
+		if ( ! isset( $elements[ $target_index ]['settings'] ) || ! is_array( $elements[ $target_index ]['settings'] ) ) {
+			$elements[ $target_index ]['settings'] = [];
+		}
 
 		foreach ( self::STYLE_KEYS as $key ) {
 			// Mode filtering.
