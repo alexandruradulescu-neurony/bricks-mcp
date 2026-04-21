@@ -91,6 +91,33 @@ final class StreamableHttpHandler {
 	private const MAX_BODY_HARD_LIMIT = 10 * 1024 * 1024;
 
 	/**
+	 * Absolute minimum allowed body-size cap.
+	 *
+	 * A misconfigured bricks_mcp_max_body_size filter that returns a very small
+	 * or zero value would otherwise DoS the endpoint by rejecting every realistic
+	 * JSON-RPC payload. Floor at 1 KB.
+	 *
+	 * @var int
+	 */
+	private const MAX_BODY_FLOOR = 1024;
+
+	/**
+	 * SSE keepalive bounds in seconds.
+	 *
+	 * KEEPALIVE_MIN avoids tight-looping on a misconfigured filter. KEEPALIVE_MAX
+	 * stays below the typical PHP-FPM default idle timeout of 60 seconds so the
+	 * server emits a keepalive comment before FPM would otherwise kill the worker.
+	 *
+	 * @var int
+	 */
+	private const KEEPALIVE_MIN_SECONDS = 5;
+
+	/**
+	 * @var int
+	 */
+	private const KEEPALIVE_MAX_SECONDS = 55;
+
+	/**
 	 * Router instance.
 	 *
 	 * @var Router
@@ -131,8 +158,14 @@ final class StreamableHttpHandler {
 		}
 
 		// Check body size before parsing.
+		// Clamp between MAX_BODY_FLOOR and MAX_BODY_HARD_LIMIT so that:
+		//   - filter values above 10 MB cannot override the hard ceiling
+		//   - filter values below ~1 KB cannot DoS the endpoint with 413s
 		$body     = $request->get_body();
-		$max_body = min( (int) apply_filters( 'bricks_mcp_max_body_size', self::MAX_BODY_SIZE ), self::MAX_BODY_HARD_LIMIT );
+		$max_body = max(
+			self::MAX_BODY_FLOOR,
+			min( (int) apply_filters( 'bricks_mcp_max_body_size', self::MAX_BODY_SIZE ), self::MAX_BODY_HARD_LIMIT )
+		);
 		if ( strlen( $body ) > $max_body ) {
 			status_header( 413 );
 			header( 'Content-Type: application/json' );
@@ -233,7 +266,7 @@ final class StreamableHttpHandler {
 			}
 			flush();
 			$keepalive = (int) apply_filters( 'bricks_mcp_keepalive_interval', 25 );
-			sleep( max( 5, min( $keepalive, 55 ) ) );
+			sleep( max( self::KEEPALIVE_MIN_SECONDS, min( $keepalive, self::KEEPALIVE_MAX_SECONDS ) ) );
 			if ( connection_aborted() ) {
 				break;
 			}
@@ -354,7 +387,11 @@ final class StreamableHttpHandler {
 
 		// Add onboarding data to serverInfo.
 		$onboarding_service = new OnboardingService( new BricksService() );
-		$session_id = $params['sessionId'] ?? '';
+		// String-cast with fallback — clients sending non-string sessionId would
+		// otherwise pass through to OnboardingService::is_first_session() and cause
+		// silently-unexpected return values.
+		$raw_session_id = $params['sessionId'] ?? '';
+		$session_id     = is_string( $raw_session_id ) ? $raw_session_id : '';
 		$server_info['onboarding'] = $onboarding_service->generate_onboarding( get_current_user_id() );
 		$server_info['requires_onboarding_review'] = $onboarding_service->is_first_session( $session_id );
 
@@ -463,6 +500,16 @@ final class StreamableHttpHandler {
 		header( 'Connection: keep-alive' );
 		header( 'X-Accel-Buffering: no' );
 
+		// Idempotent registration: handle_post paths that both parse-error-and-exit
+		// and dispatch can invoke emit_sse_headers() twice in the same request,
+		// stacking two ": stream-end" comments. Spec-compliant SSE clients ignore
+		// duplicate comments but it's still noise.
+		static $shutdown_registered = false;
+		if ( $shutdown_registered ) {
+			return;
+		}
+		$shutdown_registered = true;
+
 		register_shutdown_function(
 			function () {
 				echo ": stream-end\n\n";
@@ -481,8 +528,28 @@ final class StreamableHttpHandler {
 	 * @return void
 	 */
 	private function emit_sse_event( array $payload ): void {
+		// wp_json_encode() returns false on invalid UTF-8, recursion, or non-encodable
+		// values. Emitting 'data: \n\n' produces a malformed SSE event that many
+		// parsers reject — fall back to an inline error payload instead.
+		$json = wp_json_encode( $payload );
+		if ( false === $json ) {
+			$json = wp_json_encode(
+				[
+					'jsonrpc' => '2.0',
+					'error'   => [
+						'code'    => self::INTERNAL_ERROR,
+						'message' => 'Response encoding failed: ' . json_last_error_msg(),
+					],
+				]
+			);
+			if ( false === $json ) {
+				// Truly pathological case — emit a minimal literal.
+				$json = '{"jsonrpc":"2.0","error":{"code":-32603,"message":"encoding failed"}}';
+			}
+		}
+
 		echo "event: message\n";
-		echo 'data: ' . wp_json_encode( $payload ) . "\n\n";
+		echo 'data: ' . $json . "\n\n";
 
 		if ( ob_get_level() > 0 ) {
 			ob_flush();
