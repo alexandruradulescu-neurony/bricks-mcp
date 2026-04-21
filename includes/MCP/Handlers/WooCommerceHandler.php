@@ -81,8 +81,7 @@ final class WooCommerceHandler {
 			);
 		}
 
-		$action        = sanitize_text_field( $args['action'] ?? '' );
-
+		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
 			'status'            => $this->tool_woocommerce_status(),
