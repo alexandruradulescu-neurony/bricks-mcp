@@ -67,6 +67,15 @@ class BricksCore {
 	public const OPTION_HIDDEN_PATTERNS      = 'bricks_mcp_hidden_patterns';
 	public const OPTION_PATTERN_CATEGORIES   = 'bricks_mcp_pattern_categories';
 	public const OPTION_PATTERNS_MIGRATED    = 'bricks_mcp_patterns_migrated';
+	/**
+	 * V2 pattern storage key. Replaces OPTION_CUSTOM_PATTERNS from v1.
+	 * "Custom" suffix dropped — all patterns in v2 are user/AI-captured.
+	 */
+	public const OPTION_PATTERNS             = 'bricks_mcp_patterns';
+	/**
+	 * One-time flag marking the v2 migration wipe has run on this install.
+	 */
+	public const OPTION_PATTERNS_V2_WIPED    = 'bricks_mcp_patterns_v2_wiped';
 	public const OPTION_STRUCTURED_BRIEF     = 'bricks_mcp_structured_brief';
 	public const OPTION_DS_LAST_APPLIED      = 'bricks_mcp_ds_last_applied';
 	public const OPTION_DESIGN_SYSTEM_CONFIG = 'bricks_mcp_design_system_config';
