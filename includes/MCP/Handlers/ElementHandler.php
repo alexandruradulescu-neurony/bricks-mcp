@@ -232,7 +232,8 @@ final class ElementHandler {
 				return new \WP_Error(
 					'bricks_mcp_confirm_required',
 					sprintf(
-						__( 'Cascade remove of element "%s" would also delete %d descendant element(s). Set confirm: true to proceed.', 'bricks-mcp' ),
+						/* translators: 1: Element ID, 2: Descendant count */
+						__( 'Cascade remove of element "%1$s" would also delete %2$d descendant element(s). Set confirm: true to proceed.', 'bricks-mcp' ),
 						$element_id,
 						$descendant_count
 					)
