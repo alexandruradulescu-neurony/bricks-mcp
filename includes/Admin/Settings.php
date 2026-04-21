@@ -934,7 +934,7 @@ final class Settings {
 							<td><?php echo esc_html( $pw['name'] ?? '' ); ?></td>
 							<td><?php echo esc_html( ! empty( $pw['created'] ) ? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $pw['created'] ) : '—' ); ?></td>
 							<td><?php echo esc_html( ! empty( $pw['last_used'] ) ? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $pw['last_used'] ) : __( 'Never', 'bricks-mcp' ) ); ?></td>
-							<td><?php echo esc_html( ! empty( $pw['last_ip'] ) ? $pw['last_ip'] : '—' ); ?></td>
+							<td><?php echo esc_html( ! empty( $pw['last_ip'] ) && filter_var( $pw['last_ip'], FILTER_VALIDATE_IP ) ? $pw['last_ip'] : '—' ); ?></td>
 							<td><button type="button" class="button button-small bwm-revoke-password" data-uuid="<?php echo esc_attr( $pw['uuid'] ?? '' ); ?>"><?php esc_html_e( 'Revoke', 'bricks-mcp' ); ?></button></td>
 						</tr>
 					<?php endforeach; ?>
@@ -1356,6 +1356,7 @@ final class Settings {
 
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
 		}
 
 		$current_user = wp_get_current_user();
@@ -1559,18 +1560,24 @@ final class Settings {
 
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ), 403 );
+			return;
 		}
 
 		$note_id = isset( $_POST['note_id'] ) ? sanitize_text_field( wp_unslash( $_POST['note_id'] ) ) : '';
 		if ( empty( $note_id ) ) {
 			wp_send_json_error( array( 'message' => __( 'Missing note ID.', 'bricks-mcp' ) ) );
+			return;
 		}
 
 		$notes    = get_option( BricksCore::OPTION_NOTES, [] );
+		$notes    = is_array( $notes ) ? $notes : [];
 		$filtered = array_values( array_filter( $notes, static fn( $n ) => ( $n['id'] ?? '' ) !== $note_id ) );
 
 		if ( count( $filtered ) === count( $notes ) ) {
-			wp_send_json_error( __( 'Note not found.', 'bricks-mcp' ) );
+			// Match the [ 'message' => ... ] shape used by the other handlers so the
+			// JS error renderer finds resp.data.message.
+			wp_send_json_error( array( 'message' => __( 'Note not found.', 'bricks-mcp' ) ) );
+			return;
 		}
 
 		update_option( BricksCore::OPTION_NOTES, $filtered, false );
@@ -1587,11 +1594,14 @@ final class Settings {
 
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ), 403 );
+			return;
 		}
 
 		$text = isset( $_POST['text'] ) ? sanitize_text_field( wp_unslash( $_POST['text'] ) ) : '';
-		if ( empty( $text ) ) {
+		// Reject whitespace-only text — empty() returns false for ' ' but the note would be useless.
+		if ( '' === trim( $text ) ) {
 			wp_send_json_error( array( 'message' => __( 'Note text is required.', 'bricks-mcp' ) ) );
+			return;
 		}
 
 		$notes = get_option( BricksCore::OPTION_NOTES, [] );
@@ -1599,7 +1609,8 @@ final class Settings {
 			$notes = [];
 		}
 
-		$id   = 'note_' . bin2hex( random_bytes( 4 ) );
+		// 8 bytes (16 hex chars) gives ~1.8e19 IDs — birthday collision negligible even for long-lived sites.
+		$id   = 'note_' . bin2hex( random_bytes( 8 ) );
 		$note = [
 			'id'         => $id,
 			'text'       => $text,
@@ -1621,16 +1632,19 @@ final class Settings {
 
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
 		}
 
 		$uuid = isset( $_POST['uuid'] ) ? sanitize_text_field( wp_unslash( $_POST['uuid'] ) ) : '';
 		if ( empty( $uuid ) ) {
 			wp_send_json_error( [ 'message' => __( 'Missing password UUID.', 'bricks-mcp' ) ] );
+			return;
 		}
 
 		$deleted = \WP_Application_Passwords::delete_application_password( get_current_user_id(), $uuid );
 		if ( is_wp_error( $deleted ) ) {
 			wp_send_json_error( [ 'message' => $deleted->get_error_message() ] );
+			return;
 		}
 
 		wp_send_json_success( [ 'message' => __( 'Application Password revoked.', 'bricks-mcp' ) ] );
@@ -1932,6 +1946,7 @@ final class Settings {
 
 		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
 			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
 		}
 
 		wp_send_json_error( [
