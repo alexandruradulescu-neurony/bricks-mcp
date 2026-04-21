@@ -55,6 +55,9 @@ final class BuildHandler {
 	 */
 	private ElementSettingsGenerator $settings_generator;
 
+	/**
+	 * @var \BricksMCP\MCP\Services\ProposalService
+	 */
 	private \BricksMCP\MCP\Services\ProposalService $proposal_service;
 
 	/**
@@ -508,12 +511,6 @@ final class BuildHandler {
 		return $count;
 	}
 
-	/**
-	 * Register the build_from_schema tool with the given registry.
-	 *
-	 * @param ToolRegistry $registry Tool registry instance.
-	 * @return void
-	 */
 	/**
 	 * Fix block widths inside flex-row parents.
 	 *
