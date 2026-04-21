@@ -21,6 +21,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class SchemaSkeletonGenerator {
 
 	/**
+	 * Rotating placeholder icon names used to seed pattern items (pricing tiers,
+	 * feature cards, etc.). The list is library-agnostic — ElementSettingsGenerator
+	 * resolve_icon() prepends the correct family prefix at render time.
+	 */
+	private const PLACEHOLDER_ICONS = [
+		'star',
+		'shield',
+		'settings',
+		'truck',
+		'bolt-alt',
+		'timer',
+		'car',
+		'check',
+		'heart',
+		'location-pin',
+	];
+
+	/**
 	 * Generate a complete schema skeleton from a description.
 	 *
 	 * @param int                    $page_id           Target page ID.
@@ -677,10 +695,12 @@ final class SchemaSkeletonGenerator {
 
 	/**
 	 * Get a placeholder icon name by index.
+	 *
+	 * Rotates through self::PLACEHOLDER_ICONS using 1-indexed input (first call
+	 * passes $index = 1) so the modulo wrap lands on the first entry cleanly.
 	 */
 	private function get_placeholder_icon( int $index ): string {
-		$icons = [ 'star', 'shield', 'settings', 'truck', 'bolt-alt', 'timer', 'car', 'check', 'heart', 'location-pin' ];
-		return $icons[ ( $index - 1 ) % count( $icons ) ];
+		return self::PLACEHOLDER_ICONS[ ( $index - 1 ) % count( self::PLACEHOLDER_ICONS ) ];
 	}
 
 	/**
