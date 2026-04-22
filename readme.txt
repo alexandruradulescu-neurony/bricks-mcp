@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.28.6
+Stable tag: 3.28.7
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,11 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.28.7 =
+**Hotfix — label applied to all element types + role identifiers preserved verbatim**
+* Fix: ElementSettingsGenerator now writes `label` setting on ALL element types (not just structural wrappers). Required for populate_content role-keyed injection to resolve leaf elements (heading, button, text-basic, etc.).
+* Fix: role-identifier labels (lowercase underscore_case) kept verbatim instead of prettified — content_map keys match element labels directly.
 
 = 3.28.6 =
 **Hotfix — role_map + section_id in build_structure response**

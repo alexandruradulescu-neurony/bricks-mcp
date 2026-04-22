@@ -4,6 +4,12 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.28.7] — 2026-04-22
+
+**Hotfix — label applied to all element types + role identifiers preserved verbatim**
+* Fix: ElementSettingsGenerator now writes `label` setting on ALL element types (not just structural wrappers). Required for populate_content role-keyed injection to resolve leaf elements (heading, button, text-basic, etc.).
+* Fix: role-identifier labels (lowercase underscore_case) kept verbatim instead of prettified — content_map keys match element labels directly.
+
 ## [3.28.6] — 2026-04-22
 
 **Hotfix — role_map + section_id in build_structure response**

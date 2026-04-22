@@ -348,12 +348,26 @@ final class ElementSettingsGenerator {
 	private function build_settings( array $node, string $type, array $class_map, array $design_context, array $classes_with_styles = [] ): array {
 		$settings = [];
 
-		// 1. Apply label on structural elements.
-		if ( self::is_structural( $type ) ) {
-			$label = $node['label'] ?? $node['class_intent'] ?? null;
-			if ( null !== $label ) {
-				$settings['label'] = ucfirst( str_replace( [ '-', '_' ], ' ', $label ) );
-			}
+		// 1. Apply label.
+		//    v3.28.0+ two-tier build relies on labels across ALL element types
+		//    so populate_content can resolve design_plan roles → element IDs.
+		//    Structural elements fall back to class_intent (legacy behavior);
+		//    non-structural only get a label when explicitly set (typically the
+		//    design_plan role written there by BuildStructureHandler).
+		//
+		//    Labels from the `role` property (underscore_case role identifiers)
+		//    are kept verbatim so populate_content can match content_map keys.
+		//    Free-form labels ("Hero", "CTA row") get prettified.
+		$label = $node['label'] ?? null;
+		if ( null === $label && self::is_structural( $type ) ) {
+			$label = $node['class_intent'] ?? null;
+		}
+		if ( null !== $label && is_string( $label ) && $label !== '' ) {
+			// Heuristic: role identifiers match /^[a-z][a-z0-9_]*$/ — lowercase, underscores.
+			$is_role_identifier = (bool) preg_match( '/^[a-z][a-z0-9_]*$/', $label );
+			$settings['label']  = $is_role_identifier
+				? $label
+				: ucfirst( str_replace( [ '-', '_' ], ' ', $label ) );
 		}
 
 		// 2. Apply semantic tag.
