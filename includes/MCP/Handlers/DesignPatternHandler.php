@@ -67,17 +67,18 @@ final class DesignPatternHandler {
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
 		return match ( $action ) {
-			'capture' => $this->tool_capture( $args ),
-			'list'    => $this->tool_list( $args ),
-			'get'     => $this->tool_get( $args ),
-			'create'  => $this->tool_create( $args ),
-			'update'  => $this->tool_update( $args ),
-			'delete'  => $this->tool_delete( $args ),
-			'export'  => $this->tool_export( $args ),
-			'import'  => $this->tool_import( $args ),
-			default   => new \WP_Error(
+			'capture'       => $this->tool_capture( $args ),
+			'list'          => $this->tool_list( $args ),
+			'get'           => $this->tool_get( $args ),
+			'create'        => $this->tool_create( $args ),
+			'update'        => $this->tool_update( $args ),
+			'delete'        => $this->tool_delete( $args ),
+			'export'        => $this->tool_export( $args ),
+			'import'        => $this->tool_import( $args ),
+			'mark_required' => $this->tool_mark_required( $args ),
+			default         => new \WP_Error(
 				'invalid_action',
-				sprintf( 'Unknown action "%s". Valid: capture, list, get, create, update, delete, export, import.', $action )
+				sprintf( 'Unknown action "%s". Valid: capture, list, get, create, update, delete, export, import, mark_required.', $action )
 			),
 		};
 	}
@@ -290,6 +291,88 @@ final class DesignPatternHandler {
 	}
 
 	/**
+	 * Mark a role as required (or unmark) on a pattern.
+	 *
+	 * Walks the pattern's structure tree, finds all nodes with matching `role`,
+	 * sets `required` flag. Re-computes checksum + persists.
+	 */
+	private function tool_mark_required( array $args ): array|\WP_Error {
+		$pattern_id = sanitize_text_field( $args['pattern_id'] ?? '' );
+		$role       = sanitize_text_field( $args['role'] ?? '' );
+		$required   = (bool) ( $args['required'] ?? true );
+
+		if ( $pattern_id === '' ) {
+			return new \WP_Error( 'missing_field', 'Argument "pattern_id" is required.' );
+		}
+		if ( $role === '' ) {
+			return new \WP_Error( 'missing_field', 'Argument "role" is required.' );
+		}
+
+		$pattern = \BricksMCP\MCP\Services\DesignPatternService::get( $pattern_id );
+		if ( null === $pattern ) {
+			return new \WP_Error( 'pattern_not_found', sprintf( 'Pattern "%s" not found.', $pattern_id ) );
+		}
+
+		$nodes_updated   = 0;
+		$available_roles = [];
+		$walker = function ( array &$node ) use ( $role, $required, &$nodes_updated, &$available_roles, &$walker ) {
+			if ( isset( $node['role'] ) && is_string( $node['role'] ) && $node['role'] !== '' ) {
+				$available_roles[] = $node['role'];
+				if ( $node['role'] === $role ) {
+					if ( $required ) {
+						$node['required'] = true;
+					} else {
+						unset( $node['required'] );
+					}
+					$nodes_updated++;
+				}
+			}
+			if ( isset( $node['children'] ) && is_array( $node['children'] ) ) {
+				foreach ( $node['children'] as &$child ) {
+					if ( is_array( $child ) ) {
+						$walker( $child );
+					}
+				}
+				unset( $child );
+			}
+		};
+
+		if ( isset( $pattern['structure'] ) && is_array( $pattern['structure'] ) ) {
+			$walker( $pattern['structure'] );
+		}
+
+		if ( $nodes_updated === 0 ) {
+			return new \WP_Error(
+				'role_not_in_pattern',
+				sprintf( 'Role "%s" not found in pattern "%s".', $role, $pattern_id ),
+				[ 'available_roles' => array_values( array_unique( $available_roles ) ) ]
+			);
+		}
+
+		// Recompute checksum.
+		if ( class_exists( '\BricksMCP\MCP\Services\PatternValidator' ) ) {
+			$pattern['checksum'] = ( new \BricksMCP\MCP\Services\PatternValidator() )->checksum( $pattern );
+		}
+
+		$updated = \BricksMCP\MCP\Services\DesignPatternService::update( $pattern_id, $pattern );
+		if ( is_wp_error( $updated ) ) {
+			return $updated;
+		}
+
+		// Clear drift transient (pattern changed).
+		delete_transient( 'bricks_mcp_pattern_drift_' . $pattern_id );
+
+		return [
+			'updated'       => true,
+			'pattern_id'    => $pattern_id,
+			'role'          => $role,
+			'required'      => $required,
+			'nodes_updated' => $nodes_updated,
+			'checksum'      => $updated['checksum'] ?? ( $pattern['checksum'] ?? '' ),
+		];
+	}
+
+	/**
 	 * Register the design_pattern tool.
 	 *
 	 * @param ToolRegistry $registry Tool registry instance.
@@ -303,7 +386,7 @@ final class DesignPatternHandler {
 				'properties' => [
 					'action'   => [
 						'type'        => 'string',
-						'enum'        => [ 'capture', 'list', 'get', 'create', 'update', 'delete', 'export', 'import' ],
+						'enum'        => [ 'capture', 'list', 'get', 'create', 'update', 'delete', 'export', 'import', 'mark_required' ],
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					],
 					'page_id'  => [
@@ -351,6 +434,14 @@ final class DesignPatternHandler {
 						'type'        => 'string',
 						'enum'        => [ 'dark', 'light' ],
 						'description' => __( 'Background tone (capture: optional, default inferred from section _background color)', 'bricks-mcp' ),
+					],
+					'role' => [
+						'type'        => 'string',
+						'description' => __( 'Role name to mark/unmark required (mark_required: required)', 'bricks-mcp' ),
+					],
+					'required' => [
+						'type'        => 'boolean',
+						'description' => __( 'Mark role as required (true) or unmark (false). Default true. (mark_required: optional)', 'bricks-mcp' ),
 					],
 				],
 				'required'   => [ 'action' ],
