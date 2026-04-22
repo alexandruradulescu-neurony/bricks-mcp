@@ -49,11 +49,26 @@ final class PatternAdapter {
         // Shape mismatch gate (Rule D).
         $mismatch = $this->assess_shape_mismatch( array_keys( $content_map ), $pattern_roles );
         if ( $mismatch['fraction'] > self::SHAPE_MISMATCH_THRESHOLD ) {
+            $suggested = [];
+            if ( $this->catalog !== null && isset( $pattern['category'] ) ) {
+                $candidates = $this->catalog->build( $pattern['category'], 'high' )['patterns'] ?? [];
+                foreach ( $candidates as $c ) {
+                    if ( ( $c['id'] ?? '' ) === ( $pattern['id'] ?? '' ) ) {
+                        continue;
+                    }
+                    $suggested[] = $c['id'];
+                    if ( count( $suggested ) >= 3 ) {
+                        break;
+                    }
+                }
+            }
             return [
                 'error'              => 'shape_mismatch',
                 'message'            => 'Pattern shape incompatible with content roles.',
                 'incompatible_roles' => $mismatch['unmatched'],
                 'fraction'           => round( $mismatch['fraction'], 2 ),
+                'suggested_patterns' => $suggested,
+                'fallback'           => 'Supply fresh `elements: [...]` instead of `use_pattern`.',
             ];
         }
 
