@@ -21,6 +21,7 @@ class PatternsAdmin {
 		add_action( 'wp_ajax_bricks_mcp_delete_pattern', [ $this, 'ajax_delete_pattern' ] );
 		add_action( 'wp_ajax_bricks_mcp_export_patterns', [ $this, 'ajax_export_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_import_patterns', [ $this, 'ajax_import_patterns' ] );
+		add_action( 'wp_ajax_bricks_mcp_get_pattern', [ $this, 'ajax_get_pattern' ] );
 		add_action( 'admin_notices', [ $this, 'maybe_render_patterns_v2_notice' ] );
 	}
 
@@ -95,8 +96,8 @@ class PatternsAdmin {
 					<th><?php esc_html_e( 'Name', 'bricks-mcp' ); ?></th>
 					<th style="width:100px;"><?php esc_html_e( 'Category', 'bricks-mcp' ); ?></th>
 					<th style="width:90px;"><?php esc_html_e( 'Layout', 'bricks-mcp' ); ?></th>
-					<th><?php esc_html_e( 'AI Description', 'bricks-mcp' ); ?></th>
-					<th style="width:160px;"><?php esc_html_e( 'Actions', 'bricks-mcp' ); ?></th>
+					<th><?php esc_html_e( 'Structure', 'bricks-mcp' ); ?></th>
+					<th style="width:120px;"><?php esc_html_e( 'Actions', 'bricks-mcp' ); ?></th>
 				</tr></thead>
 				<tbody>
 				<?php if ( empty( $patterns ) ) : ?>
@@ -115,8 +116,11 @@ class PatternsAdmin {
 						</td>
 						<td><?php echo esc_html( ucfirst( $p['category'] ?? '' ) ); ?></td>
 						<td><?php echo esc_html( $p['layout'] ?? '' ); ?></td>
-						<td style="font-size:12px;color:#666;"><?php echo esc_html( $p['ai_description'] ?? '' ); ?></td>
+						<td style="font-family:monospace;font-size:11px;color:#666;">
+							<?php echo esc_html( ( new \BricksMCP\MCP\Services\PatternCatalog() )->build_structural_summary( $p ) ); ?>
+						</td>
 						<td>
+							<button type="button" class="button button-small bricks-mcp-view-pattern" data-id="<?php echo esc_attr( $p['id'] ); ?>"><?php esc_html_e( 'View', 'bricks-mcp' ); ?></button>
 							<button type="button" class="button button-small bricks-mcp-delete-pattern" data-id="<?php echo esc_attr( $p['id'] ); ?>"><?php esc_html_e( 'Delete', 'bricks-mcp' ); ?></button>
 						</td>
 					</tr>
@@ -124,6 +128,30 @@ class PatternsAdmin {
 				<?php endif; ?>
 				</tbody>
 			</table>
+
+			<div id="bricks-mcp-pattern-detail" class="bwm-pattern-detail" style="display:none;">
+				<div class="bwm-detail-header">
+					<h3 id="bricks-mcp-detail-name">—</h3>
+					<button type="button" class="bwm-detail-close">&times;</button>
+				</div>
+				<div class="bwm-detail-body">
+					<div class="bwm-detail-meta">
+						<p><strong><?php esc_html_e( 'Category:', 'bricks-mcp' ); ?></strong> <span id="bricks-mcp-detail-category"></span></p>
+						<p><strong><?php esc_html_e( 'Layout:', 'bricks-mcp' ); ?></strong> <span id="bricks-mcp-detail-layout"></span></p>
+						<p><strong><?php esc_html_e( 'Captured from:', 'bricks-mcp' ); ?></strong> <a id="bricks-mcp-detail-captured-link" href="#" target="_blank">—</a></p>
+						<p><strong><?php esc_html_e( 'Classes:', 'bricks-mcp' ); ?></strong> <span id="bricks-mcp-detail-classes"></span></p>
+						<p><strong><?php esc_html_e( 'Variables:', 'bricks-mcp' ); ?></strong> <span id="bricks-mcp-detail-variables"></span></p>
+					</div>
+					<div class="bwm-detail-structure">
+						<h4><?php esc_html_e( 'Structure', 'bricks-mcp' ); ?></h4>
+						<pre id="bricks-mcp-detail-structure-tree"></pre>
+					</div>
+					<div class="bwm-detail-json">
+						<h4><?php esc_html_e( 'Full JSON', 'bricks-mcp' ); ?></h4>
+						<textarea id="bricks-mcp-detail-json" rows="12" readonly></textarea>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<?php
@@ -216,6 +244,28 @@ class PatternsAdmin {
 			'count'    => count( $exported ),
 			'patterns' => $exported,
 		] );
+	}
+
+	/**
+	 * AJAX: Get full pattern by ID for detail panel.
+	 */
+	public function ajax_get_pattern(): void {
+		check_ajax_referer( BricksCore::ADMIN_NONCE_ACTION, 'nonce' );
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
+		}
+		$id = isset( $_POST['pattern_id'] ) ? sanitize_text_field( wp_unslash( $_POST['pattern_id'] ) ) : '';
+		if ( '' === $id ) {
+			wp_send_json_error( [ 'message' => __( 'Missing pattern ID.', 'bricks-mcp' ) ] );
+			return;
+		}
+		$p = DesignPatternService::get( $id );
+		if ( null === $p ) {
+			wp_send_json_error( [ 'message' => __( 'Pattern not found.', 'bricks-mcp' ) ] );
+			return;
+		}
+		wp_send_json_success( $p );
 	}
 
 	/**
