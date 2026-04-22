@@ -24,6 +24,7 @@ class PatternsAdmin {
 		add_action( 'wp_ajax_bricks_mcp_import_patterns', [ $this, 'ajax_import_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_get_pattern', [ $this, 'ajax_get_pattern' ] );
 		add_action( 'admin_notices', [ $this, 'maybe_render_patterns_v2_notice' ] );
+		add_action( 'admin_notices', [ $this, 'maybe_render_v3_28_notice' ] );
 	}
 
 	/**
@@ -192,6 +193,25 @@ class PatternsAdmin {
 		<div class="notice notice-info is-dismissible">
 			<p><strong><?php esc_html_e( 'Bricks MCP — Pattern system redesigned.', 'bricks-mcp' ); ?></strong></p>
 			<p><?php esc_html_e( 'Previous patterns wiped. Capture new patterns from your built sections via MCP or paste JSON through the design_pattern tool.', 'bricks-mcp' ); ?></p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * One-time admin notice for v3.28.0 class/pattern system redesign.
+	 */
+	public function maybe_render_v3_28_notice(): void {
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
+			return;
+		}
+		if ( ! get_transient( 'bricks_mcp_show_v3_28_notice' ) ) {
+			return;
+		}
+		delete_transient( 'bricks_mcp_show_v3_28_notice' );
+		?>
+		<div class="notice notice-info is-dismissible">
+			<p><strong><?php esc_html_e( 'Bricks MCP — v3.28.0 class generation redesigned.', 'bricks-mcp' ); ?></strong></p>
+			<p><?php esc_html_e( 'New classes now use BEM (block--modifier__element). Build pipeline split: build_structure then populate_content. Existing classes and patterns keep working.', 'bricks-mcp' ); ?></p>
 		</div>
 		<?php
 	}
