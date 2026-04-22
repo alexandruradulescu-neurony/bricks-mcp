@@ -344,7 +344,46 @@ final class PatternAdapter {
                 $elem['style_tokens'] = $sibling['style_tokens'];
             }
         }
+
+        // v3.28.0: BEM inheritance — if sibling has a BEM class_ref, build new ref with same block+modifier, swap element to inserted role.
+        $normalizer = new BEMClassNormalizer();
+        if ( $sibling !== null && ! empty( $sibling['class_refs'] ) ) {
+            foreach ( $sibling['class_refs'] as $ref ) {
+                if ( ! is_string( $ref ) || ! $normalizer->is_valid( $ref ) ) {
+                    continue;
+                }
+                $parts = $this->parse_bem( $ref );
+                if ( $parts === null ) {
+                    continue;
+                }
+                $new_ref = $normalizer->normalize( [
+                    'block'    => $parts['block'],
+                    'modifier' => $parts['modifier'],
+                    'element'  => $role,
+                ] );
+                if ( $new_ref !== '' ) {
+                    $elem['class_refs'] = [ $new_ref ];
+                    break;
+                }
+            }
+        }
+
         return $elem;
+    }
+
+    /**
+     * Parse a BEM class name into its block/modifier/element parts.
+     * Returns null if the name doesn't match BEM grammar.
+     */
+    private function parse_bem( string $class_name ): ?array {
+        if ( ! preg_match( '/^([a-z][a-z0-9]*)(?:--([a-z][a-z0-9-]*(?:--[a-z][a-z0-9-]*)*))?(?:__([a-z][a-z0-9-]*))?$/', $class_name, $m ) ) {
+            return null;
+        }
+        return [
+            'block'    => $m[1],
+            'modifier' => $m[2] ?? '',
+            'element'  => $m[3] ?? '',
+        ];
     }
 
     /**
