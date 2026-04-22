@@ -474,6 +474,7 @@ final class ProposalService {
 			'layout'           => 'centered|split-60-40|split-50-50|grid-2|grid-3|grid-4 (REQUIRED)',
 			'background'       => 'dark|light|tinted-neutral|tinted-accent|tinted-warning|tinted-danger (optional, default: light). Use tinted-* values for alternating sections on light-themed sites.',
 			'background_image' => 'optional — "unsplash:query" to auto-fetch a background image.',
+			'variant'          => 'optional — BEM modifier applied as default to all structured class_intents that omit their own modifier. E.g. "b2b" makes {block}--b2b__{element}. Loose-string class_intents are unaffected.',
 			'elements'     => [
 				[
 					'type'         => 'REQUIRED — element type from available_elements',

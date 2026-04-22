@@ -68,10 +68,14 @@ final class SchemaSkeletonGenerator {
 		$patterns_def = $plan['patterns'] ?? [];
 		$roles        = $this->map_classes_to_roles( $suggested_classes );
 
+		// v3.28.0: plan-level variant becomes the default modifier for elements
+		// whose structured class_intent omits an explicit modifier.
+		$default_modifier = isset( $plan['variant'] ) && is_string( $plan['variant'] ) ? trim( $plan['variant'] ) : '';
+
 		// Build element nodes from the plan's element list.
 		$content_nodes = [];
 		foreach ( $elements as $el ) {
-			$content_nodes[] = $this->build_plan_element( $el, $roles );
+			$content_nodes[] = $this->build_plan_element( $el, $roles, false, $default_modifier );
 		}
 
 		// Build pattern definitions.
@@ -86,7 +90,7 @@ final class SchemaSkeletonGenerator {
 			// Build pattern node.
 			$pat_children = [];
 			foreach ( $pat_elements as $pel ) {
-				$pat_children[] = $this->build_plan_element( $pel, $roles, true );
+				$pat_children[] = $this->build_plan_element( $pel, $roles, true, $default_modifier );
 			}
 
 			$pat_class = $this->find_class_for_pattern( $pat_name, $roles );
@@ -568,8 +572,16 @@ final class SchemaSkeletonGenerator {
 
 	/**
 	 * Build a single element node from a plan element.
+	 *
+	 * @param array  $el               Element definition from the design plan.
+	 * @param array  $roles            Role → class name map for this section.
+	 * @param bool   $is_pattern       True when building a pattern child element.
+	 * @param string $default_modifier Plan-level variant to use as BEM modifier when
+	 *                                 a structured class_intent omits its own modifier.
+	 *                                 Only applies to structured (array) intents; loose
+	 *                                 strings are left unchanged.
 	 */
-	private function build_plan_element( array $el, array $roles, bool $is_pattern = false ): array {
+	private function build_plan_element( array $el, array $roles, bool $is_pattern = false, string $default_modifier = '' ): array {
 		$type         = $el['type'] ?? 'text-basic';
 		$role         = $el['role'] ?? '';
 		$tag          = $el['tag'] ?? null;
@@ -578,6 +590,13 @@ final class SchemaSkeletonGenerator {
 		// Auto-assign class from role if not explicitly set.
 		if ( null === $class_intent ) {
 			$class_intent = $this->role_to_class( $role, $roles );
+		}
+
+		// v3.28.0: apply plan-level variant as default modifier when a structured
+		// class_intent doesn't specify its own modifier. Loose strings are opaque
+		// (positional-only parsing) and are intentionally left unchanged.
+		if ( $default_modifier !== '' && is_array( $class_intent ) && ! isset( $class_intent['modifier'] ) ) {
+			$class_intent['modifier'] = $default_modifier;
 		}
 
 		$props = [];
