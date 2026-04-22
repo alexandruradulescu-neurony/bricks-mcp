@@ -708,10 +708,12 @@ final class ProposalService {
 		}
 
 		// elements.
-		$elements = $plan['elements'] ?? [];
-		if ( empty( $elements ) || ! is_array( $elements ) ) {
-			$errors[] = 'design_plan.elements is required and must be a non-empty array. Each element needs: type, role. Optional: content_hint (moved to content_plan map in v3.28.0).';
-		} else {
+		// v3.29: when use_pattern is set, pattern provides structure — elements optional.
+		$has_use_pattern = ! empty( $plan['use_pattern'] );
+		$elements        = $plan['elements'] ?? [];
+		if ( ! $has_use_pattern && ( empty( $elements ) || ! is_array( $elements ) ) ) {
+			$errors[] = 'design_plan.elements is required and must be a non-empty array. Each element needs: type, role. Optional: content_hint (moved to content_plan map in v3.28.0). When using a pattern, set use_pattern and elements becomes optional.';
+		} elseif ( is_array( $elements ) && ! empty( $elements ) ) {
 			foreach ( $elements as $idx => $el ) {
 				$path = "design_plan.elements[{$idx}]";
 				if ( empty( $el['type'] ) ) {
