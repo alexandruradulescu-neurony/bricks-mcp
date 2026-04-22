@@ -197,7 +197,7 @@ final class Router {
 			'font'          => new Handlers\FontHandler( $this->bricks_service, $require_bricks ),
 			'code'          => new Handlers\CodeHandler( $this->bricks_service, $require_bricks ),
 			'proposal'      => new Handlers\ProposalHandler( $proposal_service, $require_bricks ),
-			'build'         => new Handlers\BuildHandler(
+			'build'         => $build_handler = new Handlers\BuildHandler(
 				$this->bricks_service,
 				$design_validator,
 				$class_resolver,
@@ -205,7 +205,7 @@ final class Router {
 				$element_settings_gen,
 				$proposal_service
 			),
-			'build_structure'  => new Handlers\BuildStructureHandler( $this->handlers['build'] ),
+			'build_structure'  => new Handlers\BuildStructureHandler( $build_handler ),
 			'populate_content' => new Handlers\PopulateContentHandler( $this->bricks_service, $this->media_service ),
 			'onboarding'    => new OnboardingHandler( new OnboardingService( $this->bricks_service ) ),
 			'verify'        => new Handlers\VerifyHandler( $this->bricks_service, $require_bricks ),

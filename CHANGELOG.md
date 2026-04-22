@@ -4,6 +4,11 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.28.1] — 2026-04-22
+
+**Critical hotfix for v3.28.0**
+* Fix: fatal error on plugin load caused by PHP array literal evaluation — `$this->handlers['build']` was null when referenced during array construction. Now captured via local variable and passed to BuildStructureHandler explicitly.
+
 ## [3.28.0] — 2026-04-22
 
 **Pattern + Class System v3 — BEM + two-tier build**

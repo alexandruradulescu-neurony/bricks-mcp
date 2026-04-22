@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.28.0
+Stable tag: 3.28.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,10 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.28.1 =
+**Critical hotfix for v3.28.0**
+* Fix: fatal error on plugin load caused by PHP array literal evaluation — `$this->handlers['build']` was null when referenced during array construction. Now captured via local variable and passed to BuildStructureHandler explicitly.
 
 = 3.28.0 =
 **Pattern + Class System v3 — BEM + two-tier build**
