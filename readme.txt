@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.29.0
+Stable tag: 3.31.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,21 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.31.0 =
+**Pattern from Image + build_from_schema Removal (M3)**
+
+AI vision can now generate Bricks patterns directly from screenshots. Point a URL, upload a file, or paste base64 — the plugin calls Anthropic Claude (Sonnet 4.5) with a tool-use schema and gets back a validated pattern or design_plan. Server-side vision means any MCP client works, not just vision-capable ones.
+
+* Added: `design_pattern(action: "from_image")` — image → validated pattern, saved to library. Accepts image_url (HTTPS, SSRF-safe), image_id (WP media attachment), image_base64 (inline ≤5MB), and optional reference_json (Bricksies calibration). dry_run flag returns preview without saving.
+* Added: `propose_design` now accepts image_url / image_id / image_base64 / reference_json. Server-side vision produces the design_plan — one call bypasses the 2-phase discovery dance.
+* Added: Admin setting "Anthropic API key (vision features)" under Settings → Bricks MCP. Format sk-ant-... validated on save; stored in existing bricks_mcp_settings option.
+* Added: New vision service layer — VisionProvider interface + ClaudeVisionProvider (wp_remote_post, retry-on-429/5xx, no SDK) + VisionPromptBuilder + VisionResponseMapper + VisionPatternGenerator orchestrator + ImageInputResolver. Driver pattern ready for future OpenAI / Gemini providers.
+* Added: Class-reuse pipeline for vision output — site-context injection into prompt + ClassDedupEngine signature-match + BEMClassNormalizer on new names. Prevents proliferation across repeated vision runs.
+* Removed (breaking): public `build_from_schema` MCP tool. Callers must use `build_structure` + `populate_content` (shipped v3.28.0, stabilized v3.29.0). Internal `BuildHandler` class retained as the pipeline implementation invoked by `BuildStructureHandler`. Error messages + onboarding guide + tool descriptions updated to reference the two-tier flow.
+* Changed: PrerequisiteGateService `'design'` tier removed (no public callers post-M3). FLAG_DESIGN_READY deprecated.
+
+Vision features require an Anthropic API key. Set it under Settings → Bricks MCP before calling from_image or propose_design with image input.
 
 = 3.29.0 =
 **Pattern Usability (M1)**

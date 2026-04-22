@@ -4,6 +4,37 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.31.0] — 2026-04-22
+
+**Pattern from Image + build_from_schema Removal (M3)**
+
+### Added
+
+- `design_pattern(action: "from_image")` — AI-vision pattern capture with four input vectors (`image_url`, `image_id`, `image_base64`, `reference_json`) and `dry_run` preview flag. Server-side Anthropic Claude call with tool-use schema produces validated pattern structure that flows through the same `PatternValidator` + `ClassDedupEngine` + `BEMClassNormalizer` pipeline as manual capture.
+- `propose_design` image input: `image_url`, `image_id`, `image_base64`, `reference_json`. Server-side vision emits the `design_plan` — single call bypasses 2-phase discovery for image-driven builds.
+- New service layer: `VisionProvider` interface + `ClaudeVisionProvider` concrete (`wp_remote_post` against Anthropic Messages API v1, retry on 429/5xx, no external SDK) + `VisionPromptBuilder` (site-context compression, dual tool schemas: `emit_pattern` and `emit_design_plan`) + `VisionResponseMapper` (audit_classes + BEM normalize + reference_json diff) + `VisionPatternGenerator` orchestrator (depth guardrail at 10). Driver pattern ready for future OpenAI / Gemini providers without refactor.
+- `ImageInputResolver` service — normalizes four input shapes to `{type: base64, media_type, data}` with SSRF guard (HTTPS-only, private IPs blocked), size cap (5MB), and MIME sniffing (PNG/JPEG/WEBP/GIF).
+- Admin setting `anthropic_api_key` with `sk-ant-[A-Za-z0-9_\-]+` regex validation and masked preview.
+- Class-reuse pipeline for vision output: site context (existing classes + variables) injected into every prompt, `ClassDedupEngine` renames signature-matching outputs, `BEMClassNormalizer` enforces `block[--modifier][__element]` shape on net-new names.
+- 32 new PHPUnit tests across `VisionProvider`, `ClaudeVisionProvider`, `VisionPromptBuilder`, `VisionResponseMapper`, `VisionPatternGenerator`, `ImageInputResolver`.
+
+### Removed (breaking)
+
+- Public `build_from_schema` MCP tool. Callers must migrate to `build_structure` + `populate_content` (shipped v3.28.0, stabilized v3.29.0). The `BuildHandler` PHP class is retained as the internal pipeline invoked by `BuildStructureHandler` via `_internal=true`. Public registration dropped from Router; `GATED_OPERATIONS` entry removed.
+- `PrerequisiteGateService` `'design'` tier. After `build_from_schema` removal, no public tool uses this tier. `FLAG_DESIGN_READY` constant + related call sites removed.
+
+### Changed
+
+- Router design-gate error code renamed: `bricks_mcp_use_build_from_schema` → `bricks_mcp_use_build_pipeline`. Associated error message rewritten to describe the `propose_design → build_structure → populate_content → verify_build` flow.
+- `OnboardingService` tool list + design-build flow description updated to reference two-tier build.
+- Cross-codebase user-facing references to `build_from_schema` updated in: `Router`, `OnboardingService`, `PrerequisiteGateService`, `StreamableHttpHandler`, `VerifyHandler`, `ElementHandler`, `PageHandler`, `PageLayoutHandler`, `PageLayoutService`, `SchemaSkeletonGenerator`, `DesignSchemaValidator`, `ProposalHandler`.
+
+### Notes
+
+- Vision features require an Anthropic API key. Set it under Settings → Bricks MCP before calling `design_pattern(from_image)` or `propose_design` with image input.
+- Hardcoded defaults: model `claude-sonnet-4-5-20250929`, `max_tokens: 4096`, `temperature: 0`. Admin-exposed model picker / usage log / budget caps deferred to M3.x.
+- Pre-existing test failures (14 total across `PageHandlerDispatchTest`, `PrerequisiteGateServiceTest`, `StarterClassesServiceTest`) are carryover from v3.6 era and unaffected by this release.
+
 ## [3.29.0] — 2026-04-22
 
 **Pattern Usability (M1)**
