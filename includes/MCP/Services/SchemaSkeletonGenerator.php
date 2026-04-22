@@ -70,6 +70,18 @@ final class SchemaSkeletonGenerator {
 		$section_type = $plan['section_type'] ?? 'generic';
 		$layout       = $plan['layout'] ?? 'centered';
 		$background   = $plan['background'] ?? 'light';
+
+		// NEW: use_pattern branch.
+		if ( ! empty( $plan['use_pattern'] ) ) {
+			return $this->generate_from_pattern(
+				$page_id,
+				(string) $plan['use_pattern'],
+				(array) ( $plan['content_map'] ?? [] ),
+				$suggested_classes,
+				$scoped_variables
+			);
+		}
+
 		$elements     = $plan['elements'] ?? [];
 		$patterns_def = $plan['patterns'] ?? [];
 		$roles        = $this->map_classes_to_roles( $suggested_classes );
@@ -858,4 +870,98 @@ final class SchemaSkeletonGenerator {
 	// pricing, testimonials, split, generic). They were only called by the
 	// deleted generate() method. generate_from_plan() builds schemas
 	// directly from the AI's design_plan without hardcoded skeletons.
+
+	// ──────────────────────────────────────────────
+	// Pattern-driven generation
+	// ──────────────────────────────────────────────
+
+	/**
+	 * Generate schema by adapting a pattern + content_map.
+	 *
+	 * @param int                   $page_id          Target page ID.
+	 * @param string                $pattern_id       Pattern ID to look up.
+	 * @param array<string, mixed>  $content_map      role => content value map.
+	 * @param array<string, string> $suggested_classes class_name => class_id map.
+	 * @param array<string, array>  $scoped_variables  category => variable names.
+	 * @return array<string, mixed>
+	 */
+	private function generate_from_pattern( int $page_id, string $pattern_id, array $content_map, array $suggested_classes, array $scoped_variables ): array {
+		$pattern = DesignPatternService::get( $pattern_id );
+		if ( null === $pattern ) {
+			return [
+				'error'   => 'pattern_not_found',
+				'message' => sprintf( 'Pattern "%s" does not exist. Call design_pattern(action: "list") for valid IDs.', $pattern_id ),
+			];
+		}
+
+		// Site compatibility: create missing classes + variables before building.
+		$core    = new BricksCore( new ElementNormalizer( new ElementIdGenerator() ) );
+		$classes = new GlobalClassService( $core );
+		$vars    = new GlobalVariableService( $core );
+
+		foreach ( $pattern['classes'] ?? [] as $name => $def ) {
+			if ( ! $classes->exists_by_name( $name ) ) {
+				$classes->create_from_payload( $def );
+			}
+		}
+		foreach ( $pattern['variables'] ?? [] as $name => $def ) {
+			if ( ! $vars->exists( $name ) ) {
+				$vars->create_from_payload( $name, $def );
+			}
+		}
+
+		// Adapt.
+		$adapter = new PatternAdapter( new PatternCatalog() );
+		$adapted = $adapter->adapt( $pattern, $content_map );
+		if ( isset( $adapted['error'] ) ) {
+			return $adapted;
+		}
+
+		// Inject content into adapted structure.
+		$with_content = $this->inject_content_map( $adapted['structure'], $content_map );
+
+		return [
+			'pattern_id'     => $pattern_id,
+			'structure'      => $with_content,
+			'adaptation_log' => $adapted['adaptation_log'],
+		];
+	}
+
+	/**
+	 * Walk adapted structure; for each element with a role present in content_map,
+	 * attach the content value to the appropriate field based on element type.
+	 *
+	 * @param array<string, mixed> $node        Element node (may have 'children').
+	 * @param array<string, mixed> $content_map role => content value map.
+	 * @return array<string, mixed> Node with content injected.
+	 */
+	private function inject_content_map( array $node, array $content_map ): array {
+		$role = $node['role'] ?? null;
+		if ( $role !== null && array_key_exists( $role, $content_map ) ) {
+			$value = $content_map[ $role ];
+			$type  = $node['type'] ?? '';
+
+			if ( $type === 'button' ) {
+				$node['label'] = is_array( $value ) ? ( $value['label'] ?? '' ) : (string) $value;
+				if ( is_array( $value ) ) {
+					if ( isset( $value['link'] ) ) { $node['link'] = $value['link']; }
+					if ( isset( $value['icon'] ) ) { $node['icon'] = $value['icon']; }
+				}
+			} elseif ( in_array( $type, [ 'heading', 'text-basic', 'text' ], true ) ) {
+				$node['content'] = is_array( $value ) ? wp_json_encode( $value ) : (string) $value;
+			} elseif ( $type === 'image' ) {
+				if ( is_array( $value ) && isset( $value['url'] ) ) {
+					$node['src'] = $value['url'];
+				} elseif ( is_string( $value ) ) {
+					$node['src'] = $value;
+				}
+			} else {
+				$node['content'] = is_array( $value ) ? wp_json_encode( $value ) : (string) $value;
+			}
+		}
+		if ( isset( $node['children'] ) && is_array( $node['children'] ) ) {
+			$node['children'] = array_map( fn( $c ) => is_array( $c ) ? $this->inject_content_map( $c, $content_map ) : $c, $node['children'] );
+		}
+		return $node;
+	}
 }
