@@ -22,10 +22,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class BuildStructureHandler {
 
-	/** Content fields forbidden in build_structure schemas. */
+	/**
+	 * Content fields forbidden in build_structure schemas.
+	 *
+	 * Excluded deliberately:
+	 *   - label: Bricks structural metadata (section/container organization), not user-facing content
+	 *   - title: commonly used as tooltip/aria on interactive elements, not only content
+	 *   - description: same
+	 *
+	 * Content generation belongs in populate_content; these rejected fields are the ones
+	 * the suggested_schema from propose_design never emits but user-modified schemas might.
+	 */
 	private const FORBIDDEN_CONTENT_FIELDS = [
-		'content', 'content_example', 'label', 'text', 'title', 'description',
-		'link', 'href', 'icon', 'image', 'src', 'url', 'placeholder',
+		'content', 'content_example', 'text',
+		'link', 'href', 'target',
+		'icon', 'image', 'src', 'url',
+		'placeholder',
 	];
 
 	public function __construct( private BuildHandler $delegate ) {}

@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.28.2
+Stable tag: 3.28.3
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,10 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.28.3 =
+**Hotfix — build_structure validator**
+* Fix: removed label, title, description from forbidden content fields. These are Bricks structural metadata (element organization labels, tooltip attrs), not user-facing content. Kept as forbidden: content, content_example, text, link, href, target, icon, image, src, url, placeholder.
 
 = 3.28.2 =
 **Hotfix — design_plan validator**

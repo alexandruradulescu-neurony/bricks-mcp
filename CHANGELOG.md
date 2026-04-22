@@ -4,6 +4,11 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.28.3] — 2026-04-22
+
+**Hotfix — build_structure validator**
+* Fix: removed label, title, description from forbidden content fields. These are Bricks structural metadata (element organization labels, tooltip attrs), not user-facing content. Kept as forbidden: content, content_example, text, link, href, target, icon, image, src, url, placeholder.
+
 ## [3.28.2] — 2026-04-22
 
 **Hotfix — design_plan validator**
