@@ -23,6 +23,7 @@ class PatternsAdmin {
 		add_action( 'wp_ajax_bricks_mcp_export_patterns', [ $this, 'ajax_export_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_import_patterns', [ $this, 'ajax_import_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_get_pattern', [ $this, 'ajax_get_pattern' ] );
+		add_action( 'wp_ajax_bricks_mcp_get_pattern_drift', [ $this, 'ajax_get_pattern_drift' ] );
 		add_action( 'admin_notices', [ $this, 'maybe_render_patterns_v2_notice' ] );
 		add_action( 'admin_notices', [ $this, 'maybe_render_v3_28_notice' ] );
 	}
@@ -335,6 +336,46 @@ class PatternsAdmin {
 			return;
 		}
 		wp_send_json_success( $p );
+	}
+
+	/**
+	 * AJAX: Get drift report for a pattern. 60s transient cache.
+	 */
+	public function ajax_get_pattern_drift(): void {
+		check_ajax_referer( BricksCore::ADMIN_NONCE_ACTION, 'nonce' );
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
+		}
+		$id = isset( $_POST['pattern_id'] ) ? sanitize_text_field( wp_unslash( $_POST['pattern_id'] ) ) : '';
+		if ( $id === '' ) {
+			wp_send_json_error( [ 'message' => __( 'Missing pattern ID.', 'bricks-mcp' ) ] );
+			return;
+		}
+		$pattern = DesignPatternService::get( $id );
+		if ( null === $pattern ) {
+			wp_send_json_error( [ 'message' => __( 'Pattern not found.', 'bricks-mcp' ) ] );
+			return;
+		}
+
+		$cache_key = 'bricks_mcp_pattern_drift_' . $id;
+		$cached    = get_transient( $cache_key );
+		if ( is_array( $cached ) ) {
+			wp_send_json_success( $cached );
+			return;
+		}
+
+		$core          = new \BricksMCP\MCP\Services\BricksCore(
+			new \BricksMCP\MCP\Services\ElementNormalizer( new \BricksMCP\MCP\Services\ElementIdGenerator() )
+		);
+		$class_service = new \BricksMCP\MCP\Services\GlobalClassService( $core );
+		$site_classes  = $class_service->get_all_by_name();
+
+		$detector = new \BricksMCP\MCP\Services\PatternDriftDetector();
+		$report   = $detector->detect( $pattern, $site_classes );
+
+		set_transient( $cache_key, $report, 60 );
+		wp_send_json_success( $report );
 	}
 
 	/**
