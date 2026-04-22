@@ -302,9 +302,25 @@ final class GlobalClassHandler {
 			if ( ! empty( $warnings ) ) {
 				$result['warnings'] = $warnings;
 			}
+
+			// v3.29: invalidate pattern drift transients (class change may affect drift reports).
+			$this->clear_all_pattern_drift_transients();
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Clear all pattern drift transients (simple bulk iteration).
+	 */
+	private function clear_all_pattern_drift_transients(): void {
+		$patterns = \BricksMCP\MCP\Services\DesignPatternService::list_all();
+		foreach ( $patterns as $p ) {
+			$id = $p['id'] ?? '';
+			if ( $id !== '' ) {
+				delete_transient( 'bricks_mcp_pattern_drift_' . $id );
+			}
+		}
 	}
 
 	/**

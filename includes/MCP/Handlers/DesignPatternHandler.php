@@ -265,7 +265,14 @@ final class DesignPatternHandler {
 			return new \WP_Error( 'missing_pattern', 'pattern object with fields to update is required.' );
 		}
 
-		return DesignPatternService::update( $id, $updates );
+		$result = DesignPatternService::update( $id, $updates );
+
+		// v3.29: clear own drift transient so next get reflects the updated pattern.
+		if ( ! is_wp_error( $result ) ) {
+			delete_transient( 'bricks_mcp_pattern_drift_' . $id );
+		}
+
+		return $result;
 	}
 
 	/**
