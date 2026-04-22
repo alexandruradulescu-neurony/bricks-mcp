@@ -20,6 +20,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class ClassDedupEngine {
 
+    public function __construct( private ?BEMClassNormalizer $normalizer = null ) {
+        $this->normalizer = $normalizer ?? new BEMClassNormalizer();
+    }
+
     /**
      * Compute a deterministic signature for a style_tokens tree.
      *
@@ -41,6 +45,26 @@ final class ClassDedupEngine {
         $candidate_sig = $this->signature( $candidate_tokens );
         foreach ( $pool as $name => $tokens ) {
             if ( ! is_array( $tokens ) ) {
+                continue;
+            }
+            if ( $this->signature( $tokens ) === $candidate_sig ) {
+                return (string) $name;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Variant of find_match that only considers BEM-named entries.
+     *
+     * Legacy (non-BEM) classes are silently skipped — they can be referenced
+     * by explicit class_intent, but the dedup engine will never reuse them
+     * by style signature alone (G1 policy).
+     */
+    public function find_bem_match( array $candidate_tokens, array $pool ): ?string {
+        $candidate_sig = $this->signature( $candidate_tokens );
+        foreach ( $pool as $name => $tokens ) {
+            if ( ! is_array( $tokens ) || $this->normalizer->classify( (string) $name ) !== 'bem' ) {
                 continue;
             }
             if ( $this->signature( $tokens ) === $candidate_sig ) {
