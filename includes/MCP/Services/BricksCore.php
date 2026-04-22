@@ -76,6 +76,10 @@ class BricksCore {
 	 * One-time flag marking the v2 migration wipe has run on this install.
 	 */
 	public const OPTION_PATTERNS_V2_WIPED    = 'bricks_mcp_patterns_v2_wiped';
+	/**
+	 * One-time flag marking the v3.28.0 BEM metadata backfill has run on this install.
+	 */
+	public const OPTION_PATTERNS_V3_28_METADATA_APPLIED = 'bricks_mcp_patterns_v3_28_metadata_applied';
 	public const OPTION_STRUCTURED_BRIEF     = 'bricks_mcp_structured_brief';
 	public const OPTION_DS_LAST_APPLIED      = 'bricks_mcp_ds_last_applied';
 	public const OPTION_DESIGN_SYSTEM_CONFIG = 'bricks_mcp_design_system_config';

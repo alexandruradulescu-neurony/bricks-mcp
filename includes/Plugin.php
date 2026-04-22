@@ -131,6 +131,13 @@ final class Plugin {
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				error_log( 'BricksMCP maybe_wipe_v1_patterns failed: ' . $e->getMessage() );
 			}
+			try {
+				$this->maybe_apply_v3_28_pattern_metadata();
+			} catch ( \Throwable $e ) {
+				$migration_ok = false;
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'BricksMCP maybe_apply_v3_28_pattern_metadata failed: ' . $e->getMessage() );
+			}
 			if ( $migration_ok ) {
 				update_option( MCP\Services\BricksCore::OPTION_DB_VERSION, BRICKS_MCP_VERSION, true );
 			}
@@ -204,6 +211,36 @@ final class Plugin {
 		delete_option( 'bricks_mcp_patterns_migrated' );
 		update_option( $flag, time(), false );
 		set_transient( 'bricks_mcp_show_patterns_v2_notice', 1, DAY_IN_SECONDS );
+	}
+
+	/**
+	 * v3.28.0 — backfill BEM metadata on all stored patterns.
+	 *
+	 * Guarded by OPTION_PATTERNS_V3_28_METADATA_APPLIED so it runs once per install.
+	 * Computes bem_purity, non_bem_classes, bem_migration_hints for each pattern.
+	 */
+	private function maybe_apply_v3_28_pattern_metadata(): void {
+		$flag = MCP\Services\BricksCore::OPTION_PATTERNS_V3_28_METADATA_APPLIED;
+		if ( get_option( $flag ) ) {
+			return;
+		}
+		$patterns = get_option( MCP\Services\BricksCore::OPTION_PATTERNS, [] );
+		if ( ! is_array( $patterns ) ) {
+			update_option( $flag, time(), false );
+			return;
+		}
+		$validator = new MCP\Services\PatternValidator();
+		foreach ( $patterns as &$p ) {
+			if ( ! is_array( $p ) ) continue;
+			$meta                       = $validator->compute_bem_metadata( $p );
+			$p['bem_purity']            = $meta['bem_purity'];
+			$p['non_bem_classes']       = $meta['non_bem_classes'];
+			$p['bem_migration_hints']   = $meta['bem_migration_hints'];
+		}
+		unset( $p );
+		update_option( MCP\Services\BricksCore::OPTION_PATTERNS, $patterns, false );
+		update_option( $flag, time(), false );
+		set_transient( 'bricks_mcp_show_v3_28_notice', 1, DAY_IN_SECONDS );
 	}
 
 	/**
