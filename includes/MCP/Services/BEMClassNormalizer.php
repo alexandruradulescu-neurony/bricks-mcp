@@ -19,8 +19,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class BEMClassNormalizer {
 
-    /** BEM validation regex. */
-    public const BEM_REGEX = '/^[a-z][a-z0-9-]*(--[a-z][a-z0-9-]*)*(__[a-z][a-z0-9-]*)?$/';
+    /**
+     * BEM validation regex.
+     *
+     * Block must be a single identifier (no hyphens) so hyphenated-only names
+     * like `btn-b2b-primary` are rejected as legacy. Modifiers and elements
+     * may contain internal hyphens (e.g. `cta--accent__primary-button`).
+     */
+    public const BEM_REGEX = '/^[a-z][a-z0-9]*(--[a-z][a-z0-9-]*)*(__[a-z][a-z0-9-]*)?$/';
 
     /**
      * Normalize any class_intent input into BEM form.
@@ -110,5 +116,15 @@ final class BEMClassNormalizer {
     /** Check whether a string matches BEM grammar. */
     public function is_valid( string $class_name ): bool {
         return (bool) preg_match( self::BEM_REGEX, $class_name );
+    }
+
+    /**
+     * Classify a class name as 'bem' or 'legacy'.
+     *
+     * Legacy = any non-BEM-valid name on the site. Used by dedup engine
+     * to skip non-BEM classes from auto-reuse pool (G1 policy).
+     */
+    public function classify( string $class_name ): string {
+        return $this->is_valid( $class_name ) ? 'bem' : 'legacy';
     }
 }
