@@ -91,6 +91,8 @@ final class PatternCatalog {
             'background'          => $p['background'] ?? '',
             'tags'                => $p['tags'] ?? [],
             'class_refs_preview'  => array_values( array_unique( $class_refs_preview ) ),
+            'bem_purity'          => $p['bem_purity'] ?? null,
+            'non_bem_classes'     => $p['non_bem_classes'] ?? [],
         ];
     }
 
