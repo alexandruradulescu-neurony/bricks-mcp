@@ -233,7 +233,7 @@ final class SchemaSkeletonGenerator {
 			}
 
 			if ( empty( $right_nodes ) ) {
-				$right_nodes[] = $this->node( 'text-basic', [ 'content' => '[RIGHT COLUMN CONTENT]' ] );
+				$right_nodes[] = $this->node( 'text-basic' );
 			}
 
 			$grid_template = 'split-60-40' === $layout ? 'var(--grid-3-2)' : 'var(--grid-2)';
@@ -456,7 +456,7 @@ final class SchemaSkeletonGenerator {
 			}
 
 			if ( empty( $right_nodes ) ) {
-				$right_nodes[] = $this->node( 'text-basic', [ 'content' => '[RIGHT COLUMN CONTENT]' ] );
+				$right_nodes[] = $this->node( 'text-basic' );
 			}
 
 			// Apply column overrides from pattern.
@@ -572,7 +572,6 @@ final class SchemaSkeletonGenerator {
 	private function build_plan_element( array $el, array $roles, bool $is_pattern = false ): array {
 		$type         = $el['type'] ?? 'text-basic';
 		$role         = $el['role'] ?? '';
-		$content_hint = $el['content_hint'] ?? '';
 		$tag          = $el['tag'] ?? null;
 		$class_intent = $el['class_intent'] ?? null;
 
@@ -590,21 +589,8 @@ final class SchemaSkeletonGenerator {
 			$props['class_intent'] = $class_intent;
 		}
 
-		// Content: use data substitution in patterns, placeholder otherwise.
-		if ( in_array( $type, [ 'heading', 'text-basic', 'text-link', 'button' ], true ) ) {
-			$props['content'] = $is_pattern ? "data.{$role}" : "[{$content_hint}]";
-		}
-
-		if ( 'icon' === $type ) {
-			$props['icon'] = $is_pattern ? "data.{$role}" : 'star';
-		}
-
-		if ( 'image' === $type ) {
-			$props['src'] = 'unsplash:[RELEVANT QUERY]';
-		}
-
 		if ( 'form' === $type ) {
-			$props['form_type'] = FormTypeDetector::detect( $role . ' ' . $content_hint );
+			$props['form_type'] = FormTypeDetector::detect( $role );
 		}
 
 		return $this->node( $type, $props );
@@ -679,17 +665,8 @@ final class SchemaSkeletonGenerator {
 	 */
 	private function make_pattern_item( array $pat_elements, string $pat_hint, int $index, string $section_type, bool $is_featured ): array {
 		$item = [];
-		foreach ( $pat_elements as $pel ) {
-			$role = $pel['role'] ?? 'item';
-			if ( 'icon' === ( $pel['type'] ?? '' ) || str_contains( $role, 'icon' ) ) {
-				$item[ $role ] = 'star';
-			} else {
-				$annotation     = $is_featured ? ' (FEATURED / RECOMMENDED TIER)' : '';
-				$item[ $role ]  = "[{$pat_hint}{$annotation} — ITEM {$index} " . strtoupper( $role ) . ']';
-			}
-		}
 		if ( $is_featured && 'pricing' === $section_type ) {
-			$item['_featured_badge'] = 'RECOMANDAT';
+			$item['_featured'] = true;
 		}
 		return $item;
 	}
