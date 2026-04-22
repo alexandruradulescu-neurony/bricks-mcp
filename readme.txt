@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.26.1
+Stable tag: 3.27.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,39 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.27.0 =
+**Pattern System v2 — Complete Redesign**
+
+Patterns are now site-specific design memory, not a shipped template gallery.
+The plugin ships with ZERO patterns; you capture them from real built sections
+on your site via MCP. Each pattern is stripped of content, tokenized to your
+site's design system (colors, spacing, radii, fonts), and fully self-contained
+(carries its own class + variable payloads).
+
+**Breaking Changes**
+* Legacy `bricks_mcp_custom_patterns` option is wiped on upgrade. One-time admin notice appears.
+* Admin "Add Pattern" modal removed. Pattern creation is MCP-only via `design_pattern` tool.
+* `reference_patterns` field replaced with `pattern_catalog` in propose_design Phase 1 response.
+* `find_matching_pattern` in SchemaSkeletonGenerator removed. Use `use_pattern` in design_plan instead.
+
+**Added**
+* `design_pattern(action: 'capture')` — captures pattern from an existing built section.
+* `design_pattern(action: 'import')` — auto-creates missing classes + variables on target site.
+* `use_pattern` in design_plan + `content_map` for pattern-based builds.
+* Adaptive build: patterns adapt to content (repeat cloning, role insertion, shape-mismatch rejection).
+* `adaptation_log` in build responses shows every structural change made.
+* Admin UI: read-only structural_summary column + detail panel (view classes, variables, full JSON).
+
+**Under the hood**
+* New services: PatternValidator, PatternCapture, PatternCatalog, PatternAdapter.
+* 32 new unit tests covering validation, token snapping (CIELAB ΔE for colors, pixel delta for spacing/radius/fonts), repeat expansion, role insertion, required-role checks.
+
+**Removed**
+* `data/design-patterns.json` seed file (21 generic patterns). No more shipped patterns.
+* Admin reseed button + AJAX endpoint.
+* DesignPatternService::migrate_plugin_patterns / reseed_plugin_patterns / load_and_merge_seed.
+* SchemaSkeletonGenerator::find_matching_pattern / PLACEHOLDER_ICONS / get_placeholder_icon.
 
 = 3.26.1 =
 * 54 additional commits from Phase 13 parallel agent sweep (Core+Admin, Handlers+Services). Continuation of v3.26.0.
