@@ -79,6 +79,14 @@ final class BuildStructureHandler {
 		// placeholders; populate_content resolves them by querying the built page.
 		$role_map = $this->extract_role_map_from_schema( $schema );
 
+		// Normalize class_intent: downstream DesignSchemaValidator + ClassIntentResolver
+		// treat class_intent as a scalar (string). v3.28.0 introduced structured
+		// class_intent objects ({block, modifier?, element?}) and loose strings.
+		// Convert every class_intent in the schema tree to its normalized BEM string
+		// before delegating — otherwise array values trip "Illegal offset type".
+		$schema = $this->normalize_class_intents( $schema );
+		$args['schema'] = $schema;
+
 		// Delegate element emission to existing BuildHandler.
 		// The _internal flag signals Task 4.4's deprecation wrapper to skip the
 		// "use build_structure instead" nudge for this programmatic call.
@@ -119,6 +127,36 @@ final class BuildStructureHandler {
 			}
 		}
 		return $offending;
+	}
+
+	/**
+	 * Walk the schema tree and normalize every class_intent into a BEM string.
+	 *
+	 * Structured objects ({block, modifier?, element?}) and loose strings are
+	 * both converted via BEMClassNormalizer. Downstream DesignSchemaValidator +
+	 * ClassIntentResolver treat class_intent as a scalar; passing an array
+	 * triggers "Illegal offset type" in isset() lookups.
+	 *
+	 * @param array<string, mixed> $node Any schema subtree.
+	 * @return array<string, mixed> Same shape with class_intent values flattened to BEM strings.
+	 */
+	private function normalize_class_intents( array $node ): array {
+		$normalizer = new \BricksMCP\MCP\Services\BEMClassNormalizer();
+		foreach ( $node as $key => $value ) {
+			if ( $key === 'class_intent' && ( is_array( $value ) || is_string( $value ) ) ) {
+				$normalized = $normalizer->normalize( $value );
+				if ( $normalized !== '' ) {
+					$node[ $key ] = $normalized;
+				} else {
+					unset( $node[ $key ] );
+				}
+				continue;
+			}
+			if ( is_array( $value ) ) {
+				$node[ $key ] = $this->normalize_class_intents( $value );
+			}
+		}
+		return $node;
 	}
 
 	/**

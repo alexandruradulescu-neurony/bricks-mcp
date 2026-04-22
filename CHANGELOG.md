@@ -4,6 +4,11 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.28.5] — 2026-04-22
+
+**Hotfix — class_intent normalization before delegation**
+* Fix: build_structure now normalizes structured class_intent objects ({block, modifier?, element?}) and loose strings into BEM class names before passing to downstream validator. Previously threw "Illegal offset type" because DesignSchemaValidator expected scalar strings.
+
 ## [3.28.4] — 2026-04-22
 
 **Hotfix — build_structure scanner false positive on routing fields**
