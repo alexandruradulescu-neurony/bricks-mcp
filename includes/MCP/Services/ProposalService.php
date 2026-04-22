@@ -507,9 +507,9 @@ final class ProposalService {
 				[
 					'type'         => 'REQUIRED — element type from available_elements',
 					'role'         => 'REQUIRED — what this element does',
-					'content_hint' => 'REQUIRED — describe what content goes here',
 					'tag'          => 'optional — h1-h6 for headings',
-					'class_intent' => 'optional — name of an existing class to reuse',
+					'class_intent' => 'optional — structured {block, modifier?, element?} or loose string; auto-normalized to BEM',
+					'content_hint' => 'optional — extracted into content_plan map; use populate_content after build_structure',
 				],
 			],
 			'patterns' => [
@@ -517,9 +517,10 @@ final class ProposalService {
 					'name'              => 'REQUIRED — pattern name',
 					'repeat'            => 'REQUIRED — how many times to repeat',
 					'element_structure' => 'REQUIRED — array of {type, role} objects',
-					'content_hint'      => 'REQUIRED — describe what each instance contains',
+					'content_hint'      => 'optional — echoed in content_plan for the repeated instance',
 				],
 			],
+			'content_plan' => 'optional — role-keyed map of content hints for populate_content; server merges element-level content_hints into this',
 		];
 	}
 
@@ -657,7 +658,7 @@ final class ProposalService {
 			'created_at'       => current_time( 'mysql' ),
 			'suggested_schema' => $suggested_schema,
 			'content_plan'     => $content_plan,
-			'next_step'        => 'Review the suggested_schema. Replace [PLACEHOLDER] content with real text based on the briefs and your content_hints. The element_schemas below show what each element accepts — use this to set correct content keys. Then call build_from_schema with this proposal_id and the modified schema.',
+			'next_step'        => 'Review the suggested_schema (structure-only, no content fields). Call build_structure with this proposal_id + the schema. It returns section_id + role_map. Then call populate_content with section_id + content_map keyed by role to inject real content.',
 			'resolved'         => [
 				'classes_suggested' => $suggested_classes,
 				'variables'         => $scoped_variables,
@@ -709,7 +710,7 @@ final class ProposalService {
 		// elements.
 		$elements = $plan['elements'] ?? [];
 		if ( empty( $elements ) || ! is_array( $elements ) ) {
-			$errors[] = 'design_plan.elements is required and must be a non-empty array. Each element needs: type, role, content_hint.';
+			$errors[] = 'design_plan.elements is required and must be a non-empty array. Each element needs: type, role. Optional: content_hint (moved to content_plan map in v3.28.0).';
 		} else {
 			foreach ( $elements as $idx => $el ) {
 				$path = "design_plan.elements[{$idx}]";
@@ -728,9 +729,7 @@ final class ProposalService {
 				if ( empty( $el['role'] ) ) {
 					$errors[] = "{$path}.role is required — describe what this element does (e.g., 'main_heading', 'primary_cta').";
 				}
-				if ( empty( $el['content_hint'] ) ) {
-					$errors[] = "{$path}.content_hint is required — describe what content goes here.";
-				}
+				// v3.28.0: content_hint is optional at element level (extracted into content_plan map).
 			}
 		}
 

@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.28.1
+Stable tag: 3.28.2
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,12 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.28.2 =
+**Hotfix — design_plan validator**
+* Fix: content_hint is now optional at element level (was still rejecting Phase 2 calls without it). Hints still extracted into content_plan map when supplied.
+* Fix: next_step text in Phase 2 response pointed to deprecated build_from_schema with [PLACEHOLDER] guidance. Now points to build_structure + populate_content with role-keyed content_map.
+* design_plan_format descriptor documents content_hint as optional + content_plan as the v3.28.0 replacement map.
 
 = 3.28.1 =
 **Critical hotfix for v3.28.0**

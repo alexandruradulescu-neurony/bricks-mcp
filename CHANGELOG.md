@@ -4,6 +4,13 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.28.2] — 2026-04-22
+
+**Hotfix — design_plan validator**
+* Fix: content_hint is now optional at element level (was still rejecting Phase 2 calls without it). Hints still extracted into content_plan map when supplied.
+* Fix: next_step text in Phase 2 response pointed to deprecated build_from_schema with [PLACEHOLDER] guidance. Now points to build_structure + populate_content with role-keyed content_map.
+* design_plan_format descriptor documents content_hint as optional + content_plan as the v3.28.0 replacement map.
+
 ## [3.28.1] — 2026-04-22
 
 **Critical hotfix for v3.28.0**
