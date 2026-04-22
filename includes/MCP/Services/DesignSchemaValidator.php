@@ -177,6 +177,7 @@ final class DesignSchemaValidator {
 	 */
 	private const VALID_NODE_KEYS = [
 		'type', 'tag', 'label', 'content',
+		'role',
 		'class_intent', 'style_overrides', 'responsive_overrides',
 		'layout', 'columns', 'responsive',
 		'background',

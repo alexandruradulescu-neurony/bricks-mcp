@@ -205,7 +205,7 @@ final class Router {
 				$element_settings_gen,
 				$proposal_service
 			),
-			'build_structure'  => new Handlers\BuildStructureHandler( $build_handler ),
+			'build_structure'  => new Handlers\BuildStructureHandler( $build_handler, $this->bricks_service ),
 			'populate_content' => new Handlers\PopulateContentHandler( $this->bricks_service, $this->media_service ),
 			'onboarding'    => new OnboardingHandler( new OnboardingService( $this->bricks_service ) ),
 			'verify'        => new Handlers\VerifyHandler( $this->bricks_service, $require_bricks ),

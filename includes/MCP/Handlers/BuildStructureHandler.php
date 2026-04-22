@@ -46,7 +46,10 @@ final class BuildStructureHandler {
 	 */
 	private const SCAN_SKIP_TOP_KEYS = [ 'target', 'design_context', 'intent' ];
 
-	public function __construct( private BuildHandler $delegate ) {}
+	public function __construct(
+		private BuildHandler $delegate,
+		private ?\BricksMCP\MCP\Services\BricksService $bricks = null
+	) {}
 
 	/**
 	 * Handle build_structure tool invocation.
@@ -72,12 +75,11 @@ final class BuildStructureHandler {
 			);
 		}
 
-		// Extract role_map from the input schema before delegating, because
-		// BuildHandler::handle() does not return element IDs or roles in its
-		// normal (non-dry-run) response — only tree_summary and counts.
-		// role_map is keyed by schema label/class_intent with null values as
-		// placeholders; populate_content resolves them by querying the built page.
-		$role_map = $this->extract_role_map_from_schema( $schema );
+		// v3.28.6: tag each element carrying a `role` with `label = role` so
+		// Bricks stores the role name as the element label. populate_content
+		// resolves content_map keys by scanning element labels. Without this,
+		// role-keyed populate misses every element.
+		$schema = $this->tag_labels_from_roles( $schema );
 
 		// Normalize class_intent: downstream DesignSchemaValidator + ClassIntentResolver
 		// treat class_intent as a scalar (string). v3.28.0 introduced structured
@@ -87,6 +89,23 @@ final class BuildStructureHandler {
 		$schema = $this->normalize_class_intents( $schema );
 		$args['schema'] = $schema;
 
+		// v3.28.6: capture pre-build element IDs so we can diff post-build to
+		// identify the newly-created section + its descendants. This enables a
+		// complete role_map with real element IDs (not null placeholders) and
+		// returns the section_id populate_content needs.
+		$page_id       = (int) ( $schema['target']['page_id'] ?? $schema['target']['template_id'] ?? 0 );
+		$pre_build_ids = [];
+		if ( $page_id > 0 && $this->bricks !== null ) {
+			$pre_elements = $this->bricks->get_elements( $page_id );
+			if ( is_array( $pre_elements ) ) {
+				foreach ( $pre_elements as $el ) {
+					if ( isset( $el['id'] ) ) {
+						$pre_build_ids[ (string) $el['id'] ] = true;
+					}
+				}
+			}
+		}
+
 		// Delegate element emission to existing BuildHandler.
 		// The _internal flag signals Task 4.4's deprecation wrapper to skip the
 		// "use build_structure instead" nudge for this programmatic call.
@@ -95,13 +114,62 @@ final class BuildStructureHandler {
 			return $result;
 		}
 
-		return array_merge(
+		// Post-build: find new elements, section_id, and build role_map by label.
+		$section_id = null;
+		$role_map   = [];
+		if ( $page_id > 0 && $this->bricks !== null ) {
+			$post_elements = $this->bricks->get_elements( $page_id );
+			if ( is_array( $post_elements ) ) {
+				foreach ( $post_elements as $el ) {
+					$id = (string) ( $el['id'] ?? '' );
+					if ( $id === '' || isset( $pre_build_ids[ $id ] ) ) {
+						continue; // pre-existing element
+					}
+					// New element. Is it a section at root? Capture first as section_id.
+					$parent = (string) ( $el['parent'] ?? '0' );
+					$name   = (string) ( $el['name'] ?? '' );
+					if ( $section_id === null && $name === 'section' && $parent === '0' ) {
+						$section_id = $id;
+					}
+					// Role map: label → element_id.
+					$label = (string) ( $el['settings']['label'] ?? $el['label'] ?? '' );
+					if ( $label !== '' ) {
+						$role_map[ $label ] = $id;
+					}
+				}
+			}
+		}
+
+		$response = array_merge(
 			$result,
 			[
 				'role_map'  => $role_map,
 				'next_step' => 'Call populate_content with section_id + content_map keyed by role.',
 			]
 		);
+		if ( $section_id !== null ) {
+			$response['section_id'] = $section_id;
+		}
+		return $response;
+	}
+
+	/**
+	 * Walk schema; for each element carrying a `role` field, set `label = role`
+	 * so Bricks stores the role name as the element's label.
+	 */
+	private function tag_labels_from_roles( array $node ): array {
+		foreach ( $node as $key => $value ) {
+			if ( is_array( $value ) ) {
+				$node[ $key ] = $this->tag_labels_from_roles( $value );
+			}
+		}
+		if ( isset( $node['role'] ) && is_string( $node['role'] ) && $node['role'] !== '' ) {
+			// Only set label when absent so explicit schema labels (e.g. "Hero") win.
+			if ( empty( $node['label'] ) ) {
+				$node['label'] = $node['role'];
+			}
+		}
+		return $node;
 	}
 
 	/**

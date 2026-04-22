@@ -4,6 +4,14 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.28.6] — 2026-04-22
+
+**Hotfix — role_map + section_id in build_structure response**
+* Fix: build_structure now returns section_id (new section's Bricks element ID) so populate_content doesn't need a separate page:get query.
+* Fix: build_structure tags each element with label = role before delegation. populate_content's role-keyed content_map now works end-to-end.
+* Fix: role_map in build_structure response is now populated with real element IDs (was null placeholders keyed by class_intent).
+* SchemaSkeletonGenerator now emits `role` field on schema nodes. DesignSchemaValidator whitelist updated.
+
 ## [3.28.5] — 2026-04-22
 
 **Hotfix — class_intent normalization before delegation**

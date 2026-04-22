@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.28.5
+Stable tag: 3.28.6
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,13 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.28.6 =
+**Hotfix — role_map + section_id in build_structure response**
+* Fix: build_structure now returns section_id (new section's Bricks element ID) so populate_content doesn't need a separate page:get query.
+* Fix: build_structure tags each element with label = role before delegation. populate_content's role-keyed content_map now works end-to-end.
+* Fix: role_map in build_structure response is now populated with real element IDs (was null placeholders keyed by class_intent).
+* SchemaSkeletonGenerator now emits `role` field on schema nodes. DesignSchemaValidator whitelist updated.
 
 = 3.28.5 =
 **Hotfix — class_intent normalization before delegation**

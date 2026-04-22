@@ -601,6 +601,13 @@ final class SchemaSkeletonGenerator {
 
 		$props = [];
 
+		// v3.28.6: surface role on emitted schema so BuildStructureHandler can
+		// tag elements with `label = role` pre-delegation. This lets
+		// populate_content resolve content_map roles → element IDs post-build
+		// without relying on class_intent name matching.
+		if ( $role !== '' ) {
+			$props['role'] = $role;
+		}
 		if ( null !== $tag ) {
 			$props['tag'] = $tag;
 		}
