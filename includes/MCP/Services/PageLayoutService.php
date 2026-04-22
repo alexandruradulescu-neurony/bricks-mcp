@@ -194,7 +194,7 @@ final class PageLayoutService {
 			'tone'          => $tone,
 			'section_count' => count( $sections ),
 			'sections'      => $sections,
-			'next_step'     => 'Loop: for each section, call propose_design with the design_plan (enrich elements with content_hint first), then build_from_schema. Use bypass_design_gate: false (default).',
+			'next_step'     => 'Loop: for each section, call propose_design with the design_plan (enrich elements with content_hint first), then build_structure(proposal_id), populate_content(section_id, content_map), and verify_build. Use bypass_design_gate: false (default).',
 		];
 
 		if ( null !== $page_id ) {

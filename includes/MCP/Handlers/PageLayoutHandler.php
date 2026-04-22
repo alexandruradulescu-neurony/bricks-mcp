@@ -91,7 +91,7 @@ final class PageLayoutHandler {
 				. "- A design_plan skeleton per section (section_type, layout, background, basic elements)\n"
 				. "- A recommended_pattern_id from the pattern library\n"
 				. "- A rationale explaining each section choice\n\n"
-				. "Next step: for each section, enrich the design_plan with content_hints, then call propose_design + build_from_schema.", 'bricks-mcp' ),
+				. "Next step: for each section, enrich the design_plan with content_hints, then call propose_design + build_structure(proposal_id) + populate_content(section_id, content_map) + verify_build.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(

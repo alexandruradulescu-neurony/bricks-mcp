@@ -3,8 +3,9 @@
  * Schema skeleton generator.
  *
  * Generates a ready-to-use design schema skeleton from a natural language
- * description and resolved site data. The AI reviews the skeleton, adjusts
- * content, and passes it directly to build_from_schema.
+ * description and resolved site data. The skeleton is surfaced back to the AI
+ * as part of the propose_design response and then consumed by BuildHandler
+ * via the internal two-tier build_structure + populate_content flow.
  *
  * @package BricksMCP
  * @license GPL-2.0-or-later
@@ -27,7 +28,7 @@ final class SchemaSkeletonGenerator {
 	 * @param string                 $description       Free-text description.
 	 * @param array<string, string>  $suggested_classes  class_name => class_id map.
 	 * @param array<string, array>   $scoped_variables   category => variable names.
-	 * @return array<string, mixed> Complete schema ready for build_from_schema.
+	 * @return array<string, mixed> Complete schema ready for the internal build pipeline (build_structure + populate_content).
 	 */
 	// generate() removed — was legacy fallback for description-only mode.
 	// Only generate_from_plan() is used by ProposalService.
@@ -46,7 +47,7 @@ final class SchemaSkeletonGenerator {
 	 * @param array<string, mixed>   $plan              Validated design_plan.
 	 * @param array<string, string>  $suggested_classes  class_name => class_id map.
 	 * @param array<string, array>   $scoped_variables   category => variable names.
-	 * @return array<string, mixed> Complete schema ready for build_from_schema.
+	 * @return array<string, mixed> Complete schema ready for the internal build pipeline (build_structure + populate_content).
 	 */
 	public function generate_from_plan( int $page_id, array $plan, array $suggested_classes, array $scoped_variables ): array {
 		$section_type = $plan['section_type'] ?? 'generic';

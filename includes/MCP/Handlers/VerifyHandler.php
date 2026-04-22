@@ -290,7 +290,7 @@ final class VerifyHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'verify_build',
-			__( "Post-build verification. Call after build_from_schema to confirm the result matches your design intent.\n\n"
+			__( "Post-build verification. Call after build_structure + populate_content to confirm the result matches your design intent.\n\n"
 				. "Returns: element count, type counts, classes used, labels, and hierarchy of the last section built.\n"
 				. "Compare against your design_plan to verify nothing was lost or mangled.", 'bricks-mcp' ),
 			array(

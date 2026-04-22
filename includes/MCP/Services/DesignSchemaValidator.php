@@ -2,7 +2,9 @@
 /**
  * Design schema validator.
  *
- * Validates incoming design schemas for the build_from_schema pipeline.
+ * Validates incoming design schemas for the internal build pipeline
+ * (BuildHandler, invoked by BuildStructureHandler via the _internal=true
+ * relay).
  *
  * @package BricksMCP
  * @license GPL-2.0-or-later

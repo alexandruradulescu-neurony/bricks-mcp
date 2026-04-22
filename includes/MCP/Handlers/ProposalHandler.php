@@ -179,7 +179,7 @@ final class ProposalHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'propose_design',
-			__( "Two-phase design tool. MUST be called twice before build_from_schema.\n\n"
+			__( "Two-phase design tool. MUST be called twice before build_structure.\n\n"
 				. "INPUT ALTERNATIVES (at least ONE required): description, design_plan, or image_* (image_url/image_id/image_base64).\n"
 				. "description is only required when BOTH design_plan and image_* are absent; when image_* is provided, description is optional extra guidance.\n\n"
 				. "PHASE 1 — DISCOVERY (description only, no design_plan):\n"
@@ -191,7 +191,7 @@ final class ProposalHandler {
 				. "PHASE 2 — PROPOSAL (description + design_plan):\n"
 				. "After reviewing Phase 1 data, think as a DESIGNER and provide a design_plan with your decisions.\n"
 				. "Returns proposal_id + suggested_schema generated from YOUR design decisions.\n"
-				. "Replace [PLACEHOLDER] content in suggested_schema, then call build_from_schema.\n\n"
+				. "Replace [PLACEHOLDER] content later during populate_content. Then call build_structure(proposal_id) to create the element tree, populate_content(section_id, content_map) to fill it, and verify_build to confirm.\n\n"
 				. "IMAGE INPUT (v3.31, alternative to design_plan; description is optional):\n"
 				. "Pass image_url/image_id/image_base64 instead of design_plan — server-side vision produces the design_plan from the image, then the normal Phase 2 flow runs. reference_json can be passed for calibration.\n"
 				. "When both design_plan and image_* are provided, image_* is IGNORED (text-only caller path preserved).\n\n"
