@@ -22,6 +22,38 @@ final class VisionPromptBuilder {
     private const CLASS_PREVIEW_CAP = 40;
 
     /**
+     * Cache of valid Bricks element types loaded from data/elements.json.
+     * @var array<int, string>|null
+     */
+    private static ?array $element_types_cache = null;
+
+    /**
+     * Load the canonical list of Bricks element types from the registry
+     * (data/elements.json). Used to enum-constrain vision tool schemas so the
+     * model cannot invent element types that don't exist in Bricks.
+     *
+     * @return array<int, string> Sorted list of element type keys.
+     */
+    private function get_valid_element_types(): array {
+        if ( self::$element_types_cache !== null ) {
+            return self::$element_types_cache;
+        }
+        $registry_path = BRICKS_MCP_PLUGIN_DIR . 'data/elements.json';
+        if ( ! is_readable( $registry_path ) ) {
+            self::$element_types_cache = [];
+            return [];
+        }
+        $raw  = file_get_contents( $registry_path );
+        $data = is_string( $raw ) ? json_decode( $raw, true ) : null;
+        $keys = is_array( $data ) && isset( $data['elements'] ) && is_array( $data['elements'] )
+            ? array_keys( $data['elements'] )
+            : [];
+        sort( $keys );
+        self::$element_types_cache = $keys;
+        return $keys;
+    }
+
+    /**
      * Build prompt + schema for the pattern-save flow (emit_pattern).
      *
      * @param array{classes: array, variables: array, theme: string} $site_context
@@ -129,7 +161,7 @@ final class VisionPromptBuilder {
         $node_schema = [
             'type'       => 'object',
             'properties' => [
-                'type'         => [ 'type' => 'string', 'description' => 'Bricks element type (section, container, heading, text-basic, image, button, block, div, etc.)' ],
+                'type'         => [ 'type' => 'string', 'enum' => $this->get_valid_element_types(), 'description' => 'Bricks element type. MUST be one of the listed enum values — do not invent types. Common picks: section, container, block, div, heading, text-basic, button, image, icon, slider, carousel, form, divider.' ],
                 'role'         => [ 'type' => 'string', 'description' => 'Semantic role (e.g. heading_main, eyebrow, subtitle, cta_primary, feature_card)' ],
                 'tag'          => [ 'type' => 'string', 'description' => 'HTML tag override (e.g. h1, h2)' ],
                 'class_refs'   => [ 'type' => 'array', 'items' => [ 'type' => 'string' ], 'description' => 'Existing or new class names for this node' ],
@@ -171,7 +203,7 @@ final class VisionPromptBuilder {
                         'items' => [
                             'type'       => 'object',
                             'properties' => [
-                                'type'         => [ 'type' => 'string' ],
+                                'type'         => [ 'type' => 'string', 'enum' => $this->get_valid_element_types(), 'description' => 'Bricks element type. MUST be one of the listed enum values — do not invent types.' ],
                                 'role'         => [ 'type' => 'string' ],
                                 'content_hint' => [ 'type' => 'string' ],
                                 'tag'          => [ 'type' => 'string' ],
@@ -181,8 +213,28 @@ final class VisionPromptBuilder {
                         ],
                     ],
                     'patterns'     => [
-                        'type'  => 'array',
-                        'items' => [ 'type' => 'object' ],
+                        'type'        => 'array',
+                        'description' => 'Optional repeat-templates (e.g. card grid where one card shape clones N times). Omit entirely if no repeating content. Never emit empty or incomplete entries.',
+                        'items'       => [
+                            'type'       => 'object',
+                            'properties' => [
+                                'name'              => [ 'type' => 'string', 'description' => 'Template name (e.g. feature_card, testimonial).' ],
+                                'repeat'            => [ 'type' => 'integer', 'minimum' => 1, 'description' => 'How many clones to produce.' ],
+                                'element_structure' => [
+                                    'type'  => 'array',
+                                    'items' => [
+                                        'type'       => 'object',
+                                        'properties' => [
+                                            'type' => [ 'type' => 'string', 'enum' => $this->get_valid_element_types() ],
+                                            'role' => [ 'type' => 'string' ],
+                                        ],
+                                        'required'   => [ 'type', 'role' ],
+                                    ],
+                                ],
+                                'content_hint'      => [ 'type' => 'string' ],
+                            ],
+                            'required'   => [ 'name', 'repeat', 'element_structure' ],
+                        ],
                     ],
                 ],
                 'required'   => [ 'section_type', 'layout', 'background', 'elements' ],
