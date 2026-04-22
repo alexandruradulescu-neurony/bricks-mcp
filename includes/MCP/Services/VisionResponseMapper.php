@@ -88,6 +88,21 @@ final class VisionResponseMapper {
             'patterns'     => is_array( $tool_input['patterns'] ?? null ) ? $tool_input['patterns'] : [],
         ];
 
+        // Normalize element hierarchy: vision sometimes emits 'container' or
+        // 'section' inside design_plan.elements, but SchemaSkeletonGenerator
+        // wraps the whole element list in its own section + container frame.
+        // Inner container/section would then violate Bricks hierarchy rules
+        // (container's valid_parents is ['section']; section is root-only).
+        // Coerce to 'block' (generic wrapper) — preserves visual grouping
+        // without breaking the parent-child registry.
+        foreach ( $design_plan['elements'] as &$el ) {
+            $type = $el['type'] ?? '';
+            if ( $type === 'container' || $type === 'section' ) {
+                $el['type'] = 'block';
+            }
+        }
+        unset( $el );
+
         // audit class_intent references inside elements (best-effort dedup).
         $new_classes = $reused_classes = $deduped_classes = [];
         foreach ( $design_plan['elements'] as &$el ) {
