@@ -930,10 +930,12 @@ final class Router {
 		}
 
 		// Handlers that register Bricks-only tools. Order matches the v3.x grouping.
+		// NOTE: 'build' handler stays instantiated (BuildStructureHandler calls it
+		// internally via _internal=true) but is NOT registered as a public tool.
 		$bricks_handler_keys = [
 			'bricks_tool', 'page', 'element', 'template', 'global_class',
 			'design_system', 'media', 'menu', 'component', 'woocommerce',
-			'font', 'code', 'proposal', 'build', 'verify', 'page_layout',
+			'font', 'code', 'proposal', 'verify', 'page_layout',
 			'design_pattern', 'build_structure', 'populate_content',
 		];
 
