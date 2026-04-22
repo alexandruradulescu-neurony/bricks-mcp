@@ -141,9 +141,170 @@ final class PatternAdapter {
         return $node;
     }
 
-    /** Placeholder — filled in subsequent tasks. */
+    /**
+     * Insert content roles that have no structural home into sensible positions.
+     *
+     * Uses INSERTION_RULES() map. New element inherits type, class_refs, style_tokens
+     * from nearest semantic sibling (same type, same parent). If no sibling of same
+     * type exists, inherits from the anchor element itself.
+     */
     private function insert_extras( array $node, array $content_map, array $pattern_roles, array &$log ): array {
+        $rules = $this->INSERTION_RULES();
+        foreach ( array_keys( $content_map ) as $role ) {
+            if ( in_array( $role, $pattern_roles, true ) ) {
+                continue;
+            }
+
+            if ( isset( $rules[ $role ] ) ) {
+                $node = $this->insert_by_rule( $node, $role, $rules[ $role ], $log );
+                $pattern_roles[] = $role;
+                continue;
+            }
+
+            if ( preg_match( '/^cta_/', $role ) ) {
+                $node = $this->append_to_cta_row( $node, $role, $log );
+                $pattern_roles[] = $role;
+                continue;
+            }
+
+            $node = $this->append_to_last_container( $node, $role, $log );
+            $pattern_roles[] = $role;
+        }
         return $node;
+    }
+
+    /**
+     * Execute an insertion rule like "before:heading_main" or "after:heading_main".
+     */
+    private function insert_by_rule( array $node, string $role, string $rule, array &$log ): array {
+        [ $position, $anchor_role ] = explode( ':', $rule );
+
+        if ( ! isset( $node['children'] ) || ! is_array( $node['children'] ) ) {
+            return $node;
+        }
+
+        $new_children = [];
+        foreach ( $node['children'] as $child ) {
+            if ( is_array( $child ) && ( $child['role'] ?? '' ) === $anchor_role ) {
+                $injected = $this->build_inserted_element( $role, $child );
+                if ( $position === 'before' ) {
+                    $new_children[] = $injected;
+                    $new_children[] = $child;
+                } else {
+                    $new_children[] = $child;
+                    $new_children[] = $injected;
+                }
+                $log[] = sprintf( 'Pattern missing "%s" role, content supplied one → inserted %s %s.', $role, $position, $anchor_role );
+            } else {
+                $new_children[] = is_array( $child ) ? $this->insert_by_rule( $child, $role, $rule, $log ) : $child;
+            }
+        }
+        $node['children'] = $new_children;
+        return $node;
+    }
+
+    /**
+     * Append a cta_* element to a cta_row wrapper. Creates the wrapper if missing
+     * (placed after subtitle, else after heading_main, else appended).
+     */
+    private function append_to_cta_row( array $node, string $role, array &$log ): array {
+        if ( ! isset( $node['children'] ) || ! is_array( $node['children'] ) ) {
+            return $node;
+        }
+
+        $found = $this->find_and_append_in_role( $node, 'cta_row', $role );
+        if ( $found['found'] ) {
+            $log[] = sprintf( 'Pattern missing "%s", appended to existing cta_row.', $role );
+            return $found['node'];
+        }
+
+        $new_child = $this->build_inserted_element( $role, null );
+        $cta_row   = [ 'type' => 'block', 'role' => 'cta_row', 'children' => [ $new_child ] ];
+
+        $children = $node['children'];
+        $insert_at = count( $children );
+        foreach ( $children as $i => $c ) {
+            if ( is_array( $c ) && in_array( ( $c['role'] ?? '' ), [ 'subtitle', 'heading_main' ], true ) ) {
+                $insert_at = $i + 1;
+            }
+        }
+        array_splice( $children, $insert_at, 0, [ $cta_row ] );
+        $node['children'] = $children;
+        $log[] = sprintf( 'Pattern missing cta_row, created with "%s" inside.', $role );
+        return $node;
+    }
+
+    /**
+     * Find the first descendant with a given role and append a child to it.
+     */
+    private function find_and_append_in_role( array $node, string $target_role, string $append_role ): array {
+        if ( ! isset( $node['children'] ) || ! is_array( $node['children'] ) ) {
+            return [ 'found' => false, 'node' => $node ];
+        }
+        foreach ( $node['children'] as $i => $child ) {
+            if ( ! is_array( $child ) ) {
+                continue;
+            }
+            if ( ( $child['role'] ?? '' ) === $target_role ) {
+                $new_child                  = $this->build_inserted_element( $append_role, $child['children'][0] ?? null );
+                $child['children']          = array_merge( $child['children'] ?? [], [ $new_child ] );
+                $node['children'][ $i ]     = $child;
+                return [ 'found' => true, 'node' => $node ];
+            }
+            $result = $this->find_and_append_in_role( $child, $target_role, $append_role );
+            if ( $result['found'] ) {
+                $node['children'][ $i ] = $result['node'];
+                return [ 'found' => true, 'node' => $node ];
+            }
+        }
+        return [ 'found' => false, 'node' => $node ];
+    }
+
+    /**
+     * Append an unknown-role element to the deepest container-like child of root.
+     */
+    private function append_to_last_container( array $node, string $role, array &$log ): array {
+        if ( ! isset( $node['children'] ) || ! is_array( $node['children'] ) || empty( $node['children'] ) ) {
+            return $node;
+        }
+        $last_idx = count( $node['children'] ) - 1;
+        $last     = $node['children'][ $last_idx ];
+        if ( is_array( $last ) && isset( $last['children'] ) ) {
+            $last['children'][] = $this->build_inserted_element( $role, null );
+            $node['children'][ $last_idx ] = $last;
+        } else {
+            $node['children'][] = $this->build_inserted_element( $role, null );
+        }
+        $log[] = sprintf( 'Content had unknown role "%s", appended to last container.', $role );
+        return $node;
+    }
+
+    /**
+     * Build a new element for an inserted role, inheriting from a sibling if given.
+     */
+    private function build_inserted_element( string $role, ?array $sibling ): array {
+        $elem = [ 'role' => $role ];
+        $role_defaults = [
+            'eyebrow'  => [ 'type' => 'text-basic' ],
+            'subtitle' => [ 'type' => 'text-basic' ],
+        ];
+        if ( preg_match( '/^cta_/', $role ) ) {
+            $elem['type'] = 'button';
+        } elseif ( isset( $role_defaults[ $role ] ) ) {
+            $elem += $role_defaults[ $role ];
+        } else {
+            $elem['type'] = 'text-basic';
+        }
+
+        if ( $sibling && ( $sibling['type'] ?? '' ) === $elem['type'] ) {
+            if ( isset( $sibling['class_refs'] ) ) {
+                $elem['class_refs'] = $sibling['class_refs'];
+            }
+            if ( isset( $sibling['style_tokens'] ) ) {
+                $elem['style_tokens'] = $sibling['style_tokens'];
+            }
+        }
+        return $elem;
     }
 
     /** Placeholder — filled in subsequent tasks. */
