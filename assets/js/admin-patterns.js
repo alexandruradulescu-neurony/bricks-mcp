@@ -260,6 +260,92 @@
         if (panel) panel.style.display = 'block';
       })
       .catch(function (err) { alert('Request failed: ' + err.message); });
+
+    // Parallel drift fetch (v3.29).
+    var driftBody = new FormData();
+    driftBody.append('action', 'bricks_mcp_get_pattern_drift');
+    driftBody.append('nonce', nonce);
+    driftBody.append('pattern_id', patternId);
+    fetch(ajaxurl, { method: 'POST', body: driftBody, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.success) { return; }
+        var report = data.data;
+        var statusEl = document.getElementById('bricks-mcp-detail-drift-status');
+        if (!statusEl) { return; }
+        if (!report.drift_detected) {
+          statusEl.textContent = '✓ Clean';
+          var missingWrap = document.getElementById('bricks-mcp-detail-drift-missing');
+          var driftedWrap = document.getElementById('bricks-mcp-detail-drift-drifted');
+          if (missingWrap) missingWrap.style.display = 'none';
+          if (driftedWrap) driftedWrap.style.display = 'none';
+          return;
+        }
+        var missingCount = (report.missing_on_site || []).length;
+        var driftedCount = Object.keys(report.drifted || {}).length;
+        statusEl.textContent = '⚠ ' + driftedCount + ' drifted, ' + missingCount + ' missing';
+
+        // Missing list.
+        var missingWrap = document.getElementById('bricks-mcp-detail-drift-missing');
+        if (missingWrap) {
+          if (missingCount > 0) {
+            var missingList = document.getElementById('bricks-mcp-detail-drift-missing-list');
+            if (missingList) {
+              missingList.innerHTML = '';
+              (report.missing_on_site || []).forEach(function (name) {
+                var li = document.createElement('li');
+                li.textContent = name;
+                missingList.appendChild(li);
+              });
+            }
+            missingWrap.style.display = 'block';
+          } else {
+            missingWrap.style.display = 'none';
+          }
+        }
+
+        // Drifted details.
+        var drWrap = document.getElementById('bricks-mcp-detail-drift-drifted');
+        if (drWrap) {
+          if (driftedCount > 0) {
+            var drContent = document.getElementById('bricks-mcp-detail-drift-drifted-content');
+            if (drContent) {
+              drContent.innerHTML = '';
+              Object.keys(report.drifted).forEach(function (name) {
+                var d = report.drifted[name];
+                var h = document.createElement('p');
+                h.style.fontWeight = 'bold';
+                h.textContent = name;
+                drContent.appendChild(h);
+                (d.changed_keys || []).forEach(function (c) {
+                  var row = document.createElement('div');
+                  row.style.marginLeft = '16px';
+                  row.textContent = c.path + ': ' +
+                    JSON.stringify(c.pattern_value) + ' → ' +
+                    JSON.stringify(c.site_value);
+                  drContent.appendChild(row);
+                });
+                (d.added_keys || []).forEach(function (p) {
+                  var row = document.createElement('div');
+                  row.style.marginLeft = '16px';
+                  row.textContent = p + ' (added in pattern, missing on site)';
+                  drContent.appendChild(row);
+                });
+                (d.removed_keys || []).forEach(function (p) {
+                  var row = document.createElement('div');
+                  row.style.marginLeft = '16px';
+                  row.textContent = p + ' (on site, missing in pattern)';
+                  drContent.appendChild(row);
+                });
+              });
+            }
+            drWrap.style.display = 'block';
+          } else {
+            drWrap.style.display = 'none';
+          }
+        }
+      })
+      .catch(function () { /* silent; drift is optional */ });
   }
 
   document.addEventListener('click', function (e) {

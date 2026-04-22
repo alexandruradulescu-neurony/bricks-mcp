@@ -161,6 +161,18 @@ class PatternsAdmin {
 						<p><strong><?php esc_html_e( 'Migration hints:', 'bricks-mcp' ); ?></strong></p>
 						<ul id="bricks-mcp-detail-migration-hints" style="font-family:monospace;font-size:11px;margin-left:16px;"></ul>
 					</div>
+					<div class="bwm-detail-drift">
+						<h4><?php esc_html_e( 'Class Drift', 'bricks-mcp' ); ?></h4>
+						<p id="bricks-mcp-detail-drift-status">—</p>
+						<div id="bricks-mcp-detail-drift-missing" style="display:none;">
+							<p><strong><?php esc_html_e( 'Missing on site:', 'bricks-mcp' ); ?></strong></p>
+							<ul id="bricks-mcp-detail-drift-missing-list" style="font-family:monospace;font-size:11px;margin-left:16px;"></ul>
+						</div>
+						<div id="bricks-mcp-detail-drift-drifted" style="display:none;">
+							<p><strong><?php esc_html_e( 'Drifted:', 'bricks-mcp' ); ?></strong></p>
+							<div id="bricks-mcp-detail-drift-drifted-content" style="font-family:monospace;font-size:11px;margin-left:16px;"></div>
+						</div>
+					</div>
 					<div class="bwm-detail-structure">
 						<h4><?php esc_html_e( 'Structure', 'bricks-mcp' ); ?></h4>
 						<pre id="bricks-mcp-detail-structure-tree" style="background:#f6f7f7;padding:12px;border-radius:4px;max-height:200px;overflow-y:auto;"></pre>
