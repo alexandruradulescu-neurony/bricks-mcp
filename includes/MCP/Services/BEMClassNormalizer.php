@@ -56,7 +56,46 @@ final class BEMClassNormalizer {
     }
 
     private function from_string( string $s ): string {
-        return $this->kebab( strtolower( trim( $s ) ) );
+        $s = trim( $s );
+        if ( $s === '' ) {
+            return '';
+        }
+
+        // Already BEM? Pass through.
+        if ( preg_match( self::BEM_REGEX, $s ) ) {
+            return $s;
+        }
+
+        // Contains `--` or `__`? Treat as BEM-shaped but normalize spacing/case.
+        if ( strpos( $s, '--' ) !== false || strpos( $s, '__' ) !== false ) {
+            return strtolower( preg_replace( '/\s+/', '', $s ) ?? '' );
+        }
+
+        // Positional split on whitespace (preserve original casing so kebab() can
+        // detect PascalCase word boundaries before lowercasing).
+        $parts = preg_split( '/\s+/', $s );
+        $parts = array_values( array_filter( $parts, static fn( $p ) => $p !== '' ) );
+
+        if ( count( $parts ) === 0 ) {
+            return '';
+        }
+        if ( count( $parts ) === 1 ) {
+            return $this->kebab( $parts[0] );
+        }
+        // For multi-word inputs there is no PascalCase to detect (words are already
+        // separated by spaces), so lowercase before passing to kebab().
+        $parts = array_map( 'strtolower', $parts );
+        if ( count( $parts ) === 1 ) {
+            return $this->kebab( $parts[0] );
+        }
+        if ( count( $parts ) === 2 ) {
+            return $this->kebab( $parts[0] ) . '__' . $this->kebab( $parts[1] );
+        }
+        // 3+ words: block modifier element (excess words collapsed into element).
+        $block    = $this->kebab( $parts[0] );
+        $modifier = $this->kebab( $parts[1] );
+        $element  = $this->kebab( implode( '-', array_slice( $parts, 2 ) ) );
+        return $block . '--' . $modifier . '__' . $element;
     }
 
     /** Kebab-case conversion: PascalCase or spaces/underscores → hyphens. */
