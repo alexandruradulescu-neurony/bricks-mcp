@@ -2006,9 +2006,12 @@ class GlobalClassService {
 			$suffix++;
 		}
 
+		// v3.29: `create_global_class` reads `styles` (line 176), not `settings`.
+		// Patterns store payload under `settings` (Bricks convention for class
+		// records). Map the field here so the styles actually persist.
 		$args = [
-			'name'     => $name,
-			'settings' => $settings,
+			'name'   => $name,
+			'styles' => $settings,
 		];
 		if ( $category !== '' ) {
 			$args['category'] = $category;
