@@ -417,6 +417,34 @@ final class ProposalService {
 		$response['site_context_changed'] = true;
 		$response['design_plan_format']   = $this->get_design_plan_format();
 		$response['recommended_knowledge'] = self::detect_recommended_knowledge( $description );
+
+		// Teach the AI how class_intent values are structured.
+		$response['class_intent_format'] = [
+			'structured'       => [ 'block' => 'required', 'modifier' => 'optional', 'element' => 'optional' ],
+			'loose'            => 'positional string: "block [modifier] [element]"',
+			'bem_grammar'      => 'block[--modifier][__element]',
+			'existing_blocks'  => [ 'hero', 'cta', 'features', 'pricing', 'testimonial' ],
+			'common_modifiers' => [ 'dark', 'light', 'b2b', 'featured', 'accent' ],
+		];
+
+		// Split site classes into BEM-conformant vs legacy pools.
+		$normalizer = new BEMClassNormalizer();
+		$bem        = [];
+		$legacy     = [];
+		foreach ( $all_classes as $class ) {
+			$name  = $class['name'] ?? '';
+			$entry = [
+				'name'           => $name,
+				'signature_hint' => $this->summarize_class_hint( $class ),
+			];
+			if ( $normalizer->classify( $name ) === 'bem' ) {
+				$bem[] = $entry;
+			} else {
+				$legacy[] = array_merge( $entry, [ 'note' => 'non-BEM, reusable by explicit class_intent but not auto-deduped' ] );
+			}
+		}
+		$response['site_classes'] = [ 'bem' => $bem, 'legacy' => $legacy ];
+
 		$response['next_step'] .= ' For subsequent sections, you can skip Phase 1 and call propose_design directly with a design_plan.';
 
 		return $response;
@@ -906,6 +934,31 @@ final class ProposalService {
 		}
 
 		return $summaries;
+	}
+
+	/**
+	 * Produce a short human-readable CSS signature for a global class definition.
+	 *
+	 * Used by the discovery response to give the AI a quick sense of what
+	 * visual properties a class applies without dumping the entire settings blob.
+	 * Returns at most 3 hints joined by '; '.
+	 *
+	 * @param array<string, mixed> $def Raw class entry (must have optional 'settings' key).
+	 * @return string Comma-separated hint string, or '' when no recognisable settings exist.
+	 */
+	private function summarize_class_hint( array $def ): string {
+		$settings = $def['settings'] ?? [];
+		$hints    = [];
+		if ( isset( $settings['_typography']['font-size'] ) ) {
+			$hints[] = 'font-size: ' . $settings['_typography']['font-size'];
+		}
+		if ( isset( $settings['_background']['color']['raw'] ) ) {
+			$hints[] = 'bg: ' . $settings['_background']['color']['raw'];
+		}
+		if ( isset( $settings['_padding'] ) ) {
+			$hints[] = 'padding';
+		}
+		return implode( '; ', array_slice( $hints, 0, 3 ) );
 	}
 
 	/**
