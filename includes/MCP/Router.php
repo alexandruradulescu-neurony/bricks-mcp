@@ -105,9 +105,6 @@ final class Router {
 			'instantiate' => 'direct',
 			'fill_slot'   => 'direct',
 		],
-		'build_from_schema' => [
-			'_always' => 'design',
-		],
 		'propose_design' => [
 			'_always' => 'direct',
 		],
