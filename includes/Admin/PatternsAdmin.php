@@ -152,6 +152,13 @@ class PatternsAdmin {
 						<p><strong><?php esc_html_e( 'Classes:', 'bricks-mcp' ); ?></strong> <span id="bricks-mcp-detail-classes"></span></p>
 						<p><strong><?php esc_html_e( 'Variables:', 'bricks-mcp' ); ?></strong> <span id="bricks-mcp-detail-variables"></span></p>
 					</div>
+					<div class="bwm-detail-bem">
+						<h4><?php esc_html_e( 'BEM Compliance', 'bricks-mcp' ); ?></h4>
+						<p><strong><?php esc_html_e( 'Purity:', 'bricks-mcp' ); ?></strong> <span id="bricks-mcp-detail-bem-purity">—</span></p>
+						<p><strong><?php esc_html_e( 'Non-BEM classes:', 'bricks-mcp' ); ?></strong> <span id="bricks-mcp-detail-non-bem">—</span></p>
+						<p><strong><?php esc_html_e( 'Migration hints:', 'bricks-mcp' ); ?></strong></p>
+						<ul id="bricks-mcp-detail-migration-hints" style="font-family:monospace;font-size:11px;margin-left:16px;"></ul>
+					</div>
 					<div class="bwm-detail-structure">
 						<h4><?php esc_html_e( 'Structure', 'bricks-mcp' ); ?></h4>
 						<pre id="bricks-mcp-detail-structure-tree" style="background:#f6f7f7;padding:12px;border-radius:4px;max-height:200px;overflow-y:auto;"></pre>

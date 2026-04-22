@@ -234,6 +234,29 @@
         var jsonEl = qs('#bricks-mcp-detail-json');
         if (jsonEl) jsonEl.value = JSON.stringify(p, null, 2);
 
+        var bemPurityEl = qs('#bricks-mcp-detail-bem-purity');
+        if (bemPurityEl) {
+          var purity = typeof p.bem_purity === 'number' ? (p.bem_purity * 100).toFixed(0) + '%' : '—';
+          bemPurityEl.textContent = purity;
+        }
+
+        var nonBemEl = qs('#bricks-mcp-detail-non-bem');
+        if (nonBemEl) {
+          nonBemEl.textContent = (p.non_bem_classes && p.non_bem_classes.length) ? p.non_bem_classes.join(', ') : '—';
+        }
+
+        var hintsUl = qs('#bricks-mcp-detail-migration-hints');
+        if (hintsUl) {
+          hintsUl.innerHTML = '';
+          for (var legacy in (p.bem_migration_hints || {})) {
+            if (Object.prototype.hasOwnProperty.call(p.bem_migration_hints, legacy)) {
+              var li = document.createElement('li');
+              li.textContent = legacy + ' → ' + p.bem_migration_hints[legacy];
+              hintsUl.appendChild(li);
+            }
+          }
+        }
+
         if (panel) panel.style.display = 'block';
       })
       .catch(function (err) { alert('Request failed: ' + err.message); });
