@@ -28,6 +28,16 @@ final class ClassIntentResolver {
 	private GlobalClassService $class_service;
 
 	/**
+	 * @var BEMClassNormalizer
+	 */
+	private BEMClassNormalizer $normalizer;
+
+	/**
+	 * @var ClassDedupEngine
+	 */
+	private ClassDedupEngine $dedup;
+
+	/**
 	 * Cached global classes for the current request.
 	 *
 	 * @var array<int, array<string, mixed>>|null
@@ -37,10 +47,18 @@ final class ClassIntentResolver {
 	/**
 	 * Constructor.
 	 *
-	 * @param GlobalClassService $class_service Global class service.
+	 * @param GlobalClassService      $class_service Global class service.
+	 * @param BEMClassNormalizer|null $normalizer    BEM class normalizer (optional, auto-instantiated).
+	 * @param ClassDedupEngine|null   $dedup         Class dedup engine (optional, auto-instantiated).
 	 */
-	public function __construct( GlobalClassService $class_service ) {
+	public function __construct(
+		GlobalClassService $class_service,
+		?BEMClassNormalizer $normalizer = null,
+		?ClassDedupEngine $dedup = null
+	) {
 		$this->class_service = $class_service;
+		$this->normalizer    = $normalizer ?? new BEMClassNormalizer();
+		$this->dedup         = $dedup ?? new ClassDedupEngine( $this->normalizer );
 	}
 
 	/**
@@ -190,5 +208,21 @@ final class ClassIntentResolver {
 	 */
 	public function clear_cache(): void {
 		$this->cached_classes = null;
+	}
+
+	/**
+	 * Normalize a class_intent (structured object or loose string) into BEM form.
+	 *
+	 * Proxies to BEMClassNormalizer. Null or empty input → null (classless element).
+	 *
+	 * @param mixed $intent Structured array, loose string, null, or empty.
+	 * @return string|null Normalized BEM name, or null if no intent.
+	 */
+	public function normalize_intent( $intent ): ?string {
+		if ( $intent === null || $intent === '' || $intent === [] ) {
+			return null;
+		}
+		$normalized = $this->normalizer->normalize( $intent );
+		return $normalized === '' ? null : $normalized;
 	}
 }
