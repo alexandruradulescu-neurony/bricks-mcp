@@ -107,8 +107,37 @@ final class PatternAdapter {
         ];
     }
 
-    /** Placeholder — filled in subsequent tasks. */
+    /**
+     * Walk the tree; for each element with repeat:true, clone it N times where
+     * N = length of content_map[role], and replace the single template in the
+     * parent's children with the clone list.
+     */
     private function expand_repeats( array $node, array $content_map, array &$log ): array {
+        if ( isset( $node['children'] ) && is_array( $node['children'] ) ) {
+            $new_children = [];
+            foreach ( $node['children'] as $child ) {
+                if ( is_array( $child ) && ! empty( $child['repeat'] ) ) {
+                    $role  = $child['role'] ?? '';
+                    $items = $content_map[ $role ] ?? [];
+                    $count = is_array( $items ) ? count( $items ) : 0;
+
+                    if ( $count === 0 ) {
+                        $log[] = sprintf( 'Pattern had repeat:true on role "%s", content supplied 0 items → removed.', $role );
+                        continue;
+                    }
+
+                    $template = $child;
+                    unset( $template['repeat'] );
+                    for ( $i = 0; $i < $count; $i++ ) {
+                        $new_children[] = $this->expand_repeats( $template, $content_map, $log );
+                    }
+                    $log[] = sprintf( 'Pattern had repeat:true on role "%s", cloned to %d instances.', $role, $count );
+                } else {
+                    $new_children[] = is_array( $child ) ? $this->expand_repeats( $child, $content_map, $log ) : $child;
+                }
+            }
+            $node['children'] = $new_children;
+        }
         return $node;
     }
 
