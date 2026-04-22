@@ -541,6 +541,49 @@ final class PatternValidator {
     }
 
     /**
+     * Compute BEM compliance metrics for a pattern.
+     *
+     * @param array $pattern Full pattern structure.
+     * @return array{bem_purity: float, non_bem_classes: array, bem_migration_hints: array}
+     */
+    public function compute_bem_metadata( array $pattern ): array {
+        $normalizer = new BEMClassNormalizer();
+        $class_refs = $this->collect_class_refs( $pattern['structure'] ?? [] );
+        if ( empty( $class_refs ) ) {
+            return [ 'bem_purity' => 1.0, 'non_bem_classes' => [], 'bem_migration_hints' => [] ];
+        }
+        $bem_count = 0;
+        $non_bem   = [];
+        $hints     = [];
+
+        $section_type = $pattern['category'] ?? 'generic';
+        $variant      = $pattern['variant'] ?? ( $pattern['background'] ?? '' );
+
+        foreach ( $class_refs as $name ) {
+            if ( $normalizer->classify( $name ) === 'bem' ) {
+                $bem_count++;
+                continue;
+            }
+            $non_bem[] = $name;
+
+            // Simple migration hint: strip common prefixes, construct BEM.
+            $element_part = preg_replace( '/^(btn|b2b)[-_]/', '', $name );
+            $hint_parts   = [ 'block' => $section_type ];
+            if ( $variant !== '' ) {
+                $hint_parts['modifier'] = $variant;
+            }
+            $hint_parts['element'] = $element_part;
+            $hints[ $name ] = $normalizer->normalize( $hint_parts );
+        }
+
+        return [
+            'bem_purity'          => round( $bem_count / count( $class_refs ), 2 ),
+            'non_bem_classes'     => array_values( $non_bem ),
+            'bem_migration_hints' => $hints,
+        ];
+    }
+
+    /**
      * Full validation pipeline against a prepared site context.
      *
      * Pipeline order:
