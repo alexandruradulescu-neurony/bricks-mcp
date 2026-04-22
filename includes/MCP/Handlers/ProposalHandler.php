@@ -89,14 +89,20 @@ final class ProposalHandler {
 		if ( 0 === $page_id ) {
 			return new \WP_Error( 'missing_page_id', 'page_id or template_id is required.' );
 		}
-		if ( '' === $description ) {
-			return new \WP_Error( 'missing_description', 'description is required. Describe what you want to build.' );
-		}
 
-		// v3.31: if image input provided and no design_plan, let vision produce design_plan.
+		// v3.31: description is required ONLY when no image_* input and no design_plan provided.
+		// Image-only and design_plan-only callers are valid alternative entry points per spec §4.2.
 		$has_image = isset( $args['image_url'] ) || isset( $args['image_id'] ) || isset( $args['image_base64'] );
 		$has_plan  = isset( $args['design_plan'] ) && is_array( $args['design_plan'] );
 
+		if ( '' === $description && ! $has_image && ! $has_plan ) {
+			return new \WP_Error(
+				'missing_description',
+				'description is required when no image_* input and no design_plan is provided.'
+			);
+		}
+
+		// v3.31: if image input provided and no design_plan, let vision produce design_plan.
 		if ( $has_image && ! $has_plan ) {
 			if ( null === $this->vision || null === $this->image_resolver || null === $this->bricks_service ) {
 				return new \WP_Error(
@@ -174,6 +180,8 @@ final class ProposalHandler {
 		$registry->register(
 			'propose_design',
 			__( "Two-phase design tool. MUST be called twice before build_from_schema.\n\n"
+				. "INPUT ALTERNATIVES (at least ONE required): description, design_plan, or image_* (image_url/image_id/image_base64).\n"
+				. "description is only required when BOTH design_plan and image_* are absent; when image_* is provided, description is optional extra guidance.\n\n"
 				. "PHASE 1 — DISCOVERY (description only, no design_plan):\n"
 				. "Returns site context, available element types with PURPOSE descriptions, available layouts, global classes, CSS variables, and design/business briefs.\n"
 				. "You use this to understand WHAT building blocks exist and WHAT the site looks like.\n"
@@ -184,7 +192,7 @@ final class ProposalHandler {
 				. "After reviewing Phase 1 data, think as a DESIGNER and provide a design_plan with your decisions.\n"
 				. "Returns proposal_id + suggested_schema generated from YOUR design decisions.\n"
 				. "Replace [PLACEHOLDER] content in suggested_schema, then call build_from_schema.\n\n"
-				. "IMAGE INPUT (v3.31, alternative to design_plan):\n"
+				. "IMAGE INPUT (v3.31, alternative to design_plan; description is optional):\n"
 				. "Pass image_url/image_id/image_base64 instead of design_plan — server-side vision produces the design_plan from the image, then the normal Phase 2 flow runs. reference_json can be passed for calibration.\n"
 				. "When both design_plan and image_* are provided, image_* is IGNORED (text-only caller path preserved).\n\n"
 				. "design_plan REQUIRED fields:\n"
@@ -230,7 +238,9 @@ final class ProposalHandler {
 						'description' => __( 'Optional known-good pattern for calibration (used as few-shot + post-vision diff)', 'bricks-mcp' ),
 					),
 				),
-				'required'   => array( 'description' ),
+				// description is no longer schema-required: callers may instead supply design_plan OR image_* as the input.
+				// The handler still enforces that at least one of description / design_plan / image_* must be present.
+				'required'   => array(),
 			),
 			array( $this, 'handle' )
 		);
