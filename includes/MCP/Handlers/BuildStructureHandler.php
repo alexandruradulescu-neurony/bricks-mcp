@@ -35,10 +35,16 @@ final class BuildStructureHandler {
 	 */
 	private const FORBIDDEN_CONTENT_FIELDS = [
 		'content', 'content_example', 'text',
-		'link', 'href', 'target',
+		'link', 'href',
 		'icon', 'image', 'src', 'url',
 		'placeholder',
 	];
+
+	/**
+	 * Top-level keys that must be skipped by the content-field scanner.
+	 * These are schema-routing / structural metadata, not element content.
+	 */
+	private const SCAN_SKIP_TOP_KEYS = [ 'target', 'design_context', 'intent' ];
 
 	public function __construct( private BuildHandler $delegate ) {}
 
@@ -100,6 +106,10 @@ final class BuildStructureHandler {
 	private function scan_for_content_fields( array $node, string $path = '' ): array {
 		$offending = [];
 		foreach ( $node as $key => $value ) {
+			// Skip schema-routing / structural metadata at top level.
+			if ( $path === '' && in_array( $key, self::SCAN_SKIP_TOP_KEYS, true ) ) {
+				continue;
+			}
 			$sub_path = $path === '' ? (string) $key : $path . '.' . $key;
 			if ( in_array( $key, self::FORBIDDEN_CONTENT_FIELDS, true ) ) {
 				$offending[] = $sub_path;

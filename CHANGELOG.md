@@ -4,6 +4,12 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.28.4] — 2026-04-22
+
+**Hotfix — build_structure scanner false positive on routing fields**
+* Fix: removed `target` from forbidden list (link target attr is structural, not content).
+* Fix: scanner now skips `target`, `design_context`, `intent` at top level of schema (schema-routing metadata, not element content).
+
 ## [3.28.3] — 2026-04-22
 
 **Hotfix — build_structure validator**
