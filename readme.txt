@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.27.2
+Stable tag: 3.28.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,30 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.28.0 =
+**Pattern + Class System v3 — BEM + two-tier build**
+
+Unifies pattern and class pipelines. Every styled element gets a BEM class (auto-normalized from AI input). Build split into two steps: build_structure (classes + layout, no content) then populate_content (content injected by role).
+
+**Breaking:**
+* build_from_schema tool deprecated — returns redirect error pointing to build_structure + populate_content.
+* suggested_schema from propose_design is now content-free. No [PLACEHOLDER] text.
+* design_plan element-level content_hint field stripped; content hints echoed back as content_plan map.
+
+**Added:**
+* BEMClassNormalizer — parses structured + loose class_intent into BEM form.
+* ClassDedupEngine — style-signature dedup across section + pattern pool (BEM-only).
+* build_structure tool — returns section_id + role_map + classes_created/reused.
+* populate_content tool — role-keyed injection, #id-prefix direct targeting, Unsplash sideload.
+* PatternValidator BEM awareness — bem_purity + non_bem_classes + bem_migration_hints on every pattern.
+* Admin pattern detail panel shows BEM compliance tile.
+* variant field on design_plan becomes default class_intent modifier.
+
+**Preserved (G1):**
+* Existing non-BEM classes on deployed sites remain untouched.
+* New classes always BEM.
+* Legacy classes reusable by explicit class_intent but never auto-deduped.
 
 = 3.27.2 =
 **Bug fixes for pattern catalog**

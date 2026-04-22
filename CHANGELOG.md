@@ -4,6 +4,31 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.28.0] — 2026-04-22
+
+**Pattern + Class System v3 — BEM + two-tier build**
+
+Unifies pattern and class pipelines. Every styled element gets a BEM class (auto-normalized from AI input). Build split into two steps: build_structure (classes + layout, no content) then populate_content (content injected by role).
+
+**Breaking:**
+* build_from_schema tool deprecated — returns redirect error pointing to build_structure + populate_content.
+* suggested_schema from propose_design is now content-free. No [PLACEHOLDER] text.
+* design_plan element-level content_hint field stripped; content hints echoed back as content_plan map.
+
+**Added:**
+* BEMClassNormalizer — parses structured + loose class_intent into BEM form.
+* ClassDedupEngine — style-signature dedup across section + pattern pool (BEM-only).
+* build_structure tool — returns section_id + role_map + classes_created/reused.
+* populate_content tool — role-keyed injection, #id-prefix direct targeting, Unsplash sideload.
+* PatternValidator BEM awareness — bem_purity + non_bem_classes + bem_migration_hints on every pattern.
+* Admin pattern detail panel shows BEM compliance tile.
+* variant field on design_plan becomes default class_intent modifier.
+
+**Preserved (G1):**
+* Existing non-BEM classes on deployed sites remain untouched.
+* New classes always BEM.
+* Legacy classes reusable by explicit class_intent but never auto-deduped.
+
 ## [3.27.2] — 2026-04-22
 
 **Bug fixes for pattern catalog**
