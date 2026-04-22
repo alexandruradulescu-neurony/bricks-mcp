@@ -4,6 +4,13 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.27.1] — 2026-04-22
+
+**Bug fixes for v3.27.0**
+* Fix: legacy patterns now wipe on zip-upload upgrade (moved from activation hook to version-bump migration).
+* Fix: added "Delete Selected" bulk delete button to Patterns admin.
+* Fix: pattern detail view now renders as proper modal overlay (was rendering inline at page bottom).
+
 ## [3.27.0] — 2026-04-22
 
 ### Pattern System v2 — Complete Redesign

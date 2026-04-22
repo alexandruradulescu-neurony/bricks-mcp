@@ -247,10 +247,39 @@
       return;
     }
 
-    if (e.target.classList.contains('bwm-detail-close')) {
-      if (panel) panel.style.display = 'none';
+    if (e.target.classList.contains('bwm-modal-close') ||
+        e.target.classList.contains('bwm-modal-backdrop')) {
+      if (panel && panel.contains(e.target)) {
+        panel.style.display = 'none';
+        return;
+      }
+    }
+  });
+
+  // Bulk delete selected patterns.
+  document.addEventListener('click', function (ev) {
+    var bulk = ev.target.closest('#bricks-mcp-bulk-delete-patterns');
+    if (!bulk) return;
+    var checked = Array.from(document.querySelectorAll('.bricks-mcp-pattern-select:checked'));
+    if (checked.length === 0) {
+      alert('Select at least one pattern first.');
       return;
     }
+    if (!confirm('Delete ' + checked.length + ' pattern(s)? This cannot be undone.')) return;
+    var body = new FormData();
+    body.append('action', 'bricks_mcp_bulk_delete_patterns');
+    body.append('nonce', (window.bricksMcpPatterns || {}).nonce || '');
+    checked.forEach(function (cb) { body.append('pattern_ids[]', cb.value); });
+    fetch(ajaxurl, { method: 'POST', body: body, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.success) {
+          alert(data.data && data.data.message ? data.data.message : 'Bulk delete failed.');
+          return;
+        }
+        location.reload();
+      })
+      .catch(function (err) { alert('Request failed: ' + err.message); });
   });
 
 })();

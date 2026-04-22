@@ -19,6 +19,7 @@ class PatternsAdmin {
 	public function init(): void {
 		add_action( 'wp_ajax_bricks_mcp_list_patterns', [ $this, 'ajax_list_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_delete_pattern', [ $this, 'ajax_delete_pattern' ] );
+		add_action( 'wp_ajax_bricks_mcp_bulk_delete_patterns', [ $this, 'ajax_bulk_delete_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_export_patterns', [ $this, 'ajax_export_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_import_patterns', [ $this, 'ajax_import_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_get_pattern', [ $this, 'ajax_get_pattern' ] );
@@ -78,6 +79,7 @@ class PatternsAdmin {
 				</select>
 <button type="button" class="button button-secondary" id="bricks-mcp-export-patterns"><?php esc_html_e( 'Export', 'bricks-mcp' ); ?></button>
 				<button type="button" class="button button-secondary" id="bricks-mcp-import-patterns-btn"><?php esc_html_e( 'Import', 'bricks-mcp' ); ?></button>
+				<button type="button" class="button button-link-delete" id="bricks-mcp-bulk-delete-patterns" title="<?php esc_attr_e( 'Delete selected patterns', 'bricks-mcp' ); ?>"><?php esc_html_e( 'Delete Selected', 'bricks-mcp' ); ?></button>
 				<input type="file" id="bricks-mcp-import-file" accept=".json" style="display:none;">
 				<span class="bwm-patterns-count" style="margin-left:auto;color:#666;">
 					<?php
@@ -129,12 +131,13 @@ class PatternsAdmin {
 				</tbody>
 			</table>
 
-			<div id="bricks-mcp-pattern-detail" class="bwm-pattern-detail" style="display:none;">
-				<div class="bwm-detail-header">
-					<h3 id="bricks-mcp-detail-name">—</h3>
-					<button type="button" class="bwm-detail-close">&times;</button>
-				</div>
-				<div class="bwm-detail-body">
+			<div id="bricks-mcp-pattern-detail" style="display:none;">
+				<div class="bwm-modal-backdrop"></div>
+				<div class="bwm-modal-content" style="max-width:900px;">
+					<div class="bwm-modal-header">
+						<h3 id="bricks-mcp-detail-name">—</h3>
+						<button type="button" class="bwm-modal-close">&times;</button>
+					</div>
 					<div class="bwm-detail-meta">
 						<p><strong><?php esc_html_e( 'Category:', 'bricks-mcp' ); ?></strong> <span id="bricks-mcp-detail-category"></span></p>
 						<p><strong><?php esc_html_e( 'Layout:', 'bricks-mcp' ); ?></strong> <span id="bricks-mcp-detail-layout"></span></p>
@@ -144,11 +147,11 @@ class PatternsAdmin {
 					</div>
 					<div class="bwm-detail-structure">
 						<h4><?php esc_html_e( 'Structure', 'bricks-mcp' ); ?></h4>
-						<pre id="bricks-mcp-detail-structure-tree"></pre>
+						<pre id="bricks-mcp-detail-structure-tree" style="background:#f6f7f7;padding:12px;border-radius:4px;max-height:200px;overflow-y:auto;"></pre>
 					</div>
 					<div class="bwm-detail-json">
 						<h4><?php esc_html_e( 'Full JSON', 'bricks-mcp' ); ?></h4>
-						<textarea id="bricks-mcp-detail-json" rows="12" readonly></textarea>
+						<textarea id="bricks-mcp-detail-json" rows="12" readonly style="width:100%;font-family:monospace;font-size:11px;"></textarea>
 					</div>
 				</div>
 			</div>
@@ -216,6 +219,38 @@ class PatternsAdmin {
 		}
 
 		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX: Bulk delete patterns by IDs.
+	 */
+	public function ajax_bulk_delete_patterns(): void {
+		check_ajax_referer( BricksCore::ADMIN_NONCE_ACTION, 'nonce' );
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
+			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
+			return;
+		}
+		$raw = $_POST['pattern_ids'] ?? []; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$ids = [];
+		if ( is_array( $raw ) ) {
+			$scalars = array_filter( wp_unslash( $raw ), 'is_scalar' );
+			$ids     = array_values( array_filter( array_map( 'sanitize_text_field', $scalars ) ) );
+		}
+		if ( empty( $ids ) ) {
+			wp_send_json_error( [ 'message' => __( 'No pattern IDs supplied.', 'bricks-mcp' ) ] );
+			return;
+		}
+		$deleted = [];
+		$errors  = [];
+		foreach ( $ids as $id ) {
+			$r = DesignPatternService::delete( $id );
+			if ( is_wp_error( $r ) ) {
+				$errors[] = [ 'id' => $id, 'error' => $r->get_error_message() ];
+			} else {
+				$deleted[] = $id;
+			}
+		}
+		wp_send_json_success( [ 'deleted' => $deleted, 'errors' => $errors ] );
 	}
 
 	/**

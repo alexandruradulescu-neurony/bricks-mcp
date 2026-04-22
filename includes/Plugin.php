@@ -124,6 +124,13 @@ final class Plugin {
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				error_log( 'BricksMCP migrate_settings failed: ' . $e->getMessage() );
 			}
+			try {
+				$this->maybe_wipe_v1_patterns();
+			} catch ( \Throwable $e ) {
+				$migration_ok = false;
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'BricksMCP maybe_wipe_v1_patterns failed: ' . $e->getMessage() );
+			}
 			if ( $migration_ok ) {
 				update_option( MCP\Services\BricksCore::OPTION_DB_VERSION, BRICKS_MCP_VERSION, true );
 			}
@@ -179,6 +186,24 @@ final class Plugin {
 
 		$site_health = new Admin\SiteHealth();
 		$site_health->init();
+	}
+
+	/**
+	 * Pattern System v2 — one-time wipe of legacy pattern options.
+	 *
+	 * Guarded by OPTION_PATTERNS_V2_WIPED so it only fires once per install.
+	 * Runs on version-bump from Plugin::init() (covers zip-upload upgrades
+	 * that don't trigger activation hooks).
+	 */
+	private function maybe_wipe_v1_patterns(): void {
+		$flag = MCP\Services\BricksCore::OPTION_PATTERNS_V2_WIPED;
+		if ( get_option( $flag ) ) {
+			return;
+		}
+		delete_option( 'bricks_mcp_custom_patterns' );
+		delete_option( 'bricks_mcp_patterns_migrated' );
+		update_option( $flag, time(), false );
+		set_transient( 'bricks_mcp_show_patterns_v2_notice', 1, DAY_IN_SECONDS );
 	}
 
 	/**

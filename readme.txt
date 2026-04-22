@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.27.0
+Stable tag: 3.27.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,12 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.27.1 =
+**Bug fixes for v3.27.0**
+* Fix: legacy patterns now wipe on zip-upload upgrade (moved from activation hook to version-bump migration).
+* Fix: added "Delete Selected" bulk delete button to Patterns admin.
+* Fix: pattern detail view now renders as proper modal overlay (was rendering inline at page bottom).
 
 = 3.27.0 =
 **Pattern System v2 — Complete Redesign**
