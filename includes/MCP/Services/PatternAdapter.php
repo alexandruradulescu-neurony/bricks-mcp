@@ -36,46 +36,56 @@ final class PatternAdapter {
         $structure = $pattern['structure'] ?? [];
         $pattern_roles = $this->collect_roles( $structure );
 
-        // Required-role check (Rule C - required variant).
-        $missing_required = $this->check_required_roles( $structure, $content_map );
-        if ( ! empty( $missing_required ) ) {
-            return [
-                'error'          => 'missing_required_role',
-                'message'        => 'Pattern has required roles not supplied in content_map.',
-                'missing_roles'  => $missing_required,
-            ];
-        }
+        // v3.29: two-tier build defers content-dependent checks to populate_content
+        // phase when content_map is supplied. At propose_design with empty content_map,
+        // the adapter preserves structure as-is so build_structure can run cleanly;
+        // PopulateContentHandler re-runs required/shape checks against the real map.
+        $is_content_phase = ! empty( $content_map );
 
-        // Shape mismatch gate (Rule D).
-        $mismatch = $this->assess_shape_mismatch( array_keys( $content_map ), $pattern_roles );
-        if ( $mismatch['fraction'] > self::SHAPE_MISMATCH_THRESHOLD ) {
-            $suggested = [];
-            if ( $this->catalog !== null && isset( $pattern['category'] ) ) {
-                $candidates = $this->catalog->build( $pattern['category'], 'high' )['patterns'] ?? [];
-                foreach ( $candidates as $c ) {
-                    if ( ( $c['id'] ?? '' ) === ( $pattern['id'] ?? '' ) ) {
-                        continue;
-                    }
-                    $suggested[] = $c['id'];
-                    if ( count( $suggested ) >= 3 ) {
-                        break;
+        if ( $is_content_phase ) {
+            // Required-role check (Rule C - required variant).
+            $missing_required = $this->check_required_roles( $structure, $content_map );
+            if ( ! empty( $missing_required ) ) {
+                return [
+                    'error'          => 'missing_required_role',
+                    'message'        => 'Pattern has required roles not supplied in content_map.',
+                    'missing_roles'  => $missing_required,
+                ];
+            }
+
+            // Shape mismatch gate (Rule D).
+            $mismatch = $this->assess_shape_mismatch( array_keys( $content_map ), $pattern_roles );
+            if ( $mismatch['fraction'] > self::SHAPE_MISMATCH_THRESHOLD ) {
+                $suggested = [];
+                if ( $this->catalog !== null && isset( $pattern['category'] ) ) {
+                    $candidates = $this->catalog->build( $pattern['category'], 'high' )['patterns'] ?? [];
+                    foreach ( $candidates as $c ) {
+                        if ( ( $c['id'] ?? '' ) === ( $pattern['id'] ?? '' ) ) {
+                            continue;
+                        }
+                        $suggested[] = $c['id'];
+                        if ( count( $suggested ) >= 3 ) {
+                            break;
+                        }
                     }
                 }
+                return [
+                    'error'              => 'shape_mismatch',
+                    'message'            => 'Pattern shape incompatible with content roles.',
+                    'incompatible_roles' => $mismatch['unmatched'],
+                    'fraction'           => round( $mismatch['fraction'], 2 ),
+                    'suggested_patterns' => $suggested,
+                    'fallback'           => 'Supply fresh `elements: [...]` instead of `use_pattern`.',
+                ];
             }
-            return [
-                'error'              => 'shape_mismatch',
-                'message'            => 'Pattern shape incompatible with content roles.',
-                'incompatible_roles' => $mismatch['unmatched'],
-                'fraction'           => round( $mismatch['fraction'], 2 ),
-                'suggested_patterns' => $suggested,
-                'fallback'           => 'Supply fresh `elements: [...]` instead of `use_pattern`.',
-            ];
         }
 
         $log = [];
         $structure = $this->expand_repeats( $structure, $content_map, $log );
         $structure = $this->insert_extras( $structure, $content_map, $pattern_roles, $log );
-        $structure = $this->drop_missing_optional( $structure, $content_map, $log );
+        if ( $is_content_phase ) {
+            $structure = $this->drop_missing_optional( $structure, $content_map, $log );
+        }
 
         return [
             'structure'      => $structure,
