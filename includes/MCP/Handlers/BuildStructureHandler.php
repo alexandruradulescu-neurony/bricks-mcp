@@ -48,7 +48,10 @@ final class BuildStructureHandler {
 
 	public function __construct(
 		private BuildHandler $delegate,
-		private ?\BricksMCP\MCP\Services\BricksService $bricks = null
+		private ?\BricksMCP\MCP\Services\BricksService $bricks = null,
+		private ?\BricksMCP\MCP\Services\ProposalService $proposal_service = null,
+		private ?\BricksMCP\MCP\Services\GlobalClassService $classes = null,
+		private ?\BricksMCP\MCP\Services\GlobalVariableService $variables = null
 	) {}
 
 	/**
@@ -88,6 +91,50 @@ final class BuildStructureHandler {
 		// before delegating — otherwise array values trip "Illegal offset type".
 		$schema = $this->normalize_class_intents( $schema );
 		$args['schema'] = $schema;
+
+		// v3.29: auto-provision pattern classes + variables from proposal manifest.
+		$proposal_id           = $args['proposal_id'] ?? '';
+		$provisioned_classes   = [];
+		$provisioned_variables = [];
+		$provisioning_errors   = [];
+		if ( $proposal_id !== '' && $this->proposal_service !== null ) {
+			// Read transient directly (non-destructive) — consume() deletes the
+			// transient, which would prevent BuildHandler (delegated below) from
+			// validating the same proposal_id.
+			$proposal = get_transient( 'bricks_mcp_proposal_' . $proposal_id );
+
+			if ( is_array( $proposal ) && ! empty( $proposal['provisioning_manifest'] ) ) {
+				$manifest = $proposal['provisioning_manifest'];
+
+				// Classes.
+				if ( ! empty( $manifest['classes'] ) && is_array( $manifest['classes'] ) && $this->classes !== null ) {
+					foreach ( $manifest['classes'] as $name => $def ) {
+						if ( ! is_string( $name ) || $name === '' ) continue;
+						if ( $this->classes->exists_by_name( $name ) ) continue;
+						$created = $this->classes->create_from_payload( $def );
+						if ( is_string( $created ) && $created !== '' ) {
+							$provisioned_classes[] = $created;
+						} else {
+							$provisioning_errors[] = [ 'kind' => 'class', 'name' => $name, 'error' => 'create_from_payload returned empty' ];
+						}
+					}
+				}
+
+				// Variables.
+				if ( ! empty( $manifest['variables'] ) && is_array( $manifest['variables'] ) && $this->variables !== null ) {
+					foreach ( $manifest['variables'] as $name => $def ) {
+						if ( ! is_string( $name ) || $name === '' ) continue;
+						if ( $this->variables->exists( $name ) ) continue;
+						$ok = $this->variables->create_from_payload( $name, $def );
+						if ( $ok ) {
+							$provisioned_variables[] = $name;
+						} else {
+							$provisioning_errors[] = [ 'kind' => 'variable', 'name' => $name, 'error' => 'create_from_payload failed' ];
+						}
+					}
+				}
+			}
+		}
 
 		// v3.28.6: capture pre-build element IDs so we can diff post-build to
 		// identify the newly-created section + its descendants. This enables a
@@ -149,6 +196,15 @@ final class BuildStructureHandler {
 		);
 		if ( $section_id !== null ) {
 			$response['section_id'] = $section_id;
+		}
+		if ( ! empty( $provisioned_classes ) ) {
+			$response['classes_provisioned_from_pattern'] = $provisioned_classes;
+		}
+		if ( ! empty( $provisioned_variables ) ) {
+			$response['variables_provisioned_from_pattern'] = $provisioned_variables;
+		}
+		if ( ! empty( $provisioning_errors ) ) {
+			$response['provisioning_warnings'] = $provisioning_errors;
 		}
 		return $response;
 	}
