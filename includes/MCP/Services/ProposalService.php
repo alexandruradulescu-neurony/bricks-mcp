@@ -642,6 +642,25 @@ final class ProposalService {
 			$scoped_variables
 		);
 
+		// v3.29: detect pattern-based schema and extract provisioning manifest + logs.
+		$pattern_id            = null;
+		$provisioning_manifest = null;
+		$adaptation_log        = [];
+		$conversion_log        = [];
+		if ( is_array( $suggested_schema ) && ! empty( $suggested_schema['_use_pattern'] ) ) {
+			$pattern_id            = $suggested_schema['_pattern_id'] ?? null;
+			$provisioning_manifest = $suggested_schema['_provisioning_manifest'] ?? null;
+			$adaptation_log        = $suggested_schema['_adaptation_log'] ?? [];
+			$conversion_log        = $suggested_schema['_conversion_log'] ?? [];
+			unset(
+				$suggested_schema['_use_pattern'],
+				$suggested_schema['_pattern_id'],
+				$suggested_schema['_provisioning_manifest'],
+				$suggested_schema['_adaptation_log'],
+				$suggested_schema['_conversion_log']
+			);
+		}
+
 		// Generate proposal ID.
 		// Previously: substr(md5(...), 0, 12) = 48 bits of entropy. Concurrent requests
 		// within the same microsecond could collide; second proposal would overwrite
@@ -664,12 +683,29 @@ final class ProposalService {
 				'variables'         => $scoped_variables,
 				'element_schemas'   => $element_details,
 			],
+			// v3.29 pattern-flow metadata:
+			'pattern_id'            => $pattern_id,
+			'provisioning_manifest' => $provisioning_manifest,
+			'adaptation_log'        => $adaptation_log,
+			'conversion_log'        => $conversion_log,
 		];
 
-		// Store as transient.
+		// Store as transient (includes provisioning_manifest for BuildStructureHandler).
 		set_transient( self::TRANSIENT_PREFIX . $proposal_id, $proposal, self::TTL );
 
-		return $proposal;
+		// Build AI response: provisioning_manifest is internal-only (full class/variable
+		// payloads bloat AI context). Strip it before returning.
+		$response = $proposal;
+		unset( $response['provisioning_manifest'] );
+
+		// v3.29: surface pattern-flow trace for AI visibility.
+		if ( $pattern_id !== null ) {
+			$response['pattern_id']     = $pattern_id;
+			$response['adaptation_log'] = $adaptation_log;
+			$response['conversion_log'] = $conversion_log;
+		}
+
+		return $response;
 	}
 
 	// ================================================================
