@@ -463,13 +463,11 @@ final class Router {
 			// only runs on validated string values.
 			if ( 'global_class' === $name && ( $arguments['action'] ?? '' ) === 'list' ) {
 				$this->maybe_set_site_context( 'classes_done' );
-			} elseif ( 'propose_design' === $name && is_array( $result ) ) {
-				$phase = $result['phase'] ?? '';
-				if ( 'proposal' === $phase ) {
-					// Phase 2 success means design_ready.
-					PrerequisiteGateService::set_flag( 'design_ready' );
-				}
 			}
+			// Note: propose_design used to set a 'design_ready' flag to gate
+			// build_from_schema's 'design' tier. Both the tool and the tier
+			// were removed in M3 (v3.31.0); the two-tier build_structure +
+			// populate_content flow needs no extra prerequisite.
 
 			return Response::success(
 				array(
