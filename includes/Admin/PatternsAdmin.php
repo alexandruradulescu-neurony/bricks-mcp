@@ -18,7 +18,6 @@ class PatternsAdmin {
 	 */
 	public function init(): void {
 		add_action( 'wp_ajax_bricks_mcp_list_patterns', [ $this, 'ajax_list_patterns' ] );
-		add_action( 'wp_ajax_bricks_mcp_create_pattern', [ $this, 'ajax_create_pattern' ] );
 		add_action( 'wp_ajax_bricks_mcp_delete_pattern', [ $this, 'ajax_delete_pattern' ] );
 		add_action( 'wp_ajax_bricks_mcp_export_patterns', [ $this, 'ajax_export_patterns' ] );
 		add_action( 'wp_ajax_bricks_mcp_import_patterns', [ $this, 'ajax_import_patterns' ] );
@@ -45,9 +44,7 @@ class PatternsAdmin {
 			]
 		);
 
-		// WP Media Library for pattern reference images.
-		wp_enqueue_media();
-	}
+}
 
 	/**
 	 * Render the Patterns tab content.
@@ -78,8 +75,7 @@ class PatternsAdmin {
 						<option value="<?php echo esc_attr( $cat_id ); ?>"><?php echo esc_html( $cat_label ); ?></option>
 					<?php endforeach; ?>
 				</select>
-				<button type="button" class="button button-primary" id="bricks-mcp-add-pattern-btn"><?php esc_html_e( 'Add Pattern', 'bricks-mcp' ); ?></button>
-				<button type="button" class="button button-secondary" id="bricks-mcp-export-patterns"><?php esc_html_e( 'Export', 'bricks-mcp' ); ?></button>
+<button type="button" class="button button-secondary" id="bricks-mcp-export-patterns"><?php esc_html_e( 'Export', 'bricks-mcp' ); ?></button>
 				<button type="button" class="button button-secondary" id="bricks-mcp-import-patterns-btn"><?php esc_html_e( 'Import', 'bricks-mcp' ); ?></button>
 				<input type="file" id="bricks-mcp-import-file" accept=".json" style="display:none;">
 				<span class="bwm-patterns-count" style="margin-left:auto;color:#666;">
@@ -121,7 +117,6 @@ class PatternsAdmin {
 						<td><?php echo esc_html( $p['layout'] ?? '' ); ?></td>
 						<td style="font-size:12px;color:#666;"><?php echo esc_html( $p['ai_description'] ?? '' ); ?></td>
 						<td>
-							<button type="button" class="button button-small bricks-mcp-edit-pattern" data-id="<?php echo esc_attr( $p['id'] ); ?>"><?php esc_html_e( 'Edit', 'bricks-mcp' ); ?></button>
 							<button type="button" class="button button-small bricks-mcp-delete-pattern" data-id="<?php echo esc_attr( $p['id'] ); ?>"><?php esc_html_e( 'Delete', 'bricks-mcp' ); ?></button>
 						</td>
 					</tr>
@@ -131,91 +126,6 @@ class PatternsAdmin {
 			</table>
 		</div>
 
-		<!-- View Pattern JSON Modal -->
-		<div id="bricks-mcp-pattern-modal" style="display:none;">
-			<div class="bwm-modal-backdrop"></div>
-			<div class="bwm-modal-content">
-				<div class="bwm-modal-header">
-					<h3 id="bricks-mcp-modal-title"><?php esc_html_e( 'Pattern JSON', 'bricks-mcp' ); ?></h3>
-					<button type="button" class="bwm-modal-close">&times;</button>
-				</div>
-				<textarea id="bricks-mcp-pattern-json" rows="20" style="width:100%;font-family:monospace;font-size:12px;"></textarea>
-				<div class="bwm-modal-footer" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
-					<button type="button" class="button button-secondary bwm-modal-close"><?php esc_html_e( 'Close', 'bricks-mcp' ); ?></button>
-					<button type="button" class="button button-primary" id="bricks-mcp-save-pattern" style="display:none;"><?php esc_html_e( 'Save Changes', 'bricks-mcp' ); ?></button>
-				</div>
-			</div>
-		</div>
-
-		<!-- Pattern Creator/Editor Modal -->
-		<div id="bricks-mcp-creator-modal" style="display:none;">
-			<div class="bwm-modal-backdrop"></div>
-			<div class="bwm-modal-content" style="max-width:900px;">
-				<div class="bwm-modal-header">
-					<h3 id="bricks-mcp-creator-modal-title"><?php esc_html_e( 'Add New Pattern', 'bricks-mcp' ); ?></h3>
-					<button type="button" class="bwm-modal-close">&times;</button>
-				</div>
-
-				<div class="bwm-creator-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-					<!-- Left column: metadata -->
-					<div>
-						<p><label><strong><?php esc_html_e( 'Name', 'bricks-mcp' ); ?> *</strong></label><br>
-						<input type="text" id="bricks-mcp-creator-name" class="regular-text" style="width:100%;"></p>
-
-						<p><label><strong><?php esc_html_e( 'ID', 'bricks-mcp' ); ?></strong> <small>(<?php esc_html_e( 'auto-generated from name', 'bricks-mcp' ); ?>)</small></label><br>
-						<input type="text" id="bricks-mcp-creator-id" class="regular-text" style="width:100%;" pattern="[a-z0-9-]+"></p>
-
-						<p><label><strong><?php esc_html_e( 'Category', 'bricks-mcp' ); ?> *</strong></label><br>
-						<input type="text" id="bricks-mcp-creator-category" class="regular-text" style="width:100%;" placeholder="<?php esc_attr_e( 'e.g. hero, features, cta', 'bricks-mcp' ); ?>"></p>
-
-						<p><label><strong><?php esc_html_e( 'Tags', 'bricks-mcp' ); ?></strong> <small>(<?php esc_html_e( 'comma-separated', 'bricks-mcp' ); ?>)</small></label><br>
-						<input type="text" id="bricks-mcp-creator-tags" class="regular-text" style="width:100%;" placeholder="dark, centered, cta"></p>
-
-						<div style="display:flex;gap:12px;">
-							<p style="flex:1;"><label><strong><?php esc_html_e( 'Layout', 'bricks-mcp' ); ?></strong></label><br>
-							<select id="bricks-mcp-creator-layout" style="width:100%;">
-								<option value="">—</option>
-								<option value="centered">centered</option>
-								<option value="split-60-40">split-60-40</option>
-								<option value="split-50-50">split-50-50</option>
-								<option value="grid-2">grid-2</option>
-								<option value="grid-3">grid-3</option>
-								<option value="grid-4">grid-4</option>
-								<option value="stacked">stacked</option>
-							</select></p>
-
-							<p style="flex:1;"><label><strong><?php esc_html_e( 'Background', 'bricks-mcp' ); ?></strong></label><br>
-							<select id="bricks-mcp-creator-bg" style="width:100%;">
-								<option value="light">light</option>
-								<option value="dark">dark</option>
-							</select></p>
-						</div>
-
-						<p><label><strong><?php esc_html_e( 'Reference Image', 'bricks-mcp' ); ?></strong></label><br>
-						<button type="button" class="button button-secondary" id="bricks-mcp-creator-upload-image"><?php esc_html_e( 'Upload Image', 'bricks-mcp' ); ?></button>
-						<input type="hidden" id="bricks-mcp-creator-image-id">
-						<br><img id="bricks-mcp-creator-image-preview" src="" style="display:none;max-width:200px;margin-top:8px;border-radius:8px;"></p>
-					</div>
-
-					<!-- Right column: AI metadata + composition -->
-					<div>
-						<p><label><strong><?php esc_html_e( 'AI Description', 'bricks-mcp' ); ?></strong> <small id="bricks-mcp-creator-char-count">0/300</small></label><br>
-						<textarea id="bricks-mcp-creator-ai-desc" rows="3" style="width:100%;" maxlength="300" placeholder="<?php esc_attr_e( '1-2 sentence description of what the pattern looks like when built...', 'bricks-mcp' ); ?>"></textarea></p>
-
-						<p><label><strong><?php esc_html_e( 'AI Usage Hints', 'bricks-mcp' ); ?></strong> <small>(<?php esc_html_e( 'one per line, max 5', 'bricks-mcp' ); ?>)</small></label><br>
-						<textarea id="bricks-mcp-creator-ai-hints" rows="3" style="width:100%;" placeholder="<?php esc_attr_e( "Best as first section on homepage\nPair with features section below", 'bricks-mcp' ); ?>"></textarea></p>
-
-						<p><label><strong><?php esc_html_e( 'Composition / Structure JSON', 'bricks-mcp' ); ?></strong></label><br>
-						<textarea id="bricks-mcp-creator-composition" rows="12" style="width:100%;font-family:monospace;font-size:12px;" placeholder='<?php echo esc_attr( "{\n  \"composition\": [...],\n  \"columns\": {...},\n  \"patterns\": {...}\n}" ); ?>'></textarea></p>
-					</div>
-				</div>
-
-				<div class="bwm-modal-footer" style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
-					<button type="button" class="button button-secondary bwm-modal-close"><?php esc_html_e( 'Cancel', 'bricks-mcp' ); ?></button>
-					<button type="button" class="button button-primary" id="bricks-mcp-creator-save"><?php esc_html_e( 'Save Pattern', 'bricks-mcp' ); ?></button>
-				</div>
-			</div>
-		</div>
 		<?php
 	}
 
@@ -253,54 +163,6 @@ class PatternsAdmin {
 			return;
 		}
 		wp_send_json_success( DesignPatternService::list_all() );
-	}
-
-	/**
-	 * AJAX: Create a new database pattern.
-	 */
-	public function ajax_create_pattern(): void {
-		check_ajax_referer( BricksCore::ADMIN_NONCE_ACTION, 'nonce' );
-		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
-			wp_send_json_error( [ 'message' => __( 'Unauthorized.', 'bricks-mcp' ) ], 403 );
-			return;
-		}
-
-		$json = isset( $_POST['pattern_json'] ) ? wp_unslash( $_POST['pattern_json'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$pattern = json_decode( $json, true );
-		if ( ! is_array( $pattern ) ) {
-			wp_send_json_error( [ 'message' => __( 'Invalid JSON.', 'bricks-mcp' ) ] );
-			return;
-		}
-
-		// Boundary-sanitize the top-level pattern metadata so stored XSS in downstream
-		// render paths isn't a single-escape-miss away. DesignPatternService::create
-		// still validates structural shape; this layer guards the human-facing strings.
-		if ( isset( $pattern['id'] ) ) {
-			$pattern['id'] = sanitize_key( (string) $pattern['id'] );
-		}
-		if ( isset( $pattern['name'] ) ) {
-			$pattern['name'] = sanitize_text_field( (string) $pattern['name'] );
-		}
-		if ( isset( $pattern['description'] ) ) {
-			$pattern['description'] = wp_kses_post( (string) $pattern['description'] );
-		}
-		if ( isset( $pattern['category'] ) ) {
-			$pattern['category'] = sanitize_text_field( (string) $pattern['category'] );
-		}
-		if ( isset( $pattern['tags'] ) && is_array( $pattern['tags'] ) ) {
-			$pattern['tags'] = array_values( array_filter( array_map(
-				static fn( $t ) => is_scalar( $t ) ? sanitize_text_field( (string) $t ) : '',
-				$pattern['tags']
-			) ) );
-		}
-
-		$result = DesignPatternService::create( $pattern );
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
-			return;
-		}
-
-		wp_send_json_success( $result );
 	}
 
 	/**
