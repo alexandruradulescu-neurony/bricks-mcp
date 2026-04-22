@@ -10,11 +10,16 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP;
 
+use BricksMCP\Admin\Settings;
+use BricksMCP\MCP\Services\BEMClassNormalizer;
 use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\Services\ClassDedupEngine;
 use BricksMCP\MCP\Services\ClassIntentResolver;
+use BricksMCP\MCP\Services\ClaudeVisionProvider;
 use BricksMCP\MCP\Services\DesignSchemaValidator;
 use BricksMCP\MCP\Services\ElementSettingsGenerator;
+use BricksMCP\MCP\Services\ImageInputResolver;
 use BricksMCP\MCP\Services\MediaService;
 use BricksMCP\MCP\Services\MenuService;
 use BricksMCP\MCP\Services\OnboardingService;
@@ -25,6 +30,9 @@ use BricksMCP\MCP\Services\ValidationService;
 use BricksMCP\MCP\Services\PrerequisiteGateService;
 use BricksMCP\MCP\Services\ProposalService;
 use BricksMCP\MCP\Services\PageLayoutService;
+use BricksMCP\MCP\Services\VisionPatternGenerator;
+use BricksMCP\MCP\Services\VisionPromptBuilder;
+use BricksMCP\MCP\Services\VisionResponseMapper;
 use BricksMCP\MCP\Handlers\OnboardingHandler;
 use BricksMCP\MCP\ToolRegistry;
 use BricksMCP\Plugin;
@@ -179,6 +187,18 @@ final class Router {
 		$proposal_service     = new ProposalService( $this->bricks_service->get_global_class_service(), $this->schema_generator, $this->bricks_service );
 		$schema_handler       = new Handlers\SchemaHandler( $this->schema_generator, $this->bricks_service );
 
+		// M3 (v3.31): vision pipeline for design_pattern(action: from_image).
+		// ClaudeVisionProvider tolerates an empty API key at construction time — the
+		// actual key check happens on first analyze() call, keeping Router wiring
+		// side-effect-free for installs that don't use from_image.
+		$vision_normalizer    = new BEMClassNormalizer();
+		$vision_dedup         = new ClassDedupEngine( $vision_normalizer );
+		$vision_provider      = new ClaudeVisionProvider( Settings::get_anthropic_api_key() );
+		$vision_prompt        = new VisionPromptBuilder();
+		$vision_mapper        = new VisionResponseMapper( $vision_dedup, $vision_normalizer );
+		$vision_generator     = new VisionPatternGenerator( $vision_provider, $vision_prompt, $vision_mapper );
+		$image_resolver       = new ImageInputResolver();
+
 		// All handlers indexed by short name.
 		$this->handlers = [
 			'component'     => new Handlers\ComponentHandler( $this->bricks_service, $require_bricks ),
@@ -216,7 +236,12 @@ final class Router {
 			'onboarding'    => new OnboardingHandler( new OnboardingService( $this->bricks_service ) ),
 			'verify'        => new Handlers\VerifyHandler( $this->bricks_service, $require_bricks ),
 			'page_layout'      => new Handlers\PageLayoutHandler( new PageLayoutService(), $require_bricks ),
-			'design_pattern'   => new Handlers\DesignPatternHandler( $this->bricks_service, $require_bricks ),
+			'design_pattern'   => new Handlers\DesignPatternHandler(
+				$this->bricks_service,
+				$require_bricks,
+				$vision_generator,
+				$image_resolver
+			),
 		];
 
 		$this->pending_action_service = new PendingActionService();

@@ -14,8 +14,10 @@ namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\DesignPatternService;
+use BricksMCP\MCP\Services\ImageInputResolver;
 use BricksMCP\MCP\Services\PatternCapture;
 use BricksMCP\MCP\Services\PatternValidator;
+use BricksMCP\MCP\Services\VisionPatternGenerator;
 use BricksMCP\MCP\ToolRegistry;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -42,14 +44,37 @@ final class DesignPatternHandler {
 	private $require_bricks;
 
 	/**
+	 * Vision pattern generator (Flow A: image -> pattern).
+	 *
+	 * @var VisionPatternGenerator|null
+	 */
+	private ?VisionPatternGenerator $vision;
+
+	/**
+	 * Image input resolver (url/id/base64 -> provider payload).
+	 *
+	 * @var ImageInputResolver|null
+	 */
+	private ?ImageInputResolver $image_resolver;
+
+	/**
 	 * Constructor.
 	 *
-	 * @param BricksService $bricks_service Bricks service instance.
-	 * @param callable      $require_bricks Callback that returns \WP_Error|null.
+	 * @param BricksService               $bricks_service  Bricks service instance.
+	 * @param callable                    $require_bricks  Callback that returns \WP_Error|null.
+	 * @param VisionPatternGenerator|null $vision          Optional vision orchestrator (required for action=from_image).
+	 * @param ImageInputResolver|null     $image_resolver  Optional image resolver (required for action=from_image).
 	 */
-	public function __construct( BricksService $bricks_service, callable $require_bricks ) {
+	public function __construct(
+		BricksService $bricks_service,
+		callable $require_bricks,
+		?VisionPatternGenerator $vision = null,
+		?ImageInputResolver $image_resolver = null
+	) {
 		$this->bricks_service = $bricks_service;
 		$this->require_bricks = $require_bricks;
+		$this->vision         = $vision;
+		$this->image_resolver = $image_resolver;
 	}
 
 	/**
@@ -76,9 +101,10 @@ final class DesignPatternHandler {
 			'export'        => $this->tool_export( $args ),
 			'import'        => $this->tool_import( $args ),
 			'mark_required' => $this->tool_mark_required( $args ),
+			'from_image'    => $this->tool_from_image( $args ),
 			default         => new \WP_Error(
 				'invalid_action',
-				sprintf( 'Unknown action "%s". Valid: capture, list, get, create, update, delete, export, import, mark_required.', $action )
+				sprintf( 'Unknown action "%s". Valid: capture, list, get, create, update, delete, export, import, mark_required, from_image.', $action )
 			),
 		};
 	}
@@ -130,6 +156,170 @@ final class DesignPatternHandler {
 			'captured' => true,
 			'pattern'  => $saved,
 		];
+	}
+
+	/**
+	 * Generate a pattern from an image via server-side vision.
+	 *
+	 * Required: name, category, and one of image_url/image_id/image_base64.
+	 * Optional: reference_json, tags, dry_run.
+	 */
+	private function tool_from_image( array $args ): array|\WP_Error {
+		if ( null === $this->vision || null === $this->image_resolver ) {
+			return new \WP_Error(
+				'from_image_unavailable',
+				'from_image requires vision dependencies; DesignPatternHandler was constructed without VisionPatternGenerator/ImageInputResolver.'
+			);
+		}
+
+		$name     = sanitize_text_field( $args['name'] ?? '' );
+		$category = sanitize_text_field( $args['category'] ?? '' );
+		if ( $name === '' )     { return new \WP_Error( 'missing_field', 'Argument "name" is required.' ); }
+		if ( $category === '' ) { return new \WP_Error( 'missing_field', 'Argument "category" is required.' ); }
+
+		$image = $this->image_resolver->resolve( $args );
+		if ( is_wp_error( $image ) ) {
+			return $image;
+		}
+
+		$reference_json = null;
+		if ( isset( $args['reference_json'] ) ) {
+			$ref = $args['reference_json'];
+			if ( ! is_array( $ref ) || ! isset( $ref['structure'] ) ) {
+				return new \WP_Error( 'invalid_reference_json', 'reference_json must be an object with a "structure" key.' );
+			}
+			$reference_json = $ref;
+		}
+
+		$classes   = $this->bricks_service->get_global_class_service();
+		$variables = $this->bricks_service->get_global_variable_service();
+		$site_context = [
+			'classes'   => $classes->get_all_by_name(),
+			'variables' => $variables->get_all_with_values(),
+			'theme'     => $this->infer_theme( $variables->get_all_with_values() ),
+		];
+
+		$meta   = [ 'category' => $category, 'variant' => sanitize_text_field( $args['background'] ?? '' ) ];
+		$mapped = $this->vision->generate_pattern( $image, $site_context, $reference_json, $meta );
+		if ( is_wp_error( $mapped ) ) {
+			return $mapped;
+		}
+
+		$dry_run = (bool) ( $args['dry_run'] ?? false );
+
+		if ( $dry_run ) {
+			return [
+				'dry_run'            => true,
+				'structure'          => $mapped['structure'],
+				'layout'             => $mapped['layout']     ?? '',
+				'background'         => $mapped['background'] ?? '',
+				'new_classes'        => $mapped['new_classes'],
+				'reused_classes'     => $mapped['reused_classes'],
+				'deduped_classes'    => $mapped['deduped_classes'],
+				'new_variables'      => $mapped['new_variables'],
+				'conversion_log'     => $mapped['conversion_log'],
+				'vision_cost_tokens' => $mapped['vision_cost_tokens'],
+			];
+		}
+
+		// Auto-provision new classes. GlobalClassService::create_from_payload
+		// accepts a single payload array and returns the final class name (empty on failure).
+		$orphaned_classes = [];
+		foreach ( $mapped['new_classes'] as $cls ) {
+			$payload = [
+				'name'     => $cls['name'] ?? '',
+				'settings' => $cls['style_tokens'] ?? [],
+			];
+			$created = $classes->create_from_payload( $payload );
+			if ( '' === $created ) {
+				$orphaned_classes[] = $cls['name'] ?? '';
+			}
+		}
+
+		// Auto-provision new variables via the plain value-creation API.
+		$orphaned_vars = [];
+		foreach ( $mapped['new_variables'] as $var ) {
+			$vname   = (string) ( $var['name'] ?? '' );
+			$vvalue  = (string) ( $var['value'] ?? '' );
+			$created = $variables->create_global_variable( $vname, $vvalue );
+			if ( is_wp_error( $created ) ) {
+				$orphaned_vars[] = $vname;
+			}
+		}
+
+		$tags         = array_values( array_filter( array_map( 'sanitize_text_field', (array) ( $args['tags'] ?? [] ) ) ) );
+		$meta_pattern = [
+			'id'         => sanitize_key( $args['id'] ?? $this->slugify( $name ) ),
+			'name'       => $name,
+			'category'   => $category,
+			'tags'       => $tags,
+			'layout'     => $mapped['layout']     ?? '',
+			'background' => $mapped['background'] ?? '',
+		];
+
+		$validator              = new PatternValidator();
+		$site_vars_for_validate = [];
+		foreach ( $site_context['variables'] as $vname => $vval ) {
+			$site_vars_for_validate[ $vname ] = [ 'value' => (string) $vval ];
+		}
+
+		// Refresh class map so any just-provisioned classes are visible to the validator.
+		$refreshed_classes = $classes->get_all_by_name();
+
+		$pattern_input = array_merge( $meta_pattern, [ 'structure' => $mapped['structure'] ] );
+		$validated     = $validator->validate_with_context(
+			$pattern_input,
+			[
+				'variables' => $site_vars_for_validate,
+				'classes'   => $refreshed_classes,
+			]
+		);
+		if ( isset( $validated['error'] ) ) {
+			return new \WP_Error(
+				$validated['error'],
+				$validated['message'] ?? 'Pattern validation failed.',
+				[
+					'validation_details' => $validated,
+					'orphaned_resources' => [
+						'classes'           => $orphaned_classes,
+						'variables'         => $orphaned_vars,
+						'created_classes'   => array_column( $mapped['new_classes'], 'name' ),
+						'created_variables' => array_column( $mapped['new_variables'], 'name' ),
+					],
+				]
+			);
+		}
+
+		$saved = DesignPatternService::create( $validated );
+		if ( is_wp_error( $saved ) ) {
+			return $saved;
+		}
+
+		return [
+			'captured'           => true,
+			'pattern'            => $saved,
+			'reused_classes'     => $mapped['reused_classes'],
+			'new_classes'        => $mapped['new_classes'],
+			'deduped_classes'    => $mapped['deduped_classes'],
+			'new_variables'      => $mapped['new_variables'],
+			'conversion_log'     => $mapped['conversion_log'],
+			'vision_cost_tokens' => $mapped['vision_cost_tokens'],
+		];
+	}
+
+	/**
+	 * Infer theme hint (dark/light) from variable palette.
+	 *
+	 * @param array<string, mixed> $site_vars name => value map.
+	 */
+	private function infer_theme( array $site_vars ): string {
+		foreach ( $site_vars as $name => $value ) {
+			$lname = strtolower( (string) $name );
+			if ( str_contains( $lname, 'base-ultra-dark' ) || str_contains( $lname, 'base-dark' ) ) {
+				return 'dark';
+			}
+		}
+		return 'light';
 	}
 
 	/**
@@ -422,13 +612,13 @@ final class DesignPatternHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'design_pattern',
-			__( "Manage design patterns \u2014 reusable section compositions for the build pipeline.\n\nActions: capture, list, get, create, update, delete, export, import.\n\nUse capture to snapshot an existing built section into the pattern library. All patterns live in the database (managed via admin UI or MCP). Use export/import for cross-site sharing.", 'bricks-mcp' ),
+			__( "Manage design patterns \u2014 reusable section compositions for the build pipeline.\n\nActions: capture, list, get, create, update, delete, export, import, mark_required, from_image.\n\nUse capture to snapshot an existing built section into the pattern library. Use from_image to generate a new pattern from an image via server-side vision (provides a dry_run preview mode). All patterns live in the database (managed via admin UI or MCP). Use export/import for cross-site sharing.", 'bricks-mcp' ),
 			[
 				'type'       => 'object',
 				'properties' => [
 					'action'   => [
 						'type'        => 'string',
-						'enum'        => [ 'capture', 'list', 'get', 'create', 'update', 'delete', 'export', 'import', 'mark_required' ],
+						'enum'        => [ 'capture', 'list', 'get', 'create', 'update', 'delete', 'export', 'import', 'mark_required', 'from_image' ],
 						'description' => __( 'Action to perform', 'bricks-mcp' ),
 					],
 					'page_id'  => [
@@ -488,6 +678,26 @@ final class DesignPatternHandler {
 					'include_drift' => [
 						'type'        => 'boolean',
 						'description' => __( 'Include drift_report in response (get: optional, default false)', 'bricks-mcp' ),
+					],
+					'image_url' => [
+						'type'        => 'string',
+						'description' => __( 'HTTPS image URL (from_image: one of image_url/image_id/image_base64 required)', 'bricks-mcp' ),
+					],
+					'image_id' => [
+						'type'        => 'integer',
+						'description' => __( 'WP media attachment ID (from_image: alternative to image_url/image_base64)', 'bricks-mcp' ),
+					],
+					'image_base64' => [
+						'type'        => 'string',
+						'description' => __( 'Raw base64-encoded image bytes (from_image: alternative to image_url/image_id)', 'bricks-mcp' ),
+					],
+					'reference_json' => [
+						'type'        => 'object',
+						'description' => __( 'Optional known-good pattern for calibration (from_image: used as few-shot + post-vision diff)', 'bricks-mcp' ),
+					],
+					'dry_run' => [
+						'type'        => 'boolean',
+						'description' => __( 'Preview only, no save (from_image: optional, default false)', 'bricks-mcp' ),
 					],
 				],
 				'required'   => [ 'action' ],
