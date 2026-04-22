@@ -79,7 +79,7 @@ final class Router {
 	/**
 	 * Operations that require prerequisites, with tier level per action.
 	 *
-	 * Tiers: 'direct' (site_context), 'design' (site_context + design_ready).
+	 * Tiers: 'direct' (site_context).
 	 *
 	 * @var array<string, array<string, string>>
 	 */
@@ -437,7 +437,9 @@ final class Router {
 			}
 		}
 
-		// Design build gate: reject complex element trees that should use build_from_schema.
+		// Design build gate: reject section elements — sections must flow through the
+		// two-tier build_structure + populate_content pipeline for proper validation,
+		// class resolution, and design consistency.
 		$design_gate = $this->check_design_build_gate( $name, $arguments );
 		if ( null !== $design_gate ) {
 			return $design_gate;
@@ -493,7 +495,7 @@ final class Router {
 	 *
 	 * @param string               $name      Tool name.
 	 * @param array<string, mixed> $arguments Tool arguments.
-	 * @return string|null Tier name ('direct', 'design') or null if not gated.
+	 * @return string|null Tier name ('direct') or null if not gated.
 	 */
 	private function get_operation_tier( string $name, array $arguments ): ?string {
 		if ( ! isset( self::GATED_OPERATIONS[ $name ] ) ) {
@@ -502,7 +504,7 @@ final class Router {
 
 		$ops = self::GATED_OPERATIONS[ $name ];
 
-		// Tools gated unconditionally (no action routing, e.g. build_from_schema).
+		// Tools gated unconditionally (no action routing, e.g. propose_design).
 		if ( isset( $ops['_always'] ) ) {
 			return $ops['_always'];
 		}
@@ -520,12 +522,14 @@ final class Router {
 	}
 
 	/**
-	 * Design build gate: reject section elements that should use build_from_schema.
+	 * Design build gate: reject section elements that should use the two-tier
+	 * build_structure + populate_content pipeline.
 	 *
 	 * Checks page:append_content, page:update_content, page:create (with elements),
 	 * page:import_clipboard, and element:bulk_add. Rejects when:
-	 * - Any root element is a section (full sections must use build_from_schema
-	 *   for proper validation, class resolution, and design consistency).
+	 * - Any root element is a section (full sections must flow through
+	 *   build_structure + populate_content for proper validation, class
+	 *   resolution, and design consistency).
 	 *
 	 * Non-section elements of any count are allowed for instructed builds.
 	 * Can be bypassed with bypass_design_gate: true in arguments.
@@ -585,10 +589,10 @@ final class Router {
 			$el_name = $el['name'] ?? '';
 			if ( 'section' === $el_name ) {
 				return Response::error(
-					'bricks_mcp_use_build_from_schema',
+					'bricks_mcp_use_build_pipeline',
 					sprintf(
 						/* translators: %s: Suggested next call (e.g. propose_design(page_id=42, description='...')). */
-						__( 'Section elements must be built using build_from_schema for proper validation, class resolution, and design consistency. Start the 4-step pipeline: call %s to discover site context, then again with a design_plan, then build_from_schema, then verify_build. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
+						__( 'Section elements must be built using the two-tier build pipeline for proper validation, class resolution, and design consistency. Start: call %s to stage a design proposal, then build_structure(proposal_id) to create the element tree, then populate_content(section_id, content_map) to fill it, then verify_build to confirm. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
 						sprintf( "propose_design(%s, description='<describe the section>')", $next_target )
 					),
 					422
