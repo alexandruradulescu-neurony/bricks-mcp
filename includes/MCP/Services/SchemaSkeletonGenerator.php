@@ -21,24 +21,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class SchemaSkeletonGenerator {
 
 	/**
-	 * Rotating placeholder icon names used to seed pattern items (pricing tiers,
-	 * feature cards, etc.). The list is library-agnostic — ElementSettingsGenerator
-	 * resolve_icon() prepends the correct family prefix at render time.
-	 */
-	private const PLACEHOLDER_ICONS = [
-		'star',
-		'shield',
-		'settings',
-		'truck',
-		'bolt-alt',
-		'timer',
-		'car',
-		'check',
-		'heart',
-		'location-pin',
-	];
-
-	/**
 	 * Generate a complete schema skeleton from a description.
 	 *
 	 * @param int                    $page_id           Target page ID.
@@ -211,8 +193,8 @@ final class SchemaSkeletonGenerator {
 			}
 		}
 
-		// Try to find a matching design pattern for layout intelligence.
-		$matched_pattern = $this->find_matching_pattern( $section_type, $layout, $background );
+		// Pattern matching removed (Task 5.7): non-pattern path emits a plain skeleton.
+		$matched_pattern = null;
 
 		// Check for multi-row patterns (e.g., hero with split + badge grid below).
 		$is_multi_row = ! empty( $matched_pattern['has_two_rows'] ) && ! empty( $matched_pattern['rows'] );
@@ -405,30 +387,6 @@ final class SchemaSkeletonGenerator {
 		}
 
 		return $schema;
-	}
-
-	/**
-	 * Find a matching design pattern for the given section type and layout.
-	 *
-	 * @param string $section_type Section type (hero, split, features, etc.)
-	 * @param string $layout       Layout (centered, split-50-50, etc.)
-	 * @param string $background   Background hint (dark, light).
-	 * @return array|null Matched pattern or null.
-	 */
-	private function find_matching_pattern( string $section_type, string $layout, string $background ): ?array {
-		$tags = [ $background ];
-		if ( str_starts_with( $layout, 'split' ) ) {
-			$tags[] = 'split';
-		}
-		if ( str_starts_with( $layout, 'grid' ) ) {
-			$tags[] = 'grid';
-		}
-		if ( 'centered' === $layout ) {
-			$tags[] = 'centered';
-		}
-
-		$matches = DesignPatternService::find( $section_type, $tags, 1 );
-		return $matches[0] ?? null;
 	}
 
 	/**
@@ -706,16 +664,6 @@ final class SchemaSkeletonGenerator {
 	}
 
 	/**
-	 * Get a placeholder icon name by index.
-	 *
-	 * Rotates through self::PLACEHOLDER_ICONS using 1-indexed input (first call
-	 * passes $index = 1) so the modulo wrap lands on the first entry cleanly.
-	 */
-	private function get_placeholder_icon( int $index ): string {
-		return self::PLACEHOLDER_ICONS[ ( $index - 1 ) % count( self::PLACEHOLDER_ICONS ) ];
-	}
-
-	/**
 	 * Build a single pattern data item from the element structure.
 	 *
 	 * For pricing sections, items can be marked as featured — the hint gets
@@ -734,7 +682,7 @@ final class SchemaSkeletonGenerator {
 		foreach ( $pat_elements as $pel ) {
 			$role = $pel['role'] ?? 'item';
 			if ( 'icon' === ( $pel['type'] ?? '' ) || str_contains( $role, 'icon' ) ) {
-				$item[ $role ] = $this->get_placeholder_icon( $index );
+				$item[ $role ] = 'star';
 			} else {
 				$annotation     = $is_featured ? ' (FEATURED / RECOMMENDED TIER)' : '';
 				$item[ $role ]  = "[{$pat_hint}{$annotation} — ITEM {$index} " . strtoupper( $role ) . ']';
