@@ -95,7 +95,18 @@ final class VisionPromptBuilder {
 
         $task = $mode === 'pattern'
             ? "[TASK] Analyze the image. Call emit_pattern with the structure. Prefer existing classes and variables listed above when visual function matches. Use BEM-style class names (block--modifier__element) for any new classes."
-            : "[TASK] Analyze the image. Call emit_design_plan with section_type, layout, background, elements[], patterns[]. Prefer existing classes and variables listed above when visual function matches.";
+            : <<<'EOT'
+[TASK] Analyze the image. Call emit_design_plan producing a design_plan exactly as a skilled human would type into propose_design — this is fed DIRECTLY into the existing build pipeline.
+
+CRITICAL RULES:
+1. elements[] is a flat list of content/leaf elements. Do NOT emit section/container/block wrappers — SchemaSkeletonGenerator adds the frame. Elements inside are: heading, text-basic, button, image, icon, list, slider, form, divider, etc.
+2. Every styled element needs a class_intent LABEL (string, BEM-style like "hero__heading", "hero--dark__cta-primary"). The pipeline creates the class with styles derived from site design tokens. Do NOT put style values, CSS properties, or style objects anywhere — only LABELS.
+3. Reuse existing site class names (listed above) when a class matches the element's visual function semantically. Only invent new class_intent labels when no existing class fits.
+4. For repeating content (card grids, feature lists, testimonial sliders): use the patterns[] array — one pattern entry per repeat-template with name, repeat count, element_structure, content_hint.
+5. content_hint per element is a short plain-text description of the intended content (e.g. "Main CTA button linking to contact", "Section tagline above the heading"). The pipeline uses these for content_plan and Unsplash queries.
+6. section_type must match image intent (hero, features, pricing, cta, testimonials, split, generic).
+7. background: pick dark or light based on dominant backdrop in image.
+EOT;
         $messages[] = [ 'type' => 'text', 'text' => $task ];
 
         return $messages;
@@ -207,7 +218,7 @@ final class VisionPromptBuilder {
                                 'role'         => [ 'type' => 'string' ],
                                 'content_hint' => [ 'type' => 'string' ],
                                 'tag'          => [ 'type' => 'string' ],
-                                'class_intent' => [ 'type' => [ 'string', 'array', 'object' ] ],
+                                'class_intent' => [ 'type' => 'string', 'description' => 'BEM-style class label for this element (e.g. "hero__heading", "hero--dark__cta-primary"). Prefer existing site class names when the visual function matches; otherwise invent a new BEM label following site conventions. NEVER emit style values as class_intent — use labels only. The pipeline creates the class with appropriate styles drawn from site design tokens.' ],
                             ],
                             'required' => [ 'type', 'role' ],
                         ],
