@@ -123,6 +123,21 @@ final class BuildHandler {
 	 * @return array<string, mixed>|\WP_Error Build result or error.
 	 */
 	public function handle( array $args ): array|\WP_Error {
+		// v3.28.0 deprecation: redirect public callers to new two-tier tools.
+		// BuildStructureHandler calls this via handle_internal() or sets _internal=true in args.
+		if ( empty( $args['_internal'] ) ) {
+			return new \WP_Error(
+				'tool_deprecated',
+				'build_from_schema replaced by build_structure + populate_content in v3.28.0.',
+				[
+					'next_step'           => '1) Call build_structure (strip content fields). 2) Call populate_content with section_id + content_map keyed by role.',
+					'migration_guide_url' => 'https://github.com/alexandruradulescu-neurony/bricks-mcp/blob/main/MIGRATION-v3.28.md',
+				]
+			);
+		}
+
+		unset( $args['_internal'] );
+
 		$schema      = $args['schema'] ?? null;
 		$dry_run_raw = $args['dry_run'] ?? false;
 		$dry_run     = false !== $dry_run_raw && '' !== $dry_run_raw;
