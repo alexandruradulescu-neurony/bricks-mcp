@@ -586,6 +586,24 @@ final class ProposalService {
 			}
 		}
 
+		// Extract content_hints from elements into a role-keyed map.
+		// content_hint is for AI content planning only — schema generation never reads it.
+		$content_plan   = [];
+		$clean_elements = [];
+		foreach ( $design_plan['elements'] ?? [] as $el ) {
+			if ( isset( $el['content_hint'], $el['role'] ) ) {
+				$content_plan[ $el['role'] ] = $el['content_hint'];
+			}
+			unset( $el['content_hint'] );
+			$clean_elements[] = $el;
+		}
+		$design_plan['elements'] = $clean_elements;
+
+		// Merge with AI-supplied content_plan (AI's explicit plan wins on key collision).
+		if ( isset( $design_plan['content_plan'] ) && is_array( $design_plan['content_plan'] ) ) {
+			$content_plan = array_merge( $content_plan, $design_plan['content_plan'] );
+		}
+
 		// Generate skeleton from the AI's design decisions.
 		$suggested_schema = $this->skeleton_generator->generate_from_plan(
 			$page_id,
@@ -609,6 +627,7 @@ final class ProposalService {
 			'design_plan'      => $design_plan,
 			'created_at'       => current_time( 'mysql' ),
 			'suggested_schema' => $suggested_schema,
+			'content_plan'     => $content_plan,
 			'next_step'        => 'Review the suggested_schema. Replace [PLACEHOLDER] content with real text based on the briefs and your content_hints. The element_schemas below show what each element accepts — use this to set correct content keys. Then call build_from_schema with this proposal_id and the modified schema.',
 			'resolved'         => [
 				'classes_suggested' => $suggested_classes,
