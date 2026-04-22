@@ -4,6 +4,26 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.29.0] — 2026-04-22
+
+**Pattern Usability (M1)**
+
+use_pattern two-tier build now works end-to-end. Pattern captured on site can be
+used via propose_design(use_pattern) → build_structure (auto-provisions missing
+classes + variables from pattern's embedded payload) → populate_content.
+
+* Added: PatternToSchemaBridge service — converts adapted pattern tree to schema shape
+* Added: PatternDriftDetector service — deep-diff between pattern's embedded class payload and live site class
+* Added: design_pattern(action: mark_required) — mark roles required at per-node level
+* Added: design_pattern(action: get, include_drift: true) — returns drift_report
+* Added: PatternsAdmin detail panel gets Class Drift tile + 60s transient cache
+* Added: Auto-provisioning — missing classes + variables created from pattern's embedded payload during build_structure
+* Changed: Required-role enforcement deferred to populate_content phase (content-supply time) — adapter preserves structure at propose_design
+* Fixed: GlobalClassService::create_from_payload styles now actually persist (was passing 'settings' but create_global_class reads 'styles')
+* Fixed: generate_from_pattern returns full schema shape instead of broken {pattern_id, structure, adaptation_log}
+
+No migration needed; backward compatible with v3.28 patterns.
+
 ## [3.28.7] — 2026-04-22
 
 **Hotfix — label applied to all element types + role identifiers preserved verbatim**
