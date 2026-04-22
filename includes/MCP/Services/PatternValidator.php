@@ -668,7 +668,13 @@ final class PatternValidator {
             ];
         }
 
-        // 6. Checksum.
+        // 7. BEM metadata (additive — never rejects).
+        $bem_meta                     = $this->compute_bem_metadata( $input );
+        $input['bem_purity']          = $bem_meta['bem_purity'];
+        $input['non_bem_classes']     = $bem_meta['non_bem_classes'];
+        $input['bem_migration_hints'] = $bem_meta['bem_migration_hints'];
+
+        // 8. Checksum (existing).
         $input['checksum'] = $this->checksum( $input );
 
         return $input;
