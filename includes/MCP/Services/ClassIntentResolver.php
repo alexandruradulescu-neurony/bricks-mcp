@@ -225,4 +225,46 @@ final class ClassIntentResolver {
 		$normalized = $this->normalizer->normalize( $intent );
 		return $normalized === '' ? null : $normalized;
 	}
+
+	/**
+	 * Resolve a class_intent to a final class name, applying dedup:
+	 *
+	 *   1. Normalize intent to BEM via BEMClassNormalizer.
+	 *   2. Build dedup pool from site BEM classes.
+	 *   3. If style_tokens match an existing BEM class by signature → reuse that name.
+	 *   4. If style_tokens match a BEM class in the supplied pattern pool → reuse that name.
+	 *   5. Otherwise, use the normalized BEM name as-is (create-if-missing happens downstream).
+	 *
+	 * @param mixed                 $intent       Raw class_intent input (structured object, loose string, null).
+	 * @param array<string, mixed>  $style_tokens Element's style tokens (for dedup).
+	 * @param array<string, array>  $pattern_pool Map of class_name => style_tokens from pattern library (optional).
+	 * @return array{final_name: ?string, source: string, reason: string}
+	 *         source values: 'new', 'site_dedup', 'pattern_dedup', 'none'.
+	 */
+	public function resolve_with_dedup( $intent, array $style_tokens, array $pattern_pool = [] ): array {
+		$normalized = $this->normalize_intent( $intent );
+		if ( $normalized === null ) {
+			return [ 'final_name' => null, 'source' => 'none', 'reason' => 'no_intent_supplied' ];
+		}
+
+		// Build site BEM pool.
+		$site_pool = [];
+		foreach ( $this->class_service->get_all_by_name() as $name => $def ) {
+			if ( $this->normalizer->classify( (string) $name ) === 'bem' ) {
+				$site_pool[ $name ] = $def['settings'] ?? [];
+			}
+		}
+
+		$site_match = $this->dedup->find_bem_match( $style_tokens, $site_pool );
+		if ( $site_match !== null ) {
+			return [ 'final_name' => $site_match, 'source' => 'site_dedup', 'reason' => 'signature_matched_site_class' ];
+		}
+
+		$pattern_match = $this->dedup->find_bem_match( $style_tokens, $pattern_pool );
+		if ( $pattern_match !== null ) {
+			return [ 'final_name' => $pattern_match, 'source' => 'pattern_dedup', 'reason' => 'signature_matched_pattern_class' ];
+		}
+
+		return [ 'final_name' => $normalized, 'source' => 'new', 'reason' => 'no_match_create_fresh' ];
+	}
 }
