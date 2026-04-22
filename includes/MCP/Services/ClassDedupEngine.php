@@ -30,6 +30,26 @@ final class ClassDedupEngine {
         return 'sig:' . substr( hash( 'sha256', wp_json_encode( $canon ) ), 0, 16 );
     }
 
+    /**
+     * Look up a class in a pool whose style signature matches the candidate's.
+     *
+     * @param array                 $candidate_tokens Style tokens to match.
+     * @param array<string, array>  $pool             Map of class_name => style_tokens.
+     * @return string|null Matching class name, or null.
+     */
+    public function find_match( array $candidate_tokens, array $pool ): ?string {
+        $candidate_sig = $this->signature( $candidate_tokens );
+        foreach ( $pool as $name => $tokens ) {
+            if ( ! is_array( $tokens ) ) {
+                continue;
+            }
+            if ( $this->signature( $tokens ) === $candidate_sig ) {
+                return (string) $name;
+            }
+        }
+        return null;
+    }
+
     private function canonicalize( $value ) {
         if ( ! is_array( $value ) ) {
             if ( is_string( $value ) ) {
