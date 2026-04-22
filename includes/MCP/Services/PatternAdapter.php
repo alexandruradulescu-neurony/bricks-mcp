@@ -36,6 +36,16 @@ final class PatternAdapter {
         $structure = $pattern['structure'] ?? [];
         $pattern_roles = $this->collect_roles( $structure );
 
+        // Required-role check (Rule C - required variant).
+        $missing_required = $this->check_required_roles( $structure, $content_map );
+        if ( ! empty( $missing_required ) ) {
+            return [
+                'error'          => 'missing_required_role',
+                'message'        => 'Pattern has required roles not supplied in content_map.',
+                'missing_roles'  => $missing_required,
+            ];
+        }
+
         // Shape mismatch gate (Rule D).
         $mismatch = $this->assess_shape_mismatch( array_keys( $content_map ), $pattern_roles );
         if ( $mismatch['fraction'] > self::SHAPE_MISMATCH_THRESHOLD ) {
@@ -48,20 +58,35 @@ final class PatternAdapter {
         }
 
         $log = [];
-
-        // Rule B: expand repeats.
         $structure = $this->expand_repeats( $structure, $content_map, $log );
-
-        // Rule A: insert extra roles.
         $structure = $this->insert_extras( $structure, $content_map, $pattern_roles, $log );
-
-        // Rule C: drop optional roles not supplied.
         $structure = $this->drop_missing_optional( $structure, $content_map, $log );
 
         return [
             'structure'      => $structure,
             'adaptation_log' => $log,
         ];
+    }
+
+    /**
+     * Walk pattern tree and return a list of roles marked required:true that are absent from content_map.
+     */
+    private function check_required_roles( array $node, array $content_map ): array {
+        $missing = [];
+        $walk = static function ( $n ) use ( &$walk, &$missing, $content_map ) {
+            if ( ! empty( $n['required'] ) && isset( $n['role'] ) ) {
+                if ( ! array_key_exists( $n['role'], $content_map ) ) {
+                    $missing[] = $n['role'];
+                }
+            }
+            foreach ( $n as $v ) {
+                if ( is_array( $v ) ) {
+                    $walk( $v );
+                }
+            }
+        };
+        $walk( $node );
+        return $missing;
     }
 
     /**
@@ -307,8 +332,27 @@ final class PatternAdapter {
         return $elem;
     }
 
-    /** Placeholder — filled in subsequent tasks. */
+    /**
+     * Remove elements from the structure whose role is not present in content_map
+     * (and are not marked required). Runs recursively.
+     */
     private function drop_missing_optional( array $node, array $content_map, array &$log ): array {
+        if ( isset( $node['children'] ) && is_array( $node['children'] ) ) {
+            $kept = [];
+            foreach ( $node['children'] as $child ) {
+                if ( ! is_array( $child ) ) {
+                    $kept[] = $child;
+                    continue;
+                }
+                $role = $child['role'] ?? null;
+                if ( $role !== null && ! array_key_exists( $role, $content_map ) && empty( $child['required'] ) ) {
+                    $log[] = sprintf( 'Pattern had optional role "%s", content omitted → element dropped.', $role );
+                    continue;
+                }
+                $kept[] = $this->drop_missing_optional( $child, $content_map, $log );
+            }
+            $node['children'] = $kept;
+        }
         return $node;
     }
 
