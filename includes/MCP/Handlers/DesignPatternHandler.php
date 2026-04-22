@@ -181,6 +181,9 @@ final class DesignPatternHandler {
 
 	/**
 	 * Get a single pattern by ID.
+	 *
+	 * Optional args:
+	 *   include_drift (bool) — attach drift_report to response (default false).
 	 */
 	private function tool_get( array $args ): array|\WP_Error {
 		$id = sanitize_text_field( $args['id'] ?? '' );
@@ -193,7 +196,39 @@ final class DesignPatternHandler {
 			return new \WP_Error( 'not_found', sprintf( 'Pattern "%s" not found.', $id ) );
 		}
 
+		// v3.29: optional drift report.
+		$include_drift = ! empty( $args['include_drift'] );
+		if ( $include_drift ) {
+			$pattern['drift_report'] = $this->compute_drift( $pattern );
+		}
+
 		return $pattern;
+	}
+
+	/**
+	 * Compute drift report for a pattern. Cached in transient for 60s.
+	 *
+	 * Reuses the already-injected BricksService to obtain GlobalClassService,
+	 * avoiding redundant instantiation of BricksCore.
+	 *
+	 * @param array<string, mixed> $pattern Full pattern array.
+	 * @return array<string, mixed> Drift report from PatternDriftDetector::detect().
+	 */
+	private function compute_drift( array $pattern ): array {
+		$cache_key = 'bricks_mcp_pattern_drift_' . ( $pattern['id'] ?? '' );
+		$cached    = get_transient( $cache_key );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+
+		$class_service = $this->bricks_service->get_global_class_service();
+		$site_classes  = $class_service->get_all_by_name();
+
+		$detector = new \BricksMCP\MCP\Services\PatternDriftDetector();
+		$report   = $detector->detect( $pattern, $site_classes );
+
+		set_transient( $cache_key, $report, 60 );
+		return $report;
 	}
 
 	/**
@@ -442,6 +477,10 @@ final class DesignPatternHandler {
 					'required' => [
 						'type'        => 'boolean',
 						'description' => __( 'Mark role as required (true) or unmark (false). Default true. (mark_required: optional)', 'bricks-mcp' ),
+					],
+					'include_drift' => [
+						'type'        => 'boolean',
+						'description' => __( 'Include drift_report in response (get: optional, default false)', 'bricks-mcp' ),
 					],
 				],
 				'required'   => [ 'action' ],
