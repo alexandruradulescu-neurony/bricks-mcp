@@ -216,7 +216,13 @@ final class Router {
 			'media'         => new Handlers\MediaHandler( $this->media_service, $require_bricks ),
 			'font'          => new Handlers\FontHandler( $this->bricks_service, $require_bricks ),
 			'code'          => new Handlers\CodeHandler( $this->bricks_service, $require_bricks ),
-			'proposal'      => new Handlers\ProposalHandler( $proposal_service, $require_bricks ),
+			'proposal'      => new Handlers\ProposalHandler(
+				$proposal_service,
+				$require_bricks,
+				$this->bricks_service,
+				$vision_generator,
+				$image_resolver
+			),
 			'build'         => $build_handler = new Handlers\BuildHandler(
 				$this->bricks_service,
 				$design_validator,
