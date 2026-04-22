@@ -101,10 +101,12 @@ final class DesignPatternHandler {
 		}
 
 		$meta = [
-			'id'       => sanitize_key( $args['id'] ?? $this->slugify( $name ) ),
-			'name'     => $name,
-			'category' => $category,
-			'tags'     => array_values( array_filter( array_map( 'sanitize_text_field', (array) ( $args['tags'] ?? [] ) ) ) ),
+			'id'         => sanitize_key( $args['id'] ?? $this->slugify( $name ) ),
+			'name'       => $name,
+			'category'   => $category,
+			'tags'       => array_values( array_filter( array_map( 'sanitize_text_field', (array) ( $args['tags'] ?? [] ) ) ) ),
+			'layout'     => sanitize_text_field( $args['layout'] ?? '' ),
+			'background' => sanitize_text_field( $args['background'] ?? '' ),
 		];
 
 		$validator = new PatternValidator();
@@ -339,6 +341,16 @@ final class DesignPatternHandler {
 					'tags'     => [
 						'type'        => 'array',
 						'description' => __( 'Pattern tags (capture: optional; list: optional filter)', 'bricks-mcp' ),
+					],
+					'layout' => [
+						'type'        => 'string',
+						'enum'        => [ 'centered', 'split-60-40', 'split-50-50', 'grid-2', 'grid-3', 'grid-4', 'stacked' ],
+						'description' => __( 'Layout shape (capture: optional, default inferred from structure)', 'bricks-mcp' ),
+					],
+					'background' => [
+						'type'        => 'string',
+						'enum'        => [ 'dark', 'light' ],
+						'description' => __( 'Background tone (capture: optional, default inferred from section _background color)', 'bricks-mcp' ),
 					],
 				],
 				'required'   => [ 'action' ],

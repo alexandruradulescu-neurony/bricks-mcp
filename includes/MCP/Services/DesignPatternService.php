@@ -131,6 +131,19 @@ final class DesignPatternService {
 	}
 
 	/**
+	 * Return ALL patterns as full objects (including structure, classes, variables).
+	 *
+	 * Used by PatternCatalog and admin UI for anything that needs the full pattern tree.
+	 * list_all() is intentionally a thin summary and cannot be changed without breaking
+	 * other callers that expect small payloads.
+	 *
+	 * @return array<int, array>
+	 */
+	public static function get_all_full(): array {
+		return self::load_all();
+	}
+
+	/**
 	 * Get a summary list of all patterns.
 	 *
 	 * @return array<int, array> Pattern summaries.

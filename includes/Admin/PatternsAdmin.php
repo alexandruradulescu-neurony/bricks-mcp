@@ -53,6 +53,10 @@ class PatternsAdmin {
 	 */
 	public function render(): void {
 		$patterns = DesignPatternService::list_all();
+		$full_patterns_by_id = [];
+		foreach ( DesignPatternService::get_all_full() as $fp ) {
+			$full_patterns_by_id[ $fp['id'] ?? '' ] = $fp;
+		}
 
 		// Collect unique categories from patterns for the filter dropdown.
 		$categories = [];
@@ -119,7 +123,10 @@ class PatternsAdmin {
 						<td><?php echo esc_html( ucfirst( $p['category'] ?? '' ) ); ?></td>
 						<td><?php echo esc_html( $p['layout'] ?? '' ); ?></td>
 						<td style="font-family:monospace;font-size:11px;color:#666;">
-							<?php echo esc_html( ( new \BricksMCP\MCP\Services\PatternCatalog() )->build_structural_summary( $p ) ); ?>
+							<?php
+							$full_p = $full_patterns_by_id[ $p['id'] ?? '' ] ?? $p;
+							echo esc_html( ( new \BricksMCP\MCP\Services\PatternCatalog() )->build_structural_summary( $full_p ) );
+							?>
 						</td>
 						<td>
 							<button type="button" class="button button-small bricks-mcp-view-pattern" data-id="<?php echo esc_attr( $p['id'] ); ?>"><?php esc_html_e( 'View', 'bricks-mcp' ); ?></button>

@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.27.1
+Stable tag: 3.27.2
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,13 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.27.2 =
+**Bug fixes for pattern catalog**
+* Fix: discovery catalog now shows populated structural_summary + class_refs_preview (was empty because catalog used pattern summaries instead of full structures).
+* Fix: admin Patterns table Structure column now renders the actual tree.
+* Fix: capture action now accepts and infers layout + background fields from structure.
+* Added: DesignPatternService::get_all_full() public API for consumers that need full pattern trees.
 
 = 3.27.1 =
 **Bug fixes for v3.27.0**

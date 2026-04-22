@@ -57,7 +57,85 @@ final class PatternCapture {
 			],
 		] );
 
+		// Infer layout + background if the handler didn't pass them.
+		if ( empty( $pattern['layout'] ) ) {
+			$pattern['layout'] = $this->infer_layout( $structure );
+		}
+		if ( empty( $pattern['background'] ) ) {
+			$pattern['background'] = $this->infer_background( $structure );
+		}
+
 		return $this->validator->validate_with_context( $pattern, $site_context );
+	}
+
+	/**
+	 * Infer layout shape from the captured structure.
+	 *
+	 * Heuristic: look at section > container > direct children.
+	 *   - 2 sibling containers/blocks (split layout) → "split-50-50" (can't detect 60-40 reliably)
+	 *   - grid layout keyword in style_tokens → map to grid-N
+	 *   - default: "centered"
+	 */
+	private function infer_layout( array $structure ): string {
+		// Find the first container.
+		$container = null;
+		foreach ( $structure['children'] ?? [] as $child ) {
+			if ( is_array( $child ) && ( $child['type'] ?? '' ) === 'container' ) {
+				$container = $child;
+				break;
+			}
+		}
+		if ( $container === null ) {
+			return 'centered';
+		}
+
+		$children  = $container['children'] ?? [];
+		$grid_cols = $container['style_tokens']['_gridTemplateColumns'] ?? '';
+
+		if ( $grid_cols !== '' ) {
+			// e.g. "var(--grid-3)" → 3; "repeat(3, 1fr)" → 3
+			if ( preg_match( '/grid-(\d)/', $grid_cols, $m ) ) {
+				return 'grid-' . (int) $m[1];
+			}
+			if ( preg_match( '/repeat\((\d)/', $grid_cols, $m ) ) {
+				return 'grid-' . (int) $m[1];
+			}
+		}
+
+		if ( count( $children ) === 2 ) {
+			return 'split-50-50';
+		}
+
+		return 'centered';
+	}
+
+	/**
+	 * Infer background tone from top-level section _background color.
+	 * "dark" if color resolves to a dark variable; else "light".
+	 */
+	private function infer_background( array $structure ): string {
+		$bg = $structure['style_tokens']['_background']['color']['raw'] ?? '';
+		if ( $bg === '' ) {
+			return 'light';
+		}
+		$lower = strtolower( $bg );
+		// Common dark variable patterns.
+		if ( str_contains( $lower, 'base-ultra-dark' ) ||
+			 str_contains( $lower, 'base-dark' ) ||
+			 str_contains( $lower, '--black' ) ||
+			 str_contains( $lower, 'primary-ultra-dark' ) ) {
+			return 'dark';
+		}
+		// Check raw rgb/hex for darkness.
+		if ( preg_match( '/#([0-9a-f]{6})/i', $bg, $m ) ) {
+			$hex       = $m[1];
+			$r         = hexdec( substr( $hex, 0, 2 ) );
+			$g         = hexdec( substr( $hex, 2, 2 ) );
+			$b         = hexdec( substr( $hex, 4, 2 ) );
+			$luminance = ( 0.299 * $r + 0.587 * $g + 0.114 * $b ) / 255;
+			return $luminance < 0.5 ? 'dark' : 'light';
+		}
+		return 'light';
 	}
 
 	/**

@@ -32,7 +32,7 @@ final class PatternCatalog {
             : array_unique( array_merge( $this->likely_categories( $section_type ), [ 'generic' ] ) );
         $scope = array_values( array_unique( $scope ) );
 
-        $all = DesignPatternService::list_all();
+        $all = DesignPatternService::get_all_full();
         $in_scope = array_values( array_filter( $all, fn( $p ) => in_array( $p['category'] ?? '', $scope, true ) ) );
 
         $patterns = array_map( fn( $p ) => $this->catalog_entry( $p ), $in_scope );

@@ -4,6 +4,14 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.27.2] — 2026-04-22
+
+**Bug fixes for pattern catalog**
+* Fix: discovery catalog now shows populated structural_summary + class_refs_preview (was empty because catalog used pattern summaries instead of full structures).
+* Fix: admin Patterns table Structure column now renders the actual tree.
+* Fix: capture action now accepts and infers layout + background fields from structure.
+* Added: DesignPatternService::get_all_full() public API for consumers that need full pattern trees.
+
 ## [3.27.1] — 2026-04-22
 
 **Bug fixes for v3.27.0**
