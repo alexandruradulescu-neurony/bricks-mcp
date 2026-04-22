@@ -257,20 +257,19 @@ final class DesignPatternHandler {
 			'background' => $mapped['background'] ?? '',
 		];
 
-		$validator              = new PatternValidator();
-		$site_vars_for_validate = [];
-		foreach ( $site_context['variables'] as $vname => $vval ) {
-			$site_vars_for_validate[ $vname ] = [ 'value' => (string) $vval ];
-		}
+		$validator = new PatternValidator();
 
 		// Refresh class map so any just-provisioned classes are visible to the validator.
 		$refreshed_classes = $classes->get_all_by_name();
 
+		// Pass site variables through unchanged — PatternValidator::validate_with_context
+		// normalizes both shapes (full Bricks variable records or scalar strings). Matches
+		// PatternCapture::capture() behavior — no re-wrapping.
 		$pattern_input = array_merge( $meta_pattern, [ 'structure' => $mapped['structure'] ] );
 		$validated     = $validator->validate_with_context(
 			$pattern_input,
 			[
-				'variables' => $site_vars_for_validate,
+				'variables' => $site_context['variables'],
 				'classes'   => $refreshed_classes,
 			]
 		);
