@@ -337,9 +337,9 @@ final class OnboardingService {
             'design_builds' => [
                 'description' => __( 'Build complete pages from design schemas', 'bricks-mcp' ),
                 'prerequisites' => [ 'get_site_info', 'global_class:list', 'global_variable:list' ],
-                'tools' => [ 'propose_design', 'build_from_schema' ],
+                'tools' => [ 'propose_design', 'build_structure', 'populate_content' ],
                 'example' => __( 'Design a services page with hero, features, pricing, and CTA sections', 'bricks-mcp' ),
-                'flow' => __( 'Call propose_design first → review resolved data → write schema → call build_from_schema', 'bricks-mcp' ),
+                'flow' => __( 'Call propose_design → review resolved data → build_structure(proposal_id) → populate_content(section_id, content_map) → verify_build', 'bricks-mcp' ),
             ],
             'knowledge_library' => [
                 'description' => __( 'Domain-specific guidance for complex subsystems', 'bricks-mcp' ),
