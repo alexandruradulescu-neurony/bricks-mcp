@@ -205,6 +205,8 @@ final class Router {
 				$element_settings_gen,
 				$proposal_service
 			),
+			'build_structure'  => new Handlers\BuildStructureHandler( $this->handlers['build'] ),
+			'populate_content' => new Handlers\PopulateContentHandler( $this->bricks_service, $this->media_service ),
 			'onboarding'    => new OnboardingHandler( new OnboardingService( $this->bricks_service ) ),
 			'verify'        => new Handlers\VerifyHandler( $this->bricks_service, $require_bricks ),
 			'page_layout'      => new Handlers\PageLayoutHandler( new PageLayoutService(), $require_bricks ),
@@ -895,7 +897,7 @@ final class Router {
 			'bricks_tool', 'page', 'element', 'template', 'global_class',
 			'design_system', 'media', 'menu', 'component', 'woocommerce',
 			'font', 'code', 'proposal', 'build', 'verify', 'page_layout',
-			'design_pattern',
+			'design_pattern', 'build_structure', 'populate_content',
 		];
 
 		foreach ( $bricks_handler_keys as $key ) {
