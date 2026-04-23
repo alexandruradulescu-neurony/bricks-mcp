@@ -4,6 +4,29 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.33.0] — 2026-04-23
+
+**Intelligence layer final polish**
+
+Closes the parked intelligence-layer backlog spec. Most items (whitelist → blocklist, verify content extraction, grid/empty/responsive warnings, working-example registry) were already landed in v3.22.0. This release fills the remaining gaps.
+
+### Added
+
+- **Heading hierarchy warning** (`DesignSchemaValidator::check_heading_hierarchy`) — non-blocking warning when a section has multiple h1 elements or skips a heading level (e.g. h2 → h4). Surfaces alongside existing grid/empty/responsive warnings in the build response. Accessibility improvement.
+- **Section style values in `verify_build`** (`PageOperationsService::describe_section`) — each section now reports a `styles` object with `min_height` and inline `background_color` (raw CSS value, e.g. `var(--base-ultra-dark)`) when set. Lets AI callers verify the hero's actual height / bg without a browser check.
+- **Expanded registry defaults** (`data/elements.json`) — `element_settings_defaults` now covers 16 elements (up from 6). New entries: `accordion-nested`, `countdown`, `image-gallery`, `dropdown`, `offcanvas`, `popup`, `toggle`, `posts`, `form`, `carousel`. Pipeline auto-merges these when `element_settings` is omitted, producing functional elements without the AI having to remember every key.
+
+### Changed
+
+- **`DANGEROUS_SETTINGS_BLOCKED`** — added `_cssCustom` to the 5-key blocklist (now 6 keys). Closes the bypass path where `element_settings._cssCustom` could inject raw CSS on any element type. `ElementNormalizer` already strips this from text elements; this blocks at the schema level for all element types.
+
+### Already landed in v3.22.0 (spec was outdated)
+
+- Whitelist → blocklist (`DANGEROUS_SETTINGS_BLOCKED`)
+- verify_build content extraction (`content_sample.headings`/`buttons`/`texts`, `has_placeholder_content`)
+- Grid columns vs children warning, empty content warning, responsive completeness warning
+- Working examples in `data/elements.json` (76/76 coverage), `SchemaGenerator::generate_working_example` reads registry-first
+
 ## [3.32.3] — 2026-04-23
 
 **Fix: [object Object] in class settings (nested dimension shape)**

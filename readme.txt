@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.32.3
+Stable tag: 3.33.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,14 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.33.0 =
+**Intelligence layer final polish**
+
+* Added: heading hierarchy warning — non-blocking flag when a section has multiple h1 or skips levels (h2 → h4). Accessibility improvement.
+* Added: `verify_build` now reports `styles.min_height` and `styles.background_color` per section. Raw CSS values — verify hero height / bg without browser.
+* Added: 10 more elements now have `element_settings_defaults` (accordion-nested, countdown, image-gallery, dropdown, offcanvas, popup, toggle, posts, form, carousel). Pipeline auto-merges defaults when `element_settings` omitted.
+* Changed: `_cssCustom` added to `DANGEROUS_SETTINGS_BLOCKED`. Closes element_settings bypass for raw CSS injection.
 
 = 3.32.3 =
 **Fix: [object Object] in class settings**

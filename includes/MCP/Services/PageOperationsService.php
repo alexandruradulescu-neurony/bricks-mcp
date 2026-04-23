@@ -788,7 +788,20 @@ class PageOperationsService {
 
 		$label = $section['settings']['label'] ?? $section['label'] ?? 'Section';
 
-		return [
+		// Extract section-level style values that AI callers commonly need to verify:
+		// min_height (hero ~80vh, full viewport, etc.) + raw background color when set inline.
+		$min_height = $section['settings']['_minHeight'] ?? '';
+		$bg_raw     = $section['settings']['_background']['color']['raw'] ?? '';
+
+		$styles = [];
+		if ( '' !== $min_height && null !== $min_height ) {
+			$styles['min_height'] = is_scalar( $min_height ) ? (string) $min_height : '';
+		}
+		if ( '' !== $bg_raw ) {
+			$styles['background_color'] = (string) $bg_raw;
+		}
+
+		$result = [
 			'label'         => $label,
 			'description'   => implode( '. ', $desc_parts ) . '.',
 			'element_count' => $element_count,
@@ -796,6 +809,12 @@ class PageOperationsService {
 			'layout'        => $layout,
 			'background'    => $bg,
 		];
+
+		if ( ! empty( $styles ) ) {
+			$result['styles'] = $styles;
+		}
+
+		return $result;
 	}
 
 	/**

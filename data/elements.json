@@ -3,29 +3,57 @@
   "_maintenance": "Per-element fields: valid_parents (required, array of allowed parent types or 'root'), accepts_children (required, bool), typical_children (optional, array for containers), content_key (optional, string — the Bricks settings key that schema.content maps to), default_tag (optional, string — default HTML tag), flex_by_default (optional, bool — pipeline auto-applies _display:flex), structural (optional, bool — a layout element rather than content), skip_auto_flex (optional, bool — nested elements that manage their own layout), nestable (optional, bool — Bricks nestable element with child-element support), element_settings_defaults (optional, object — sane defaults merged into settings when no element_settings given), working_example (optional, object — minimal valid settings returned by bricks:get_element_schemas; also used as content_key fallback), purpose (optional, string — one-line description served to AI), capabilities (optional, array — what the element can do), rules (optional, array — do's and don'ts for the AI), notes (optional, string — free-form hints).",
   "elements": {
     "accordion": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Deprecated base version. Use accordion-nested for customizable accordion content — its child divs are the panes.",
       "purpose": "Deprecated — use accordion-nested for customizable accordion content",
       "working_example": {
         "accordions": [
-          { "id": "acc001", "title": "Accordion Item 1", "subtitle": "More details", "content": "Content of accordion item 1." },
-          { "id": "acc002", "title": "Accordion Item 2", "content": "Content of accordion item 2." }
+          {
+            "id": "acc001",
+            "title": "Accordion Item 1",
+            "subtitle": "More details",
+            "content": "Content of accordion item 1."
+          },
+          {
+            "id": "acc002",
+            "title": "Accordion Item 2",
+            "content": "Content of accordion item 2."
+          }
         ],
         "titleTag": "h4",
-        "icon": { "library": "ionicons", "icon": "ion-ios-arrow-forward" },
-        "iconExpanded": { "library": "ionicons", "icon": "ion-ios-arrow-down" }
+        "icon": {
+          "library": "ionicons",
+          "icon": "ion-ios-arrow-forward"
+        },
+        "iconExpanded": {
+          "library": "ionicons",
+          "icon": "ion-ios-arrow-down"
+        }
       }
     },
     "accordion-nested": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": true,
-      "typical_children": ["div"],
+      "typical_children": [
+        "div"
+      ],
       "skip_auto_flex": true,
       "notes": "Each accordion item is a div child.",
       "nestable": true,
       "purpose": "Collapsible FAQ/accordion sections",
-      "capabilities": ["multiple panels with any nested content", "click to expand/collapse"],
+      "capabilities": [
+        "multiple panels with any nested content",
+        "click to expand/collapse"
+      ],
       "working_example": {
         "_nestable_children": [
           {
@@ -39,17 +67,25 @@
                   "_direction": "row",
                   "_justifyContent": "space-between",
                   "_alignItems": "center",
-                  "_hidden": { "_cssClasses": "accordion-title-wrapper" }
+                  "_hidden": {
+                    "_cssClasses": "accordion-title-wrapper"
+                  }
                 },
                 "children": [
                   {
                     "name": "heading",
-                    "settings": { "text": "Accordion Title", "tag": "h3" }
+                    "settings": {
+                      "text": "Accordion Title",
+                      "tag": "h3"
+                    }
                   },
                   {
                     "name": "icon",
                     "settings": {
-                      "icon": { "icon": "ion-ios-arrow-forward", "library": "ionicons" },
+                      "icon": {
+                        "icon": "ion-ios-arrow-forward",
+                        "library": "ionicons"
+                      },
                       "iconSize": "1em",
                       "isAccordionIcon": true
                     }
@@ -60,51 +96,90 @@
                 "name": "block",
                 "label": "Content",
                 "settings": {
-                  "_hidden": { "_cssClasses": "accordion-content-wrapper" }
+                  "_hidden": {
+                    "_cssClasses": "accordion-content-wrapper"
+                  }
                 },
                 "children": [
                   {
                     "name": "text",
-                    "settings": { "text": "Accordion content goes here." }
+                    "settings": {
+                      "text": "Accordion content goes here."
+                    }
                   }
                 ]
               }
             ]
           }
         ]
+      },
+      "element_settings_defaults": {
+        "expandFirstItem": false,
+        "accordionItemsCollapsed": true
       }
     },
     "alert": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "content",
       "purpose": "Notification banner — info, success, warning, error",
-      "capabilities": ["icon + text content", "dismissible flag", "color variants"],
-      "rules": ["content goes in the alert text setting; choose alert type for color"],
+      "capabilities": [
+        "icon + text content",
+        "dismissible flag",
+        "color variants"
+      ],
+      "rules": [
+        "content goes in the alert text setting; choose alert type for color"
+      ],
       "working_example": {
         "content": "<p>This is an alert message.</p>",
         "type": "info"
       }
     },
     "animated-typing": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "prefix",
       "element_settings_defaults": {
-        "strings": ["Loading..."],
+        "strings": [
+          "Loading..."
+        ],
         "typeSpeed": 80
       },
       "notes": "Compositional element — 'prefix' + animated 'strings' array + 'suffix'. schema.content maps to prefix (static text before animation). Use element_settings for the 'strings' array with actual animated words.",
       "purpose": "Typewriter / typing animation effect — cycles through a list of strings",
-      "capabilities": ["multiple strings to cycle through", "type/back speed", "loop"],
-      "rules": ["use element_settings.strings (array of strings to cycle), typeSpeed (ms per char)"],
+      "capabilities": [
+        "multiple strings to cycle through",
+        "type/back speed",
+        "loop"
+      ],
+      "rules": [
+        "use element_settings.strings (array of strings to cycle), typeSpeed (ms per char)"
+      ],
       "working_example": {
         "prefix": "We ",
         "suffix": " for you!",
         "strings": [
-          { "id": "aty001", "text": "design" },
-          { "id": "aty002", "text": "code" },
-          { "id": "aty003", "text": "launch" }
+          {
+            "id": "aty001",
+            "text": "design"
+          },
+          {
+            "id": "aty002",
+            "text": "code"
+          },
+          {
+            "id": "aty003",
+            "text": "launch"
+          }
         ],
         "typeSpeed": 55,
         "backSpeed": 30,
@@ -112,40 +187,79 @@
       }
     },
     "audio": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "HTML5 audio player. Supply a media URL or attachment ID.",
       "purpose": "HTML5 audio player — podcasts, music, sound clips",
-      "capabilities": ["self-hosted or external audio URL", "native browser play/pause controls"],
+      "capabilities": [
+        "self-hosted or external audio URL",
+        "native browser play/pause controls"
+      ],
       "working_example": {}
     },
     "back-to-top": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": true,
-      "typical_children": ["icon", "text-basic"],
+      "typical_children": [
+        "icon",
+        "text-basic"
+      ],
       "nestable": true,
       "notes": "Nestable back-to-top button. Children define the button content (icon + optional label).",
       "purpose": "Scroll-to-top button — fixed position, appears on scroll",
-      "capabilities": ["nestable — icon + text children define button content", "auto-shows after scroll threshold"],
+      "capabilities": [
+        "nestable — icon + text children define button content",
+        "auto-shows after scroll threshold"
+      ],
       "working_example": {
         "_nestable_children": [
           {
             "name": "icon",
             "settings": {
-              "icon": { "library": "ionicons", "icon": "ion-ios-arrow-up" }
+              "icon": {
+                "library": "ionicons",
+                "icon": "ion-ios-arrow-up"
+              }
             }
           },
           {
             "name": "text-basic",
-            "settings": { "text": "Back to top" }
+            "settings": {
+              "text": "Back to top"
+            }
           }
         ]
       }
     },
     "block": {
-      "valid_parents": ["container", "div", "block", "tabs-nested", "accordion-nested", "slider-nested"],
+      "valid_parents": [
+        "container",
+        "div",
+        "block",
+        "tabs-nested",
+        "accordion-nested",
+        "slider-nested"
+      ],
       "accepts_children": true,
-      "typical_children": ["heading", "text", "text-basic", "button", "image", "icon", "div", "block"],
+      "typical_children": [
+        "heading",
+        "text",
+        "text-basic",
+        "button",
+        "image",
+        "icon",
+        "div",
+        "block"
+      ],
       "structural": true,
       "flex_by_default": true,
       "purpose": "Structural grouping — columns, rows, card wrappers",
@@ -155,19 +269,32 @@
         "semantic HTML tags (ul, li, article, nav, figure)",
         "responsive grid collapse"
       ],
-      "rules": ["use block for horizontal rows — NOT div (div ignores _direction)"],
+      "rules": [
+        "use block for horizontal rows — NOT div (div ignores _direction)"
+      ],
       "working_example": {}
     },
     "breadcrumbs": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Auto-generated breadcrumb navigation trail.",
       "purpose": "Breadcrumb navigation trail — Home > Parent > Current page",
-      "capabilities": ["auto-generated from WordPress page hierarchy", "custom separator character"],
+      "capabilities": [
+        "auto-generated from WordPress page hierarchy",
+        "custom separator character"
+      ],
       "working_example": {}
     },
     "button": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "text",
       "purpose": "Call-to-action button",
@@ -176,76 +303,163 @@
         "link with tel: or https:// URL",
         "style variants via class_intent (primary, outline, ghost)"
       ],
-      "rules": ["use native icon feature — do NOT put emoji in button text"],
+      "rules": [
+        "use native icon feature — do NOT put emoji in button text"
+      ],
       "working_example": {
         "text": "Click Me",
         "style": "primary",
-        "link": { "type": "external", "url": "#" }
+        "link": {
+          "type": "external",
+          "url": "#"
+        }
       }
     },
     "carousel": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Simple carousel element (non-nested). For custom carousel content, use slider-nested with div children.",
       "purpose": "Simple post carousel — use slider-nested for custom content slides",
-      "capabilities": ["dynamic data fields from posts query", "arrows, infinite loop, auto-rotation"],
+      "capabilities": [
+        "dynamic data fields from posts query",
+        "arrows, infinite loop, auto-rotation"
+      ],
       "working_example": {
         "fields": [
           {
             "id": "crf001",
             "dynamicData": "{post_title:link}",
             "tag": "h3",
-            "dynamicMargin": { "top": 20, "right": 0, "bottom": 20, "left": 0 }
+            "dynamicMargin": {
+              "top": 20,
+              "right": 0,
+              "bottom": 20,
+              "left": 0
+            }
           },
-          { "id": "crf002", "dynamicData": "{post_excerpt:20}" }
+          {
+            "id": "crf002",
+            "dynamicData": "{post_excerpt:20}"
+          }
         ],
         "arrows": true,
         "infinite": true,
-        "prevArrow": { "library": "ionicons", "icon": "ion-ios-arrow-back" },
-        "nextArrow": { "library": "ionicons", "icon": "ion-ios-arrow-forward" }
+        "prevArrow": {
+          "library": "ionicons",
+          "icon": "ion-ios-arrow-back"
+        },
+        "nextArrow": {
+          "library": "ionicons",
+          "icon": "ion-ios-arrow-forward"
+        }
+      },
+      "element_settings_defaults": {
+        "autoplay": false,
+        "arrows": true,
+        "dots": true,
+        "loop": false
       }
     },
     "code": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Inline HTML/CSS/JS code snippet.",
       "purpose": "Custom HTML/CSS/JS/PHP code block",
-      "capabilities": ["inline code rendering", "PHP execution when dangerous actions enabled"],
-      "rules": ["requires 'Dangerous Actions' toggle enabled in plugin settings for PHP"],
+      "capabilities": [
+        "inline code rendering",
+        "PHP execution when dangerous actions enabled"
+      ],
+      "rules": [
+        "requires 'Dangerous Actions' toggle enabled in plugin settings for PHP"
+      ],
       "working_example": {
         "code": "<h1>Custom HTML/PHP</h1><?php echo date(\"Y\"); ?>",
         "executeCode": true
       }
     },
     "container": {
-      "valid_parents": ["section"],
+      "valid_parents": [
+        "section"
+      ],
       "accepts_children": true,
-      "typical_children": ["block", "div", "heading", "text", "text-basic", "button", "image"],
+      "typical_children": [
+        "block",
+        "div",
+        "heading",
+        "text",
+        "text-basic",
+        "button",
+        "image"
+      ],
       "structural": true,
       "flex_by_default": true,
       "purpose": "Content container inside a section — controls max-width and centering",
-      "capabilities": ["flex alignment (_alignItems, _justifyContent)", "text-align for centered text layouts"],
-      "rules": ["DO NOT set _gap — child theme handles it", "use multiple containers for multiple visual rows"],
+      "capabilities": [
+        "flex alignment (_alignItems, _justifyContent)",
+        "text-align for centered text layouts"
+      ],
+      "rules": [
+        "DO NOT set _gap — child theme handles it",
+        "use multiple containers for multiple visual rows"
+      ],
       "working_example": {}
     },
     "countdown": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Countdown timer to a target date/time.",
       "purpose": "Countdown timer to a target date/time — launches, events, sales",
-      "capabilities": ["configurable date target", "days/hours/minutes/seconds format fields"],
+      "capabilities": [
+        "configurable date target",
+        "days/hours/minutes/seconds format fields"
+      ],
       "working_example": {
         "date": "2026-12-31 00:00",
         "fields": [
-          { "id": "cdf001", "format": "%D days" },
-          { "id": "cdf002", "format": "%H hours" },
-          { "id": "cdf003", "format": "%M minutes" },
-          { "id": "cdf004", "format": "%S seconds" }
+          {
+            "id": "cdf001",
+            "format": "%D days"
+          },
+          {
+            "id": "cdf002",
+            "format": "%H hours"
+          },
+          {
+            "id": "cdf003",
+            "format": "%M minutes"
+          },
+          {
+            "id": "cdf004",
+            "format": "%S seconds"
+          }
         ]
+      },
+      "element_settings_defaults": {
+        "format": "dHMS",
+        "dateFormat": "timestamp"
       }
     },
     "counter": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "countTo",
       "element_settings_defaults": {
@@ -253,77 +467,166 @@
         "duration": 2000
       },
       "purpose": "Animated number counter",
-      "capabilities": ["count-to target number", "prefix/suffix text", "animation on scroll"],
+      "capabilities": [
+        "count-to target number",
+        "prefix/suffix text",
+        "animation on scroll"
+      ],
       "working_example": {
         "countTo": "1000"
       }
     },
     "custom-title": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "title",
       "notes": "Custom title element with separate title and subtitle fields.",
       "purpose": "Decorative title with separate subtitle field",
-      "capabilities": ["title + subtitle rendered as one element", "independent styling per part"],
+      "capabilities": [
+        "title + subtitle rendered as one element",
+        "independent styling per part"
+      ],
       "working_example": {
         "title": "Custom Title",
         "subtitle": "Subtitle text here"
       }
     },
     "div": {
-      "valid_parents": ["container", "div", "block", "tabs-nested", "accordion-nested", "slider-nested"],
+      "valid_parents": [
+        "container",
+        "div",
+        "block",
+        "tabs-nested",
+        "accordion-nested",
+        "slider-nested"
+      ],
       "accepts_children": true,
-      "typical_children": ["heading", "text", "text-basic", "button", "image", "icon", "div", "block"],
+      "typical_children": [
+        "heading",
+        "text",
+        "text-basic",
+        "button",
+        "image",
+        "icon",
+        "div",
+        "block"
+      ],
       "structural": true,
       "notes": "Does NOT default to flex. Requires explicit _display: flex for flex layouts.",
       "purpose": "Small wrapper — icon circles, overlays, decorative containers",
-      "capabilities": ["explicit _display: flex for centering content"],
-      "rules": ["does NOT support _direction — use block instead for rows"],
+      "capabilities": [
+        "explicit _display: flex for centering content"
+      ],
+      "rules": [
+        "does NOT support _direction — use block instead for rows"
+      ],
       "working_example": {}
     },
     "divider": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "purpose": "Horizontal separator line",
-      "capabilities": ["custom width, color, style"],
+      "capabilities": [
+        "custom width, color, style"
+      ],
       "working_example": {}
     },
     "dropdown": {
-      "valid_parents": ["container", "block"],
+      "valid_parents": [
+        "container",
+        "block"
+      ],
       "accepts_children": true,
-      "typical_children": ["block"],
+      "typical_children": [
+        "block"
+      ],
       "nestable": true,
       "notes": "Dropdown menu container (nestable). Children are the dropdown items.",
       "purpose": "Dropdown menu container — for navigation submenus",
-      "capabilities": ["hover or click trigger via element_settings.trigger", "nestable — children are dropdown items"],
+      "capabilities": [
+        "hover or click trigger via element_settings.trigger",
+        "nestable — children are dropdown items"
+      ],
       "working_example": {
         "text": "Dropdown"
+      },
+      "element_settings_defaults": {
+        "trigger": "click",
+        "closeOnOutsideClick": true
       }
     },
     "facebook-page": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Facebook Page embed widget.",
       "purpose": "Facebook Page embed widget — timeline, events feed",
-      "capabilities": ["page timeline and events tabs", "configurable width and height"],
+      "capabilities": [
+        "page timeline and events tabs",
+        "configurable width and height"
+      ],
       "working_example": {
         "href": "https://facebook.com/facebook"
       }
     },
     "form": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": true,
-      "typical_children": ["form-field"],
+      "typical_children": [
+        "form-field"
+      ],
       "notes": "Schema must supply 'fields' array via element_settings. The pipeline no longer injects default field templates — AI must specify newsletter/contact/login fields explicitly per site language/branding.",
       "purpose": "Contact or input form",
-      "capabilities": ["text fields, email, textarea, select, checkbox", "submit button", "email notifications"],
+      "capabilities": [
+        "text fields, email, textarea, select, checkbox",
+        "submit button",
+        "email notifications"
+      ],
       "working_example": {
         "fields": [
-          { "id": "abc123", "type": "text", "label": "Name", "placeholder": "Your Name", "required": false, "width": 100 },
-          { "id": "def456", "type": "email", "label": "Email", "placeholder": "Your Email", "required": true, "width": 100 },
-          { "id": "ghi789", "type": "textarea", "label": "Message", "placeholder": "Your Message", "required": true, "width": 100 }
+          {
+            "id": "abc123",
+            "type": "text",
+            "label": "Name",
+            "placeholder": "Your Name",
+            "required": false,
+            "width": 100
+          },
+          {
+            "id": "def456",
+            "type": "email",
+            "label": "Email",
+            "placeholder": "Your Email",
+            "required": true,
+            "width": 100
+          },
+          {
+            "id": "ghi789",
+            "type": "textarea",
+            "label": "Message",
+            "placeholder": "Your Message",
+            "required": true,
+            "width": 100
+          }
         ],
-        "actions": ["email"],
+        "actions": [
+          "email"
+        ],
         "submitButtonStyle": "primary",
         "successMessage": "Message successfully sent. We will get back to you as soon as possible.",
         "emailSubject": "Contact form request",
@@ -331,10 +634,18 @@
         "fromName": "{site_name}",
         "htmlEmail": true,
         "submitButtonText": "Send"
+      },
+      "element_settings_defaults": {
+        "submitButtonText": "Submit",
+        "fields": []
       }
     },
     "heading": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "text",
       "default_tag": "h2",
@@ -343,35 +654,61 @@
         "HTML in content — use <span style=\"color:var(--secondary)\">text</span> for colored words",
         "tag: h1 for page titles, h2 for sections, h3-h4 for cards"
       ],
-      "rules": ["DO NOT set font-size, color, line-height, font-weight — child theme handles all heading styles"],
+      "rules": [
+        "DO NOT set font-size, color, line-height, font-weight — child theme handles all heading styles"
+      ],
       "working_example": {
         "text": "Heading Text",
         "tag": "h2"
       }
     },
     "icon": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "purpose": "Single decorative or functional icon",
-      "capabilities": ["Themify icon library (ti-truck, ti-shield, ti-timer, etc.)", "custom size, color"],
+      "capabilities": [
+        "Themify icon library (ti-truck, ti-shield, ti-timer, etc.)",
+        "custom size, color"
+      ],
       "working_example": {
-        "icon": { "library": "themify", "icon": "ti-star" }
+        "icon": {
+          "library": "themify",
+          "icon": "ti-star"
+        }
       }
     },
     "icon-box": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "content",
       "notes": "Content key is 'content' (HTML body), verified against Bricks 2.3 working_example. 'title' is a separate heading field, not the content.",
       "purpose": "Feature card — icon + heading + text combined",
-      "capabilities": ["built-in icon, title, and description fields", "good for feature grids and service highlights"],
+      "capabilities": [
+        "built-in icon, title, and description fields",
+        "good for feature grids and service highlights"
+      ],
       "working_example": {
-        "icon": { "library": "themify", "icon": "ti-wordpress" },
+        "icon": {
+          "library": "themify",
+          "icon": "ti-wordpress"
+        },
         "content": "<h4>Icon box heading</h4><p>Icon box description text.</p>"
       }
     },
     "image": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "purpose": "Image element — photos, illustrations, logos",
       "capabilities": [
@@ -392,65 +729,141 @@
       }
     },
     "image-gallery": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "items",
       "notes": "Gallery of images. Supports loadMoreInitial / loadMoreStep / loadMoreInfiniteScroll for progressive loading.",
       "purpose": "Image gallery grid with optional lightbox",
-      "capabilities": ["masonry or grid layout", "lightbox on click", "progressive loading (loadMoreInitial/loadMoreStep/loadMoreInfiniteScroll)"],
+      "capabilities": [
+        "masonry or grid layout",
+        "lightbox on click",
+        "progressive loading (loadMoreInitial/loadMoreStep/loadMoreInfiniteScroll)"
+      ],
       "working_example": {
         "items": {
           "images": [
-            { "id": 0, "filename": "gallery-1.jpg", "size": "full", "full": "https://placeholder.example/800x600", "url": "https://placeholder.example/800x600" },
-            { "id": 0, "filename": "gallery-2.jpg", "size": "full", "full": "https://placeholder.example/800x600", "url": "https://placeholder.example/800x600" }
+            {
+              "id": 0,
+              "filename": "gallery-1.jpg",
+              "size": "full",
+              "full": "https://placeholder.example/800x600",
+              "url": "https://placeholder.example/800x600"
+            },
+            {
+              "id": 0,
+              "filename": "gallery-2.jpg",
+              "size": "full",
+              "full": "https://placeholder.example/800x600",
+              "url": "https://placeholder.example/800x600"
+            }
           ]
         }
+      },
+      "element_settings_defaults": {
+        "loadMoreInitial": 6,
+        "loadMoreStep": 6,
+        "lightbox": true
       }
     },
     "instagram-feed": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Instagram feed embed. Requires Instagram API token configuration.",
       "purpose": "Instagram feed embed — displays recent posts from account",
-      "capabilities": ["follow button with custom text and icon", "requires Instagram API token in Bricks settings"],
+      "capabilities": [
+        "follow button with custom text and icon",
+        "requires Instagram API token in Bricks settings"
+      ],
       "working_example": {
         "followText": "Follow us @yourhandle",
-        "followIcon": { "library": "ionicons", "icon": "ion-logo-instagram" }
+        "followIcon": {
+          "library": "ionicons",
+          "icon": "ion-logo-instagram"
+        }
       }
     },
     "list": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "purpose": "Bulleted or numbered list",
-      "capabilities": ["custom icons per item", "ordered or unordered"],
+      "capabilities": [
+        "custom icons per item",
+        "ordered or unordered"
+      ],
       "working_example": {
         "items": [
-          { "id": "lst001", "title": "List item #1", "meta": "$10.00", "link": { "type": "external", "url": "#" } },
-          { "id": "lst002", "title": "List item #2", "meta": "$25.00" }
+          {
+            "id": "lst001",
+            "title": "List item #1",
+            "meta": "$10.00",
+            "link": {
+              "type": "external",
+              "url": "#"
+            }
+          },
+          {
+            "id": "lst002",
+            "title": "List item #2",
+            "meta": "$25.00"
+          }
         ]
       }
     },
     "logo": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "logoText",
       "notes": "Site logo element. Shows site logo image or text fallback.",
       "purpose": "Site logo — image with text fallback",
-      "capabilities": ["auto-fetches site logo from WordPress settings", "text fallback via logoText setting"],
+      "capabilities": [
+        "auto-fetches site logo from WordPress settings",
+        "text fallback via logoText setting"
+      ],
       "working_example": {
         "logoText": "Site Name"
       }
     },
     "map": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Google Maps embed with address or coordinates.",
       "purpose": "Google Maps embed with markers and controls",
-      "capabilities": ["latitude/longitude coordinates", "multiple address markers", "zoom/scroll/drag/streetView controls"],
-      "rules": ["requires Google Maps API key in Bricks settings"],
+      "capabilities": [
+        "latitude/longitude coordinates",
+        "multiple address markers",
+        "zoom/scroll/drag/streetView controls"
+      ],
+      "rules": [
+        "requires Google Maps API key in Bricks settings"
+      ],
       "working_example": {
         "addresses": [
-          { "id": "map001", "latitude": "40.7128", "longitude": "-74.0060" }
+          {
+            "id": "map001",
+            "latitude": "40.7128",
+            "longitude": "-74.0060"
+          }
         ],
         "scrollwheel": true,
         "draggable": true,
@@ -459,22 +872,40 @@
       }
     },
     "map-connector": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Map connector element — links multiple map markers or locations.",
       "purpose": "Route connector between map markers",
-      "capabilities": ["links multiple map address points visually"],
+      "capabilities": [
+        "links multiple map address points visually"
+      ],
       "working_example": {}
     },
     "map-leaflet": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Leaflet (OpenStreetMap) embed — no API key required.",
       "purpose": "OpenStreetMap embed via Leaflet — no API key required",
-      "capabilities": ["custom tile layers", "zoom/drag controls", "free alternative to Google Maps"],
+      "capabilities": [
+        "custom tile layers",
+        "zoom/drag controls",
+        "free alternative to Google Maps"
+      ],
       "working_example": {
         "layers": [
-          { "id": "mpl001", "name": "OpenStreetMap", "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png" }
+          {
+            "id": "mpl001",
+            "name": "OpenStreetMap",
+            "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          }
         ],
         "zoomControl": true,
         "dragging": true,
@@ -482,39 +913,79 @@
       }
     },
     "nav-menu": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "WordPress menu widget. Renders a registered WP nav menu. For custom navigation, use nav-nested.",
       "purpose": "WordPress registered menu — renders a saved WP nav menu",
-      "capabilities": ["selects from registered menu locations", "basic horizontal/vertical layout"],
-      "rules": ["for custom navigation with dropdowns and nested content, use nav-nested instead"],
+      "capabilities": [
+        "selects from registered menu locations",
+        "basic horizontal/vertical layout"
+      ],
+      "rules": [
+        "for custom navigation with dropdowns and nested content, use nav-nested instead"
+      ],
       "working_example": {}
     },
     "nav-nested": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": true,
-      "typical_children": ["div"],
+      "typical_children": [
+        "div"
+      ],
       "skip_auto_flex": true,
       "nestable": true,
       "purpose": "Custom navigation menu — full nesting control for mega menus",
-      "capabilities": ["nestable — text-link and dropdown children", "mega menu support with any nested content", "mobile responsive patterns"],
+      "capabilities": [
+        "nestable — text-link and dropdown children",
+        "mega menu support with any nested content",
+        "mobile responsive patterns"
+      ],
       "working_example": {
         "_nestable_children": [
           {
             "name": "text-link",
-            "settings": { "text": "Home", "link": { "url": "/", "type": "external" } }
+            "settings": {
+              "text": "Home",
+              "link": {
+                "url": "/",
+                "type": "external"
+              }
+            }
           },
           {
             "name": "text-link",
-            "settings": { "text": "About", "link": { "url": "/about/", "type": "external" } }
+            "settings": {
+              "text": "About",
+              "link": {
+                "url": "/about/",
+                "type": "external"
+              }
+            }
           },
           {
             "name": "dropdown",
-            "settings": { "text": "Services", "trigger": "hover" },
+            "settings": {
+              "text": "Services",
+              "trigger": "hover"
+            },
             "children": [
               {
                 "name": "text-link",
-                "settings": { "text": "Service 1", "link": { "url": "/service-1/", "type": "external" } }
+                "settings": {
+                  "text": "Service 1",
+                  "link": {
+                    "url": "/service-1/",
+                    "type": "external"
+                  }
+                }
               }
             ]
           }
@@ -522,26 +993,55 @@
       }
     },
     "offcanvas": {
-      "valid_parents": ["section", "container"],
+      "valid_parents": [
+        "section",
+        "container"
+      ],
       "accepts_children": true,
-      "typical_children": ["block", "container"],
+      "typical_children": [
+        "block",
+        "container"
+      ],
       "nestable": true,
       "notes": "Off-canvas slide-in panel (nestable). Triggered by a toggle/button.",
       "purpose": "Slide-in panel — mobile menus, sidebars, filter panels",
-      "capabilities": ["nestable — any content inside", "triggered by toggle/button element", "left/right/top/bottom slide position"],
-      "working_example": {}
+      "capabilities": [
+        "nestable — any content inside",
+        "triggered by toggle/button element",
+        "left/right/top/bottom slide position"
+      ],
+      "working_example": {},
+      "element_settings_defaults": {
+        "position": "right",
+        "closeOnOutsideClick": true,
+        "closeOnEsc": true
+      }
     },
     "pagination": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Query pagination — use inside or after a query loop.",
       "purpose": "Query loop pagination — prev/next/numbered page links",
-      "capabilities": ["auto-detects parent query loop", "customizable labels and style"],
-      "rules": ["place after or inside a posts/query loop element"],
+      "capabilities": [
+        "auto-detects parent query loop",
+        "customizable labels and style"
+      ],
+      "rules": [
+        "place after or inside a posts/query loop element"
+      ],
       "working_example": {}
     },
     "pie-chart": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "percent",
       "element_settings_defaults": {
@@ -550,32 +1050,66 @@
         "lineWidth": 16
       },
       "purpose": "Circular percentage chart / radial progress",
-      "capabilities": ["percent (0-100)", "bar color, track color", "inner content (percent text)"],
-      "rules": ["use element_settings.percent (integer 0-100), barColor and trackColor are {raw} color objects"],
+      "capabilities": [
+        "percent (0-100)",
+        "bar color, track color",
+        "inner content (percent text)"
+      ],
+      "rules": [
+        "use element_settings.percent (integer 0-100), barColor and trackColor are {raw} color objects"
+      ],
       "working_example": {
         "percent": 60,
         "content": "percent",
-        "barColor": { "hex": "#3b82f6" },
-        "trackColor": { "hex": "#e5e7eb" }
+        "barColor": {
+          "hex": "#3b82f6"
+        },
+        "trackColor": {
+          "hex": "#e5e7eb"
+        }
       }
     },
     "popup": {
-      "valid_parents": ["section", "container"],
+      "valid_parents": [
+        "section",
+        "container"
+      ],
       "accepts_children": true,
-      "typical_children": ["block", "container"],
+      "typical_children": [
+        "block",
+        "container"
+      ],
       "nestable": true,
       "notes": "Popup content container (nestable). Lives inside a popup template.",
       "purpose": "Popup/modal content container — lives inside popup templates",
-      "capabilities": ["nestable — any content inside the modal", "trigger conditions (click, scroll, exit intent, timed delay)", "close on overlay click or button"],
-      "rules": ["must be placed inside a popup template type — see bricks:get_knowledge('popups')"],
-      "working_example": {}
+      "capabilities": [
+        "nestable — any content inside the modal",
+        "trigger conditions (click, scroll, exit intent, timed delay)",
+        "close on overlay click or button"
+      ],
+      "rules": [
+        "must be placed inside a popup template type — see bricks:get_knowledge('popups')"
+      ],
+      "working_example": {},
+      "element_settings_defaults": {
+        "trigger": "click",
+        "closeOnOutsideClick": true,
+        "closeOnEsc": true
+      }
     },
     "post-author": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Single post author bio box — avatar, name, bio, links.",
       "purpose": "Author bio box — avatar, name, bio, website links",
-      "capabilities": ["toggle avatar, name, website, bio, posts link individually", "for single post templates"],
+      "capabilities": [
+        "toggle avatar, name, website, bio, posts link individually",
+        "for single post templates"
+      ],
       "working_example": {
         "avatar": true,
         "name": true,
@@ -586,11 +1120,19 @@
       }
     },
     "post-comments": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "WordPress comments section for a single post.",
       "purpose": "WordPress comments section with reply form",
-      "capabilities": ["comment list with avatars", "reply form with submit button", "for single post templates"],
+      "capabilities": [
+        "comment list with avatars",
+        "reply form with submit button",
+        "for single post templates"
+      ],
       "working_example": {
         "title": true,
         "avatar": true,
@@ -600,124 +1142,245 @@
       }
     },
     "post-content": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Renders the post content (the_content). Use in single post templates.",
       "purpose": "Renders the full post body content (the_content)",
-      "capabilities": ["outputs formatted post content", "for single post templates"],
+      "capabilities": [
+        "outputs formatted post content",
+        "for single post templates"
+      ],
       "working_example": {}
     },
     "post-excerpt": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Renders the post excerpt. Use in archive loops or single post templates.",
       "purpose": "Post excerpt — short summary text",
-      "capabilities": ["auto-generated or manual excerpt", "for archive loops or single post templates"],
+      "capabilities": [
+        "auto-generated or manual excerpt",
+        "for archive loops or single post templates"
+      ],
       "working_example": {}
     },
     "post-meta": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Displays post metadata — author, date, comments, categories. Uses dynamic data tags.",
       "purpose": "Post metadata display — author, date, comments count",
-      "capabilities": ["dynamic data tags per field ({author_name}, {post_date})", "customizable separator", "for single post or archive templates"],
+      "capabilities": [
+        "dynamic data tags per field ({author_name}, {post_date})",
+        "customizable separator",
+        "for single post or archive templates"
+      ],
       "working_example": {
         "meta": [
-          { "id": "mtd001", "dynamicData": "{author_name}" },
-          { "id": "mtd002", "dynamicData": "{post_date}" },
-          { "id": "mtd003", "dynamicData": "{post_comments}" }
+          {
+            "id": "mtd001",
+            "dynamicData": "{author_name}"
+          },
+          {
+            "id": "mtd002",
+            "dynamicData": "{post_date}"
+          },
+          {
+            "id": "mtd003",
+            "dynamicData": "{post_comments}"
+          }
         ]
       }
     },
     "post-navigation": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Previous/next post links for single post templates.",
       "purpose": "Previous/next post links for single post templates",
-      "capabilities": ["shows label, title, thumbnail", "customizable arrow icons"],
+      "capabilities": [
+        "shows label, title, thumbnail",
+        "customizable arrow icons"
+      ],
       "working_example": {
         "label": true,
         "title": true,
         "image": true,
-        "prevArrow": { "library": "ionicons", "icon": "ion-ios-arrow-back" },
-        "nextArrow": { "library": "ionicons", "icon": "ion-ios-arrow-forward" }
+        "prevArrow": {
+          "library": "ionicons",
+          "icon": "ion-ios-arrow-back"
+        },
+        "nextArrow": {
+          "library": "ionicons",
+          "icon": "ion-ios-arrow-forward"
+        }
       }
     },
     "post-reading-progress-bar": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Reading progress bar that fills as user scrolls through post content.",
       "purpose": "Reading progress indicator — fills as user scrolls",
-      "capabilities": ["auto-tracks scroll position vs content length", "customizable color and height"],
+      "capabilities": [
+        "auto-tracks scroll position vs content length",
+        "customizable color and height"
+      ],
       "working_example": {}
     },
     "post-reading-time": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Estimated reading time display for the current post.",
       "purpose": "Estimated reading time display",
-      "capabilities": ["auto-calculated from content length", "customizable prefix/suffix text"],
+      "capabilities": [
+        "auto-calculated from content length",
+        "customizable prefix/suffix text"
+      ],
       "working_example": {
         "prefix": "Reading time: ",
         "suffix": " minutes"
       }
     },
     "post-sharing": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Social sharing buttons for the current post.",
       "purpose": "Social sharing buttons for the current post",
-      "capabilities": ["Facebook, Twitter, LinkedIn, WhatsApp, Pinterest, Telegram, Email", "brand colors option"],
+      "capabilities": [
+        "Facebook, Twitter, LinkedIn, WhatsApp, Pinterest, Telegram, Email",
+        "brand colors option"
+      ],
       "working_example": {
         "items": [
-          { "id": "psh001", "service": "facebook" },
-          { "id": "psh002", "service": "twitter" },
-          { "id": "psh003", "service": "linkedin" },
-          { "id": "psh004", "service": "whatsapp" },
-          { "id": "psh005", "service": "pinterest" },
-          { "id": "psh006", "service": "telegram" },
-          { "id": "psh007", "service": "email" }
+          {
+            "id": "psh001",
+            "service": "facebook"
+          },
+          {
+            "id": "psh002",
+            "service": "twitter"
+          },
+          {
+            "id": "psh003",
+            "service": "linkedin"
+          },
+          {
+            "id": "psh004",
+            "service": "whatsapp"
+          },
+          {
+            "id": "psh005",
+            "service": "pinterest"
+          },
+          {
+            "id": "psh006",
+            "service": "telegram"
+          },
+          {
+            "id": "psh007",
+            "service": "email"
+          }
         ],
         "brandColors": true
       }
     },
     "post-taxonomy": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Displays post taxonomy terms (categories, tags). Use in post templates.",
       "purpose": "Post taxonomy terms — categories or tags as links",
-      "capabilities": ["any registered taxonomy", "style variants (dark, light)"],
+      "capabilities": [
+        "any registered taxonomy",
+        "style variants (dark, light)"
+      ],
       "working_example": {
         "taxonomy": "category",
         "style": "dark"
       }
     },
     "post-title": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "tag",
       "notes": "Dynamic post title element for single post templates.",
       "purpose": "Dynamic post title — pulls from current post",
-      "capabilities": ["customizable HTML tag (h1-h6)", "for single post or archive templates"],
+      "capabilities": [
+        "customizable HTML tag (h1-h6)",
+        "for single post or archive templates"
+      ],
       "working_example": {
         "tag": "h1"
       }
     },
     "post-toc": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Auto-generated table of contents from post headings.",
       "purpose": "Auto-generated table of contents from post headings",
-      "capabilities": ["scans h2-h6 headings in content", "smooth scroll to sections"],
+      "capabilities": [
+        "scans h2-h6 headings in content",
+        "smooth scroll to sections"
+      ],
       "working_example": {}
     },
     "posts": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Post listing / query loop element. Displays posts with configurable fields and layout.",
       "purpose": "Post listing / query loop — blog grids, archives, related content",
-      "capabilities": ["WP_Query parameters for filtering", "grid/list layout with gutter control", "dynamic data fields per post card", "use with pagination element for multi-page results"],
-      "rules": ["pair with pagination element for paged results", "use bricks:get_knowledge('query-loops') for query parameters"],
+      "capabilities": [
+        "WP_Query parameters for filtering",
+        "grid/list layout with gutter control",
+        "dynamic data fields per post card",
+        "use with pagination element for multi-page results"
+      ],
+      "rules": [
+        "pair with pagination element for paged results",
+        "use bricks:get_knowledge('query-loops') for query parameters"
+      ],
       "working_example": {
         "gutter": "30px",
         "fields": [
@@ -725,18 +1388,37 @@
             "id": "psf001",
             "dynamicData": "{post_title:link}",
             "tag": "h3",
-            "dynamicMargin": { "top": 20, "right": 0, "bottom": 20, "left": 0 }
+            "dynamicMargin": {
+              "top": 20,
+              "right": 0,
+              "bottom": 20,
+              "left": 0
+            }
           },
-          { "id": "psf002", "dynamicData": "{post_excerpt:20}" }
+          {
+            "id": "psf002",
+            "dynamicData": "{post_excerpt:20}"
+          }
         ]
+      },
+      "element_settings_defaults": {
+        "postsPerPage": 6,
+        "ignoreSticky": true
       }
     },
     "pricing-tables": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "pricingTables",
       "purpose": "Pricing tier card",
-      "capabilities": ["plan name, price, features list, CTA button", "highlight/featured tier"],
+      "capabilities": [
+        "plan name, price, features list, CTA button",
+        "highlight/featured tier"
+      ],
       "working_example": {
         "pricingTables": [
           {
@@ -748,7 +1430,10 @@
             "priceSuffix": "90",
             "priceMeta": "per month",
             "features": "Feature 1\nFeature 2\nFeature 3",
-            "featuresIcon": { "library": "ionicons", "icon": "ion-ios-checkmark-circle-outline" },
+            "featuresIcon": {
+              "library": "ionicons",
+              "icon": "ion-ios-checkmark-circle-outline"
+            },
             "buttonText": "Choose Plan",
             "buttonStyle": "primary"
           },
@@ -761,7 +1446,10 @@
             "priceSuffix": "90",
             "priceMeta": "per month",
             "features": "All Basic features\nFeature 4\nFeature 5",
-            "featuresIcon": { "library": "ionicons", "icon": "ion-ios-checkmark-circle-outline" },
+            "featuresIcon": {
+              "library": "ionicons",
+              "icon": "ion-ios-checkmark-circle-outline"
+            },
             "buttonText": "Choose Plan",
             "buttonStyle": "primary"
           }
@@ -769,11 +1457,21 @@
       }
     },
     "progress-bar": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "bars",
       "element_settings_defaults": {
-        "bars": [{ "label": "Progress", "percentage": 75 }]
+        "bars": [
+          {
+            "label": "Progress",
+            "percentage": 75
+          }
+        ]
       },
       "purpose": "Animated horizontal progress bar — for skill bars, completion meters",
       "capabilities": [
@@ -781,26 +1479,51 @@
         "animation on scroll",
         "percentage label visibility"
       ],
-      "rules": ["use element_settings.bars for an array of {label, percentage} objects", "pair with a heading for context"],
+      "rules": [
+        "use element_settings.bars for an array of {label, percentage} objects",
+        "pair with a heading for context"
+      ],
       "working_example": {
         "bars": [
-          { "id": "prb001", "title": "Web Design", "percentage": 80 },
-          { "id": "prb002", "title": "SEO", "percentage": 90 }
+          {
+            "id": "prb001",
+            "title": "Web Design",
+            "percentage": 80
+          },
+          {
+            "id": "prb002",
+            "title": "SEO",
+            "percentage": 90
+          }
         ],
         "showPercentage": true
       }
     },
     "query-results-summary": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Shows 'Showing X of Y results' text for query loops.",
       "purpose": "Query results count text — 'Showing X of Y results'",
-      "capabilities": ["auto-detects parent query loop", "customizable format string"],
-      "rules": ["place inside or near a posts/query loop element"],
+      "capabilities": [
+        "auto-detects parent query loop",
+        "customizable format string"
+      ],
+      "rules": [
+        "place inside or near a posts/query loop element"
+      ],
       "working_example": {}
     },
     "rating": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "rating",
       "element_settings_defaults": {
@@ -808,40 +1531,78 @@
         "maxRating": 5
       },
       "purpose": "Star rating display (or other icon) — for review summaries, product ratings",
-      "capabilities": ["rating value (e.g. 4.5)", "max rating (default 5)", "icon style"],
-      "rules": ["use element_settings.rating (number 0-maxRating)"],
+      "capabilities": [
+        "rating value (e.g. 4.5)",
+        "max rating (default 5)",
+        "icon style"
+      ],
+      "rules": [
+        "use element_settings.rating (number 0-maxRating)"
+      ],
       "working_example": {
         "rating": 3.5
       }
     },
     "related-posts": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Related posts based on shared taxonomy terms. Use in single post templates.",
       "purpose": "Related posts grid based on shared taxonomy terms",
-      "capabilities": ["configurable taxonomies (category, post_tag)", "dynamic data fields per post", "for single post templates"],
+      "capabilities": [
+        "configurable taxonomies (category, post_tag)",
+        "dynamic data fields per post",
+        "for single post templates"
+      ],
       "working_example": {
-        "taxonomies": ["category", "post_tag"],
+        "taxonomies": [
+          "category",
+          "post_tag"
+        ],
         "content": [
-          { "id": "rpc001", "dynamicData": "{post_title:link}", "tag": "h3", "dynamicMargin": { "top": 10 } },
-          { "id": "rpc002", "dynamicData": "{post_excerpt:20}" }
+          {
+            "id": "rpc001",
+            "dynamicData": "{post_title:link}",
+            "tag": "h3",
+            "dynamicMargin": {
+              "top": 10
+            }
+          },
+          {
+            "id": "rpc002",
+            "dynamicData": "{post_excerpt:20}"
+          }
         ]
       }
     },
     "search": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Search form element with optional overlay mode.",
       "purpose": "Search form — inline or fullscreen overlay mode",
-      "capabilities": ["overlay mode with custom title", "AJAX search results support"],
+      "capabilities": [
+        "overlay mode with custom title",
+        "AJAX search results support"
+      ],
       "working_example": {
         "searchOverlayTitle": "Search"
       }
     },
     "section": {
-      "valid_parents": ["root"],
+      "valid_parents": [
+        "root"
+      ],
       "accepts_children": true,
-      "typical_children": ["container"],
+      "typical_children": [
+        "container"
+      ],
       "structural": true,
       "flex_by_default": true,
       "purpose": "Full-width page section — the outermost wrapper",
@@ -851,27 +1612,48 @@
         "min-height for hero sections",
         "dark/light mode"
       ],
-      "rules": ["DO NOT set _padding — child theme handles it", "only contains containers as direct children"],
+      "rules": [
+        "DO NOT set _padding — child theme handles it",
+        "only contains containers as direct children"
+      ],
       "working_example": {}
     },
     "shortcode": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Renders a WordPress shortcode. Supply the shortcode string.",
       "purpose": "WordPress shortcode renderer — any registered shortcode",
-      "capabilities": ["supports any [shortcode] with attributes", "renders output inline"],
+      "capabilities": [
+        "supports any [shortcode] with attributes",
+        "renders output inline"
+      ],
       "working_example": {}
     },
     "sidebar": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "WordPress widget sidebar area.",
       "purpose": "WordPress widget sidebar area — legacy widget integration",
-      "capabilities": ["renders any registered widget area", "for classic WordPress widgets"],
+      "capabilities": [
+        "renders any registered widget area",
+        "for classic WordPress widgets"
+      ],
       "working_example": {}
     },
     "slider": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Deprecated base version. Use slider-nested — each slide is a div child.",
       "purpose": "Deprecated — use slider-nested for custom slide content with full nesting",
@@ -882,25 +1664,46 @@
             "title": "Slide 1",
             "content": "Slide content goes here.",
             "buttonText": "Click Me",
-            "buttonLink": { "type": "external", "url": "#" },
-            "background": { "color": { "hex": "#1e293b" } }
+            "buttonLink": {
+              "type": "external",
+              "url": "#"
+            },
+            "background": {
+              "color": {
+                "hex": "#1e293b"
+              }
+            }
           },
           {
             "id": "sld002",
             "title": "Slide 2",
             "content": "Another slide.",
             "buttonText": "Learn More",
-            "buttonLink": { "type": "external", "url": "#" },
-            "background": { "color": { "hex": "#334155" } }
+            "buttonLink": {
+              "type": "external",
+              "url": "#"
+            },
+            "background": {
+              "color": {
+                "hex": "#334155"
+              }
+            }
           }
         ],
         "arrows": true
       }
     },
     "slider-nested": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": true,
-      "typical_children": ["div", "block"],
+      "typical_children": [
+        "div",
+        "block"
+      ],
       "skip_auto_flex": true,
       "nestable": true,
       "purpose": "Image or content carousel/slideshow (Splide.js under the hood)",
@@ -938,11 +1741,17 @@
             "children": [
               {
                 "name": "heading",
-                "settings": { "text": "Slide Title", "tag": "h2" }
+                "settings": {
+                  "text": "Slide Title",
+                  "tag": "h2"
+                }
               },
               {
                 "name": "button",
-                "settings": { "text": "Button", "style": "primary" }
+                "settings": {
+                  "text": "Button",
+                  "style": "primary"
+                }
               }
             ]
           }
@@ -950,74 +1759,157 @@
       }
     },
     "slot": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Template slot — placeholder for content injection in template hierarchies.",
       "purpose": "Template slot — content injection point for component architecture",
-      "capabilities": ["placeholder filled by parent template or component", "enables reusable component patterns"],
+      "capabilities": [
+        "placeholder filled by parent template or component",
+        "enables reusable component patterns"
+      ],
       "working_example": {}
     },
     "social-icons": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "icons",
       "purpose": "Row of social media icons with links",
-      "capabilities": ["icons array (facebook, twitter, instagram, etc.)", "shape (circle, square, none)", "size variants"],
-      "rules": ["each icon needs a URL; pair with a heading for context"],
+      "capabilities": [
+        "icons array (facebook, twitter, instagram, etc.)",
+        "shape (circle, square, none)",
+        "size variants"
+      ],
+      "rules": [
+        "each icon needs a URL; pair with a heading for context"
+      ],
       "working_example": {
         "icons": [
           {
             "id": "soc001",
             "label": "Facebook",
-            "icon": { "library": "fontawesomeBrands", "icon": "fab fa-facebook-f" },
-            "background": { "hex": "#1877f2" },
-            "link": { "type": "external", "url": "#" }
+            "icon": {
+              "library": "fontawesomeBrands",
+              "icon": "fab fa-facebook-f"
+            },
+            "background": {
+              "hex": "#1877f2"
+            },
+            "link": {
+              "type": "external",
+              "url": "#"
+            }
           },
           {
             "id": "soc002",
             "label": "Instagram",
-            "icon": { "library": "fontawesomeBrands", "icon": "fab fa-instagram" },
-            "background": { "hex": "#e4405f" },
-            "link": { "type": "external", "url": "#" }
+            "icon": {
+              "library": "fontawesomeBrands",
+              "icon": "fab fa-instagram"
+            },
+            "background": {
+              "hex": "#e4405f"
+            },
+            "link": {
+              "type": "external",
+              "url": "#"
+            }
           }
         ],
-        "_padding": { "top": 10, "right": 10, "bottom": 10, "left": 10 },
-        "_typography": { "font-size": "16px" }
+        "_padding": {
+          "top": 10,
+          "right": 10,
+          "bottom": 10,
+          "left": 10
+        },
+        "_typography": {
+          "font-size": "16px"
+        }
       }
     },
     "svg": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "code",
       "notes": "Inline SVG element. Content stored in 'code' or 'file' setting.",
       "purpose": "Inline SVG — icons, illustrations, decorative shapes at any size",
-      "capabilities": ["inline SVG code or file reference", "preserves vector quality at any resolution"],
+      "capabilities": [
+        "inline SVG code or file reference",
+        "preserves vector quality at any resolution"
+      ],
       "working_example": {}
     },
     "tabs": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Deprecated base version. Use tabs-nested — its child divs are the tab panes (tabs-nested supports rich content per pane; plain tabs only takes a string repeater).",
       "purpose": "Deprecated — use tabs-nested for rich tab content with full nesting",
       "working_example": {
         "tabs": [
-          { "id": "tab001", "title": "Tab 1", "content": "Tab 1 content goes here." },
-          { "id": "tab002", "title": "Tab 2", "content": "Tab 2 content goes here." }
+          {
+            "id": "tab001",
+            "title": "Tab 1",
+            "content": "Tab 1 content goes here."
+          },
+          {
+            "id": "tab002",
+            "title": "Tab 2",
+            "content": "Tab 2 content goes here."
+          }
         ],
-        "titlePadding": { "top": 15, "right": 20, "bottom": 15, "left": 20 },
-        "contentPadding": { "top": 20, "right": 20, "bottom": 20, "left": 20 }
+        "titlePadding": {
+          "top": 15,
+          "right": 20,
+          "bottom": 15,
+          "left": 20
+        },
+        "contentPadding": {
+          "top": 20,
+          "right": 20,
+          "bottom": 20,
+          "left": 20
+        }
       }
     },
     "tabs-nested": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": true,
-      "typical_children": ["div"],
+      "typical_children": [
+        "div"
+      ],
       "skip_auto_flex": true,
       "notes": "Each tab pane is a div child.",
       "nestable": true,
       "purpose": "Tabbed content panels — each tab has full nested content",
-      "capabilities": ["multiple tab panes with any content inside", "tab labels, icons"],
-      "rules": ["use tabs-nested NOT tabs — basic tabs only support plain text"],
+      "capabilities": [
+        "multiple tab panes with any content inside",
+        "tab labels, icons"
+      ],
+      "rules": [
+        "use tabs-nested NOT tabs — basic tabs only support plain text"
+      ],
       "working_example": {
         "_nestable_children": [
           {
@@ -1025,21 +1917,41 @@
             "label": "Tab Menu",
             "settings": {
               "_direction": "row",
-              "_hidden": { "_cssClasses": "tab-menu" }
+              "_hidden": {
+                "_cssClasses": "tab-menu"
+              }
             },
             "children": [
               {
                 "name": "div",
-                "settings": { "_hidden": { "_cssClasses": "tab-title" } },
+                "settings": {
+                  "_hidden": {
+                    "_cssClasses": "tab-title"
+                  }
+                },
                 "children": [
-                  { "name": "text-basic", "settings": { "text": "Tab 1" } }
+                  {
+                    "name": "text-basic",
+                    "settings": {
+                      "text": "Tab 1"
+                    }
+                  }
                 ]
               },
               {
                 "name": "div",
-                "settings": { "_hidden": { "_cssClasses": "tab-title" } },
+                "settings": {
+                  "_hidden": {
+                    "_cssClasses": "tab-title"
+                  }
+                },
                 "children": [
-                  { "name": "text-basic", "settings": { "text": "Tab 2" } }
+                  {
+                    "name": "text-basic",
+                    "settings": {
+                      "text": "Tab 2"
+                    }
+                  }
                 ]
               }
             ]
@@ -1048,21 +1960,41 @@
             "name": "block",
             "label": "Tab Content",
             "settings": {
-              "_hidden": { "_cssClasses": "tab-content" }
+              "_hidden": {
+                "_cssClasses": "tab-content"
+              }
             },
             "children": [
               {
                 "name": "block",
-                "settings": { "_hidden": { "_cssClasses": "tab-pane" } },
+                "settings": {
+                  "_hidden": {
+                    "_cssClasses": "tab-pane"
+                  }
+                },
                 "children": [
-                  { "name": "text", "settings": { "text": "Tab pane 1 content goes here." } }
+                  {
+                    "name": "text",
+                    "settings": {
+                      "text": "Tab pane 1 content goes here."
+                    }
+                  }
                 ]
               },
               {
                 "name": "block",
-                "settings": { "_hidden": { "_cssClasses": "tab-pane" } },
+                "settings": {
+                  "_hidden": {
+                    "_cssClasses": "tab-pane"
+                  }
+                },
                 "children": [
-                  { "name": "text", "settings": { "text": "Tab pane 2 content goes here." } }
+                  {
+                    "name": "text",
+                    "settings": {
+                      "text": "Tab pane 2 content goes here."
+                    }
+                  }
                 ]
               }
             ]
@@ -1071,102 +2003,200 @@
       }
     },
     "team-members": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "items",
       "notes": "Team member cards with photo, name, role, and description.",
       "purpose": "Team member cards — photo, name, role, description",
-      "capabilities": ["repeater with title, subtitle, description per member", "avatar/photo support"],
+      "capabilities": [
+        "repeater with title, subtitle, description per member",
+        "avatar/photo support"
+      ],
       "working_example": {
         "items": [
-          { "id": "tmm001", "title": "John Doe", "subtitle": "CEO", "description": "Team member description." },
-          { "id": "tmm002", "title": "Jane Smith", "subtitle": "Designer", "description": "Another team member." }
+          {
+            "id": "tmm001",
+            "title": "John Doe",
+            "subtitle": "CEO",
+            "description": "Team member description."
+          },
+          {
+            "id": "tmm002",
+            "title": "Jane Smith",
+            "subtitle": "Designer",
+            "description": "Another team member."
+          }
         ]
       }
     },
     "template": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "nestable": true,
       "notes": "Embeds another Bricks template (header, footer, section, content).",
       "purpose": "Embed another Bricks template — reusable sections, headers, footers",
-      "capabilities": ["renders any saved Bricks template by ID", "header, footer, section, or content template types"],
+      "capabilities": [
+        "renders any saved Bricks template by ID",
+        "header, footer, section, or content template types"
+      ],
       "working_example": {}
     },
     "testimonials": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "items",
       "purpose": "Customer testimonial carousel/cards — quotes with author info",
-      "capabilities": ["repeater with quote text, author name, job title", "auto-rotation between testimonials"],
+      "capabilities": [
+        "repeater with quote text, author name, job title",
+        "auto-rotation between testimonials"
+      ],
       "working_example": {
         "items": [
-          { "id": "tes001", "content": "Great service, highly recommended!", "name": "Client A", "job": "CEO" },
-          { "id": "tes002", "content": "Excellent work and fast delivery.", "name": "Client B", "job": "Manager" }
+          {
+            "id": "tes001",
+            "content": "Great service, highly recommended!",
+            "name": "Client A",
+            "job": "CEO"
+          },
+          {
+            "id": "tes002",
+            "content": "Excellent work and fast delivery.",
+            "name": "Client B",
+            "job": "Manager"
+          }
         ]
       }
     },
     "text": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "text",
       "default_tag": "p",
       "purpose": "Rich text block — paragraphs with full HTML formatting",
-      "capabilities": ["HTML content with bold, italic, links, spans", "dynamic data tag support"],
-      "rules": ["for plain text without HTML formatting, prefer text-basic"],
+      "capabilities": [
+        "HTML content with bold, italic, links, spans",
+        "dynamic data tag support"
+      ],
+      "rules": [
+        "for plain text without HTML formatting, prefer text-basic"
+      ],
       "working_example": {
         "text": "<p>Paragraph text</p>"
       }
     },
     "text-basic": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "text",
       "default_tag": "p",
       "purpose": "Paragraph or body text — descriptions, subtitles, taglines, eyebrows",
-      "capabilities": ["HTML content supported", "can be styled as tagline/eyebrow via class_intent"],
-      "rules": ["DO NOT set font-size, color, line-height — child theme handles body text styles"],
+      "capabilities": [
+        "HTML content supported",
+        "can be styled as tagline/eyebrow via class_intent"
+      ],
+      "rules": [
+        "DO NOT set font-size, color, line-height — child theme handles body text styles"
+      ],
       "working_example": {
         "text": "Paragraph text"
       }
     },
     "text-link": {
-      "valid_parents": ["section", "container", "block", "div", "text-basic"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div",
+        "text-basic"
+      ],
       "accepts_children": false,
       "content_key": "text",
       "purpose": "Clickable text link",
-      "capabilities": ["link URL (internal or external)", "custom link text"],
+      "capabilities": [
+        "link URL (internal or external)",
+        "custom link text"
+      ],
       "working_example": {
         "text": "Link text",
-        "link": { "type": "external", "url": "#" }
+        "link": {
+          "type": "external",
+          "url": "#"
+        }
       }
     },
     "toggle": {
-      "valid_parents": ["container", "block"],
+      "valid_parents": [
+        "container",
+        "block"
+      ],
       "accepts_children": true,
-      "typical_children": ["block"],
+      "typical_children": [
+        "block"
+      ],
       "nestable": true,
       "notes": "Toggle button — triggers the visibility of a target element (offcanvas, dropdown, etc.).",
       "purpose": "Toggle button — triggers visibility of target elements",
-      "capabilities": ["nestable — button content is fully customizable", "triggers offcanvas, dropdown, or any element by ID"],
-      "working_example": {}
+      "capabilities": [
+        "nestable — button content is fully customizable",
+        "triggers offcanvas, dropdown, or any element by ID"
+      ],
+      "working_example": {},
+      "element_settings_defaults": {
+        "ariaLabel": "Toggle navigation"
+      }
     },
     "toggle-mode": {
-      "valid_parents": ["section", "container", "block", "div"],
+      "valid_parents": [
+        "section",
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "Bricks 2.3+ light/dark mode toggle button. No content — configured via icon/iconColor/iconSize + iconDark/iconDarkColor/iconDarkSize + ariaLabel.",
       "purpose": "Light/dark mode toggle switch",
-      "capabilities": ["separate icons for light and dark states", "ariaLabel for accessibility", "auto-toggles site color scheme"],
+      "capabilities": [
+        "separate icons for light and dark states",
+        "ariaLabel for accessibility",
+        "auto-toggles site color scheme"
+      ],
       "working_example": {
         "ariaLabel": "Toggle mode"
       }
     },
     "video": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "content_key": "iframeUrl",
       "purpose": "Video embed",
-      "capabilities": ["YouTube, Vimeo, or self-hosted video URL"],
+      "capabilities": [
+        "YouTube, Vimeo, or self-hosted video URL"
+      ],
       "working_example": {
         "videoType": "youtube",
         "youTubeId": "VIDEO_ID_HERE",
@@ -1176,11 +2206,18 @@
       }
     },
     "wordpress": {
-      "valid_parents": ["container", "block", "div"],
+      "valid_parents": [
+        "container",
+        "block",
+        "div"
+      ],
       "accepts_children": false,
       "notes": "WordPress widget element. Wraps any WP widget (archives, categories, recent posts, etc.).",
       "purpose": "WordPress widget wrapper — renders classic WP widgets",
-      "capabilities": ["archives, categories, recent posts, tag cloud, meta, search", "legacy widget integration for non-Bricks content"],
+      "capabilities": [
+        "archives, categories, recent posts, tag cloud, meta, search",
+        "legacy widget integration for non-Bricks content"
+      ],
       "working_example": {
         "type": "posts"
       }

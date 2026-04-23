@@ -144,6 +144,7 @@ final class DesignSchemaValidator {
 					$errors[] = "{$path}.structure is required and must be an object.";
 				} else {
 					$this->validate_structure_node( $section['structure'], "{$path}.structure", $schema['patterns'] ?? [], $errors );
+					$this->check_heading_hierarchy( $section['structure'], "{$path}.structure" );
 				}
 			}
 		}
@@ -209,6 +210,10 @@ final class DesignSchemaValidator {
 		'customScriptsBodyFooter',
 		'useQueryEditor',
 		'queryEditor',
+		// _cssCustom: raw CSS injection. Already filtered at the ElementNormalizer
+		// level for most text elements, but blocking here closes the element_settings
+		// bypass path for any element type.
+		'_cssCustom',
 	];
 
 	/**
@@ -384,6 +389,64 @@ final class DesignSchemaValidator {
 		}
 
 		return isset( $this->element_names[ $type ] );
+	}
+
+	/**
+	 * W4: Heading hierarchy. Walks a section structure, collects heading tags
+	 * in document order, warns on:
+	 * - multiple h1 within one section (accessibility risk — one h1 per page)
+	 * - level skips (h1 → h3 with no h2, h2 → h4, etc.)
+	 *
+	 * Non-blocking warnings collected in $this->validation_warnings.
+	 *
+	 * @param array<string, mixed> $node Section structure root.
+	 * @param string               $path JSON path for warning messages.
+	 */
+	private function check_heading_hierarchy( array $node, string $path ): void {
+		$headings = [];
+		$this->collect_heading_tags( $node, $path, $headings );
+		if ( empty( $headings ) ) {
+			return;
+		}
+
+		// h1 appearance count.
+		$h1_entries = array_values( array_filter( $headings, static fn( $h ) => $h['level'] === 1 ) );
+		if ( count( $h1_entries ) > 1 ) {
+			$paths = implode( ', ', array_map( static fn( $h ) => $h['path'], $h1_entries ) );
+			$this->validation_warnings[] = "{$path}: multiple h1 headings ({$paths}) — only one h1 per page is recommended.";
+		}
+
+		// Level-skip detection.
+		$prev_level = 0;
+		foreach ( $headings as $h ) {
+			if ( $prev_level > 0 && $h['level'] > $prev_level + 1 ) {
+				$this->validation_warnings[] = "{$h['path']}: heading level jumps from h{$prev_level} to h{$h['level']} — skipped levels reduce accessibility.";
+			}
+			$prev_level = $h['level'];
+		}
+	}
+
+	/**
+	 * Recursively collect heading {level, path} in document order.
+	 *
+	 * @param array<string, mixed>                      $node
+	 * @param string                                    $path
+	 * @param array<int, array{level:int, path:string}> &$collected
+	 */
+	private function collect_heading_tags( array $node, string $path, array &$collected ): void {
+		if ( ( $node['type'] ?? '' ) === 'heading' ) {
+			$tag = strtolower( (string) ( $node['tag'] ?? 'h2' ) );
+			if ( preg_match( '/^h([1-6])$/', $tag, $m ) ) {
+				$collected[] = [ 'level' => (int) $m[1], 'path' => $path ];
+			}
+		}
+		if ( isset( $node['children'] ) && is_array( $node['children'] ) ) {
+			foreach ( $node['children'] as $i => $child ) {
+				if ( is_array( $child ) ) {
+					$this->collect_heading_tags( $child, "{$path}.children[{$i}]", $collected );
+				}
+			}
+		}
 	}
 
 	/**
