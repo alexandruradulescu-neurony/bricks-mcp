@@ -796,7 +796,7 @@ class TemplateService {
 		);
 
 		if ( ! empty( $stripped_js_keys ) ) {
-			$result['warnings'] = array( sprintf( 'Stripped JS-capable page settings keys (%s) because dangerous actions mode is disabled. Enable in Settings > Bricks MCP to allow.', implode( ', ', $stripped_js_keys ) ) );
+			$result['warnings'] = array( sprintf( 'Stripped JS-capable page settings keys (%s) because dangerous actions mode is disabled. Enable it under Bricks > Bricks WP MCP > Connection & Settings to allow.', implode( ', ', $stripped_js_keys ) ) );
 		}
 
 		return $result;

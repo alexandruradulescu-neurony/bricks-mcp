@@ -100,38 +100,38 @@ final class PageLayoutService {
 	 * These are intentionally sparse — the AI enriches them with content_hints
 	 * and patterns before calling propose_design.
 	 *
-	 * @var array<string, array<int, array{type: string, role: string}>>
+	 * @var array<string, array<int, array{type: string, role: string, content_hint?: string}>>
 	 */
 	private const ELEMENT_SKELETONS = [
 		'hero' => [
-			[ 'type' => 'heading', 'role' => 'title' ],
-			[ 'type' => 'text-basic', 'role' => 'description' ],
-			[ 'type' => 'button', 'role' => 'cta_primary' ],
+			[ 'type' => 'heading', 'role' => 'main_heading', 'content_hint' => 'Main heading for this hero section' ],
+			[ 'type' => 'text-basic', 'role' => 'subtitle', 'content_hint' => 'Supporting text that explains the main message' ],
+			[ 'type' => 'button', 'role' => 'primary_cta', 'content_hint' => 'Primary call to action for this hero section' ],
 		],
 		'features' => [
-			[ 'type' => 'heading', 'role' => 'section_title' ],
-			[ 'type' => 'text-basic', 'role' => 'section_subtitle' ],
+			[ 'type' => 'heading', 'role' => 'section_heading', 'content_hint' => 'Section heading for this features section' ],
+			[ 'type' => 'text-basic', 'role' => 'subtitle', 'content_hint' => 'Short intro copy for the feature grid' ],
 		],
 		'pricing' => [
-			[ 'type' => 'heading', 'role' => 'section_title' ],
-			[ 'type' => 'text-basic', 'role' => 'section_subtitle' ],
+			[ 'type' => 'heading', 'role' => 'section_heading', 'content_hint' => 'Section heading for this pricing section' ],
+			[ 'type' => 'text-basic', 'role' => 'subtitle', 'content_hint' => 'Short intro copy that frames the pricing options' ],
 		],
 		'testimonials' => [
-			[ 'type' => 'heading', 'role' => 'section_title' ],
+			[ 'type' => 'heading', 'role' => 'section_heading', 'content_hint' => 'Section heading for this testimonials section' ],
 		],
 		'split' => [
-			[ 'type' => 'heading', 'role' => 'title' ],
-			[ 'type' => 'text-basic', 'role' => 'description' ],
-			[ 'type' => 'image', 'role' => 'media' ],
+			[ 'type' => 'heading', 'role' => 'section_heading', 'content_hint' => 'Section heading for this split section' ],
+			[ 'type' => 'text-basic', 'role' => 'description_1', 'content_hint' => 'Supporting text for this split section' ],
+			[ 'type' => 'image', 'role' => 'hero_image', 'content_hint' => 'Relevant visual for the split section' ],
 		],
 		'cta' => [
-			[ 'type' => 'heading', 'role' => 'title' ],
-			[ 'type' => 'text-basic', 'role' => 'description' ],
-			[ 'type' => 'button', 'role' => 'cta_primary' ],
+			[ 'type' => 'heading', 'role' => 'section_heading', 'content_hint' => 'Section heading for this cta section' ],
+			[ 'type' => 'text-basic', 'role' => 'subtitle', 'content_hint' => 'Short supporting copy for this cta section' ],
+			[ 'type' => 'button', 'role' => 'primary_cta', 'content_hint' => 'Primary call to action for this cta section' ],
 		],
 		'generic' => [
-			[ 'type' => 'heading', 'role' => 'section_title' ],
-			[ 'type' => 'text-basic', 'role' => 'description' ],
+			[ 'type' => 'heading', 'role' => 'section_heading', 'content_hint' => 'Section heading for this section' ],
+			[ 'type' => 'text-basic', 'role' => 'subtitle', 'content_hint' => 'Supporting text for this section' ],
 		],
 	];
 
@@ -174,13 +174,19 @@ final class PageLayoutService {
 				'background'   => $background,
 				'elements'     => self::ELEMENT_SKELETONS[ $section_type ] ?? self::ELEMENT_SKELETONS['generic'],
 			];
+			$composed = ( new DesignPlanCompositionService() )->compose( $design_plan );
+			$design_plan = $composed['design_plan'];
 
 			$section_entry = [
 				'order'        => $order,
 				'section_type' => $section_type,
 				'design_plan'  => $design_plan,
 				'rationale'    => $defaults['rationale'],
+				'composition_family' => $composed['composition_family'] ?? 'content_stack',
 			];
+			if ( ! empty( $composed['composition_log'] ) ) {
+				$section_entry['composition_log'] = $composed['composition_log'];
+			}
 
 			if ( null !== $pattern ) {
 				$section_entry['recommended_pattern_id'] = $pattern['id'] ?? $pattern['name'] ?? '';

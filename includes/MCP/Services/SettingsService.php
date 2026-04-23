@@ -317,7 +317,7 @@ class SettingsService {
 			if ( in_array( $key, $js_gated_keys, true ) && ! $this->is_dangerous_actions_enabled() ) {
 				$rejected[]      = [
 					'key'    => $key,
-					'reason' => __( 'requires dangerous actions mode (Settings > Bricks MCP > Enable Dangerous Actions)', 'bricks-mcp' ),
+					'reason' => __( 'requires dangerous actions mode (Bricks > Bricks WP MCP > Connection & Settings > Enable Dangerous Actions)', 'bricks-mcp' ),
 				];
 				$rejected_keys[] = $key;
 				continue;
@@ -566,7 +566,7 @@ class SettingsService {
 		if ( isset( $popup_settings['template_interactions'] ) && ! $this->is_dangerous_actions_enabled() ) {
 			return new \WP_Error(
 				'bricks_mcp_dangerous_action',
-				__( 'template_interactions requires dangerous actions mode (Settings > Bricks MCP > Enable Dangerous Actions) because interactions can contain JavaScript.', 'bricks-mcp' )
+				__( 'template_interactions requires dangerous actions mode (Bricks > Bricks WP MCP > Connection & Settings > Enable Dangerous Actions) because interactions can contain JavaScript.', 'bricks-mcp' )
 			);
 		}
 

@@ -851,7 +851,7 @@ final class ElementSettingsGenerator {
 				if ( is_wp_error( $result ) ) {
 					$reason = 'search_photos failed: ' . $result->get_error_message();
 				} elseif ( empty( $result['photos'][0]['urls']['regular'] ) ) {
-					$reason = sprintf( 'No Unsplash results for query "%s" (is the Unsplash API key configured in Settings > Bricks MCP?)', $query );
+					$reason = sprintf( 'No Unsplash results for query "%s" (is the Unsplash Access Key configured under Bricks > Settings > API Keys?)', $query );
 				} else {
 					$photo    = $result['photos'][0];
 					$url      = $photo['urls']['regular'];
@@ -882,7 +882,7 @@ final class ElementSettingsGenerator {
 			// Attach a warning on the settings so the build response can report it.
 			$settings['_pipeline_warnings'] = array_merge(
 				$settings['_pipeline_warnings'] ?? [],
-				[ sprintf( 'Unsplash sideload failed for "%s": %s. Upload an image manually or configure an Unsplash API key.', $src, $reason ?? 'unknown' ) ]
+				[ sprintf( 'Unsplash sideload failed for "%s": %s. Upload an image manually or configure an Unsplash Access Key under Bricks > Settings > API Keys.', $src, $reason ?? 'unknown' ) ]
 			);
 			return $settings;
 		}
@@ -928,70 +928,21 @@ final class ElementSettingsGenerator {
 	 * @return array<string, mixed> Settings with correct shapes.
 	 */
 	private static function normalize_style_shapes( array $settings ): array {
-		// Rule 1: _border.style — per-side object → string.
-		if ( isset( $settings['_border']['style'] ) && is_array( $settings['_border']['style'] ) ) {
-			$arr   = $settings['_border']['style'];
-			$first = '';
-			if ( is_string( $arr['top'] ?? null ) && '' !== $arr['top'] ) {
-				$first = $arr['top'];
-			} else {
-				foreach ( $arr as $v ) {
-					if ( is_string( $v ) && '' !== $v ) {
-						$first = $v;
-						break;
-					}
-				}
-			}
-			$settings['_border']['style'] = '' !== $first ? $first : 'solid';
-		}
+		$normalized = StyleNormalizationService::normalize( $settings );
+		$settings   = $normalized['styles'];
+		$warnings   = $normalized['warnings'] ?? [];
 
-		// Rule 2: _border.color — string → {raw|hex} object.
-		if ( isset( $settings['_border']['color'] ) && is_string( $settings['_border']['color'] ) ) {
-			$settings['_border']['color'] = self::wrap_color_value( $settings['_border']['color'] );
-		}
-
-		// Rule 3: _border.width — flat string → per-side object.
-		if ( isset( $settings['_border']['width'] ) && is_string( $settings['_border']['width'] ) ) {
-			$w = $settings['_border']['width'];
-			$settings['_border']['width'] = [ 'top' => $w, 'right' => $w, 'bottom' => $w, 'left' => $w ];
-		}
-
-		// Rule 4: _cssCustom — array → string.
-		if ( isset( $settings['_cssCustom'] ) && is_array( $settings['_cssCustom'] ) ) {
-			$settings['_cssCustom'] = implode( "\n", array_filter( $settings['_cssCustom'], 'is_string' ) );
-		}
-
-		// Rule 5: _typography.color — string → {raw|hex} object.
-		if ( isset( $settings['_typography']['color'] ) && is_string( $settings['_typography']['color'] ) ) {
-			$settings['_typography']['color'] = self::wrap_color_value( $settings['_typography']['color'] );
-		}
-
-		// Rule 6: _background.color — string → {raw|hex} object.
-		if ( isset( $settings['_background']['color'] ) && is_string( $settings['_background']['color'] ) ) {
-			$settings['_background']['color'] = self::wrap_color_value( $settings['_background']['color'] );
-		}
-
-		// Rule 7: top-level _color — string → {raw|hex} object.
-		if ( isset( $settings['_color'] ) && is_string( $settings['_color'] ) ) {
-			$settings['_color'] = self::wrap_color_value( $settings['_color'] );
+		if ( ! empty( $warnings ) ) {
+			$settings['_pipeline_warnings'] = array_merge(
+				$settings['_pipeline_warnings'] ?? [],
+				array_map(
+					static fn( string $warning ): string => 'Element style normalization: ' . $warning,
+					$warnings
+				)
+			);
 		}
 
 		return $settings;
 	}
 
-	/**
-	 * Wrap a color string in Bricks' expected {raw|hex} object format.
-	 *
-	 * Hex codes (#fff, #a1b2c3) use the 'hex' key; everything else (CSS
-	 * variables, rgb(), named colors) uses the 'raw' key.
-	 *
-	 * @param string $value Raw color string.
-	 * @return array<string, string> Bricks color object.
-	 */
-	private static function wrap_color_value( string $value ): array {
-		if ( preg_match( '/^#[0-9a-fA-F]{3,8}$/', $value ) ) {
-			return [ 'hex' => $value ];
-		}
-		return [ 'raw' => $value ];
-	}
 }

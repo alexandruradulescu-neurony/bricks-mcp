@@ -54,7 +54,8 @@ final class SiteVariableResolver {
 		self::$by_category = [];
 
 		foreach ( $variables as $var ) {
-			$name     = $var['name'] ?? '';
+			$raw_name = $var['name'] ?? '';
+			$name     = is_string( $raw_name ) ? ltrim( $raw_name, '-' ) : '';
 			$cat_id   = $var['category'] ?? '';
 			$cat_name = $cat_names[ $cat_id ] ?? 'uncategorized';
 
@@ -62,12 +63,15 @@ final class SiteVariableResolver {
 				continue;
 			}
 
-			self::$by_name[ $name ] = $var;
+			$normalized_var         = $var;
+			$normalized_var['name'] = $name;
+
+			self::$by_name[ $name ] = $normalized_var;
 
 			if ( ! isset( self::$by_category[ $cat_name ] ) ) {
 				self::$by_category[ $cat_name ] = [];
 			}
-			self::$by_category[ $cat_name ][] = $var;
+			self::$by_category[ $cat_name ][] = $normalized_var;
 		}
 	}
 
@@ -118,6 +122,20 @@ final class SiteVariableResolver {
 	public static function has_variables(): bool {
 		self::load();
 		return ! empty( self::$by_name );
+	}
+
+	/**
+	 * Whether a Bricks CSS variable exists by name.
+	 *
+	 * Accepts bare names ("primary") or CSS custom property names ("--primary").
+	 *
+	 * @param string $name Variable name.
+	 * @return bool True when the variable exists.
+	 */
+	public static function exists( string $name ): bool {
+		self::load();
+		$name = ltrim( trim( $name ), '-' );
+		return '' !== $name && isset( self::$by_name[ $name ] );
 	}
 
 	/**

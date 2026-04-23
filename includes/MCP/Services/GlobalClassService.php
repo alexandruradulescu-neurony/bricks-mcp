@@ -109,6 +109,8 @@ class GlobalClassService {
 	 * @return array<string, mixed>|\WP_Error Created class array or WP_Error on failure.
 	 */
 	public function create_global_class( array $args ): array|\WP_Error {
+		$this->store_normalization_warnings( [] );
+
 		if ( ! $this->core->acquire_lock( 'global_classes' ) ) {
 			return new \WP_Error( 'concurrent_write', __( 'Another global class write is in progress. Please retry.', 'bricks-mcp' ) );
 		}
@@ -175,6 +177,7 @@ class GlobalClassService {
 		// the frontend with "Array to string conversion" during render.
 		$sanitized_styles = $this->core->sanitize_styles_array( $args['styles'] ?? [] );
 		$normalized       = $this->normalize_bricks_styles( $sanitized_styles );
+		$warnings         = $normalized['warnings'] ?? [];
 		$new_class = [
 			'id'       => $new_id,
 			'name'     => $name,
@@ -199,6 +202,11 @@ class GlobalClassService {
 				'global_class_create_failed',
 				__( 'Global class appeared to save but verification read-back failed. The database may have rejected the write.', 'bricks-mcp' )
 			);
+		}
+
+		if ( ! empty( $warnings ) ) {
+			$this->store_normalization_warnings( $warnings );
+			$new_class['warnings'] = $warnings;
 		}
 
 		return $new_class;
@@ -247,91 +255,7 @@ class GlobalClassService {
 	 * @return array{styles: array<string, mixed>, warnings: array<string>} Normalized styles and any warnings.
 	 */
 	private function normalize_bricks_styles( array $styles ): array {
-		$warnings = [];
-
-		// Rule 1: _border.style — per-side object → string.
-		// Collapse deterministically: top > right > bottom > left, falling back to
-		// 'solid' when none of the four canonical sides carry a usable string.
-		// Previously this used reset() which depends on insertion order and could
-		// pick 'dashed' when the caller meant 'solid'.
-		if ( isset( $styles['_border']['style'] ) && is_array( $styles['_border']['style'] ) ) {
-			$style_array = $styles['_border']['style'];
-			$first_value = 'solid';
-			foreach ( [ 'top', 'right', 'bottom', 'left' ] as $side ) {
-				if ( is_string( $style_array[ $side ] ?? null ) && '' !== $style_array[ $side ] ) {
-					$first_value = $style_array[ $side ];
-					break;
-				}
-			}
-
-			$styles['_border']['style'] = $first_value;
-			$warnings[] = 'Border style must be a string (e.g., "solid", "dashed"). Array value was converted to "' . esc_attr( $first_value ) . '". Use a string format in future requests.';
-		}
-
-		// Rule 2: _border.color — string → {raw|hex} object.
-		if ( isset( $styles['_border']['color'] ) && is_string( $styles['_border']['color'] ) ) {
-			$styles['_border']['color'] = self::wrap_color_value( $styles['_border']['color'] );
-			$warnings[] = '_border.color was a string; wrapped in color object.';
-		}
-
-		// Rule 3: _border.width — flat string → per-side object.
-		if ( isset( $styles['_border']['width'] ) && is_string( $styles['_border']['width'] ) ) {
-			$w = $styles['_border']['width'];
-			$styles['_border']['width'] = [ 'top' => $w, 'right' => $w, 'bottom' => $w, 'left' => $w ];
-			$warnings[] = '_border.width was a flat string; expanded to per-side object.';
-		}
-
-		// Rule 4: _cssCustom — array → string.
-		if ( isset( $styles['_cssCustom'] ) && is_array( $styles['_cssCustom'] ) ) {
-			$styles['_cssCustom'] = implode( "\n", array_filter( $styles['_cssCustom'], 'is_string' ) );
-			$warnings[] = '_cssCustom was an array; joined to string with newlines.';
-		}
-
-		// Rule 5: _typography.color — string → {raw|hex} object.
-		if ( isset( $styles['_typography']['color'] ) && is_string( $styles['_typography']['color'] ) ) {
-			$styles['_typography']['color'] = self::wrap_color_value( $styles['_typography']['color'] );
-			$warnings[] = '_typography.color was a string; wrapped in color object.';
-		}
-
-		// Rule 6: _background.color — string → {raw|hex} object.
-		if ( isset( $styles['_background']['color'] ) && is_string( $styles['_background']['color'] ) ) {
-			$styles['_background']['color'] = self::wrap_color_value( $styles['_background']['color'] );
-			$warnings[] = '_background.color was a string; wrapped in color object.';
-		}
-
-		// Rule 7: top-level _color — string → {raw|hex} object.
-		if ( isset( $styles['_color'] ) && is_string( $styles['_color'] ) ) {
-			$styles['_color'] = self::wrap_color_value( $styles['_color'] );
-			$warnings[] = '_color was a string; wrapped in color object.';
-		}
-
-		// Recursively normalize nested style groups (for theme styles).
-		foreach ( $styles as $key => $value ) {
-			// Skip known shape-sensitive keys and color objects to avoid false recursion.
-			if ( is_array( $value ) && ! isset( $value['width'] ) && ! isset( $value['style'] ) && ! isset( $value['color'] ) && ! isset( $value['radius'] ) && ! isset( $value['raw'] ) && ! isset( $value['hex'] ) ) {
-				$nested = $this->normalize_bricks_styles( $value );
-				$styles[ $key ] = $nested['styles'];
-				$warnings = array_merge( $warnings, $nested['warnings'] );
-			}
-		}
-
-		return array(
-			'styles'   => $styles,
-			'warnings' => $warnings,
-		);
-	}
-
-	/**
-	 * Wrap a color string in Bricks' expected {raw|hex} object format.
-	 *
-	 * @param string $value Raw color string.
-	 * @return array<string, string> Bricks color object.
-	 */
-	private static function wrap_color_value( string $value ): array {
-		if ( preg_match( '/^#[0-9a-fA-F]{3,8}$/', $value ) ) {
-			return [ 'hex' => $value ];
-		}
-		return [ 'raw' => $value ];
+		return StyleNormalizationService::normalize( $styles );
 	}
 
 	/**
@@ -342,6 +266,8 @@ class GlobalClassService {
 	 * @return array<string, mixed>|\WP_Error Updated class array or WP_Error on failure.
 	 */
 	public function update_global_class( string $class_id, array $args ): array|\WP_Error {
+		$this->store_normalization_warnings( [] );
+
 		if ( ! $this->core->acquire_lock( 'global_classes' ) ) {
 			return new \WP_Error( 'concurrent_write', __( 'Another global class write is in progress. Please retry.', 'bricks-mcp' ) );
 		}
@@ -597,6 +523,8 @@ class GlobalClassService {
 	 * @return array{created: array<int, array<string, mixed>>, errors: array<int|string, string>} Partial success result.
 	 */
 	public function batch_create_global_classes( array $class_definitions ): array {
+		$this->store_normalization_warnings( [] );
+
 		if ( ! $this->core->acquire_lock( 'global_classes' ) ) {
 			return [
 				'created' => [],
@@ -639,18 +567,25 @@ class GlobalClassService {
 			} while ( in_array( $new_id, $existing_ids, true ) );
 			$existing_ids[] = $new_id;
 
+			$sanitized_styles = $this->core->sanitize_styles_array( $def['styles'] ?? [] );
+			$normalized       = $this->normalize_bricks_styles( $sanitized_styles );
+			$warnings         = $normalized['warnings'] ?? [];
+
 			$new_class = [
 				'id'     => $new_id,
 				'name'   => $name,
 				'color'  => isset( $def['color'] ) ? sanitize_text_field( $def['color'] ) : '#686868',
-				'settings' => $this->core->sanitize_styles_array( $def['styles'] ?? [] ),
+				'settings' => $normalized['styles'],
 			];
 
 			if ( ! empty( $def['category'] ) ) {
 				$new_class['category'] = sanitize_text_field( $def['category'] );
 			}
 
-			$classes[]        = $new_class;
+			$classes[] = $new_class;
+			if ( ! empty( $warnings ) ) {
+				$new_class['warnings'] = $warnings;
+			}
 			$created[]        = $new_class;
 			$existing_names[] = $name;
 		}

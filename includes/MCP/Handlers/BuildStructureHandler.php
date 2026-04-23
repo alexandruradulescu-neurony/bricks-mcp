@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\ToolRegistry;
+use BricksMCP\MCP\Services\ContentContractService;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -162,8 +163,9 @@ final class BuildStructureHandler {
 		}
 
 		// Post-build: find new elements, section_id, and build role_map by label.
-		$section_id = null;
-		$role_map   = [];
+		$section_id      = null;
+		$role_map        = [];
+		$role_collisions = [];
 		if ( $page_id > 0 && $this->bricks !== null ) {
 			$post_elements = $this->bricks->get_elements( $page_id );
 			if ( is_array( $post_elements ) ) {
@@ -181,6 +183,11 @@ final class BuildStructureHandler {
 					// Role map: label → element_id.
 					$label = (string) ( $el['settings']['label'] ?? $el['label'] ?? '' );
 					if ( $label !== '' ) {
+						if ( isset( $role_map[ $label ] ) && $role_map[ $label ] !== $id ) {
+							$role_collisions[ $label ]   = $role_collisions[ $label ] ?? [ $role_map[ $label ] ];
+							$role_collisions[ $label ][] = $id;
+							continue;
+						}
 						$role_map[ $label ] = $id;
 					}
 				}
@@ -191,11 +198,24 @@ final class BuildStructureHandler {
 			$result,
 			[
 				'role_map'  => $role_map,
-				'next_step' => 'Call populate_content with section_id + content_map keyed by role.',
+				'next_step' => 'Call populate_content with section_id + content_map keyed by role. Use content_contract.required_roles when present; populate_content rejects missing required roles unless allow_partial=true.',
 			]
 		);
 		if ( $section_id !== null ) {
 			$response['section_id'] = $section_id;
+			if ( $page_id > 0 && $this->bricks !== null ) {
+				$post_elements = $this->bricks->get_elements( $page_id );
+				if ( is_array( $post_elements ) ) {
+					$response['content_contract'] = ( new ContentContractService() )->analyze( $post_elements, $section_id );
+				}
+			}
+		}
+		if ( ! empty( $role_collisions ) ) {
+			$response['role_collisions'] = array_map(
+				static fn( array $ids ): array => array_values( array_unique( $ids ) ),
+				$role_collisions
+			);
+			$response['next_step'] = 'Call populate_content with section_id + content_map keyed by role. This build has role_collisions; use #element-id keys for collided roles, or rebuild with unique roles. populate_content rejects ambiguous role keys unless you target exact IDs.';
 		}
 		if ( ! empty( $provisioned_classes ) ) {
 			$response['classes_provisioned_from_pattern'] = $provisioned_classes;
@@ -220,6 +240,7 @@ final class BuildStructureHandler {
 			}
 		}
 		if ( isset( $node['role'] ) && is_string( $node['role'] ) && $node['role'] !== '' ) {
+			$node['role'] = \BricksMCP\MCP\Services\DesignPlanNormalizationService::normalize_role_key( $node['role'] );
 			// Only set label when absent so explicit schema labels (e.g. "Hero") win.
 			if ( empty( $node['label'] ) ) {
 				$node['label'] = $node['role'];
@@ -334,7 +355,7 @@ final class BuildStructureHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'build_structure',
-			__( "Phase 1 of two-tier build. Takes structure-only schema (no content). Returns section_id + role_map + class creation summary. Call populate_content next.", 'bricks-mcp' ),
+			__( "Phase 1 of two-tier build. Takes structure-only schema (no content). Returns section_id + role_map + content_contract + class creation summary. Call populate_content next.", 'bricks-mcp' ),
 			[
 				'type'       => 'object',
 				'properties' => [

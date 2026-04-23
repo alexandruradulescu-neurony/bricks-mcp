@@ -47,9 +47,11 @@ final class SchemaSkeletonGenerator {
 	 * @param array<string, mixed>   $plan              Validated design_plan.
 	 * @param array<string, string>  $suggested_classes  class_name => class_id map.
 	 * @param array<string, array>   $scoped_variables   category => variable names.
+	 * @param array<string, array>   $style_roles        Semantic role resolution from StyleRoleResolver.
+	 * @param array<string, array>   $component_classes  Generated component class definitions by semantic role.
 	 * @return array<string, mixed> Complete schema ready for the internal build pipeline (build_structure + populate_content).
 	 */
-	public function generate_from_plan( int $page_id, array $plan, array $suggested_classes, array $scoped_variables ): array {
+	public function generate_from_plan( int $page_id, array $plan, array $suggested_classes, array $scoped_variables, array $style_roles = [], array $component_classes = [] ): array {
 		$section_type = $plan['section_type'] ?? 'generic';
 		$layout       = $plan['layout'] ?? 'centered';
 		$background   = $plan['background'] ?? 'light';
@@ -61,13 +63,20 @@ final class SchemaSkeletonGenerator {
 				(string) $plan['use_pattern'],
 				(array) ( $plan['content_map'] ?? [] ),
 				$suggested_classes,
-				$scoped_variables
+				$scoped_variables,
+				$style_roles,
+				$component_classes
 			);
 		}
 
 		$elements     = $plan['elements'] ?? [];
 		$patterns_def = $plan['patterns'] ?? [];
-		$roles        = $this->map_classes_to_roles( $suggested_classes );
+		$roles        = array_merge(
+			$this->map_classes_to_roles( $suggested_classes ),
+			$this->map_style_roles_to_class_roles( $style_roles ),
+			$this->map_generated_components_to_class_roles( $component_classes )
+		);
+		$component_styles = $this->map_generated_components_to_styles( $component_classes );
 
 		// v3.28.0: plan-level variant becomes the default modifier for elements
 		// whose structured class_intent omits an explicit modifier.
@@ -76,7 +85,7 @@ final class SchemaSkeletonGenerator {
 		// Build element nodes from the plan's element list.
 		$content_nodes = [];
 		foreach ( $elements as $el ) {
-			$content_nodes[] = $this->build_plan_element( $el, $roles, false, $default_modifier );
+			$content_nodes[] = $this->build_plan_element( $el, $roles, false, $default_modifier, $component_styles );
 		}
 
 		// Build pattern definitions.
@@ -91,7 +100,7 @@ final class SchemaSkeletonGenerator {
 			// Build pattern node.
 			$pat_children = [];
 			foreach ( $pat_elements as $pel ) {
-				$pat_children[] = $this->build_plan_element( $pel, $roles, true, $default_modifier );
+				$pat_children[] = $this->build_plan_element( $pel, $roles, true, $default_modifier, $component_styles );
 			}
 
 			$pat_class = $this->find_class_for_pattern( $pat_name, $roles );
@@ -582,7 +591,7 @@ final class SchemaSkeletonGenerator {
 	 *                                 Only applies to structured (array) intents; loose
 	 *                                 strings are left unchanged.
 	 */
-	private function build_plan_element( array $el, array $roles, bool $is_pattern = false, string $default_modifier = '' ): array {
+	private function build_plan_element( array $el, array $roles, bool $is_pattern = false, string $default_modifier = '', array $component_styles = [] ): array {
 		$type         = $el['type'] ?? 'text-basic';
 		$role         = $el['role'] ?? '';
 		$tag          = $el['tag'] ?? null;
@@ -607,13 +616,16 @@ final class SchemaSkeletonGenerator {
 		// populate_content resolve content_map roles → element IDs post-build
 		// without relying on class_intent name matching.
 		if ( $role !== '' ) {
-			$props['role'] = $role;
+			$props['role'] = $is_pattern ? RepeatRoleNamingService::role_data_ref( $role ) : $role;
 		}
 		if ( null !== $tag ) {
 			$props['tag'] = $tag;
 		}
 		if ( null !== $class_intent ) {
 			$props['class_intent'] = $class_intent;
+			if ( is_string( $class_intent ) && isset( $component_styles[ $class_intent ] ) ) {
+				$props['style_overrides'] = $component_styles[ $class_intent ];
+			}
 		}
 
 		if ( 'form' === $type ) {
@@ -628,6 +640,11 @@ final class SchemaSkeletonGenerator {
 	 */
 	private function role_to_class( string $role, array $roles ): ?string {
 		$role_lower = strtolower( $role );
+
+		$semantic_role = $this->infer_semantic_role_from_design_role( $role_lower );
+		if ( null !== $semantic_role && isset( $roles[ $semantic_role ] ) ) {
+			return $roles[ $semantic_role ];
+		}
 
 		// Direct role matches — class roles resolved from structured brief when available.
 		$brief         = BriefResolver::get_instance();
@@ -652,6 +669,120 @@ final class SchemaSkeletonGenerator {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Convert StyleRoleResolver output into the local role map used by skeleton generation.
+	 *
+	 * @param array<string, array<string, mixed>> $style_roles
+	 * @return array<string, string>
+	 */
+	private function map_style_roles_to_class_roles( array $style_roles ): array {
+		$roles = [];
+
+		foreach ( $style_roles as $semantic_role => $resolution ) {
+			if (
+				! is_array( $resolution )
+				|| ( $resolution['kind'] ?? '' ) !== 'class'
+				|| ( $resolution['status'] ?? '' ) !== 'resolved'
+				|| empty( $resolution['class_name'] )
+			) {
+				continue;
+			}
+
+			$class_name = (string) $resolution['class_name'];
+			$roles[ (string) $semantic_role ] = $class_name;
+
+			foreach ( $this->legacy_role_aliases_for_semantic_role( (string) $semantic_role ) as $alias ) {
+				if ( ! isset( $roles[ $alias ] ) ) {
+					$roles[ $alias ] = $class_name;
+				}
+			}
+		}
+
+		return $roles;
+	}
+
+	/**
+	 * @param array<string, array<string, mixed>> $component_classes
+	 * @return array<string, string>
+	 */
+	private function map_generated_components_to_class_roles( array $component_classes ): array {
+		$roles = [];
+
+		foreach ( $component_classes as $semantic_role => $definition ) {
+			if ( ! is_array( $definition ) || empty( $definition['name'] ) ) {
+				continue;
+			}
+
+			$class_name = (string) $definition['name'];
+			$roles[ (string) $semantic_role ] = $class_name;
+
+			foreach ( $this->legacy_role_aliases_for_semantic_role( (string) $semantic_role ) as $alias ) {
+				if ( ! isset( $roles[ $alias ] ) ) {
+					$roles[ $alias ] = $class_name;
+				}
+			}
+		}
+
+		return $roles;
+	}
+
+	/**
+	 * @param array<string, array<string, mixed>> $component_classes
+	 * @return array<string, array<string, mixed>>
+	 */
+	private function map_generated_components_to_styles( array $component_classes ): array {
+		$styles = [];
+
+		foreach ( $component_classes as $definition ) {
+			if ( ! is_array( $definition ) || empty( $definition['name'] ) || ! is_array( $definition['styles'] ?? null ) ) {
+				continue;
+			}
+			$styles[ (string) $definition['name'] ] = $definition['styles'];
+		}
+
+		return $styles;
+	}
+
+	/**
+	 * Infer a semantic style role from a free-form design role.
+	 */
+	private function infer_semantic_role_from_design_role( string $role_lower ): ?string {
+		if ( str_contains( $role_lower, 'primary' ) && ( str_contains( $role_lower, 'cta' ) || str_contains( $role_lower, 'button' ) || str_contains( $role_lower, 'btn' ) ) ) {
+			return 'button.primary';
+		}
+		if ( ( str_contains( $role_lower, 'secondary' ) || str_contains( $role_lower, 'ghost' ) || str_contains( $role_lower, 'outline' ) ) && ( str_contains( $role_lower, 'cta' ) || str_contains( $role_lower, 'button' ) || str_contains( $role_lower, 'btn' ) ) ) {
+			return 'button.secondary';
+		}
+		if ( str_contains( $role_lower, 'eyebrow' ) || str_contains( $role_lower, 'tagline' ) || str_contains( $role_lower, 'overline' ) || str_contains( $role_lower, 'kicker' ) ) {
+			return 'text.eyebrow';
+		}
+		if ( str_contains( $role_lower, 'subtitle' ) || str_contains( $role_lower, 'description' ) || str_contains( $role_lower, 'lead' ) ) {
+			return 'text.subtitle';
+		}
+		if ( str_contains( $role_lower, 'card' ) || str_contains( $role_lower, 'feature' ) || str_contains( $role_lower, 'service' ) || str_contains( $role_lower, 'pricing' ) ) {
+			return str_contains( $role_lower, 'featured' ) ? 'card.featured' : 'card.default';
+		}
+
+		return null;
+	}
+
+	/**
+	 * Map semantic role names into the legacy role keys already used by this class.
+	 *
+	 * @return array<int, string>
+	 */
+	private function legacy_role_aliases_for_semantic_role( string $semantic_role ): array {
+		return match ( $semantic_role ) {
+			'button.primary'   => [ 'btn_primary' ],
+			'button.secondary' => [ 'btn_ghost', 'btn_secondary' ],
+			'card.default'     => [ 'stat_card', 'service_card' ],
+			'card.featured'    => [ 'stat_card_featured', 'service_card_featured' ],
+			'text.eyebrow'     => [ 'eyebrow' ],
+			'text.subtitle'    => [ 'hero_description' ],
+			default            => [],
+		};
 	}
 
 	/**
@@ -692,6 +823,16 @@ final class SchemaSkeletonGenerator {
 	 */
 	private function make_pattern_item( array $pat_elements, string $pat_hint, int $index, string $section_type, bool $is_featured ): array {
 		$item = [];
+		foreach ( $pat_elements as $element ) {
+			if ( ! is_array( $element ) ) {
+				continue;
+			}
+			$role = DesignPlanNormalizationService::normalize_role_key( (string) ( $element['role'] ?? '' ) );
+			if ( '' === $role ) {
+				continue;
+			}
+			$item[ RepeatRoleNamingService::role_data_key( $role ) ] = RepeatRoleNamingService::indexed_role( $role, $index );
+		}
 		if ( $is_featured && 'pricing' === $section_type ) {
 			$item['_featured'] = true;
 		}
@@ -837,7 +978,7 @@ final class SchemaSkeletonGenerator {
 	 * @param array<string, array>  $scoped_variables  category => variable names.
 	 * @return array<string, mixed>
 	 */
-	private function generate_from_pattern( int $page_id, string $pattern_id, array $content_map, array $suggested_classes, array $scoped_variables ): array {
+	private function generate_from_pattern( int $page_id, string $pattern_id, array $content_map, array $suggested_classes, array $scoped_variables, array $style_roles = [], array $component_classes = [] ): array {
 		$pattern = DesignPatternService::get( $pattern_id );
 		if ( null === $pattern ) {
 			return [
@@ -855,7 +996,13 @@ final class SchemaSkeletonGenerator {
 		}
 
 		// Bridge adapted pattern → schema.
-		$bridge = new PatternToSchemaBridge();
+		$core         = new BricksCore( new ElementNormalizer( new ElementIdGenerator() ) );
+		$class_service = new GlobalClassService( $core );
+		$bridge       = new PatternToSchemaBridge(
+			$class_service->get_all_by_name(),
+			$style_roles,
+			$component_classes
+		);
 		$bridged = $bridge->pattern_to_schema( $adapted, [
 			'page_id'    => $page_id,
 			'pattern_id' => $pattern_id,

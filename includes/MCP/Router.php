@@ -18,6 +18,7 @@ use BricksMCP\MCP\Services\ClassDedupEngine;
 use BricksMCP\MCP\Services\ClassIntentResolver;
 use BricksMCP\MCP\Services\ClaudeVisionProvider;
 use BricksMCP\MCP\Services\DesignSchemaValidator;
+use BricksMCP\MCP\Services\DesignSystemIntrospector;
 use BricksMCP\MCP\Services\ElementSettingsGenerator;
 use BricksMCP\MCP\Services\ImageInputResolver;
 use BricksMCP\MCP\Services\ImageSideloadService;
@@ -846,6 +847,10 @@ final class Router {
 		// Color palette removed — site custom colors are already in design_tokens
 		// under "Colors" category (primary, secondary, accent, base, white, etc.).
 		// The Bricks default palette (grey, amber, etc.) is noise for the AI.
+
+		$design_system = new DesignSystemIntrospector( $this->bricks_service->get_global_class_service() );
+		$info['design_system_readiness'] = $design_system->analyze();
+		$info['design_system_readiness_note'] = 'Use this before building: foundation tokens, component classes, and patterns are separate readiness layers. Reuse existing resolved style_roles when confidence is high; otherwise map or generate missing component classes instead of inventing hardcoded names.';
 
 		// Pages summary: brief overview of all Bricks-enabled pages.
 		$pages_query = new \WP_Query( [

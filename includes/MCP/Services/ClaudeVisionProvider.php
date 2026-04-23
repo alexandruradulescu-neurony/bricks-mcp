@@ -38,7 +38,7 @@ final class ClaudeVisionProvider implements VisionProvider {
 
     public function analyze( array $image, array $tool_schema, array $messages, array $options = [] ): array|\WP_Error {
         if ( $this->api_key === '' ) {
-            return new \WP_Error( 'vision_not_configured', 'Set Anthropic API key in Settings → Bricks MCP before using vision features.' );
+            return new \WP_Error( 'vision_not_configured', 'Set Anthropic API key under Bricks → Bricks WP MCP → Connection & Settings before using vision features.' );
         }
 
         $content = array_merge(
@@ -51,7 +51,7 @@ final class ClaudeVisionProvider implements VisionProvider {
 
     public function call_text_only( array $messages, array $tool_schema, array $options = [] ): array|\WP_Error {
         if ( $this->api_key === '' ) {
-            return new \WP_Error( 'vision_not_configured', 'Set Anthropic API key in Settings → Bricks MCP before using vision features.' );
+            return new \WP_Error( 'vision_not_configured', 'Set Anthropic API key under Bricks → Bricks WP MCP → Connection & Settings before using vision features.' );
         }
 
         $content = [];
@@ -134,7 +134,7 @@ final class ClaudeVisionProvider implements VisionProvider {
         $body = (string) wp_remote_retrieve_body( $response );
 
         if ( $code === 401 || $code === 403 ) {
-            return new \WP_Error( 'vision_auth_failed', 'Anthropic API rejected the API key. Verify it at Settings → Bricks MCP.', [ 'upstream_body' => $body ] );
+            return new \WP_Error( 'vision_auth_failed', 'Anthropic API rejected the API key. Verify it under Bricks → Bricks WP MCP → Connection & Settings.', [ 'upstream_body' => $body ] );
         }
         if ( $code === 429 ) {
             return new \WP_Error( 'vision_rate_limited', 'Anthropic API rate limit exceeded and retry did not recover.', [ 'upstream_body' => $body ] );

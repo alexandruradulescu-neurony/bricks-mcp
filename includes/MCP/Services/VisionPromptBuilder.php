@@ -129,6 +129,13 @@ CRITICAL RULES (deviation = wrong):
    layout matches visual arrangement (centered|split-60-40|split-50-50|grid-2..4|stacked).
    background = dark or light per dominant backdrop.
 
+6b. section_type is only a coarse bucket, not the full family taxonomy. There can be many composition families inside the same bucket. Express the real family through layout choice, element ordering, media presence, CTA grouping, and repeat templates instead of flattening everything into one generic stack.
+
+6a. Prefer specific semantic roles instead of generic labels:
+   - direct elements: main_heading, section_heading, eyebrow, subtitle, primary_cta, secondary_cta, hero_image, section_image_1
+   - repeated items: feature_card_title, feature_card_text, tier_title, tier_cta, testimonial_text, testimonial_author
+   Avoid bare roles like heading, text, button, image, content, card, item.
+
 7. description field = ≤200 chars human-readable summary of what the section is.
 
 8. global_classes_to_create is REQUIRED whenever you introduce a NEW class_intent label (one that does not already exist in [SITE CONTEXT] classes). For each new class_intent, emit a matching global_classes_to_create[] entry with site-design-token style values INFERRED FROM THE IMAGE — approximate font sizes, colors, paddings, alignments you see in the image, expressed in Bricks underscore-prefix keys. Values MUST reference site variables (var(--text-2xl), var(--space-m), var(--primary-ultra-dark), var(--radius-btn), etc.) — NEVER hardcode pixel/rem values, NEVER use var(--brxw-*). Empty-shell classes produce unstyled output; fill them. You may omit a class entry ONLY if its class_intent label is already defined in [SITE CONTEXT] (reuse).
@@ -147,6 +154,8 @@ CRITICAL RULES (deviation = wrong):
 - BACKGROUND object (`_background`): `{ "backgroundColor": "var(--token)" }` or `{ "color": { "raw": "var(--token)" } }`.
 
 9. content_map is OPTIONAL — include when image text is legible and intent-specific (e.g. Romanian text reading "Tractări 24/7"). Map role → literal content string. Omit for generic image intent.
+
+10. The plan must work even if the site has NO saved patterns. Use direct elements for one-off content. Use patterns[] only when the image clearly shows repeated cards/tiers/testimonials that share the same structure.
 EOT;
         }
         $messages[] = [ 'type' => 'text', 'text' => $task ];
@@ -169,6 +178,46 @@ EOT;
             $lines[] = 'variables:';
             foreach ( $variables as $name => $value ) {
                 $lines[] = '  ' . $name . ': ' . ( is_scalar( $value ) ? (string) $value : wp_json_encode( $value ) );
+            }
+        }
+
+        $design_system = is_array( $site_context['design_system'] ?? null ) ? $site_context['design_system'] : [];
+        if ( $design_system !== [] ) {
+            $lines[] = '';
+            $lines[] = 'design_system:';
+
+            $operating_mode = (string) ( $design_system['operating_mode'] ?? '' );
+            if ( '' !== $operating_mode ) {
+                $lines[] = '  operating_mode: ' . $operating_mode;
+            }
+
+            $readiness = is_array( $design_system['readiness'] ?? null ) ? $design_system['readiness'] : [];
+            foreach ( [ 'foundation_design_system', 'component_style_layer', 'pattern_library' ] as $key ) {
+                if ( ! is_array( $readiness[ $key ] ?? null ) ) {
+                    continue;
+                }
+                $ready = ! empty( $readiness[ $key ]['ready'] ) ? 'ready' : 'not_ready';
+                $score = isset( $readiness[ $key ]['score'] ) ? (string) (int) $readiness[ $key ]['score'] : '0';
+                $lines[] = '  ' . $key . ': ' . $ready . ' (' . $score . ')';
+            }
+
+            $style_roles = is_array( $design_system['style_roles'] ?? null ) ? $design_system['style_roles'] : [];
+            if ( $style_roles !== [] ) {
+                $lines[] = '  style_roles:';
+                foreach ( $this->compact_style_role_preview( $style_roles ) as $preview ) {
+                    $lines[] = '    ' . $preview;
+                }
+            }
+
+            $component_classes = is_array( $design_system['component_classes'] ?? null ) ? $design_system['component_classes'] : [];
+            if ( $component_classes !== [] ) {
+                $lines[] = '  generated_components:';
+                foreach ( $component_classes as $semantic_role => $definition ) {
+                    if ( ! is_array( $definition ) || empty( $definition['name'] ) ) {
+                        continue;
+                    }
+                    $lines[] = '    ' . $semantic_role . ' -> ' . (string) $definition['name'];
+                }
             }
         }
 
@@ -208,6 +257,33 @@ EOT;
             }
         }
         return implode( ', ', $pick );
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $style_roles
+     * @return array<int, string>
+     */
+    private function compact_style_role_preview( array $style_roles ): array {
+        $preview = [];
+        foreach ( $style_roles as $role => $resolution ) {
+            if ( ! is_array( $resolution ) ) {
+                continue;
+            }
+            $status = (string) ( $resolution['status'] ?? 'unresolved' );
+            $kind   = (string) ( $resolution['kind'] ?? '' );
+            if ( 'resolved' === $status && 'class' === $kind && ! empty( $resolution['class_name'] ) ) {
+                $preview[] = $role . ' -> class:' . (string) $resolution['class_name'];
+                continue;
+            }
+            if ( 'resolved' === $status && 'token' === $kind && ! empty( $resolution['token_name'] ) ) {
+                $preview[] = $role . ' -> token:' . (string) $resolution['token_name'];
+                continue;
+            }
+            if ( count( $preview ) < 8 ) {
+                $preview[] = $role . ' -> unresolved';
+            }
+        }
+        return array_slice( $preview, 0, 12 );
     }
 
     private function emit_pattern_schema(): array {
@@ -289,8 +365,11 @@ EOT;
                     'items' => [
                         'type'       => 'object',
                         'properties' => [
-                            'type' => [ 'type' => 'string', 'enum' => $leaf_types ],
-                            'role' => [ 'type' => 'string' ],
+                            'type'         => [ 'type' => 'string', 'enum' => $leaf_types ],
+                            'role'         => [ 'type' => 'string' ],
+                            'tag'          => [ 'type' => 'string' ],
+                            'class_intent' => [ 'type' => 'string', 'description' => 'Optional BEM-style class label for this repeated child.' ],
+                            'content_hint' => [ 'type' => 'string', 'description' => 'Optional short hint for the repeated child content.' ],
                         ],
                         'required'   => [ 'type', 'role' ],
                     ],

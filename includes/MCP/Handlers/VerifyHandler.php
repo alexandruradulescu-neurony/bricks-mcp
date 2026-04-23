@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\Services\ContentContractService;
 use BricksMCP\MCP\ToolRegistry;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -135,18 +136,26 @@ final class VerifyHandler {
 		if ( ! is_array( $all_classes ) ) {
 			$all_classes = [];
 		}
-		$class_id_to_name = [];
+		$class_id_to_name   = [];
+		$class_id_to_record = [];
 		foreach ( $all_classes as $cls ) {
 			if ( ! is_array( $cls ) ) {
 				continue;
 			}
-			$class_id_to_name[ $cls['id'] ?? '' ] = $cls['name'] ?? '';
+			$id = (string) ( $cls['id'] ?? '' );
+			if ( '' === $id ) {
+				continue;
+			}
+			$class_id_to_name[ $id ]   = $cls['name'] ?? '';
+			$class_id_to_record[ $id ] = $cls;
 		}
 
 		$class_names = [];
 		foreach ( array_keys( $classes_used ) as $id ) {
 			$class_names[] = $class_id_to_name[ $id ] ?? $id;
 		}
+
+		$quality = $this->inspect_quality( $elements, $class_id_to_name, $class_id_to_record );
 
 		// Build hierarchy tree for last section (most recently built).
 		$sections = array_filter( $elements, fn( $el ) => is_array( $el ) && ( $el['name'] ?? '' ) === 'section' && empty( $el['parent'] ) );
@@ -176,6 +185,11 @@ final class VerifyHandler {
 
 		// Content extraction — lets AI verify actual text was set, not placeholders.
 		$content_sample = $this->extract_content_sample( $elements );
+		$content_contract = null;
+		$contract_section_id = is_string( $section_id ) ? $section_id : ( is_array( $last_section ) ? (string) ( $last_section['id'] ?? '' ) : '' );
+		if ( '' !== $contract_section_id ) {
+			$content_contract = ( new ContentContractService() )->analyze( $elements, $contract_section_id );
+		}
 
 		return [
 			'page_id'           => $page_id,
@@ -184,13 +198,91 @@ final class VerifyHandler {
 			'element_count'     => count( $elements ),
 			'type_counts'       => $type_counts,
 			'classes_used'      => array_values( array_unique( $class_names ) ),
+			'quality_checks'    => $quality,
 			'labels'            => $labels,
 			'last_section'      => $hierarchy,
 			'section_count'     => count( $sections ),
 			'content_sample'    => $content_sample,
+			'content_contract'  => $content_contract,
 			'status'            => 'ok',
-			'verification'      => 'Compare page_description and sections[*].description with your design intent. Check content_sample.headings and .buttons for actual text. If has_placeholder_content is true, replace [PLACEHOLDER] text. Compare type_counts and classes_used against your design_plan.',
+			'verification'      => 'Compare page_description and sections[*].description with your design intent. Check quality_checks, content_sample.headings and .buttons for actual text. If has_placeholder_content is true, replace [PLACEHOLDER] text. Compare type_counts and classes_used against your design_plan.',
 			'notes_hint'        => 'If you learned something about this site during the build (e.g. preferred layouts, naming conventions, design patterns that work well, corrections you had to make), save it via bricks:add_note(text="..."). Notes persist across sessions and are shown in future discovery responses.',
+		];
+	}
+
+	/**
+	 * Inspect static visual quality issues in saved Bricks elements.
+	 *
+	 * @param array<int, array<string, mixed>> $elements Flat Bricks element list.
+	 * @param array<string, string>            $class_id_to_name Class ID => class name map.
+	 * @param array<string, array<string, mixed>> $class_id_to_record Class ID => full class record map.
+	 * @return array<string, mixed>
+	 */
+	private function inspect_quality( array $elements, array $class_id_to_name, array $class_id_to_record ): array {
+		$warnings       = [];
+		$missing_ids    = [];
+		$empty_classes  = [];
+		$variable_notes = [];
+		$role_counts    = [];
+
+		foreach ( $elements as $el ) {
+			if ( ! is_array( $el ) ) {
+				continue;
+			}
+			$settings = is_array( $el['settings'] ?? null ) ? $el['settings'] : [];
+			$role     = (string) ( $settings['label'] ?? $el['label'] ?? '' );
+			if ( '' !== $role ) {
+				$role_counts[ $role ] = ( $role_counts[ $role ] ?? 0 ) + 1;
+			}
+
+			foreach ( (array) ( $settings['_cssGlobalClasses'] ?? [] ) as $class_id ) {
+				$class_id = (string) $class_id;
+				if ( '' === $class_id ) {
+					continue;
+				}
+				if ( ! isset( $class_id_to_name[ $class_id ] ) ) {
+					$missing_ids[] = $class_id;
+					continue;
+				}
+				$record = $class_id_to_record[ $class_id ] ?? [];
+				if ( empty( $record['settings'] ) ) {
+					$empty_classes[] = (string) $class_id_to_name[ $class_id ];
+				}
+			}
+
+			$normalized = \BricksMCP\MCP\Services\StyleNormalizationService::normalize( $settings );
+			foreach ( $normalized['warnings'] as $warning ) {
+				if ( str_contains( $warning, 'missing Bricks variable' ) || str_contains( $warning, 'foreign variable' ) ) {
+					$variable_notes[] = (string) ( $el['id'] ?? 'unknown' ) . ': ' . $warning;
+				}
+			}
+		}
+
+		if ( ! empty( $missing_ids ) ) {
+			$warnings[] = 'Missing global class IDs on elements: ' . implode( ', ', array_values( array_unique( $missing_ids ) ) ) . '.';
+		}
+		if ( ! empty( $empty_classes ) ) {
+			$warnings[] = 'Used empty global classes: ' . implode( ', ', array_values( array_unique( $empty_classes ) ) ) . '.';
+		}
+		$duplicate_roles = [];
+		foreach ( $role_counts as $role => $count ) {
+			if ( $count > 1 ) {
+				$duplicate_roles[] = $role;
+			}
+		}
+		if ( ! empty( $duplicate_roles ) ) {
+			$warnings[] = 'Duplicate role labels in built elements: ' . implode( ', ', array_values( array_unique( $duplicate_roles ) ) ) . '.';
+		}
+		foreach ( array_slice( array_values( array_unique( $variable_notes ) ), 0, 10 ) as $note ) {
+			$warnings[] = $note;
+		}
+
+		return [
+			'status'             => empty( $warnings ) ? 'ok' : 'needs_attention',
+			'warnings'           => $warnings,
+			'missing_class_ids'   => array_values( array_unique( $missing_ids ) ),
+			'empty_classes_used' => array_values( array_unique( $empty_classes ) ),
+			'duplicate_roles'    => array_values( array_unique( $duplicate_roles ) ),
 		];
 	}
 

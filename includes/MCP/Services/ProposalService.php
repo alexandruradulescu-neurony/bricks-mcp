@@ -343,6 +343,7 @@ final class ProposalService {
 
 		$detected = $this->detect_section_type( $description );
 		$catalog  = ( new PatternCatalog() )->build( $detected['type'], $detected['confidence'] );
+		$design_system_analysis = ( new DesignSystemIntrospector( $this->class_service ) )->analyze();
 
 		$response = [
 			'phase'       => 'discovery',
@@ -354,6 +355,7 @@ final class ProposalService {
 			'section_type_detected'   => $detected['type'],
 			'section_type_confidence' => $detected['confidence'],
 			'pattern_catalog'         => $catalog,
+			'design_system_readiness' => $design_system_analysis,
 		];
 
 		if ( ! empty( $existing_sections ) ) {
@@ -382,6 +384,12 @@ final class ProposalService {
 				'design'   => $design_brief ?: null,
 				'business' => $business_brief ?: null,
 			] ),
+			'design_system' => [
+				'operating_mode' => $design_system_analysis['operating_mode'] ?? '',
+				'readiness'      => $design_system_analysis['readiness'] ?? [],
+				'style_roles'    => $design_system_analysis['style_roles'] ?? [],
+				'next_actions'   => $design_system_analysis['next_actions'] ?? [],
+			],
 		];
 
 		$context_hash    = md5( wp_json_encode( $site_context ) );
@@ -406,7 +414,8 @@ final class ProposalService {
 		// First discovery or site data changed — return full response and persist the hash.
 		self::persist_discovery_hash( $context_hash );
 
-		$has_design_system = count( $all_classes ) >= 5 || SiteVariableResolver::has_variables();
+		$foundation = $design_system_analysis['readiness']['foundation_design_system']['ready'] ?? false;
+		$has_design_system = true === $foundation;
 
 		$response['available_elements']   = self::get_element_capabilities( $has_design_system );
 		$response['available_layouts']    = self::VALID_LAYOUTS;
@@ -516,7 +525,7 @@ final class ProposalService {
 				[
 					'name'              => 'REQUIRED — pattern name',
 					'repeat'            => 'REQUIRED — how many times to repeat',
-					'element_structure' => 'REQUIRED — array of {type, role} objects',
+					'element_structure' => 'REQUIRED — array of {type, role, tag?, class_intent?, content_hint?} objects',
 					'content_hint'      => 'optional — echoed in content_plan for the repeated instance',
 				],
 			],
@@ -532,14 +541,29 @@ final class ProposalService {
 	 * Validate design_plan, generate skeleton, return proposal.
 	 */
 	private function create_proposal( int $page_id, string $description, array $design_plan ): array|\WP_Error {
+		$all_classes       = $this->class_service->get_global_classes();
+		$plan_normalizer   = new DesignPlanNormalizationService( $this->class_service->get_all_by_name() );
+		$normalized_plan   = $plan_normalizer->normalize( $design_plan, [], is_array( $design_plan['content_plan'] ?? null ) ? $design_plan['content_plan'] : [] );
+		$design_plan       = $normalized_plan['design_plan'];
+		if ( ! empty( $normalized_plan['content_map'] ) ) {
+			$design_plan['content_plan'] = $normalized_plan['content_map'];
+		}
+		$enriched_plan       = ( new DesignPlanEnrichmentService() )->enrich( $design_plan );
+		$design_plan         = $enriched_plan['design_plan'];
+		$repeat_extracted    = ( new DesignPlanRepeatExtractionService() )->extract( $design_plan );
+		$design_plan         = $repeat_extracted['design_plan'];
+		$composed_plan       = ( new DesignPlanCompositionService() )->compose( $design_plan );
+		$design_plan         = $composed_plan['design_plan'];
+		$repaired_plan       = ( new DesignPlanStructureRepairService() )->repair( $design_plan );
+		$design_plan         = $repaired_plan['design_plan'];
+		$design_plan_warnings = ( new DesignPlanQualityService() )->analyze( $design_plan );
+
 		// Validate the design plan.
 		$validation = $this->validate_design_plan( $design_plan );
 		if ( is_wp_error( $validation ) ) {
 			return $validation;
 		}
 
-		// Get classes.
-		$all_classes       = $this->class_service->get_global_classes();
 		$suggested_classes = [];
 
 		foreach ( $all_classes as $class ) {
@@ -586,6 +610,8 @@ final class ProposalService {
 
 		// Get scoped variables.
 		$scoped_variables = $this->get_scoped_variables( $description );
+		$style_roles      = ( new StyleRoleResolver( $all_classes ) )->resolve_all();
+		$component_classes = ( new ComponentClassGenerator( $style_roles ) )->missing_component_definitions();
 
 		// Fetch real element schemas for the types the AI chose.
 		$chosen_types = [];
@@ -629,6 +655,36 @@ final class ProposalService {
 		}
 		$design_plan['elements'] = $clean_elements;
 
+		foreach ( $design_plan['patterns'] ?? [] as $pattern ) {
+			if ( ! is_array( $pattern ) ) {
+				continue;
+			}
+			$repeat            = max( 1, (int) ( $pattern['repeat'] ?? 1 ) );
+			$pattern_hint      = trim( (string) ( $pattern['content_hint'] ?? '' ) );
+			$element_structure = is_array( $pattern['element_structure'] ?? null ) ? $pattern['element_structure'] : [];
+
+			for ( $i = 1; $i <= $repeat; $i++ ) {
+				foreach ( $element_structure as $element ) {
+					if ( ! is_array( $element ) ) {
+						continue;
+					}
+					$role = DesignPlanNormalizationService::normalize_role_key( (string) ( $element['role'] ?? '' ) );
+					if ( '' === $role ) {
+						continue;
+					}
+					$indexed_role = RepeatRoleNamingService::indexed_role( $role, $i );
+					$hint         = trim( (string) ( $element['content_hint'] ?? '' ) );
+					if ( '' === $hint ) {
+						$hint = $pattern_hint;
+					}
+					if ( '' === $hint ) {
+						continue;
+					}
+					$content_plan[ $indexed_role ] = $this->indexed_repeat_hint( $hint, $i, $repeat );
+				}
+			}
+		}
+
 		// Merge with AI-supplied content_plan (AI's explicit plan wins on key collision).
 		if ( isset( $design_plan['content_plan'] ) && is_array( $design_plan['content_plan'] ) ) {
 			$content_plan = array_merge( $content_plan, $design_plan['content_plan'] );
@@ -639,7 +695,9 @@ final class ProposalService {
 			$page_id,
 			$design_plan,
 			$suggested_classes,
-			$scoped_variables
+			$scoped_variables,
+			$style_roles,
+			$component_classes
 		);
 
 		// v3.29: detect pattern-based schema and extract provisioning manifest + logs.
@@ -677,12 +735,26 @@ final class ProposalService {
 			'created_at'       => current_time( 'mysql' ),
 			'suggested_schema' => $suggested_schema,
 			'content_plan'     => $content_plan,
-			'next_step'        => 'Review the suggested_schema (structure-only, no content fields). Call build_structure with this proposal_id + the schema. It returns section_id + role_map. Then call populate_content with section_id + content_map keyed by role to inject real content.',
+			'next_step'        => 'Review the suggested_schema (structure-only, no content fields). Call build_structure with this proposal_id + the schema. It returns section_id + role_map + content_contract. Then call populate_content with section_id + content_map keyed by content_contract.required_roles to inject real content.',
 			'resolved'         => [
 				'classes_suggested' => $suggested_classes,
 				'variables'         => $scoped_variables,
 				'element_schemas'   => $element_details,
+				'style_roles'       => $style_roles,
+				'component_class_plan' => $component_classes,
+				'normalization_log' => $normalized_plan['normalization_log'] ?? [],
+				'enrichment_log'   => $enriched_plan['enrichment_log'] ?? [],
+				'repeat_extraction_log' => $repeat_extracted['extraction_log'] ?? [],
+				'composition_family' => $composed_plan['composition_family'] ?? '',
+				'composition_log'  => $composed_plan['composition_log'] ?? [],
+				'repair_log'       => $repaired_plan['repair_log'] ?? [],
+				'design_plan_warnings' => $design_plan_warnings,
 			],
+			'design_plan_warnings' => $design_plan_warnings,
+			'composition_family'   => $composed_plan['composition_family'] ?? '',
+			'composition_log'      => $composed_plan['composition_log'] ?? [],
+			'repeat_extraction_log' => $repeat_extracted['extraction_log'] ?? [],
+			'repair_log'           => $repaired_plan['repair_log'] ?? [],
 			// v3.29 pattern-flow metadata:
 			'pattern_id'            => $pattern_id,
 			'provisioning_manifest' => $provisioning_manifest,
@@ -703,6 +775,21 @@ final class ProposalService {
 			$response['pattern_id']     = $pattern_id;
 			$response['adaptation_log'] = $adaptation_log;
 			$response['conversion_log'] = $conversion_log;
+		}
+		if ( ! empty( $normalized_plan['normalization_log'] ) ) {
+			$response['normalization_log'] = $normalized_plan['normalization_log'];
+		}
+		if ( ! empty( $enriched_plan['enrichment_log'] ) ) {
+			$response['enrichment_log'] = $enriched_plan['enrichment_log'];
+		}
+		if ( ! empty( $repeat_extracted['extraction_log'] ) ) {
+			$response['repeat_extraction_log'] = $repeat_extracted['extraction_log'];
+		}
+		if ( ! empty( $composed_plan['composition_log'] ) ) {
+			$response['composition_log'] = $composed_plan['composition_log'];
+		}
+		if ( ! empty( $repaired_plan['repair_log'] ) ) {
+			$response['repair_log'] = $repaired_plan['repair_log'];
 		}
 
 		return $response;
@@ -750,6 +837,7 @@ final class ProposalService {
 		if ( ! $has_use_pattern && ( empty( $elements ) || ! is_array( $elements ) ) ) {
 			$errors[] = 'design_plan.elements is required and must be a non-empty array. Each element needs: type, role. Optional: content_hint (moved to content_plan map in v3.28.0). When using a pattern, set use_pattern and elements becomes optional.';
 		} elseif ( is_array( $elements ) && ! empty( $elements ) ) {
+			$seen_roles = [];
 			foreach ( $elements as $idx => $el ) {
 				$path = "design_plan.elements[{$idx}]";
 				if ( empty( $el['type'] ) ) {
@@ -766,6 +854,13 @@ final class ProposalService {
 				}
 				if ( empty( $el['role'] ) ) {
 					$errors[] = "{$path}.role is required — describe what this element does (e.g., 'main_heading', 'primary_cta').";
+				} else {
+					$role = (string) $el['role'];
+					if ( isset( $seen_roles[ $role ] ) ) {
+						$errors[] = "{$path}.role \"{$role}\" duplicates design_plan.elements[{$seen_roles[$role]}].role. Roles must be unique within direct elements so populate_content can target them unambiguously.";
+					} else {
+						$seen_roles[ $role ] = $idx;
+					}
 				}
 				// v3.28.0: content_hint is optional at element level (extracted into content_plan map).
 			}
@@ -785,12 +880,20 @@ final class ProposalService {
 				if ( empty( $pat['element_structure'] ) || ! is_array( $pat['element_structure'] ) ) {
 					$errors[] = "{$path}.element_structure is required — array of {type, role} objects.";
 				} else {
+					$seen_pattern_roles = [];
 					foreach ( $pat['element_structure'] as $si => $sel ) {
 						if ( empty( $sel['type'] ) ) {
 							$errors[] = "{$path}.element_structure[{$si}].type is required.";
 						}
 						if ( empty( $sel['role'] ) ) {
 							$errors[] = "{$path}.element_structure[{$si}].role is required.";
+						} else {
+							$role = (string) $sel['role'];
+							if ( isset( $seen_pattern_roles[ $role ] ) ) {
+								$errors[] = "{$path}.element_structure[{$si}].role \"{$role}\" duplicates element_structure[{$seen_pattern_roles[$role]}].role. Roles inside a repeat template must be unique.";
+							} else {
+								$seen_pattern_roles[ $role ] = $si;
+							}
 						}
 					}
 				}
@@ -806,6 +909,17 @@ final class ProposalService {
 		}
 
 		return true;
+	}
+
+	private function indexed_repeat_hint( string $hint, int $index, int $total ): string {
+		$hint = trim( $hint );
+		if ( '' === $hint ) {
+			return '';
+		}
+		if ( $total <= 1 ) {
+			return $hint;
+		}
+		return sprintf( '%s (item %d of %d)', $hint, $index, $total );
 	}
 
 	// ================================================================

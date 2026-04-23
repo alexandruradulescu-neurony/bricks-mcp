@@ -83,6 +83,7 @@ class BricksCore {
 	public const OPTION_STRUCTURED_BRIEF     = 'bricks_mcp_structured_brief';
 	public const OPTION_DS_LAST_APPLIED      = 'bricks_mcp_ds_last_applied';
 	public const OPTION_DESIGN_SYSTEM_CONFIG = 'bricks_mcp_design_system_config';
+	public const OPTION_STYLE_ROLE_MAP       = 'bricks_mcp_style_role_map';
 	public const OPTION_TERM_TRASH           = 'bricks_mcp_term_trash';
 	public const OPTION_DB_VERSION           = 'bricks_mcp_db_version';
 	public const OPTION_VERSION              = 'bricks_mcp_version';

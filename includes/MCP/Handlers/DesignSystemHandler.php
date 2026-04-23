@@ -13,6 +13,9 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\Services\BricksCore;
+use BricksMCP\MCP\Services\SiteVariableResolver;
+use BricksMCP\MCP\Services\StyleRoleResolver;
 use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
@@ -203,6 +206,36 @@ final class DesignSystemHandler {
 				sprintf(
 					/* translators: %s: Action name */
 					__( 'Invalid action "%s". Valid actions: list, create_category, update_category, delete_category, create, update, delete, batch_create, batch_delete, search', 'bricks-mcp' ),
+					$action
+				)
+			),
+		};
+	}
+
+	/**
+	 * Handle semantic style role mapping actions.
+	 *
+	 * @param array<string, mixed> $args Tool arguments (requires: action).
+	 * @return array<string, mixed>|\WP_Error Result or error.
+	 */
+	public function handle_style_role( array $args ): array|\WP_Error {
+		$bricks_error = ( $this->require_bricks )();
+		if ( null !== $bricks_error ) {
+			return $bricks_error;
+		}
+
+		$action = sanitize_text_field( $args['action'] ?? '' );
+
+		return match ( $action ) {
+			'list'  => $this->tool_list_style_roles(),
+			'map'   => $this->tool_map_style_role( $args ),
+			'unmap' => $this->tool_unmap_style_role( $args ),
+			'reset' => $this->tool_reset_style_roles(),
+			default => new \WP_Error(
+				'invalid_action',
+				sprintf(
+					/* translators: %s: Action name */
+					__( 'Invalid action "%s". Valid actions: list, map, unmap, reset', 'bricks-mcp' ),
 					$action
 				)
 			),
@@ -1025,8 +1058,113 @@ final class DesignSystemHandler {
 		return $this->bricks_service->search_global_variables( $name, $value, $category_id );
 	}
 
+	// -------------------------------------------------------------------------
+	// Style role mappings
+	// -------------------------------------------------------------------------
+
 	/**
-	 * Register theme_style, typography_scale, color_palette, and global_variable tools.
+	 * @return array<string, mixed>
+	 */
+	private function tool_list_style_roles(): array {
+		$resolver = new StyleRoleResolver( $this->bricks_service->get_global_class_service()->get_global_classes() );
+
+		return [
+			'mappings'        => StyleRoleResolver::manual_role_map(),
+			'resolved_roles'  => $resolver->resolve_all(),
+			'available_roles' => [
+				'classes' => array_keys( StyleRoleResolver::class_role_specs() ),
+				'tokens'  => array_keys( StyleRoleResolver::token_role_specs() ),
+			],
+			'note'            => 'Mappings are site-specific. They let existing class and variable names satisfy semantic roles without renaming or overwriting user-owned design systems.',
+		];
+	}
+
+	/**
+	 * @param array<string, mixed> $args Tool arguments.
+	 * @return array<string, mixed>|\WP_Error
+	 */
+	private function tool_map_style_role( array $args ): array|\WP_Error {
+		$role = sanitize_text_field( $args['role'] ?? '' );
+		$kind = sanitize_text_field( $args['kind'] ?? '' );
+		$name = sanitize_text_field( $args['name'] ?? '' );
+
+		if ( '' === $role || '' === $kind || '' === $name ) {
+			return new \WP_Error( 'missing_mapping_args', 'role, kind, and name are required.' );
+		}
+		if ( ! in_array( $kind, [ 'class', 'token' ], true ) ) {
+			return new \WP_Error( 'invalid_mapping_kind', 'kind must be "class" or "token".' );
+		}
+
+		if ( 'class' === $kind ) {
+			if ( ! isset( StyleRoleResolver::class_role_specs()[ $role ] ) ) {
+				return new \WP_Error( 'invalid_style_role', 'Unknown class style role: ' . $role );
+			}
+			if ( ! $this->global_class_exists( $name ) ) {
+				return new \WP_Error( 'class_not_found', 'Global class not found: ' . $name );
+			}
+		} else {
+			if ( ! isset( StyleRoleResolver::token_role_specs()[ $role ] ) ) {
+				return new \WP_Error( 'invalid_style_role', 'Unknown token style role: ' . $role );
+			}
+			SiteVariableResolver::clear_cache();
+			if ( ! SiteVariableResolver::exists( $name ) ) {
+				return new \WP_Error( 'variable_not_found', 'Global variable not found: ' . $name );
+			}
+			$name = ltrim( $name, '-' );
+		}
+
+		$map = StyleRoleResolver::manual_role_map();
+		if ( 'class' === $kind ) {
+			$map['classes'][ $role ] = $name;
+		} else {
+			$map['tokens'][ $role ] = $name;
+		}
+
+		update_option( BricksCore::OPTION_STYLE_ROLE_MAP, $map, false );
+		SiteVariableResolver::clear_cache();
+
+		return $this->tool_list_style_roles();
+	}
+
+	/**
+	 * @param array<string, mixed> $args Tool arguments.
+	 * @return array<string, mixed>
+	 */
+	private function tool_unmap_style_role( array $args ): array {
+		$role = sanitize_text_field( $args['role'] ?? '' );
+		$kind = sanitize_text_field( $args['kind'] ?? '' );
+		$map  = StyleRoleResolver::manual_role_map();
+
+		if ( 'class' === $kind ) {
+			unset( $map['classes'][ $role ] );
+		} elseif ( 'token' === $kind ) {
+			unset( $map['tokens'][ $role ] );
+		}
+
+		update_option( BricksCore::OPTION_STYLE_ROLE_MAP, $map, false );
+
+		return $this->tool_list_style_roles();
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private function tool_reset_style_roles(): array {
+		delete_option( BricksCore::OPTION_STYLE_ROLE_MAP );
+		return $this->tool_list_style_roles();
+	}
+
+	private function global_class_exists( string $name ): bool {
+		foreach ( $this->bricks_service->get_global_class_service()->get_global_classes() as $class ) {
+			if ( ( $class['name'] ?? '' ) === $name ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Register theme_style, typography_scale, color_palette, global_variable, and style_role tools.
 	 *
 	 * @param ToolRegistry $registry Tool registry instance.
 	 * @return void
@@ -1220,6 +1358,37 @@ final class DesignSystemHandler {
 				'required'   => array( 'action' ),
 			),
 			array( $this, 'handle_global_variable' )
+		);
+
+		// Semantic style-role mapping tool.
+		$registry->register(
+			'style_role',
+			__( "Map semantic style roles to this site's existing Bricks classes and variables. Use this when an existing design system uses custom names.\n\nActions: list, map, unmap, reset.", 'bricks-mcp' ),
+			array(
+				'type'       => 'object',
+				'properties' => array(
+					'action' => array(
+						'type'        => 'string',
+						'enum'        => array( 'list', 'map', 'unmap', 'reset' ),
+						'description' => __( 'Action to perform', 'bricks-mcp' ),
+					),
+					'role'   => array(
+						'type'        => 'string',
+						'description' => __( 'Semantic role, e.g. button.primary, card.default, color.primary, space.content_gap.', 'bricks-mcp' ),
+					),
+					'kind'   => array(
+						'type'        => 'string',
+						'enum'        => array( 'class', 'token' ),
+						'description' => __( 'Whether the role maps to a class or token.', 'bricks-mcp' ),
+					),
+					'name'   => array(
+						'type'        => 'string',
+						'description' => __( 'Existing global class name for kind=class, or existing variable name for kind=token.', 'bricks-mcp' ),
+					),
+				),
+				'required'   => array( 'action' ),
+			),
+			array( $this, 'handle_style_role' )
 		);
 	}
 }

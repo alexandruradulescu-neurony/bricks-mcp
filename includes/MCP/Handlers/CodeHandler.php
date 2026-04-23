@@ -66,7 +66,7 @@ final class CodeHandler {
 			if ( ! $this->bricks_service->is_dangerous_actions_enabled() ) {
 				return new \WP_Error(
 					'dangerous_actions_disabled',
-					__( 'Custom scripts require the Dangerous Actions toggle to be enabled in Settings > Bricks MCP.', 'bricks-mcp' )
+					__( 'Custom scripts require the Dangerous Actions toggle to be enabled under Bricks > Bricks WP MCP > Connection & Settings.', 'bricks-mcp' )
 				);
 			}
 		}

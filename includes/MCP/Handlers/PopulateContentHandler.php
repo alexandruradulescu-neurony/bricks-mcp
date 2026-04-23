@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\Services\ContentContractService;
 use BricksMCP\MCP\Services\MediaService;
 use BricksMCP\MCP\ToolRegistry;
 
@@ -31,6 +32,7 @@ final class PopulateContentHandler {
 	public function handle( array $args ): array|\WP_Error {
 		$section_id  = sanitize_text_field( $args['section_id'] ?? '' );
 		$content_map = $args['content_map'] ?? [];
+		$allow_partial = ! empty( $args['allow_partial'] );
 
 		if ( $section_id === '' ) {
 			return new \WP_Error( 'missing_section_id', 'section_id is required.' );
@@ -97,6 +99,30 @@ final class PopulateContentHandler {
 			$injected++;
 		}
 
+		$content_contract = ( new ContentContractService() )->analyze( $elements, $section_id );
+		if ( ! $allow_partial && ! empty( $unmatched ) ) {
+			return new \WP_Error(
+				'content_contract_unmatched_roles',
+				sprintf( 'Content map contains %d unmatched role(s): %s', count( $unmatched ), implode( ', ', $unmatched ) ),
+				[
+					'unmatched_roles' => array_values( $unmatched ),
+					'required_roles'  => array_keys( $content_contract['required_roles'] ?? [] ),
+					'resolution'      => 'Use role keys returned by build_structure.role_map, prefix exact element IDs with #, or set allow_partial=true for intentional partial updates.',
+				]
+			);
+		}
+		if ( ! $allow_partial && ! empty( $content_contract['missing_roles'] ) ) {
+			return new \WP_Error(
+				'content_contract_missing_required_roles',
+				sprintf( 'Missing required content for %d role(s): %s', count( $content_contract['missing_roles'] ), implode( ', ', $content_contract['missing_roles'] ) ),
+				[
+					'missing_roles'    => $content_contract['missing_roles'],
+					'required_roles'   => $content_contract['required_roles'],
+					'resolution'       => 'Provide content_map entries for every missing role, or set allow_partial=true if this is an intentional partial update.',
+				]
+			);
+		}
+
 		// Persist via BricksService (wraps update_post_meta + validation).
 		$saved = $this->bricks->save_elements( $page_id, $elements );
 		if ( is_wp_error( $saved ) ) {
@@ -109,6 +135,7 @@ final class PopulateContentHandler {
 			'page_id'         => $page_id,
 			'injected_count'  => $injected,
 			'unmatched_roles' => array_values( $unmatched ),
+			'content_contract' => $content_contract,
 		];
 		if ( ! empty( $media_errors ) ) {
 			$response['partial_success'] = true;
@@ -125,7 +152,8 @@ final class PopulateContentHandler {
 			if ( is_string( $key ) && str_starts_with( $key, '#' ) ) {
 				$by_id[ substr( $key, 1 ) ] = $value;
 			} else {
-				$by_role[ (string) $key ] = $value;
+				$normalized_role = \BricksMCP\MCP\Services\DesignPlanNormalizationService::normalize_role_key( (string) $key );
+				$by_role[ $normalized_role !== '' ? $normalized_role : (string) $key ] = $value;
 			}
 		}
 		return [ $by_id, $by_role ];
@@ -288,6 +316,10 @@ final class PopulateContentHandler {
 					'content_map' => [
 						'type'        => 'object',
 						'description' => __( 'Role → content value map. Prefix keys with # to target element IDs directly.', 'bricks-mcp' ),
+					],
+					'allow_partial' => [
+						'type'        => 'boolean',
+						'description' => __( 'Set true only for intentional partial updates. Default false enforces all required text/button roles and rejects unmatched content keys.', 'bricks-mcp' ),
 					],
 				],
 				'required'   => [ 'section_id', 'content_map' ],

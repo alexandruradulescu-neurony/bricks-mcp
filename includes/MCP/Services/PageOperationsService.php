@@ -626,7 +626,7 @@ class PageOperationsService {
 			return new \WP_Error(
 				'bricks_mcp_page_protected',
 				sprintf(
-					__( "Page '%s' (ID: %d) is protected. Remove it from protected pages in Settings > Bricks MCP to allow modifications.", 'bricks-mcp' ),
+					__( "Page '%s' (ID: %d) is protected. Remove it from protected pages under Bricks > Bricks WP MCP > Connection & Settings to allow modifications.", 'bricks-mcp' ),
 					$title,
 					$post_id
 				)

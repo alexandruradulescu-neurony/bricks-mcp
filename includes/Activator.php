@@ -125,7 +125,7 @@ final class Activator {
 			'status'  => $bricks_active ? 'pass' : 'fail',
 			'message' => $bricks_active
 				? __( 'Bricks Builder is active.', 'bricks-mcp' )
-				: __( 'Bricks Builder is not active. Bricks-specific MCP tools will be unavailable.', 'bricks-mcp' ),
+				: __( 'Bricks Builder 2.0+ is required. Bricks MCP will not run until Bricks Builder is installed and active.', 'bricks-mcp' ),
 		];
 
 		// Store results as transient for admin notice display only if issues exist.

@@ -4,6 +4,40 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.33.6] — 2026-04-23
+
+**Guidance cleanup for Claude/client failures**
+
+Follow-up audit after testing with Claude showed that the remaining failures were not in the MCP transport, but in stale guidance and runtime messages pointing humans/AI clients at old settings locations.
+
+### Changed
+
+- `readme.txt` — active setup docs now use the real admin path: Bricks → Bricks WP MCP, with Connection & Settings / AI Context tab names.
+- Runtime errors/warnings for Anthropic vision, dangerous actions, protected pages, and Unsplash sideload failures now point to the correct UI locations.
+- Unsplash guidance consistently says the key lives in Bricks → Settings → API Keys, because the plugin reads Bricks global settings (`apiKeyUnsplash` / `unsplashAccessKey`).
+- Activation warning now states Bricks Builder 2.0+ is required and the plugin will not run until Bricks is active.
+- Class and element style normalization now converts camelCase typography keys (`fontSize`, `fontWeight`, etc.) to Bricks' required kebab-case keys before save, and build responses warn when styles reference missing site variables or foreign `var(--brxw-*)` tokens.
+- Design discovery now reports foundation/component/pattern readiness separately and exposes adaptive `style_roles` so existing custom design systems can be reused without fixed class or variable names.
+- Added `style_role` MCP tool for mapping semantic roles (for example `button.primary`, `card.default`, `color.primary`) to existing Bricks classes and variables.
+- Added token-driven fallback component classes for missing semantic roles. Fresh/foundation-only sites can now generate styled buttons, cards, eyebrows, and subtitles from site variables instead of empty classes.
+- Build contract now rejects new `class_intent` values with no existing styled class and no `style_overrides`, preventing empty visual classes from being created silently.
+- `build_structure`, `populate_content`, and `verify_build` now expose/enforce a content contract for required text/button roles. `populate_content` rejects unmatched or missing required roles unless `allow_partial=true`.
+- `verify_build` now reports static quality checks for missing class IDs, empty classes in use, unresolved variable references, and content-contract state.
+- `design_pattern(from_image)` and `reference_json` translation now normalize role keys, drop empty/duplicate precreated classes, and rewrite invalid or unsupported `class_intent` guesses to resolved semantic roles or token-driven fallback component classes before proposal/build.
+- `use_pattern` builds now resolve pattern class refs through the same semantic role layer as direct proposals, so imported/captured patterns can fall back to site-owned button/card/text roles instead of carrying dead foreign class names.
+- Direct `propose_design` Phase 2 input now goes through the same role/content normalization path as image/reference imports. Role keys are canonicalized before validation, duplicate direct roles are rejected early, and `build_structure` / `verify_build` now surface `role_collisions` when built elements still end up ambiguous.
+- Added non-blocking `design_plan_warnings` for weak direct/image plans before build. The analyzer now flags split layouts with no visual anchor, CTA sections with no button, generic role names, missing media/button content hints, and repeated-card sections modeled inline instead of with `patterns[]`.
+- Added heuristic plan enrichment before validation/build. Weak generic roles like `heading`, `text`, `button`, and `image` are rewritten into more usable roles (for example `main_heading`, `subtitle`, `primary_cta`, `hero_image`), missing content hints are synthesized, and rewritten role keys propagate into `content_plan` / image-flow `content_map`.
+- Added a structural repair pass before build. When a direct/image plan is still under-specified after enrichment, the server can now insert missing singleton anchors such as `main_heading`, `subtitle`, `section_heading`, `primary_cta`, or a split-layout media element, and returns a `repair_log` describing those repairs.
+- `design_pattern(from_image)` / `reference_json` vision prompts now include design-system readiness, resolved semantic style roles, and generated fallback component classes in the site context so the model can reuse the existing system more deliberately.
+- Vision/design-plan schema guidance now pushes more specific semantic roles and allows optional `tag`, `class_intent`, and `content_hint` fields inside `patterns[].element_structure`.
+- `page_layout` skeletons now emit better out-of-the-box semantic roles and content hints (`main_heading`, `subtitle`, `primary_cta`, `section_heading`, `hero_image`) instead of vague starter labels.
+- Direct `design_plan.patterns[]` repeats now expand to unique per-item roles during schema expansion (for example `feature_card_2_title`, `tier_3_cta`) instead of cloning identical role labels. This removes repeated-item collisions in `build_structure.role_map` / `content_contract` and makes `populate_content` viable for repeated sections.
+- Pattern child elements now get synthesized `content_hint` values during enrichment, and proposal `content_plan` generation now expands those repeated hints into indexed keys (for example `feature_card_2_title`, `testimonial_3_author`) so repeated sections have concrete content guidance before populate.
+- Added automatic inline repeat extraction for direct/image plans. When a model emits indexed flat roles like `feature_card_1_title`, `feature_card_2_text`, or `tier_title_2`, the server can collapse them into `patterns[]` before validation/build and returns `repeat_extraction_log`.
+- Added an extensible composition layer (`DesignPlanCompositionService`). It works on broad composition families/traits instead of a closed fixed list, reorders weak direct plans into a more coherent element flow, and can adjust obviously weak layouts (for example repeat-heavy plans -> grid layouts, media+text stacks -> split layouts). Responses now surface `composition_family` and `composition_log`.
+- `propose_page_layout` skeletons now pass through the same composition layer, and vision prompting now explicitly treats `section_type` as a coarse bucket rather than the full family taxonomy.
+
 ## [3.33.5] — 2026-04-23
 
 **Claim-alignment pass: Bricks 2.0 floor, option name, action list, Unsplash location, design-gate scope**

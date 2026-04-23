@@ -2,7 +2,7 @@
 /**
  * Build handler for MCP Router.
  *
- * Processes design schemas into Bricks elements via the build_from_schema pipeline:
+ * Processes design schemas into Bricks elements for the build_structure pipeline:
  * validate → extract intents → resolve classes → expand patterns → generate settings → normalize → write.
  *
  * @package BricksMCP
@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
+use BricksMCP\MCP\Services\BuildContractService;
 use BricksMCP\MCP\Services\ClassIntentResolver;
 use BricksMCP\MCP\Services\DesignSchemaValidator;
 use BricksMCP\MCP\Services\ElementSettingsGenerator;
@@ -26,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Handles the build_from_schema tool.
+ * Internal build executor used by BuildStructureHandler.
  */
 final class BuildHandler {
 
@@ -175,6 +176,20 @@ final class BuildHandler {
 		// Collect non-blocking validation warnings (grid/content/responsive checks).
 		$schema_warnings = $this->validator->get_warnings();
 
+		$contract = ( new BuildContractService( $this->bricks_service->get_global_class_service() ) )->validate( $schema );
+		if ( ! empty( $contract['errors'] ) ) {
+			return new \WP_Error(
+				'build_contract_failed',
+				sprintf( 'Design schema failed %d build contract check(s): %s', count( $contract['errors'] ), implode( '; ', $contract['errors'] ) ),
+				[
+					'errors'    => $contract['errors'],
+					'warnings'  => $contract['warnings'],
+					'next_step' => 'Map class_intent values to existing styled classes, add style_overrides for new classes, or remove class_intent from elements that should inherit the design system.',
+				]
+			);
+		}
+		$schema_warnings = array_merge( $schema_warnings, $contract['warnings'] );
+
 		// Step 2: Check protected page.
 		$page_id = (int) ( $schema['target']['page_id'] ?? $schema['target']['template_id'] ?? 0 );
 		$protect = $this->bricks_service->check_protected_page( $page_id );
@@ -286,6 +301,7 @@ final class BuildHandler {
 
 		// Initialize pipeline warnings collector (populated by steps below + element-level warnings).
 		$pipeline_warnings = $schema_warnings; // Seed with non-blocking validation warnings (grid, content, responsive).
+		$pipeline_warnings = array_merge( $pipeline_warnings, $class_result['warnings'] ?? [] );
 
 		// Step 8e: Knowledge nudges — warn when building elements whose domain knowledge wasn't fetched.
 		$fetched_knowledge = BricksToolHandler::get_fetched_knowledge();

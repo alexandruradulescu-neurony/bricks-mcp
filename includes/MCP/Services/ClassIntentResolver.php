@@ -72,7 +72,7 @@ final class ClassIntentResolver {
 	 * @param array<int, string>        $intents    Unique class intent strings.
 	 * @param bool                      $dry_run    When true, only match existing classes — never create new ones.
 	 * @param array<string, array>      $style_map  Optional class_intent => style_overrides map. When creating a new class, its styles are populated from this map.
-	 * @return array{map: array<string, string>, classes_reused: string[], classes_created: string[], classes_with_styles: string[]}
+	 * @return array{map: array<string, string>, classes_reused: string[], classes_created: string[], classes_with_styles: string[], warnings: string[]}
 	 */
 	public function resolve( array $intents, bool $dry_run = false, array $style_map = [] ): array {
 		$intents = array_values( array_unique( $intents ) );
@@ -96,6 +96,7 @@ final class ClassIntentResolver {
 		$classes_reused     = [];
 		$classes_created    = [];
 		$classes_with_styles = [];
+		$warnings           = [];
 
 		foreach ( $intents as $intent ) {
 			if ( '' === $intent ) {
@@ -147,6 +148,12 @@ final class ClassIntentResolver {
 				$create_args['styles'] = $style_map[ $intent ];
 				$classes_with_styles[] = $intent;
 			}
+			if ( str_starts_with( $intent, 'mcp-' ) ) {
+				$category_id = $this->ensure_generated_component_category();
+				if ( '' !== $category_id ) {
+					$create_args['category'] = $category_id;
+				}
+			}
 
 			$result = $this->class_service->create_global_class( $create_args );
 
@@ -165,6 +172,12 @@ final class ClassIntentResolver {
 				$map[ $intent ]     = $new_id;
 				$classes_created[]  = $intent;
 
+				foreach ( $result['warnings'] ?? [] as $warning ) {
+					if ( is_string( $warning ) && '' !== $warning ) {
+						$warnings[] = sprintf( 'Class "%s": %s', $intent, $warning );
+					}
+				}
+
 				// Update indexes so subsequent intents can match.
 				$exact_index[ $intent ]                      = $new_id;
 				$normalized_index[ self::normalize( $intent ) ] = $new_id;
@@ -176,6 +189,7 @@ final class ClassIntentResolver {
 			'classes_reused'      => $classes_reused,
 			'classes_created'     => $classes_created,
 			'classes_with_styles' => $classes_with_styles,
+			'warnings'            => array_values( array_unique( $warnings ) ),
 		];
 	}
 
@@ -266,5 +280,23 @@ final class ClassIntentResolver {
 		}
 
 		return [ 'final_name' => $normalized, 'source' => 'new', 'reason' => 'no_match_create_fresh' ];
+	}
+
+	/**
+	 * Ensure generated component classes are grouped in their own category.
+	 */
+	private function ensure_generated_component_category(): string {
+		foreach ( $this->class_service->get_global_class_categories() as $category ) {
+			if ( ( $category['name'] ?? '' ) === ComponentClassGenerator::CATEGORY_NAME ) {
+				return (string) ( $category['id'] ?? '' );
+			}
+		}
+
+		$created = $this->class_service->create_global_class_category( ComponentClassGenerator::CATEGORY_NAME );
+		if ( is_wp_error( $created ) ) {
+			return '';
+		}
+
+		return (string) ( $created['id'] ?? '' );
 	}
 }
