@@ -4,6 +4,17 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.32.3] — 2026-04-23
+
+**Fix: [object Object] in class settings (nested dimension shape)**
+
+v3.32.2 vision emitted classes with `_width: {maxWidth: "var(--max-width)"}` / `_width: {width: "auto"}`. Bricks Builder UI serializes nested dimension objects as the literal string `[object Object]` because width/height use DISCRETE scalar keys (`_width`, `_widthMax`, `_widthMin`, `_height`, `_heightMax`, `_heightMin`). Vision prompt didn't specify, and the handler didn't normalize.
+
+### Fixed
+
+- `VisionResponseMapper::normalize_class_settings` + `flatten_dimension_keys` — walk every `global_classes_to_create[].settings`, flatten nested dimension shapes to discrete scalar keys. `_width: {maxWidth: x}` → `_widthMax: x`. Same for all width/height variants. Empty nested objects dropped.
+- `VisionPromptBuilder` — new Rule 8a documenting Bricks setting key shapes: scalar vs nested distinction, explicit correct/wrong examples for width/height keys, typography camelCase conventions, background shape.
+
 ## [3.32.2] — 2026-04-23
 
 **Fix: empty class shells + image-gallery has no images**

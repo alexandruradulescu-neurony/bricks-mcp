@@ -131,7 +131,20 @@ CRITICAL RULES (deviation = wrong):
 
 7. description field = ≤200 chars human-readable summary of what the section is.
 
-8. global_classes_to_create is REQUIRED whenever you introduce a NEW class_intent label (one that does not already exist in [SITE CONTEXT] classes). For each new class_intent, emit a matching global_classes_to_create[] entry with site-design-token style values INFERRED FROM THE IMAGE — approximate font sizes, colors, paddings, alignments you see in the image, expressed in Bricks underscore-prefix keys (_typography, _padding, _background, _border, _width, _columnGap, _rowGap, _display, _direction, _alignItems, _justifyContent). Values MUST reference site variables (var(--text-2xl), var(--space-m), var(--primary-ultra-dark), var(--radius-btn), etc.) — NEVER hardcode pixel/rem values, NEVER use var(--brxw-*). Empty-shell classes produce unstyled output; fill them. You may omit a class entry ONLY if its class_intent label is already defined in [SITE CONTEXT] (reuse).
+8. global_classes_to_create is REQUIRED whenever you introduce a NEW class_intent label (one that does not already exist in [SITE CONTEXT] classes). For each new class_intent, emit a matching global_classes_to_create[] entry with site-design-token style values INFERRED FROM THE IMAGE — approximate font sizes, colors, paddings, alignments you see in the image, expressed in Bricks underscore-prefix keys. Values MUST reference site variables (var(--text-2xl), var(--space-m), var(--primary-ultra-dark), var(--radius-btn), etc.) — NEVER hardcode pixel/rem values, NEVER use var(--brxw-*). Empty-shell classes produce unstyled output; fill them. You may omit a class entry ONLY if its class_intent label is already defined in [SITE CONTEXT] (reuse).
+
+8a. Bricks setting key shapes (use EXACT shape — wrong shape renders as [object Object]):
+- SCALAR string keys (emit as `"_key": "value"`, NOT as `"_key": {...}`):
+  `_width`, `_widthMin`, `_widthMax`, `_height`, `_heightMin`, `_heightMax`,
+  `_display`, `_direction`, `_alignItems`, `_justifyContent`, `_flexWrap`, `_flexGrow`, `_flexBasis`,
+  `_aspectRatio`, `_objectFit`, `_textAlign`, `_columnGap`, `_rowGap`.
+  Example CORRECT: `"_widthMax": "var(--max-width)"`, `"_textAlign": "center"`.
+  Example WRONG: `"_width": {"maxWidth": "var(--max-width)"}` — produces [object Object].
+- NESTED object keys (emit as `"_key": { top|right|bottom|left: "value" }`):
+  `_padding`, `_margin`, `_border.radius`, `_border.width`.
+  Example: `"_padding": {"top": "var(--space-s)", "bottom": "var(--space-s)"}`.
+- TYPOGRAPHY object (`_typography`): keys are camelCase (`fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `textTransform`, `color`). `color` is `{ "raw": "var(--token)" }`.
+- BACKGROUND object (`_background`): `{ "backgroundColor": "var(--token)" }` or `{ "color": { "raw": "var(--token)" } }`.
 
 9. content_map is OPTIONAL — include when image text is legible and intent-specific (e.g. Romanian text reading "Tractări 24/7"). Map role → literal content string. Omit for generic image intent.
 EOT;

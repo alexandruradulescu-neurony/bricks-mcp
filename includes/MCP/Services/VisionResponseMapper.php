@@ -47,16 +47,72 @@ final class VisionResponseMapper {
         // a container-in-container layout error.
         $design_plan = $this->strip_wrappers_from_plan( $design_plan );
 
+        $global_classes = is_array( $tool_input['global_classes_to_create'] ?? null ) ? $tool_input['global_classes_to_create'] : [];
+        // v3.32.3 defense: vision emits nested shapes like _width: {maxWidth: "..."}
+        // which Bricks renders as [object Object] in the UI. Bricks width/height
+        // uses DISCRETE scalar keys (_width, _widthMax, _widthMin, _height, _heightMax,
+        // _heightMin). Flatten any nested dimension objects.
+        $global_classes = array_map( [ $this, 'normalize_class_settings' ], $global_classes );
+
         return [
             'description'              => (string) ( $tool_input['description'] ?? '' ),
             'design_plan'              => $design_plan,
-            'global_classes_to_create' => is_array( $tool_input['global_classes_to_create'] ?? null ) ? $tool_input['global_classes_to_create'] : [],
+            'global_classes_to_create' => $global_classes,
             'content_map'              => is_array( $tool_input['content_map'] ?? null ) ? $tool_input['content_map'] : [],
             'usage'                    => [
                 'input_tokens'  => (int) ( $response['input_tokens']  ?? 0 ),
                 'output_tokens' => (int) ( $response['output_tokens'] ?? 0 ),
             ],
         ];
+    }
+
+    /**
+     * Normalize a single global_classes_to_create[] entry. Currently:
+     * - Flatten nested dimension shapes (`_width: {maxWidth: x}` → `_widthMax: x`).
+     * - Drop empty `_width: {}` / `_height: {}` that produce [object Object].
+     *
+     * @param mixed $entry
+     * @return array<string,mixed>
+     */
+    private function normalize_class_settings( $entry ): array {
+        if ( ! is_array( $entry ) ) {
+            return [];
+        }
+        $settings = is_array( $entry['settings'] ?? null ) ? $entry['settings'] : [];
+        $settings = $this->flatten_dimension_keys( $settings );
+        $entry['settings'] = $settings;
+        return $entry;
+    }
+
+    /**
+     * Bricks uses discrete scalar keys for width/height (`_width`, `_widthMax`, `_widthMin`,
+     * `_height`, `_heightMax`, `_heightMin`). Vision sometimes emits nested shapes like
+     * `_width: {maxWidth: "var(--max-width)"}` which serialize as `[object Object]`.
+     * Flatten those to the correct scalar keys.
+     *
+     * @param array<string,mixed> $settings
+     * @return array<string,mixed>
+     */
+    private function flatten_dimension_keys( array $settings ): array {
+        $dim_map = [
+            '_width'  => [ 'width' => '_width', 'maxWidth' => '_widthMax', 'minWidth' => '_widthMin' ],
+            '_height' => [ 'height' => '_height', 'maxHeight' => '_heightMax', 'minHeight' => '_heightMin' ],
+        ];
+
+        foreach ( $dim_map as $wrapper_key => $mapping ) {
+            if ( ! isset( $settings[ $wrapper_key ] ) || ! is_array( $settings[ $wrapper_key ] ) ) {
+                continue;
+            }
+            $nested = $settings[ $wrapper_key ];
+            unset( $settings[ $wrapper_key ] );
+            foreach ( $mapping as $src => $dst ) {
+                if ( isset( $nested[ $src ] ) && $nested[ $src ] !== '' ) {
+                    $settings[ $dst ] = is_scalar( $nested[ $src ] ) ? (string) $nested[ $src ] : $nested[ $src ];
+                }
+            }
+        }
+
+        return $settings;
     }
 
     /**

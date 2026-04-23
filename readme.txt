@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.32.2
+Stable tag: 3.32.3
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,14 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.32.3 =
+**Fix: [object Object] in class settings**
+
+v3.32.2 vision emitted class settings like `_width: {maxWidth: "var(--max-width)"}`. Bricks width/height use DISCRETE scalar keys (`_width`, `_widthMax`, `_widthMin`, `_height`, `_heightMax`, `_heightMin`) — nested shapes render as literal `[object Object]` in the UI.
+
+* Fix: `VisionResponseMapper` now flattens nested dimension objects in every `global_classes_to_create[].settings` before passing to `GlobalClassService::create_from_payload`. `_width: {maxWidth: x}` → `_widthMax: x` automatically.
+* Fix: VisionPromptBuilder Rule 8a documents Bricks setting shapes — scalar keys (width, height, display, flex*, textAlign, columnGap, rowGap, etc.) vs nested keys (padding, margin, border), typography camelCase, with explicit correct/wrong examples.
 
 = 3.32.2 =
 **Fix: empty class shells + image-gallery has no images**
