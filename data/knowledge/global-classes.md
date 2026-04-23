@@ -21,7 +21,7 @@ Classes generate CSS at render time — they're NOT WordPress CSS classes in the
 
 **`_cssGlobalClasses` takes IDs, not names.** Always call `global_class:list` to get the name→ID mapping before applying.
 
-In the `build_from_schema` pipeline, `class_intent` uses human names — the pipeline resolves them to IDs automatically. Direct element operations (`element:add`, `element:update`) require IDs.
+In the design-build pipeline (`propose_design` Phase 2 `design_plan` → `build_structure`), `class_intent` uses human names — the pipeline resolves them to IDs automatically. Direct element operations (`element:add`, `element:update`) require IDs.
 
 ## Style Shape
 
@@ -198,7 +198,7 @@ After creating/updating a class with styles, ALWAYS call `global_class:render_sa
 
 ## Class-First Workflow
 
-### In `build_from_schema` (design pipeline)
+### In the design-build pipeline (`propose_design` → `build_structure`)
 
 Use `class_intent` on schema elements — the pipeline handles name→ID resolution + class creation:
 

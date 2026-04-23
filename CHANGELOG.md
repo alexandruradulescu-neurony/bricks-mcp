@@ -4,6 +4,23 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.33.5] — 2026-04-23
+
+**Claim-alignment pass: Bricks 2.0 floor, option name, action list, Unsplash location, design-gate scope**
+
+Second external audit identified more docs/code drift. This release aligns every claim with the actual code behavior.
+
+### Changed
+
+- `bricks-mcp.php` — `BRICKS_MCP_MIN_BRICKS_VERSION` raised from `1.12` to `2.0`. The plugin targets Bricks 2.0+ only.
+- `readme.txt` Requirements — Bricks 1.6+ → Bricks 2.0+ (also clarifies the plugin refuses to boot without Bricks).
+- `readme.txt` FAQ — "Does this plugin work without Bricks Builder?" answer changed from "Yes, partially" to "No. Bricks Builder 2.0+ must be installed and active." The plugin's `init()` aborts without Bricks; there is no non-Bricks fallback path.
+- `readme.txt` pattern library section + `data/knowledge/building.md` — corrected option name from `bricks_mcp_design_patterns` to `bricks_mcp_patterns` (the actual key in `BricksCore::OPTION_PATTERNS`).
+- `readme.txt` `design_pattern` tool entry — action list corrected. Actual registered actions: `capture`, `list`, `get`, `create`, `update`, `delete`, `export`, `import`, `mark_required`, `from_image`. Removed `semantic_search`, `normalize`, `generate_prompt`, and category CRUD mentions (those are NOT registered on this handler; category CRUD is on `global_class` only).
+- `readme.txt` Getting Started + Installation — Unsplash key location corrected. The plugin reads Unsplash credentials from Bricks' own global settings (`apiKeyUnsplash` / `unsplashAccessKey` under Bricks → Settings → API Keys), NOT from the Bricks MCP Advanced settings. Bricks MCP Advanced only exposes the Anthropic key.
+- `readme.txt` design-gate description — was "section-level layouts and large element trees". Now accurately says: "blocks any write operation that would introduce a root-level `section` element outside the two-tier pipeline." Non-section element writes are not gated. `bypass_design_gate: true` still available per-call.
+- `data/knowledge/building.md` + `data/knowledge/global-classes.md` — remaining `build_from_schema` references replaced with the two-tier pipeline naming (`propose_design` Phase 2 `design_plan` → `build_structure`).
+
 ## [3.33.4] — 2026-04-23
 
 **Stale-claim cleanup: pattern seed + diagnostic false-positive**

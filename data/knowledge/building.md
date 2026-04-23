@@ -71,7 +71,7 @@ If a design needs `font-size: clamp(3rem, 12vw, 11rem)` for a giant typographic 
 
 - Use `_cssGlobalClasses` on every element when possible
 - Inline styles (`style_overrides`) only for instance-specific overrides
-- When using `build_from_schema`, set `class_intent` + `style_overrides` — the pipeline creates a reusable class WITH the styles
+- When using the design-build pipeline (`propose_design` Phase 2 `design_plan` → `build_structure`), set `class_intent` + optional `style_overrides` on schema nodes — the pipeline creates a reusable class WITH the styles and applies it to the element
 
 ## Labels on Structural Elements
 
@@ -306,7 +306,7 @@ These common mistakes are silently corrected with a warning attached to the buil
 
 ## Design Pattern Library
 
-Database-backed pattern library. The plugin does NOT ship a bundled pattern seed — new installs start with an empty library. Patterns live in the `bricks_mcp_design_patterns` WP option and are populated via one of four creation paths:
+Database-backed pattern library. The plugin does NOT ship a bundled pattern seed — new installs start with an empty library. Patterns live in the `bricks_mcp_patterns` WP option and are populated via one of four creation paths:
 
 - **Manual authoring** — `design_pattern:create(pattern)` or the Patterns admin tab under **Settings → Bricks MCP → Patterns**
 - **Capture live section** — `design_pattern:capture(page_id, block_id, name, category)` snapshots an existing built section (including style fingerprints) into the library
