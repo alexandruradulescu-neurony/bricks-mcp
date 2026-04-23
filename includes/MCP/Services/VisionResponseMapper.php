@@ -22,10 +22,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class VisionResponseMapper {
 
     /**
-     * Extract the tool_use block's input payload + usage from an Anthropic Messages
-     * API response envelope.
+     * Extract the tool_use block's input payload + usage from the FLAT provider
+     * output (ClaudeVisionProvider already unwrapped the tool_use block).
      *
-     * @param array<string,mixed> $response  Raw provider response (content[] + usage).
+     * @param array<string,mixed> $response  Flat provider output: { tool_input, input_tokens, output_tokens }.
      * @return array{
      *     description: string,
      *     design_plan: array<string,mixed>,
@@ -35,20 +35,10 @@ final class VisionResponseMapper {
      * }|\WP_Error
      */
     public function extract_tool_output( array $response ): array|\WP_Error {
-        $blocks = $response['content'] ?? [];
-        if ( ! is_array( $blocks ) ) {
-            return new \WP_Error( 'vision_response_malformed', 'Provider response has no content array.' );
-        }
-        $tool_input = null;
-        foreach ( $blocks as $block ) {
-            if ( is_array( $block ) && ( $block['type'] ?? '' ) === 'tool_use' && is_array( $block['input'] ?? null ) ) {
-                $tool_input = $block['input'];
-                break;
-            }
-        }
-        if ( ! is_array( $tool_input ) ) {
+        if ( ! isset( $response['tool_input'] ) || ! is_array( $response['tool_input'] ) ) {
             return new \WP_Error( 'vision_no_tool_use', 'Provider returned no tool_use block — model refused or emitted text only.' );
         }
+        $tool_input = $response['tool_input'];
 
         return [
             'description'              => (string) ( $tool_input['description'] ?? '' ),
@@ -56,8 +46,8 @@ final class VisionResponseMapper {
             'global_classes_to_create' => is_array( $tool_input['global_classes_to_create'] ?? null ) ? $tool_input['global_classes_to_create'] : [],
             'content_map'              => is_array( $tool_input['content_map'] ?? null ) ? $tool_input['content_map'] : [],
             'usage'                    => [
-                'input_tokens'  => (int) ( $response['usage']['input_tokens']  ?? 0 ),
-                'output_tokens' => (int) ( $response['usage']['output_tokens'] ?? 0 ),
+                'input_tokens'  => (int) ( $response['input_tokens']  ?? 0 ),
+                'output_tokens' => (int) ( $response['output_tokens'] ?? 0 ),
             ],
         ];
     }

@@ -149,6 +149,7 @@ final class DesignPatternHandler {
 	 */
 	public static function make_v32(
 		$proposal_service,
+		callable $require_bricks,
 		$build_structure_handler,
 		$populate_content_handler,
 		$verify_handler,
@@ -162,7 +163,7 @@ final class DesignPatternHandler {
 		$bricks_service,
 		$onboarding_service
 	): self {
-		$h = new self( $bricks_service, static fn() => null, $vision, $image_resolver );
+		$h = new self( $bricks_service, $require_bricks, $vision, $image_resolver );
 		$h->proposal_service         = $proposal_service;
 		$h->build_structure_handler  = $build_structure_handler;
 		$h->populate_content_handler = $populate_content_handler;
@@ -391,20 +392,11 @@ final class DesignPatternHandler {
 			$extracted['design_plan'] = $sideload_out['plan'];
 		}
 
-		// Save pattern to library (always, unless dry_run handled above).
-		$pattern_payload = [
-			'id'         => $this->slugify( $name ),
-			'name'       => $name,
-			'category'   => $category,
-			'tags'       => array_values( array_filter( array_map( 'sanitize_text_field', (array) ( $args['tags'] ?? [] ) ) ) ),
-			'layout'     => (string) ( $extracted['design_plan']['layout']     ?? '' ),
-			'background' => (string) ( $extracted['design_plan']['background'] ?? '' ),
-			'structure'  => $extracted['design_plan'],
-		];
-		$saved_pattern = \BricksMCP\MCP\Services\DesignPatternService::create( $pattern_payload );
-		$pattern_id    = is_array( $saved_pattern ) && isset( $saved_pattern['id'] )
-			? (string) $saved_pattern['id']
-			: '';
+		// v3.32: library save deferred — design_plan shape is not canonical Bricks
+		// element-tree shape yet, so persisting it here would create unusable library
+		// entries. Skip for from_image/JSON flows; library save can be added in a
+		// later milestone once the translator path is solid.
+		$pattern_id = '';
 
 		$response_payload = [
 			'pattern_id'             => $pattern_id,
@@ -436,7 +428,14 @@ final class DesignPatternHandler {
 			return $response_payload;   // No build handler → stop after proposal.
 		}
 
-		$build = $this->build_structure_handler->handle( [ 'proposal_id' => $proposal_id ] );
+		// BuildStructureHandler::handle requires $args['schema'] — pull it from the
+		// proposal result (ProposalService::create returns proposal_id + suggested_schema).
+		$schema = $proposal['suggested_schema'] ?? null;
+		if ( ! is_array( $schema ) ) {
+			return new \WP_Error( 'proposal_incomplete', 'ProposalService did not return suggested_schema.' );
+		}
+
+		$build = $this->build_structure_handler->handle( [ 'proposal_id' => $proposal_id, 'schema' => $schema ] );
 		if ( is_wp_error( $build ) ) {
 			return $build;
 		}
@@ -445,6 +444,26 @@ final class DesignPatternHandler {
 
 		if ( $section_id !== '' && null !== $this->populate_content_handler ) {
 			$content_map = is_array( $extracted['content_map'] ?? null ) ? $extracted['content_map'] : [];
+
+			// Synthesize a minimal content_map from design_plan.elements[].content_hint when empty.
+			// PopulateContentHandler rejects empty maps, and the downstream content_plan pass
+			// needs placeholder entries to drive Unsplash image search.
+			if ( $content_map === [] ) {
+				$synthesized = [];
+				foreach ( (array) ( $extracted['design_plan']['elements'] ?? [] ) as $el ) {
+					if ( ! is_array( $el ) ) {
+						continue;
+					}
+					$role = (string) ( $el['role'] ?? '' );
+					if ( $role === '' ) {
+						continue;
+					}
+					$hint                 = (string) ( $el['content_hint'] ?? $role );
+					$synthesized[ $role ] = '[PLACEHOLDER] ' . $hint;
+				}
+				$content_map = $synthesized !== [] ? $synthesized : [ '_fallback' => '[PLACEHOLDER]' ];
+			}
+
 			$populate    = $this->populate_content_handler->handle(
 				[
 					'section_id'  => $section_id,

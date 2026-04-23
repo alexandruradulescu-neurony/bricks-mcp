@@ -69,11 +69,8 @@ final class ReferenceJsonTranslator {
         }
 
         $tool_input = null;
-        foreach ( $response['content'] ?? [] as $block ) {
-            if ( ( $block['type'] ?? '' ) === 'tool_use' && is_array( $block['input'] ?? null ) ) {
-                $tool_input = $block['input'];
-                break;
-            }
+        if ( isset( $response['tool_input'] ) && is_array( $response['tool_input'] ) ) {
+            $tool_input = $response['tool_input'];
         }
         if ( ! is_array( $tool_input ) ) {
             return new \WP_Error( 'translation_malformed', 'Provider returned no tool_use block with design_plan.' );
@@ -85,8 +82,8 @@ final class ReferenceJsonTranslator {
             'global_classes_to_create' => is_array( $tool_input['global_classes_to_create'] ?? null ) ? $tool_input['global_classes_to_create'] : [],
             'content_map'              => is_array( $tool_input['content_map'] ?? null ) ? $tool_input['content_map'] : [],
             'usage'                    => [
-                'input_tokens'  => (int) ( $response['usage']['input_tokens']  ?? 0 ),
-                'output_tokens' => (int) ( $response['usage']['output_tokens'] ?? 0 ),
+                'input_tokens'  => (int) ( $response['input_tokens']  ?? 0 ),
+                'output_tokens' => (int) ( $response['output_tokens'] ?? 0 ),
             ],
         ];
     }

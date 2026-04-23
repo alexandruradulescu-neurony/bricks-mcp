@@ -246,6 +246,7 @@ final class Router {
 			'page_layout'      => new Handlers\PageLayoutHandler( new PageLayoutService(), $require_bricks ),
 			'design_pattern'   => Handlers\DesignPatternHandler::make_v32(
 				$proposal_service,
+				$require_bricks,
 				$build_structure_handler,
 				$populate_content_handler,
 				$verify_handler,
