@@ -148,12 +148,93 @@ final class StyleNormalizationService {
 			$warnings[] = $prefix . '_background.color was a string; wrapped in a Bricks color object.';
 		}
 
+		// v3.33.7: legacy wrong-shape `_background: {backgroundColor: "var(...)"}` — vision v3.32
+		// era emitted this. Bricks CSS compiler expects `_background.color.raw`. Rewrite.
+		if ( isset( $node['_background']['backgroundColor'] ) && is_string( $node['_background']['backgroundColor'] ) ) {
+			$bg = $node['_background']['backgroundColor'];
+			if ( ! isset( $node['_background']['color'] ) ) {
+				$node['_background']['color'] = self::wrap_color_value( $bg );
+				$warnings[] = $prefix . '_background.backgroundColor was relocated to _background.color (object shape). Bricks CSS compiler does not emit _background.backgroundColor.';
+			}
+			unset( $node['_background']['backgroundColor'] );
+		}
+
+		// v3.33.7: legacy scalar `_border.radius: "var(...)"` — Bricks CSS compiler expects
+		// per-side object {top, right, bottom, left}. Expand.
+		if ( isset( $node['_border']['radius'] ) && is_string( $node['_border']['radius'] ) ) {
+			$radius = $node['_border']['radius'];
+			$node['_border']['radius'] = [
+				'top'    => $radius,
+				'right'  => $radius,
+				'bottom' => $radius,
+				'left'   => $radius,
+			];
+			$warnings[] = $prefix . '_border.radius was a flat string; expanded to per-side values. Bricks CSS compiler ignores scalar _border.radius.';
+		}
+
 		if ( isset( $node['_color'] ) && is_string( $node['_color'] ) ) {
 			$node['_color'] = self::wrap_color_value( $node['_color'] );
 			$warnings[] = $prefix . '_color was a string; wrapped in a Bricks color object.';
 		}
 
 		return $node;
+	}
+
+	/**
+	 * v3.33.7 one-shot migration: walk every global class in the DB, re-normalize its
+	 * stored styles through `normalize()` so pre-existing legacy shapes (camelCase
+	 * typography, scalar `_border.radius`, `_background.backgroundColor`) get rewritten
+	 * to the shapes Bricks' CSS compiler actually emits. Idempotent — calling it on
+	 * already-clean classes is a no-op.
+	 *
+	 * Triggered by Plugin bootstrap under a one-shot option flag so it runs once per
+	 * install and never blocks admin page loads after the first hit.
+	 *
+	 * @return array{scanned:int, rewritten:int, warnings_total:int}
+	 */
+	public static function migrate_existing_classes(): array {
+		$option_key = defined( 'BRICKS_MCP_OPTION_GLOBAL_CLASSES_KEY' )
+			? BRICKS_MCP_OPTION_GLOBAL_CLASSES_KEY
+			: 'bricks_global_classes';
+		$classes = get_option( $option_key, [] );
+		if ( ! is_array( $classes ) ) {
+			return [ 'scanned' => 0, 'rewritten' => 0, 'warnings_total' => 0 ];
+		}
+
+		$scanned    = 0;
+		$rewritten  = 0;
+		$warnings_total = 0;
+
+		foreach ( $classes as &$class ) {
+			if ( ! is_array( $class ) ) {
+				continue;
+			}
+			$scanned++;
+			$original = $class['settings'] ?? $class['styles'] ?? [];
+			if ( ! is_array( $original ) || $original === [] ) {
+				continue;
+			}
+			$result = self::normalize( $original );
+			$new    = is_array( $result['styles'] ?? null ) ? $result['styles'] : $result;
+			$warn   = is_array( $result['warnings'] ?? null ) ? $result['warnings'] : [];
+			$warnings_total += count( $warn );
+			if ( $new !== $original ) {
+				$class['settings'] = $new;
+				unset( $class['styles'] ); // canonicalize on settings key
+				$rewritten++;
+			}
+		}
+		unset( $class );
+
+		if ( $rewritten > 0 ) {
+			update_option( $option_key, $classes, false );
+		}
+
+		return [
+			'scanned'        => $scanned,
+			'rewritten'      => $rewritten,
+			'warnings_total' => $warnings_total,
+		];
 	}
 
 	/**

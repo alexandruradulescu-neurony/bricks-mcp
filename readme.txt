@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.33.6
+Stable tag: 3.33.7
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,15 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.33.7 =
+**Fix: silent class-style dropouts — pattern skeleton + normalizer backfill**
+
+Playwright inspection on a real Bricks page caught 3 silent failures shipping at render time:
+
+* Fix: pattern skeleton — card wrapper block now absorbs the full `component_styles` (bg, border, flex-direction, row-gap) via `array_replace_recursive`. Pattern children that resolve to the same `class_intent` as the wrapper get stripped so the first-wins resolver doesn't drop the wrapper's rich styles.
+* Fix: `StyleNormalizationService` now rewrites legacy `_background: {backgroundColor: "var(...)"}` → `_background.color: {raw}` (Bricks CSS compiler ignores `backgroundColor` sub-key) and scalar `_border.radius` → per-side object.
+* Fix: one-shot migration `migrate_existing_classes` runs on version bump. Walks every global class and re-normalizes through `normalize()`, fixing legacy v3.32-era classes in place. Guarded by `bricks_mcp_legacy_class_shapes_migrated` option.
 
 = 3.33.6 =
 **Guidance cleanup for Claude/client failures**

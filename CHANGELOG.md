@@ -4,6 +4,25 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.33.7] — 2026-04-23
+
+**Fix: silent class-style dropouts — pattern skeleton + normalizer backfill**
+
+Playwright-driven live inspection caught three silent failures shipping on built pages:
+
+1. Pattern children inherited the card-wrapper `class_intent` (e.g. `mcp-card` reused on card block + heading + text-basic inside). `ClassIntentResolver` creates the class from the FIRST element's `style_overrides` (the wrapper, which had only `_padding` + `_border.radius`) then reuses for the children without merging. The children's rich `_background`, `_border.style/width/color`, `_display`, `_direction`, `_rowGap` were silently dropped. Bricks rendered empty cards with no bg, no border, no flex layout.
+2. Legacy classes from v3.32 era stored `_background: {backgroundColor: "var(...)"}` instead of the documented `_background.color.raw` shape — Bricks' CSS compiler emits nothing for `backgroundColor` sub-key.
+3. Legacy classes stored scalar `_border.radius: "var(...)"` instead of per-side object — Bricks' CSS compiler ignores scalar radius.
+
+### Fixed
+
+- `SchemaSkeletonGenerator::generate_from_plan` pattern path — card wrapper block now absorbs the full `component_styles` via `array_replace_recursive` (hardcoded padding/radius fallback preserved when no component entry exists). Children that resolve to the same class as the wrapper have their `class_intent` + `style_overrides` stripped — styles come from the wrapper only. First-wins resolver no longer drops styles.
+- `StyleNormalizationService::normalize_shape_rules` — added two new rewrites:
+  - `_background.backgroundColor: "var(...)"` → `_background.color: {raw: "var(...)"}` (doc-correct shape that Bricks actually compiles)
+  - Scalar `_border.radius: "var(...)"` → per-side object `{top, right, bottom, left}` (same pattern as existing `_border.width` auto-fix)
+- `StyleNormalizationService::migrate_existing_classes` — new one-shot migration. Walks every class in `bricks_global_classes` option, runs `normalize()`, saves back. Fixes legacy hero__*, hero-69__*, recruit__*, mcp-* classes in place.
+- `Plugin::maybe_normalize_legacy_class_shapes` — wires the migration into the same version-bump migration path as `maybe_wipe_v1_patterns` / `maybe_apply_v3_28_pattern_metadata`. Runs once per install, guarded by `bricks_mcp_legacy_class_shapes_migrated` option.
+
 ## [3.33.6] — 2026-04-23
 
 **Guidance cleanup for Claude/client failures**

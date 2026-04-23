@@ -97,32 +97,60 @@ final class SchemaSkeletonGenerator {
 			$pat_hint    = $pat['content_hint'] ?? '';
 			$pat_elements = $pat['element_structure'] ?? [];
 
-			// Build pattern node.
+			$pat_class = $this->find_class_for_pattern( $pat_name, $roles );
+
+			// Build pattern node children. Strip class_intent + style_overrides from any child
+			// whose resolved class equals the pattern's wrapper class (v3.33.7): in pre-fix
+			// SchemaSkeletonGenerator the children inherited the pattern's class (e.g.
+			// mcp-card) AND carried the full component styles, while the wrapper block only
+			// had minimal padding/radius. ClassIntentResolver creates the class on first
+			// occurrence (the wrapper), then reuses for children without merging — silently
+			// dropping bg/border/layout styles. Wrapper now carries the full styles; children
+			// no longer need to duplicate the same class.
 			$pat_children = [];
 			foreach ( $pat_elements as $pel ) {
-				$pat_children[] = $this->build_plan_element( $pel, $roles, true, $default_modifier, $component_styles );
+				$child_node = $this->build_plan_element( $pel, $roles, true, $default_modifier, $component_styles );
+				if ( is_array( $child_node )
+					&& isset( $child_node['class_intent'] )
+					&& $child_node['class_intent'] === $pat_class ) {
+					unset( $child_node['class_intent'] );
+					unset( $child_node['style_overrides'] );
+				}
+				$pat_children[] = $child_node;
 			}
 
-			$pat_class = $this->find_class_for_pattern( $pat_name, $roles );
+			// v3.33.7 fix: merge full component_styles (bg, border.style/width/color, display,
+			// direction, rowGap, padding, radius) into the card BLOCK so ClassIntentResolver
+			// creates mcp-card class with the complete style set on first encounter.
+			// Pre-3.33.7 this block only had padding + border.radius — the full styles lived
+			// on children that reused the same class_intent, and the first-wins resolver
+			// rule meant bg/border/layout were silently dropped.
+			$pattern_block_overrides = [
+				'_padding' => [
+					'top'    => 'var(--space-m)',
+					'right'  => 'var(--space-m)',
+					'bottom' => 'var(--space-m)',
+					'left'   => 'var(--space-m)',
+				],
+				'_border' => [
+					'radius' => [
+						'top'    => 'var(--radius)',
+						'right'  => 'var(--radius)',
+						'bottom' => 'var(--radius)',
+						'left'   => 'var(--radius)',
+					],
+				],
+			];
+			if ( is_string( $pat_class ) && isset( $component_styles[ $pat_class ] ) && is_array( $component_styles[ $pat_class ] ) ) {
+				// Component-generated styles win on conflict — they're the authoritative
+				// component definition; the hard-coded padding/radius above is just a fallback
+				// for when no component_styles entry exists.
+				$pattern_block_overrides = array_replace_recursive( $pattern_block_overrides, $component_styles[ $pat_class ] );
+			}
 
 			$schema_patterns[ $pat_name ] = $this->node( 'block', [
 				'class_intent'    => $pat_class,
-				'style_overrides' => [
-					'_padding' => [
-						'top'    => 'var(--space-m)',
-						'right'  => 'var(--space-m)',
-						'bottom' => 'var(--space-m)',
-						'left'   => 'var(--space-m)',
-					],
-					'_border' => [
-						'radius' => [
-							'top'    => 'var(--radius)',
-							'right'  => 'var(--radius)',
-							'bottom' => 'var(--radius)',
-							'left'   => 'var(--radius)',
-						],
-					],
-				],
+				'style_overrides' => $pattern_block_overrides,
 			], $pat_children );
 
 			// For pricing sections with 3+ tiers, emit a featured variant for the middle card.

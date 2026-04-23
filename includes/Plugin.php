@@ -138,6 +138,13 @@ final class Plugin {
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				error_log( 'BricksMCP maybe_apply_v3_28_pattern_metadata failed: ' . $e->getMessage() );
 			}
+			try {
+				$this->maybe_normalize_legacy_class_shapes();
+			} catch ( \Throwable $e ) {
+				$migration_ok = false;
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'BricksMCP maybe_normalize_legacy_class_shapes failed: ' . $e->getMessage() );
+			}
 			if ( $migration_ok ) {
 				update_option( MCP\Services\BricksCore::OPTION_DB_VERSION, BRICKS_MCP_VERSION, true );
 			}
@@ -241,6 +248,30 @@ final class Plugin {
 		update_option( MCP\Services\BricksCore::OPTION_PATTERNS, $patterns, false );
 		update_option( $flag, time(), false );
 		set_transient( 'bricks_mcp_show_v3_28_notice', 1, DAY_IN_SECONDS );
+	}
+
+	/**
+	 * v3.33.7 — re-normalize every global class in the DB through
+	 * StyleNormalizationService. Rewrites legacy shapes that don't emit CSS on
+	 * Bricks' compiler: camelCase typography keys → kebab, `_background.backgroundColor`
+	 * → `_background.color.raw`, scalar `_border.radius` → per-side object. Idempotent.
+	 *
+	 * Guarded by OPTION_LEGACY_CLASS_SHAPES_MIGRATED so it runs once per install.
+	 * Stores migration stats (scanned/rewritten counts) in the flag option value
+	 * for later audit. After this runs, existing hero__*, hero-69__*, recruit__*,
+	 * mcp-* classes get their silent-fail properties fixed.
+	 */
+	private function maybe_normalize_legacy_class_shapes(): void {
+		$flag = 'bricks_mcp_legacy_class_shapes_migrated';
+		if ( get_option( $flag ) ) {
+			return;
+		}
+		$stats = MCP\Services\StyleNormalizationService::migrate_existing_classes();
+		update_option( $flag, [
+			'ran_at'    => time(),
+			'scanned'   => $stats['scanned'],
+			'rewritten' => $stats['rewritten'],
+		], false );
 	}
 
 	/**
