@@ -30,4 +30,15 @@ interface VisionProvider {
      * @return array{tool_input: array, input_tokens: int, output_tokens: int}|\WP_Error
      */
     public function analyze( array $image, array $tool_schema, array $messages, array $options = [] ): array|\WP_Error;
+
+    /**
+     * Call the model with text-only messages (no image). Used for reference-JSON
+     * translation where no visual input is needed.
+     *
+     * @param array<int, array{type:string, text:string}> $messages   Same shape as analyze's messages arg.
+     * @param array<string,mixed>                          $tool_schema Tool definition (name, description, input_schema).
+     * @param array<string,mixed>                          $options     Optional: temperature, max_tokens, model override.
+     * @return array{tool_input: array, input_tokens: int, output_tokens: int}|\WP_Error Provider response envelope matching analyze.
+     */
+    public function call_text_only( array $messages, array $tool_schema, array $options = [] ): array|\WP_Error;
 }

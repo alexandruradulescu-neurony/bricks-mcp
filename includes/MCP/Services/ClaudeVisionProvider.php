@@ -41,6 +41,33 @@ final class ClaudeVisionProvider implements VisionProvider {
             return new \WP_Error( 'vision_not_configured', 'Set Anthropic API key in Settings → Bricks MCP before using vision features.' );
         }
 
+        $content = array_merge(
+            [ [ 'type' => 'image', 'source' => $image ] ],
+            $messages
+        );
+
+        return $this->do_request( $content, $tool_schema, $options );
+    }
+
+    public function call_text_only( array $messages, array $tool_schema, array $options = [] ): array|\WP_Error {
+        if ( $this->api_key === '' ) {
+            return new \WP_Error( 'vision_not_configured', 'Set Anthropic API key in Settings → Bricks MCP before using vision features.' );
+        }
+
+        $content = [];
+        foreach ( $messages as $m ) {
+            if ( is_array( $m ) && ( $m['type'] ?? '' ) === 'text' ) {
+                $content[] = [ 'type' => 'text', 'text' => (string) ( $m['text'] ?? '' ) ];
+            }
+        }
+        if ( $content === [] ) {
+            return new \WP_Error( 'empty_messages', 'call_text_only requires at least one text message.' );
+        }
+
+        return $this->do_request( $content, $tool_schema, $options );
+    }
+
+    private function do_request( array $content, array $tool_schema, array $options = [] ): array|\WP_Error {
         $body = [
             'model'      => (string) ( $options['model'] ?? self::DEFAULT_MODEL ),
             'max_tokens' => (int) ( $options['max_tokens'] ?? self::DEFAULT_MAX_TOKENS ),
@@ -50,10 +77,7 @@ final class ClaudeVisionProvider implements VisionProvider {
             'messages'   => [
                 [
                     'role'    => 'user',
-                    'content' => array_merge(
-                        [ [ 'type' => 'image', 'source' => $image ] ],
-                        $messages
-                    ),
+                    'content' => $content,
                 ],
             ],
         ];
