@@ -4,6 +4,21 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.33.3] — 2026-04-23
+
+**readme.txt main description refresh**
+
+Main plugin description was still advertising `build_from_schema` (removed v3.31.0) and said "3 workflows". Tool list had outdated `build_from_schema` entry and missing features. Refreshed.
+
+### Changed
+
+- `readme.txt` "Description" — now "4 workflows" with accurate design-build pipeline (`propose_design → build_structure → populate_content → verify_build`) and the new vision-driven pattern capture workflow (`design_pattern(from_image)` with 3 input modes).
+- `readme.txt` "How It Works" — replaced `build_from_schema` reference with the two-tier pipeline. Added knowledge-domain gate documentation (v3.33.1).
+- `readme.txt` "Available Tools" — removed `build_from_schema` entry (tool no longer registered). Added `build_structure` + `populate_content` entries. Enriched `verify_build` (content_sample, per-section styles, heading hierarchy warnings). Updated `design_pattern` to include `capture` + `from_image` + `mark_required` actions.
+- `readme.txt` "Design Pattern Library" — rewritten. Database-backed, four creation paths (manual, capture, import, vision). Drift detection documented.
+- `readme.txt` "External Services" — added Anthropic API entry (used only when `design_pattern(from_image)` invoked + key configured). Clarified Unsplash tool names.
+- `readme.txt` "Getting Started" + "Installation" — added Briefs setup step and Anthropic API key step.
+
 ## [3.33.2] — 2026-04-23
 
 **Documentation — key conventions + specificity trap + verification**

@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.33.2
+Stable tag: 3.33.3
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -14,13 +14,14 @@ Connect AI assistants like Claude to your Bricks Builder site. Build and edit pa
 
 Bricks MCP turns your WordPress site into an AI-controlled page builder. It implements the Model Context Protocol (MCP) — an open standard for connecting AI assistants to external tools — so that any MCP-compatible client (Claude Desktop, Claude Code, and others) can read and modify your Bricks Builder pages through plain conversation.
 
-The plugin supports three workflows:
+The plugin supports four workflows:
 
 1. **Direct operations** — Edit text, move elements, swap images, update menus. The AI uses element/page/menu tools directly.
 2. **Instructed builds** — Add a heading and two columns, insert a form. The AI uses bulk_add or append_content with awareness of your global classes.
-3. **Design builds** — Design a services page, build a landing page, redesign the hero. Server-enforced 4-step pipeline: DISCOVER (site context + element capabilities + reference patterns) → DESIGN (structured design_plan) → BUILD (build_from_schema with class resolution, pattern expansion, auto-fixes) → VERIFY (human-readable section descriptions).
+3. **Design builds** — Design a services page, build a landing page, redesign the hero. Server-enforced four-step pipeline: **propose_design** (Phase 1 discovery returns site context + element capabilities + reference patterns; Phase 2 consumes a design_plan and returns a proposal_id + validated schema) → **build_structure** (writes the structural element tree with class creation + variable resolution + auto-fixes, no content) → **populate_content** (injects content_map into role-tagged elements) → **verify_build** (human-readable section descriptions, content extraction, min-height + background-color per section, placeholder detection).
+4. **Vision-driven pattern capture** — Paste a screenshot or Bricks clipboard JSON; the AI vision translator (`design_pattern(action: from_image)`) produces a site-BEM design_plan with global_classes_to_create (inferring styles from the image using site variables), auto-sideloads per-element images via business-brief-enriched Unsplash search, and — when a target page_id is supplied — auto-chains through the design-build pipeline above. Supports three input modes: image only, reference_json only (text-only Claude translates foreign classes → site BEM + foreign variables → site equivalents), image + JSON.
 
-Tell your AI assistant "design a services section with three feature cards" and the design build pipeline analyzes your existing site, picks a reference pattern, generates a valid schema, and writes the final Bricks elements with proper global classes and CSS variables.
+Tell your AI assistant "design a services section with three feature cards" and the design-build pipeline analyzes your existing site, picks a reference pattern, generates a valid schema, and writes the final Bricks elements with proper global classes and CSS variables.
 
 = Site-Aware Building =
 
@@ -28,7 +29,15 @@ When connecting to a site with existing designed pages, the discovery phase anal
 
 = Design Pattern Library =
 
-21 curated section compositions (heroes, splits, features, CTAs, pricing, testimonials, content) serve as reference examples during discovery. Patterns capture *composition* — what elements in what arrangement — not appearance. The site's design system handles how sections actually look. Patterns live in the database (auto-migrated from plugin-shipped defaults on first install) and are fully editable via the Patterns admin tab or the `design_pattern` tool.
+Database-backed section composition library. Patterns capture *composition* — what elements in what arrangement — not appearance. The site's design system handles how sections actually look. Patterns live in the `bricks_mcp_design_patterns` option and are fully editable via the Patterns admin tab or the `design_pattern` tool.
+
+Patterns can be added four ways:
+- **Manual authoring** — hand-write via Patterns admin or `design_pattern:create(pattern)`
+- **Capture live section** — `design_pattern:capture(page_id, block_id, name, category)` snapshots an existing built section with style snapshots into the library
+- **Import portable JSON** — `design_pattern:import(patterns)` with cross-site class/variable reconciliation
+- **Vision capture** — `design_pattern:from_image` reads a screenshot (or Bricksies-format clipboard JSON, or both) and produces a site-BEM pattern, including auto-sideloaded Unsplash images when a business-brief is set
+
+Phase 1 of `propose_design` automatically scopes the catalog to the detected section_type and returns the best matches with `structural_summary` + `ai_description` + `ai_usage_hints` for AI selection. Drift detection compares a pattern's embedded class fingerprints against the current live site — surfaces via `design_pattern:get(include_drift: true)`.
 
 = Pipeline Auto-Fixes =
 
@@ -58,9 +67,9 @@ Apply writes to `bricks_global_variables` (namespaced replace across fourteen ow
 
 The plugin registers a REST API endpoint on your WordPress site that speaks the MCP protocol. You add the endpoint URL to your AI client's MCP configuration, authenticate with a WordPress Application Password, and your AI can start working with your site immediately.
 
-An intent router classifies every request into one of the three workflows above, each with server-enforced prerequisites (site info, global classes, CSS variables). A design build gate ensures that section-level layouts and large element trees are always routed through `build_from_schema` for consistent, high-quality output.
+An intent router classifies every request into one of the four workflows above, each with server-enforced prerequisites (site info, global classes, CSS variables, knowledge domains). A design-build gate ensures that section-level layouts and large element trees are always routed through the `propose_design → build_structure → populate_content → verify_build` pipeline for consistent, high-quality output. A knowledge-domain gate (v3.33.1+) blocks class writes that include styles until the session has fetched `bricks:get_knowledge('global-classes')` + `bricks:get_knowledge('building')` — Bricks has non-obvious per-key conventions (kebab-case inside `_typography`, camelCase at top-level, child-theme heading specificity) and silent failures were shipping broken classes. All destructive operations (delete, bulk replace, cascade remove) are gated behind single-use confirmation tokens.
 
-= Available Tools (27 tools) =
+= Available Tools =
 
 * **get_site_info** — Site config, design tokens, color palette, page summaries
 * **get_onboarding_guide** — Auto-orientation for AI assistants on new sessions: workflows, quick-start examples, site context, briefs
@@ -84,11 +93,12 @@ An intent router classifies every request into one of the three workflows above,
 * **wordpress** — Get posts/users/plugins, activate/deactivate plugins, create/update users
 * **metabox** — Read Meta Box custom fields, list field groups, get dynamic tags
 * **woocommerce** — WooCommerce status, elements, dynamic tags, template scaffolding
-* **propose_design** — Two-phase design proposal: Phase 1 returns site context + element capabilities + reference patterns; Phase 2 (with design_plan) returns proposal_id + suggested_schema
+* **propose_design** — Two-phase design proposal: Phase 1 returns site context + element capabilities + reference patterns + recommended_knowledge domains; Phase 2 (with design_plan) returns proposal_id + validated suggested_schema. The schema is structure-only — content is injected separately via populate_content for reliability.
 * **propose_page_layout** — Maps page intent (landing, services, about, product, contact) to a sequenced list of section types with recommended pattern IDs and ready-to-use design_plan skeletons
-* **build_from_schema** — Declarative design pipeline: validates schema, resolves class intents, expands patterns, generates element settings, resolves CSS variables, and writes the final Bricks content
-* **verify_build** — Post-build verification: returns element count, type counts, classes used, and human-readable section descriptions so the AI can self-verify the result matches intent
-* **design_pattern** — Manage the database-backed pattern library: list, get, semantic_search, create, update, delete, export, import, normalize (map external pattern to site), generate_prompt, plus category CRUD
+* **build_structure** — Phase 1 of the two-tier build: consumes proposal_id + structure-only schema, resolves class intents (reuse or auto-create classes with site variables), expands patterns, generates element settings, resolves CSS variables, writes elements. Returns section_id + role_map for content injection. Emits non-blocking validation warnings (grid-column vs child-count mismatches, empty content, missing responsive overrides, heading hierarchy issues like duplicate h1 / skipped levels).
+* **populate_content** — Phase 2 of the two-tier build: takes the section_id from build_structure + a role → content map, injects text / image-object / link values into the right elements. Role keys match `role` fields on schema elements; prefix a key with `#` to target a specific element ID directly.
+* **verify_build** — Post-build verification: element count, type counts, classes used, human-readable section descriptions, per-section styles (min_height, inline background_color), content_sample (extracted headings / buttons / texts + placeholder-content detection), and hierarchy tree for the last-built section so the AI can self-verify the result matches intent.
+* **design_pattern** — Manage the database-backed pattern library: `capture` a live section as a pattern, `list` / `get` / `semantic_search`, `create` / `update` / `delete`, `export` / `import`, `mark_required` (roles that must be populated), and **`from_image`** — vision-based pattern creation with three input modes (image only, reference JSON only, or both). When `page_id` is supplied the pattern is auto-built on the page via the pipeline. Requires `anthropic_api_key` in settings.
 
 All tools are free to use. The plugin is open source and hosted on [GitHub](https://github.com/alexandruradulescu-neurony/bricks-mcp).
 
@@ -108,22 +118,30 @@ All requests are authenticated using WordPress Application Passwords, the built-
 2. Go to **Settings > Bricks MCP** and enable the plugin.
 3. Create a WordPress Application Password under **Users > Profile**.
 4. Add the MCP server URL to your AI client configuration.
-5. Start building pages with natural language.
+5. (Optional) Under **Settings → Bricks MCP → Briefs**, fill the **Business Brief** (what the site does, target audience, tone) and **Design Brief** (visual language, button/card conventions, dark-section usage). AI reads these during discovery and uses them to generate on-brand content + drive business-context-enriched Unsplash searches via `media:smart_search`.
+6. (Optional) Under **Settings → Bricks MCP → Advanced**, add an **Unsplash API key** to enable image search / sideload, and an **Anthropic API key** (`sk-ant-...`) to enable `design_pattern(from_image)` vision capture.
+7. Start building pages with natural language.
 
 Full setup documentation is available in the [GitHub repository](https://github.com/alexandruradulescu-neurony/bricks-mcp).
 
 == External Services ==
 
-This plugin optionally connects to the Unsplash API to search for images.
+This plugin optionally connects to two external services.
 
 **Service:** Unsplash (api.unsplash.com)
-**When used:** Only when the `search_media` tool is called by an AI assistant, and only if you have configured an Unsplash API key in the plugin settings.
-**What is sent:** Your search query string and your Unsplash API key.
+**When used:** Only when the `media:search_unsplash` / `media:smart_search` / `media:sideload` tools are called by an AI assistant, and only if you have configured an Unsplash API key in the plugin settings.
+**What is sent:** Your search query string and your Unsplash API key. Sideload additionally downloads the chosen image URL into your WordPress media library.
 **Unsplash Terms of Service:** https://unsplash.com/terms
 **Unsplash Privacy Policy:** https://unsplash.com/privacy
 **Unsplash API Guidelines:** https://unsplash.com/documentation
 
-No data is sent to Unsplash unless you explicitly configure an API key and an AI assistant invokes the image search tool.
+**Service:** Anthropic Messages API (api.anthropic.com)
+**When used:** Only when the `design_pattern(action: from_image)` tool is called by an AI assistant, and only if you have configured an Anthropic API key (`sk-ant-...`) under Settings → Bricks MCP.
+**What is sent:** The model name, messages array (base64-encoded image bytes when an image is supplied, otherwise text-only for reference_json translation), site-context text block (existing class names, CSS variable names, inferred theme), optional reference_json template, and the tool schema. Outputs are returned as a `tool_use` block containing the `description` + `design_plan` + `global_classes_to_create` + `content_map`.
+**Anthropic Terms of Service:** https://www.anthropic.com/legal/commercial-terms
+**Anthropic Privacy Policy:** https://www.anthropic.com/legal/privacy
+
+No data is sent to either service unless you explicitly configure the corresponding API key and an AI assistant invokes a tool that uses it.
 
 No other external services are contacted by this plugin.
 
@@ -135,7 +153,9 @@ No other external services are contacted by this plugin.
 4. Enable the MCP server and optionally require authentication (strongly recommended for production sites).
 5. Go to **Users > Your Profile** and scroll to **Application Passwords**. Create a new Application Password and copy it — you will need it for your AI client.
 6. Add your site's MCP endpoint URL and credentials to your AI client (see the [GitHub repository](https://github.com/alexandruradulescu-neurony/bricks-mcp) for client-specific setup guides).
-7. (Optional) Enter an Unsplash API key in the settings to enable image search.
+7. (Optional) Enter an **Unsplash API key** under **Advanced** settings to enable image search / sideload.
+8. (Optional) Enter an **Anthropic API key** (`sk-ant-...`) under **Advanced** settings to enable the `design_pattern(from_image)` vision tool (screenshot → site-BEM pattern via Claude).
+9. (Optional) Fill the **Business Brief** and **Design Brief** under **Briefs** to give the AI site context for content generation and design decisions.
 
 == Frequently Asked Questions ==
 
@@ -162,6 +182,17 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.33.3 =
+**readme main description refresh**
+
+The plugin description + tool list were stale — still referring to `build_from_schema` (removed v3.31.0) and missing v3.29–v3.33 features.
+
+* Changed: Description now lists 4 workflows (added vision-driven pattern capture). Design-build pipeline corrected: `propose_design → build_structure → populate_content → verify_build`.
+* Changed: Tool list — dropped `build_from_schema`, added `build_structure` + `populate_content` + enriched `verify_build` + `design_pattern(from_image/capture/mark_required)`.
+* Changed: Pattern library section rewritten — database-backed, 4 creation paths (manual/capture/import/vision), drift detection documented.
+* Changed: External Services — Anthropic API declared (used only when `design_pattern(from_image)` invoked + key configured).
+* Changed: Getting Started / Installation — added Briefs + Anthropic API key setup steps.
 
 = 3.33.2 =
 **Documentation — key conventions, specificity trap, verification**
