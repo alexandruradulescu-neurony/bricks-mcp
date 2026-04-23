@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.32.0
+Stable tag: 3.32.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,15 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.32.1 =
+**Fix: vision container-in-container schema error**
+
+v3.32.0's vision prompt said "elements[] is flat leaves only, no wrappers" but the type enum still allowed section/container/block/div. Claude reliably emitted a `container` for image galleries, producing `container is not typically placed inside container` schema validation errors downstream.
+
+* Fix: `emit_design_plan` tool schema — `elements[].type` and `patterns[].element_structure[].type` enums now EXCLUDE section/container/block/div. Pipeline owns wrappers; vision emits leaves only.
+* Fix: `VisionResponseMapper::extract_tool_output` strips any wrapper-typed entries that slip past the schema enum. Defensive filter before design_plan reaches the skeleton generator.
+* Changed: prompt Rule 3 + Rule 4 — explicit guidance for image galleries (use `type: image-gallery` for 2-5 tile rows; `patterns[]` for >2 identical repeats).
 
 = 3.32.0 =
 **Pattern from Image Corrective Rework (M3.1)**

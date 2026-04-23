@@ -40,9 +40,16 @@ final class VisionResponseMapper {
         }
         $tool_input = $response['tool_input'];
 
+        $design_plan = is_array( $tool_input['design_plan'] ?? null ) ? $tool_input['design_plan'] : [];
+        // v3.32.1 defense: vision sometimes emits wrapper types (section/container/block/div) in
+        // elements[] despite the schema enum excluding them + the prompt saying leaves only.
+        // SchemaSkeletonGenerator owns wrappers — strip them here so the pipeline never sees
+        // a container-in-container layout error.
+        $design_plan = $this->strip_wrappers_from_plan( $design_plan );
+
         return [
             'description'              => (string) ( $tool_input['description'] ?? '' ),
-            'design_plan'              => is_array( $tool_input['design_plan'] ?? null ) ? $tool_input['design_plan'] : [],
+            'design_plan'              => $design_plan,
             'global_classes_to_create' => is_array( $tool_input['global_classes_to_create'] ?? null ) ? $tool_input['global_classes_to_create'] : [],
             'content_map'              => is_array( $tool_input['content_map'] ?? null ) ? $tool_input['content_map'] : [],
             'usage'                    => [
@@ -50,5 +57,40 @@ final class VisionResponseMapper {
                 'output_tokens' => (int) ( $response['output_tokens'] ?? 0 ),
             ],
         ];
+    }
+
+    /**
+     * Drop any wrapper-typed entries (section/container/block/div) from design_plan.elements[]
+     * and patterns[].element_structure[]. Wrappers are added by SchemaSkeletonGenerator;
+     * vision-emitted wrappers produce container-in-container validation errors downstream.
+     *
+     * @param array<string,mixed> $plan
+     * @return array<string,mixed>
+     */
+    private function strip_wrappers_from_plan( array $plan ): array {
+        $wrappers = [ 'section', 'container', 'block', 'div' ];
+
+        if ( isset( $plan['elements'] ) && is_array( $plan['elements'] ) ) {
+            $plan['elements'] = array_values( array_filter(
+                $plan['elements'],
+                static fn( $el ) => is_array( $el ) && ! in_array( (string) ( $el['type'] ?? '' ), $wrappers, true )
+            ) );
+        }
+
+        if ( isset( $plan['patterns'] ) && is_array( $plan['patterns'] ) ) {
+            foreach ( $plan['patterns'] as $i => $pat ) {
+                if ( ! is_array( $pat ) ) {
+                    continue;
+                }
+                if ( isset( $pat['element_structure'] ) && is_array( $pat['element_structure'] ) ) {
+                    $plan['patterns'][ $i ]['element_structure'] = array_values( array_filter(
+                        $pat['element_structure'],
+                        static fn( $el ) => is_array( $el ) && ! in_array( (string) ( $el['type'] ?? '' ), $wrappers, true )
+                    ) );
+                }
+            }
+        }
+
+        return $plan;
     }
 }

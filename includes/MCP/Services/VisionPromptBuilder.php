@@ -119,9 +119,9 @@ CRITICAL RULES (deviation = wrong):
 
 2. Prefer existing site class names (listed above) when visual function matches. Only invent new BEM labels when no existing class fits.
 
-3. elements[] is FLAT — content/leaf elements only (heading, text-basic, button, image, icon, list, slider, form, divider, etc.). Do NOT emit section/container/block wrappers. The pipeline adds structural frames.
+3. elements[] is FLAT — content/leaf elements only (heading, text-basic, button, image, icon, list, slider, form, divider, image-gallery, etc.). NEVER emit type: section / container / block / div — these wrappers are added by the pipeline. The enum on the elements[].type field already excludes them; do not try.
 
-4. For REPEATING content (card grids, feature lists, testimonial sliders), use patterns[] — one pattern per template with name, repeat count, element_structure, content_hint. Do NOT clone elements inline.
+4. For REPEATING content (card grids, feature lists, testimonial sliders, image galleries of >2 identical tiles), use patterns[] — one pattern per template with name, repeat count, element_structure, content_hint. Do NOT clone elements inline. For a small fixed image row (2–5 visible images as a single gallery unit), emit ONE element with type: image-gallery and content_hint describing the set.
 
 5. content_hint per element = short plain-text description of intended content (e.g. "Main CTA button linking to contact", "24/7 towing service tagline"). The pipeline uses these for content_plan and for image elements to run media:smart_search against site's business_brief.
 
@@ -228,16 +228,32 @@ EOT;
         ];
     }
 
+    /**
+     * Leaf-only element types for design_plan.elements[] and patterns[].element_structure[].
+     *
+     * SchemaSkeletonGenerator adds the section/container/block wrapper frame. Vision
+     * emitting a wrapper inline here produces container-in-container schema errors
+     * (validated by DesignSchemaValidator). This filter is the first line of defense;
+     * VisionResponseMapper::extract_tool_output coerces any that slip through.
+     *
+     * @return array<int, string>
+     */
+    private function get_leaf_element_types(): array {
+        $wrappers = [ 'section', 'container', 'block', 'div' ];
+        $all      = $this->get_valid_element_types();
+        return array_values( array_filter( $all, static fn( $t ) => ! in_array( $t, $wrappers, true ) ) );
+    }
+
     private function emit_design_plan_schema(): array {
-        $element_types = $this->get_valid_element_types();
+        $leaf_types = $this->get_leaf_element_types();
 
         $element_item = [
             'type'       => 'object',
             'properties' => [
                 'type'         => [
                     'type' => 'string',
-                    'enum' => $element_types,
-                    'description' => 'Bricks element type. MUST be one of the enum values — do not invent types.',
+                    'enum' => $leaf_types,
+                    'description' => 'Bricks LEAF element type (content/visual leaf — NOT wrappers). section/container/block/div are emitted by the pipeline, not you. For repeating image galleries use type: image-gallery or type: slider-nested; for simple image rows use multiple type: image entries inside patterns[].',
                 ],
                 'role'         => [ 'type' => 'string', 'description' => 'Semantic role snake_case (e.g. heading_main, cta_primary, feature_card_heading).' ],
                 'content_hint' => [ 'type' => 'string', 'description' => 'Short plain-text description of intended content. Drives content_plan + Unsplash smart_search for images.' ],
@@ -260,7 +276,7 @@ EOT;
                     'items' => [
                         'type'       => 'object',
                         'properties' => [
-                            'type' => [ 'type' => 'string', 'enum' => $element_types ],
+                            'type' => [ 'type' => 'string', 'enum' => $leaf_types ],
                             'role' => [ 'type' => 'string' ],
                         ],
                         'required'   => [ 'type', 'role' ],

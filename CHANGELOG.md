@@ -4,6 +4,22 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.32.1] — 2026-04-23
+
+**Fix: vision container-in-container schema error**
+
+v3.32.0's vision prompt told Claude to emit leaves only, but the type enum still allowed section/container/block/div. Vision reliably emitted `container` for image galleries, producing `container is not typically placed inside container` schema validation errors downstream.
+
+### Fixed
+
+- `VisionPromptBuilder::emit_design_plan_schema` — `elements[].type` and `patterns[].element_structure[].type` enums now exclude wrapper types (section/container/block/div). Vision can no longer emit them even if the prompt rule is ignored.
+- `VisionResponseMapper::extract_tool_output` — added `strip_wrappers_from_plan` defensive filter that drops any wrapper-typed entries before design_plan reaches `ProposalService::create`.
+
+### Changed
+
+- Prompt Rule 3 tightened: explicit NEVER for section/container/block/div + schema enum reference.
+- Prompt Rule 4: added image-gallery guidance (`type: image-gallery` for small 2-5 tile rows; `patterns[]` for larger identical repeats).
+
 ## [3.32.0] — 2026-04-23
 
 **Pattern from Image Corrective Rework (M3.1)**
