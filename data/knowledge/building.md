@@ -306,9 +306,12 @@ These common mistakes are silently corrected with a warning attached to the buil
 
 ## Design Pattern Library
 
-The plugin ships 21 curated section compositions across 7 categories (heroes, features, ctas, pricing, testimonials, splits, content/generic). These are auto-migrated into the database on first install and are fully editable from then on.
+Database-backed pattern library. The plugin does NOT ship a bundled pattern seed — new installs start with an empty library. Patterns live in the `bricks_mcp_design_patterns` WP option and are populated via one of four creation paths:
 
-Add new patterns via `design_pattern:create(pattern)` or the Patterns admin tab under **Settings → Bricks MCP → Patterns**. All patterns live in the `bricks_mcp_custom_patterns` WP option — custom patterns survive plugin updates.
+- **Manual authoring** — `design_pattern:create(pattern)` or the Patterns admin tab under **Settings → Bricks MCP → Patterns**
+- **Capture live section** — `design_pattern:capture(page_id, block_id, name, category)` snapshots an existing built section (including style fingerprints) into the library
+- **Import portable JSON** — `design_pattern:import(patterns)` with cross-site class/variable reconciliation via `design_pattern:normalize`
+- **Vision capture** — `design_pattern:from_image` reads a screenshot or Bricksies-format clipboard JSON and produces a site-BEM pattern
 
 ### Discovery
 
@@ -322,7 +325,7 @@ Each pattern has optional AI metadata:
 - `ai_description` — 1-2 sentence description of what the pattern looks like when built
 - `ai_usage_hints` — array of tips for when/how to use the pattern
 
-Use these to pick the right pattern for the task. All 21 shipped patterns have this metadata pre-filled.
+Use these to pick the right pattern for the task. Capture and from_image flows backfill this metadata automatically; manually-created patterns can add it via `design_pattern:update(id, pattern: {ai_description, ai_usage_hints})`.
 
 ### Managing patterns
 

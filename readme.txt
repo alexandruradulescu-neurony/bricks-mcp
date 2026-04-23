@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.33.3
+Stable tag: 3.33.4
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -182,6 +182,12 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.33.4 =
+**Stale-claim cleanup — pattern seed + diagnostic false-positive**
+
+* Fixed: `data/knowledge/building.md` "Design Pattern Library" section — no longer claims "21 curated patterns auto-migrated on first install". The plugin does not bundle a pattern seed; libraries start empty and are populated via capture / import / from_image / manual authoring.
+* Fixed: `DesignPipelineCheck` admin diagnostic — empty pattern library no longer flagged as a failure. Removed the stale "deactivate + reactivate to trigger seed" fix step (no seed code exists).
 
 = 3.33.3 =
 **readme main description refresh**

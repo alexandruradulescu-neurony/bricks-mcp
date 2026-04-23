@@ -73,13 +73,13 @@ class DesignPipelineCheck implements DiagnosticCheck {
 
 		$problems = array();
 
-		// 1. Design patterns are database-backed (since 3.x). Verify at least one is loadable.
+		// 1. Design patterns are database-backed (since 3.x). Verify the service is loadable.
+		// Empty library is NOT a problem — the plugin does not bundle a seed; users populate
+		// patterns via capture, import, from_image, or manual authoring.
 		try {
 			$patterns = \BricksMCP\MCP\Services\DesignPatternService::list_all();
 			if ( ! is_array( $patterns ) ) {
 				$problems[] = __( 'DesignPatternService::list_all() returned a non-array value.', 'bricks-mcp' );
-			} elseif ( empty( $patterns ) ) {
-				$problems[] = __( 'No design patterns found in the database. Bundled patterns should seed on first activation.', 'bricks-mcp' );
 			}
 		} catch ( \Throwable $e ) {
 			$problems[] = sprintf(
@@ -123,7 +123,6 @@ class DesignPipelineCheck implements DiagnosticCheck {
 				'message'   => implode( ' / ', $problems ),
 				'fix_steps' => array(
 					__( 'Reinstall or update the Bricks MCP plugin to restore missing data files.', 'bricks-mcp' ),
-					__( 'If pattern count is zero, deactivate + reactivate the plugin to trigger the pattern seed.', 'bricks-mcp' ),
 					__( 'If the problem persists, check file permissions on the plugin directory.', 'bricks-mcp' ),
 				),
 				'category'  => $this->category(),

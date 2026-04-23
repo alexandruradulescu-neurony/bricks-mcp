@@ -4,6 +4,21 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.33.4] — 2026-04-23
+
+**Stale-claim cleanup: pattern seed + diagnostic false-positive**
+
+External audit caught two docs/code inconsistencies: `data/knowledge/building.md` claimed "plugin ships 21 curated section compositions... auto-migrated into the database on first install", and the admin health check flagged empty pattern libraries as a FAIL state with fix-step "deactivate + reactivate to trigger the pattern seed." Neither was true — `data/design-patterns.json` does not exist, `DesignPatternService` has no seed/migrate method, and empty libraries are the expected fresh-install state.
+
+### Fixed
+
+- `data/knowledge/building.md` "Design Pattern Library" — rewritten. No seed claim. Documents four creation paths (manual, capture, import, from_image). Removed "21 curated" mention in AI metadata paragraph.
+- `includes/Admin/Checks/DesignPipelineCheck.php` — removed the false-positive: empty pattern library is no longer reported as a problem. Removed the stale fix-step "deactivate + reactivate to trigger the pattern seed" (no such seed code exists).
+
+### Notes
+
+- Tests: source repo has 22 PHPUnit tests at `dev/tests/Unit/` (parent of the plugin submodule). They are intentionally excluded from the distributed plugin zip per WP.org convention (`-x "tests/*"` in the release build). Changelog entries mentioning test counts refer to those source-tree files.
+
 ## [3.33.3] — 2026-04-23
 
 **readme.txt main description refresh**
