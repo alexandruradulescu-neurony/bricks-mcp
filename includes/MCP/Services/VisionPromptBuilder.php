@@ -38,7 +38,13 @@ final class VisionPromptBuilder {
         if ( self::$element_types_cache !== null ) {
             return self::$element_types_cache;
         }
+        // Primary: constant-based path (correct in a live WordPress install).
+        // Fallback: resolve relative to this file for test environments where
+        // BRICKS_MCP_PLUGIN_DIR may not point at the plugin root.
         $registry_path = BRICKS_MCP_PLUGIN_DIR . 'data/elements.json';
+        if ( ! is_readable( $registry_path ) ) {
+            $registry_path = dirname( __FILE__, 4 ) . '/data/elements.json';
+        }
         if ( ! is_readable( $registry_path ) ) {
             self::$element_types_cache = [];
             return [];
@@ -200,55 +206,95 @@ EOT;
     }
 
     private function emit_design_plan_schema(): array {
+        $element_types = $this->get_valid_element_types();
+
+        $element_item = [
+            'type'       => 'object',
+            'properties' => [
+                'type'         => [
+                    'type' => 'string',
+                    'enum' => $element_types,
+                    'description' => 'Bricks element type. MUST be one of the enum values — do not invent types.',
+                ],
+                'role'         => [ 'type' => 'string', 'description' => 'Semantic role snake_case (e.g. heading_main, cta_primary, feature_card_heading).' ],
+                'content_hint' => [ 'type' => 'string', 'description' => 'Short plain-text description of intended content. Drives content_plan + Unsplash smart_search for images.' ],
+                'tag'          => [ 'type' => 'string', 'description' => 'Optional HTML tag override (e.g. h1, h2).' ],
+                'class_intent' => [
+                    'type' => 'string',
+                    'description' => 'BEM-style class label ONLY (e.g. "hero__heading", "hero--dark__cta-primary"). NEVER emit style values, CSS properties, var(--*) references, or objects here. Pipeline creates the class with styles from site design tokens. Prefer existing site class names when visual function matches.',
+                ],
+            ],
+            'required'   => [ 'type', 'role' ],
+        ];
+
+        $pattern_item = [
+            'type'       => 'object',
+            'properties' => [
+                'name'              => [ 'type' => 'string', 'description' => 'Template name (e.g. feature_card).' ],
+                'repeat'            => [ 'type' => 'integer', 'minimum' => 1, 'description' => 'How many clones to produce.' ],
+                'element_structure' => [
+                    'type'  => 'array',
+                    'items' => [
+                        'type'       => 'object',
+                        'properties' => [
+                            'type' => [ 'type' => 'string', 'enum' => $element_types ],
+                            'role' => [ 'type' => 'string' ],
+                        ],
+                        'required'   => [ 'type', 'role' ],
+                    ],
+                ],
+                'content_hint'      => [ 'type' => 'string' ],
+            ],
+            'required'   => [ 'name', 'repeat', 'element_structure' ],
+        ];
+
+        $design_plan = [
+            'type'       => 'object',
+            'properties' => [
+                'section_type' => [ 'type' => 'string', 'enum' => [ 'hero', 'features', 'pricing', 'cta', 'testimonials', 'split', 'generic' ] ],
+                'layout'       => [ 'type' => 'string', 'enum' => [ 'centered', 'split-60-40', 'split-50-50', 'grid-2', 'grid-3', 'grid-4', 'stacked' ] ],
+                'background'   => [ 'type' => 'string', 'enum' => [ 'dark', 'light' ] ],
+                'elements'     => [ 'type' => 'array', 'items' => $element_item ],
+                'patterns'     => [
+                    'type'        => 'array',
+                    'description' => 'Optional repeat-templates (card grids, testimonial sliders). Omit entirely if no repeats.',
+                    'items'       => $pattern_item,
+                ],
+            ],
+            'required'   => [ 'section_type', 'layout', 'background', 'elements' ],
+        ];
+
+        $gc_item = [
+            'type'       => 'object',
+            'properties' => [
+                'name'     => [ 'type' => 'string', 'description' => 'BEM-normalized class name (e.g. hero__heading).' ],
+                'settings' => [
+                    'type'        => 'object',
+                    'description' => 'Style settings keyed by Bricks underscore-prefix (_typography, _padding, _background, etc.). Values MAY reference var(--site-token). NEVER reference var(--brxw-*) or foreign tokens — translate to site equivalents first.',
+                ],
+            ],
+            'required'   => [ 'name', 'settings' ],
+        ];
+
         return [
-            'name'        => 'emit_design_plan',
-            'description' => 'Emit a design_plan compatible with propose_design — drives one-shot build.',
+            'name'         => 'emit_design_plan',
+            'description'  => 'Emit description + design_plan (exact shape for propose_design Phase 2) + optional global_classes_to_create + optional content_map. class_intent fields MUST be BEM string labels only.',
             'input_schema' => [
                 'type'       => 'object',
                 'properties' => [
-                    'section_type' => [ 'type' => 'string', 'enum' => [ 'hero', 'features', 'pricing', 'cta', 'testimonials', 'split', 'generic' ] ],
-                    'layout'       => [ 'type' => 'string', 'enum' => [ 'centered', 'split-60-40', 'split-50-50', 'grid-2', 'grid-3', 'grid-4' ] ],
-                    'background'   => [ 'type' => 'string', 'enum' => [ 'dark', 'light' ] ],
-                    'elements'     => [
-                        'type'  => 'array',
-                        'items' => [
-                            'type'       => 'object',
-                            'properties' => [
-                                'type'         => [ 'type' => 'string', 'enum' => $this->get_valid_element_types(), 'description' => 'Bricks element type. MUST be one of the listed enum values — do not invent types.' ],
-                                'role'         => [ 'type' => 'string' ],
-                                'content_hint' => [ 'type' => 'string' ],
-                                'tag'          => [ 'type' => 'string' ],
-                                'class_intent' => [ 'type' => 'string', 'description' => 'BEM-style class label for this element (e.g. "hero__heading", "hero--dark__cta-primary"). Prefer existing site class names when the visual function matches; otherwise invent a new BEM label following site conventions. NEVER emit style values as class_intent — use labels only. The pipeline creates the class with appropriate styles drawn from site design tokens.' ],
-                            ],
-                            'required' => [ 'type', 'role' ],
-                        ],
-                    ],
-                    'patterns'     => [
+                    'description'              => [ 'type' => 'string', 'description' => 'Human-readable intent summary (≤200 chars).' ],
+                    'design_plan'              => $design_plan,
+                    'global_classes_to_create' => [
                         'type'        => 'array',
-                        'description' => 'Optional repeat-templates (e.g. card grid where one card shape clones N times). Omit entirely if no repeating content. Never emit empty or incomplete entries.',
-                        'items'       => [
-                            'type'       => 'object',
-                            'properties' => [
-                                'name'              => [ 'type' => 'string', 'description' => 'Template name (e.g. feature_card, testimonial).' ],
-                                'repeat'            => [ 'type' => 'integer', 'minimum' => 1, 'description' => 'How many clones to produce.' ],
-                                'element_structure' => [
-                                    'type'  => 'array',
-                                    'items' => [
-                                        'type'       => 'object',
-                                        'properties' => [
-                                            'type' => [ 'type' => 'string', 'enum' => $this->get_valid_element_types() ],
-                                            'role' => [ 'type' => 'string' ],
-                                        ],
-                                        'required'   => [ 'type', 'role' ],
-                                    ],
-                                ],
-                                'content_hint'      => [ 'type' => 'string' ],
-                            ],
-                            'required'   => [ 'name', 'repeat', 'element_structure' ],
-                        ],
+                        'description' => 'Optional. Include when reference JSON supplies explicit style values that must be preserved (translation case). Each class settings uses Bricks underscore-prefix keys and MAY reference var(--site-token).',
+                        'items'       => $gc_item,
+                    ],
+                    'content_map'              => [
+                        'type'        => 'object',
+                        'description' => 'Optional. Maps role → literal content string. When omitted, pipeline uses content_hint + business_brief.',
                     ],
                 ],
-                'required'   => [ 'section_type', 'layout', 'background', 'elements' ],
+                'required'   => [ 'description', 'design_plan' ],
             ],
         ];
     }
