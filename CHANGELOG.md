@@ -4,6 +4,21 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.32.2] — 2026-04-23
+
+**Fix: empty class shells + image-gallery has no images**
+
+v3.32.1 pipeline worked structurally (flat elements, wrapper skeleton, BEM class names applied) but the generated classes were near-empty shells (`{ _typography: { text-align: center } }` for heading, `{}` for buttons/gallery) because `global_classes_to_create[]` was marked OPTIONAL in the prompt and `ClassIntentResolver` role-defaults are sparse. Also: `ImageSideloadService` only walked `type: image` nodes, so `type: image-gallery` elements emitted zero sideloaded images.
+
+### Fixed
+
+- `VisionPromptBuilder` — prompt Rule 8 flipped: `global_classes_to_create[]` is now REQUIRED for every new `class_intent` label (one not already in site classes). Vision must infer style values from the image and express them using site variables (`var(--text-2xl)`, `var(--space-m)`, `var(--primary-ultra-dark)`, etc.). Empty-shell classes no longer possible on image-only path.
+- `ImageSideloadService::sideload` — now walks `type: image-gallery` elements in addition to `type: image`. For galleries: resolves a count (explicit `count` field → integer in content_hint → number-word in content_hint → default 5, cap 12), runs `media:smart_search(query, count+2)` for buffer, sideloads each URL, populates `items: [{id: attachment_id}, ...]` on the element.
+
+### Added
+
+- `ImageSideloadService::sideload_single` / `sideload_gallery` / `resolve_gallery_count` helper methods (refactor of single monolithic loop).
+
 ## [3.32.1] — 2026-04-23
 
 **Fix: vision container-in-container schema error**

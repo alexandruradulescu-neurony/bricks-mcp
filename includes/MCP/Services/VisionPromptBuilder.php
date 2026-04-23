@@ -131,7 +131,7 @@ CRITICAL RULES (deviation = wrong):
 
 7. description field = ≤200 chars human-readable summary of what the section is.
 
-8. global_classes_to_create is OPTIONAL — include ONLY when a reference JSON supplies explicit style values that must be preserved verbatim (translation case). Otherwise omit; ClassIntentResolver creates classes from class_intent labels using site design tokens. When provided, each class's settings use Bricks underscore-prefix keys (_typography, _padding, etc.) and values MAY reference var(--site-token) — NEVER var(--brxw-*) or other foreign tokens.
+8. global_classes_to_create is REQUIRED whenever you introduce a NEW class_intent label (one that does not already exist in [SITE CONTEXT] classes). For each new class_intent, emit a matching global_classes_to_create[] entry with site-design-token style values INFERRED FROM THE IMAGE — approximate font sizes, colors, paddings, alignments you see in the image, expressed in Bricks underscore-prefix keys (_typography, _padding, _background, _border, _width, _columnGap, _rowGap, _display, _direction, _alignItems, _justifyContent). Values MUST reference site variables (var(--text-2xl), var(--space-m), var(--primary-ultra-dark), var(--radius-btn), etc.) — NEVER hardcode pixel/rem values, NEVER use var(--brxw-*). Empty-shell classes produce unstyled output; fill them. You may omit a class entry ONLY if its class_intent label is already defined in [SITE CONTEXT] (reuse).
 
 9. content_map is OPTIONAL — include when image text is legible and intent-specific (e.g. Romanian text reading "Tractări 24/7"). Map role → literal content string. Omit for generic image intent.
 EOT;

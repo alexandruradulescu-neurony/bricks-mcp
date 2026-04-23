@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.32.1
+Stable tag: 3.32.2
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,14 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.32.2 =
+**Fix: empty class shells + image-gallery has no images**
+
+v3.32.1 pipeline worked structurally but generated near-empty class styles (`{ text-align: center }`, `{}`, `{}`) and `image-gallery` elements emitted zero sideloaded images.
+
+* Fix: `global_classes_to_create[]` is now REQUIRED (was OPTIONAL) for every new class_intent label. Vision infers style values from the image, expressed via site variables (`var(--text-2xl)`, `var(--space-m)`, etc.).
+* Fix: `ImageSideloadService::sideload` now walks `type: image-gallery` elements in addition to `type: image`. Resolves image count from `count` field → integer in content_hint → number-word → default 5 (cap 12). Populates `items: [{id}, ...]` array on the element.
 
 = 3.32.1 =
 **Fix: vision container-in-container schema error**
