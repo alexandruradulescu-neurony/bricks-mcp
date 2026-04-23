@@ -15,9 +15,14 @@ namespace BricksMCP\MCP\Handlers;
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\DesignPatternService;
 use BricksMCP\MCP\Services\ImageInputResolver;
+use BricksMCP\MCP\Services\ImageSideloadService;
 use BricksMCP\MCP\Services\PatternCapture;
 use BricksMCP\MCP\Services\PatternValidator;
+use BricksMCP\MCP\Services\ProposalService;
+use BricksMCP\MCP\Services\ReferenceJsonTranslator;
+use BricksMCP\MCP\Services\VisionPromptBuilder;
 use BricksMCP\MCP\Services\VisionProvider;
+use BricksMCP\MCP\Services\VisionResponseMapper;
 use BricksMCP\MCP\ToolRegistry;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -30,11 +35,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class DesignPatternHandler {
 
 	/**
-	 * Bricks service instance.
+	 * ProposalService instance. v3.32 orchestrator dep.
 	 *
-	 * @var BricksService
+	 * @var object|null
 	 */
-	private BricksService $bricks_service;
+	private $proposal_service = null;
 
 	/**
 	 * Bricks check callback.
@@ -44,37 +49,142 @@ final class DesignPatternHandler {
 	private $require_bricks;
 
 	/**
-	 * Vision provider (Flow A: image -> pattern). Orchestration rewritten in Task 7.
+	 * Bricks service instance.
 	 *
-	 * @var VisionProvider|null
+	 * Loose-typed to accept test anon stubs that expose get_global_class_service()
+	 * and get_global_variable_service() without extending the final class.
+	 *
+	 * @var object|null
 	 */
-	private ?VisionProvider $vision;
+	private $bricks_service = null;
 
 	/**
-	 * Image input resolver (url/id/base64 -> provider payload).
+	 * Build-structure handler. v3.32 orchestrator dep.
 	 *
-	 * @var ImageInputResolver|null
+	 * @var object|null
 	 */
-	private ?ImageInputResolver $image_resolver;
+	private $build_structure_handler = null;
+
+	/**
+	 * Populate-content handler. v3.32 orchestrator dep.
+	 *
+	 * @var object|null
+	 */
+	private $populate_content_handler = null;
+
+	/**
+	 * Verify handler. v3.32 orchestrator dep.
+	 *
+	 * @var object|null
+	 */
+	private $verify_handler = null;
+
+	/**
+	 * Media service (exposes smart_search).
+	 *
+	 * @var object|null
+	 */
+	private $media_service = null;
+
+	/** @var ImageSideloadService|null */
+	private ?ImageSideloadService $sideload_service = null;
+
+	/** @var ReferenceJsonTranslator|null */
+	private ?ReferenceJsonTranslator $translator = null;
+
+	/**
+	 * Vision provider. Loose-typed (see bricks_service rationale).
+	 *
+	 * @var object|null
+	 */
+	private $vision = null;
+
+	/**
+	 * Image resolver. Loose-typed (see bricks_service rationale).
+	 *
+	 * @var object|null
+	 */
+	private $image_resolver = null;
+
+	/** @var VisionPromptBuilder|null */
+	private ?VisionPromptBuilder $prompt_builder = null;
+
+	/** @var VisionResponseMapper|null */
+	private ?VisionResponseMapper $response_mapper = null;
+
+	/**
+	 * OnboardingService-like object exposing get_business_brief_summary(array).
+	 *
+	 * @var object|null
+	 */
+	private $onboarding_service = null;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param BricksService          $bricks_service  Bricks service instance.
+	 * Router-facing signature. All orchestrator deps optional; populated by
+	 * make_v32() for the v3.32 pattern-from-image flow.
+	 *
+	 * @param object                 $bricks_service  Bricks service (loose-typed for test anon stubs).
 	 * @param callable               $require_bricks  Callback that returns \WP_Error|null.
-	 * @param VisionProvider|null    $vision          Optional vision provider (orchestration rewritten in Task 7).
-	 * @param ImageInputResolver|null $image_resolver  Optional image resolver (required for action=from_image).
+	 * @param object|null            $vision          Optional vision provider.
+	 * @param object|null            $image_resolver  Optional image resolver.
 	 */
 	public function __construct(
-		BricksService $bricks_service,
+		$bricks_service,
 		callable $require_bricks,
-		?VisionProvider $vision = null,
-		?ImageInputResolver $image_resolver = null
+		$vision = null,
+		$image_resolver = null
 	) {
 		$this->bricks_service = $bricks_service;
 		$this->require_bricks = $require_bricks;
 		$this->vision         = $vision;
 		$this->image_resolver = $image_resolver;
+	}
+
+	/**
+	 * v3.32 canonical construction path. Router wires every dep explicitly.
+	 *
+	 * @internal
+	 */
+	public static function make_v32(
+		$proposal_service,
+		$build_structure_handler,
+		$populate_content_handler,
+		$verify_handler,
+		$media_service,
+		ImageSideloadService $sideload_service,
+		ReferenceJsonTranslator $translator,
+		$vision,
+		$image_resolver,
+		VisionPromptBuilder $prompt_builder,
+		VisionResponseMapper $response_mapper,
+		$bricks_service,
+		$onboarding_service
+	): self {
+		$h = new self( $bricks_service, static fn() => null, $vision, $image_resolver );
+		$h->proposal_service         = $proposal_service;
+		$h->build_structure_handler  = $build_structure_handler;
+		$h->populate_content_handler = $populate_content_handler;
+		$h->verify_handler           = $verify_handler;
+		$h->media_service            = $media_service;
+		$h->sideload_service         = $sideload_service;
+		$h->translator               = $translator;
+		$h->prompt_builder           = $prompt_builder;
+		$h->response_mapper          = $response_mapper;
+		$h->onboarding_service       = $onboarding_service;
+		return $h;
+	}
+
+	/**
+	 * Test-only public entry to the private tool_from_image.
+	 *
+	 * @internal
+	 * @param array<string,mixed> $args Tool args.
+	 * @return array<string,mixed>|\WP_Error
+	 */
+	public function call_tool_from_image( array $args ): array|\WP_Error {
+		return $this->tool_from_image( $args );
 	}
 
 	/**
@@ -159,16 +269,203 @@ final class DesignPatternHandler {
 	}
 
 	/**
-	 * Generate a pattern from an image via server-side vision.
+	 * Generate a pattern from an image via server-side vision — v3.32 3-flow orchestrator.
 	 *
-	 * Stub: full orchestration rewritten in Task 7 (v3.32).
-	 * Kept as a callable shell so Task 7 can replace the body without changing the signature.
+	 * Flows:
+	 *   - image only   → vision->analyze()
+	 *   - JSON only    → translator->translate() (text-only)
+	 *   - image + JSON → vision->analyze() with reference_json in prompt
+	 *
+	 * After vision/translation:
+	 *   1. Pre-create global_classes_to_create (so ClassIntentResolver sees them).
+	 *   2. Sideload image elements via ImageSideloadService.
+	 *   3. Save pattern to library (DesignPatternService::create).
+	 *   4. If page_id supplied: ProposalService::create → BuildStructureHandler → PopulateContentHandler → VerifyHandler.
 	 */
 	private function tool_from_image( array $args ): array|\WP_Error {
-		return new \WP_Error(
-			'from_image_pending_rewrite',
-			'tool_from_image pending Task 7 rewrite — v3.32 orchestrator.'
-		);
+		$name     = sanitize_text_field( $args['name']     ?? '' );
+		$category = sanitize_text_field( $args['category'] ?? '' );
+		if ( $name === '' ) {
+			return new \WP_Error( 'missing_field', 'Argument "name" is required.' );
+		}
+		if ( $category === '' ) {
+			return new \WP_Error( 'missing_field', 'Argument "category" is required.' );
+		}
+
+		$has_image = isset( $args['image_url'] ) || isset( $args['image_id'] ) || isset( $args['image_base64'] );
+		$has_json  = isset( $args['reference_json'] ) && is_array( $args['reference_json'] );
+		if ( ! $has_image && ! $has_json ) {
+			return new \WP_Error( 'missing_input', 'Supply at least one of image_url/image_id/image_base64 OR reference_json.' );
+		}
+
+		$dry_run = (bool) ( $args['dry_run'] ?? false );
+		$page_id = isset( $args['page_id'] ) ? (int) $args['page_id'] : 0;
+
+		if ( null === $this->bricks_service ) {
+			return new \WP_Error( 'bricks_unavailable', 'BricksService not injected.' );
+		}
+		$classes_svc   = $this->bricks_service->get_global_class_service();
+		$variables_svc = $this->bricks_service->get_global_variable_service();
+
+		$site_context = [
+			'classes'   => $classes_svc->get_all_by_name(),
+			'variables' => $variables_svc->get_all_with_values(),
+			'theme'     => $this->infer_theme( $variables_svc->get_all_with_values() ),
+		];
+
+		// Route to vision (image) or text-only translator (JSON-only).
+		$extracted = null;
+		if ( $has_image ) {
+			if ( null === $this->vision || null === $this->image_resolver || null === $this->prompt_builder || null === $this->response_mapper ) {
+				return new \WP_Error( 'from_image_unavailable', 'Vision pipeline not initialized.' );
+			}
+			$image = $this->image_resolver->resolve( $args );
+			if ( is_wp_error( $image ) ) {
+				return $image;
+			}
+
+			$reference_json = $has_json ? $args['reference_json'] : null;
+			$prompt         = $this->prompt_builder->build_for_schema( $site_context, $reference_json );
+			$response       = $this->vision->analyze( $image, $prompt['messages'], $prompt['tool_schema'] );
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+			$extracted = $this->response_mapper->extract_tool_output( $response );
+			if ( is_wp_error( $extracted ) ) {
+				return $extracted;
+			}
+		} else {
+			// JSON-only path.
+			if ( null === $this->translator ) {
+				return new \WP_Error( 'translator_unavailable', 'ReferenceJsonTranslator not injected.' );
+			}
+			$translation = $this->translator->translate( $args['reference_json'], $site_context );
+			if ( is_wp_error( $translation ) ) {
+				return $translation;
+			}
+			$extracted = [
+				'description'              => $translation['description'],
+				'design_plan'              => $translation['design_plan'],
+				'global_classes_to_create' => $translation['global_classes_to_create'],
+				'content_map'              => $translation['content_map'],
+				'usage'                    => $translation['usage'],
+			];
+		}
+
+		if ( $dry_run ) {
+			return [
+				'dry_run'            => true,
+				'description'        => $extracted['description'],
+				'design_plan'        => $extracted['design_plan'],
+				'global_classes'     => $extracted['global_classes_to_create'],
+				'content_map'        => $extracted['content_map'],
+				'vision_cost_tokens' => $extracted['usage'],
+			];
+		}
+
+		// Pre-create global_classes_to_create → ClassIntentResolver finds them as existing.
+		$created_classes = [];
+		foreach ( (array) $extracted['global_classes_to_create'] as $cls ) {
+			if ( ! is_array( $cls ) ) {
+				continue;
+			}
+			$cls_name = (string) ( $cls['name'] ?? '' );
+			$settings = is_array( $cls['settings'] ?? null ) ? $cls['settings'] : [];
+			if ( $cls_name === '' ) {
+				continue;
+			}
+			$created = $classes_svc->create_from_payload( [ 'name' => $cls_name, 'settings' => $settings ] );
+			if ( $created !== '' ) {
+				$created_classes[] = [ 'name' => $cls_name, 'id' => $created ];
+			}
+		}
+
+		// Sideload images (walks design_plan.elements[] image nodes).
+		$business_brief = '';
+		if ( null !== $this->onboarding_service && method_exists( $this->onboarding_service, 'get_business_brief_summary' ) ) {
+			$business_brief = (string) $this->onboarding_service->get_business_brief_summary( [] );
+		}
+		$sideload_out = [ 'plan' => $extracted['design_plan'], 'attachment_ids' => [], 'misses' => [] ];
+		if ( null !== $this->sideload_service ) {
+			$sideload_out             = $this->sideload_service->sideload( $extracted['design_plan'], $business_brief );
+			$extracted['design_plan'] = $sideload_out['plan'];
+		}
+
+		// Save pattern to library (always, unless dry_run handled above).
+		$pattern_payload = [
+			'id'         => $this->slugify( $name ),
+			'name'       => $name,
+			'category'   => $category,
+			'tags'       => array_values( array_filter( array_map( 'sanitize_text_field', (array) ( $args['tags'] ?? [] ) ) ) ),
+			'layout'     => (string) ( $extracted['design_plan']['layout']     ?? '' ),
+			'background' => (string) ( $extracted['design_plan']['background'] ?? '' ),
+			'structure'  => $extracted['design_plan'],
+		];
+		$saved_pattern = \BricksMCP\MCP\Services\DesignPatternService::create( $pattern_payload );
+		$pattern_id    = is_array( $saved_pattern ) && isset( $saved_pattern['id'] )
+			? (string) $saved_pattern['id']
+			: '';
+
+		$response_payload = [
+			'pattern_id'             => $pattern_id,
+			'description'            => $extracted['description'],
+			'design_plan'            => $extracted['design_plan'],
+			'global_classes_created' => $created_classes,
+			'sideloaded_images'      => $sideload_out['attachment_ids'],
+			'sideload_misses'        => $sideload_out['misses'],
+			'content_map'            => $extracted['content_map'],
+			'vision_cost_tokens'     => $extracted['usage'],
+		];
+
+		if ( $page_id <= 0 ) {
+			return $response_payload;   // Pattern saved, no build.
+		}
+
+		// Chain pipeline: ProposalService::create → build_structure → populate_content → verify.
+		if ( null === $this->proposal_service ) {
+			return $response_payload;
+		}
+		$proposal = $this->proposal_service->create( $page_id, $extracted['description'], $extracted['design_plan'] );
+		if ( is_wp_error( $proposal ) ) {
+			return $proposal;
+		}
+		$proposal_id                     = (string) ( $proposal['proposal_id'] ?? '' );
+		$response_payload['proposal_id'] = $proposal_id;
+
+		if ( null === $this->build_structure_handler ) {
+			return $response_payload;   // No build handler → stop after proposal.
+		}
+
+		$build = $this->build_structure_handler->handle( [ 'proposal_id' => $proposal_id ] );
+		if ( is_wp_error( $build ) ) {
+			return $build;
+		}
+		$section_id                     = (string) ( $build['section_id'] ?? '' );
+		$response_payload['section_id'] = $section_id;
+
+		if ( $section_id !== '' && null !== $this->populate_content_handler ) {
+			$content_map = is_array( $extracted['content_map'] ?? null ) ? $extracted['content_map'] : [];
+			$populate    = $this->populate_content_handler->handle(
+				[
+					'section_id'  => $section_id,
+					'content_map' => $content_map,
+				]
+			);
+			if ( is_wp_error( $populate ) ) {
+				return $populate;
+			}
+			$response_payload['populate_result'] = $populate;
+
+			if ( null !== $this->verify_handler ) {
+				$verify = $this->verify_handler->handle( [ 'page_id' => $page_id ] );
+				if ( is_wp_error( $verify ) ) {
+					return $verify;
+				}
+				$response_payload['verification'] = $verify;
+			}
+		}
+
+		return $response_payload;
 	}
 
 	/**
