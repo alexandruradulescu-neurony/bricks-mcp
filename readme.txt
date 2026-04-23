@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.31.0
+Stable tag: 3.32.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,20 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.32.0 =
+**Pattern from Image Corrective Rework (M3.1)**
+
+v3.31.0 shipped the `from_image` path with architecturally wrong output: vision emitted a parallel schema with inline style values, bypassing the existing build pipeline. Result: 0 classes applied, empty image boxes. v3.32.0 is a full rewrite into a thin translation layer that feeds the existing `propose_design → build_structure → populate_content → verify_build` pipeline.
+
+* Changed: `design_pattern(action: "from_image")` now emits the exact shape a human types into `propose_design(description, design_plan)`. When `page_id` is supplied, auto-chains through the full build pipeline.
+* Changed: `class_intent` is a BEM string label ONLY (no style values, no `var(--*)`). ClassIntentResolver creates classes with site design tokens.
+* Added: 3 input flows — image only, reference_json only (text-only Claude translates foreign classes/variables to site equivalents), image + reference_json (structure from JSON, content from image).
+* Added: `ImageSideloadService` — per-element Unsplash sideload via `media:smart_search(content_hint + business_brief)` before proposal staging. No more grey placeholder boxes.
+* Added: `ReferenceJsonTranslator` — text-only Claude call for JSON-only flow. Translates Bricksies globalClasses → site-BEM + `var(--brxw-*)` → closest site variable.
+* Added: `VisionProvider::call_text_only(messages, tool_schema)` — interface method for non-vision Claude calls.
+* Removed: `VisionPatternGenerator` service (replaced by direct orchestration in DesignPatternHandler). `propose_design(image_*)` args removed — migrate to `design_pattern(action: "from_image", page_id: N)`.
+* Note: Pattern library save deferred for from_image flow. Canonical-shape save planned for M3.2.
 
 = 3.31.0 =
 **Pattern from Image + build_from_schema Removal (M3)**

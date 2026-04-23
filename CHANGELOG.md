@@ -4,6 +4,44 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.32.0] — 2026-04-23
+
+**Pattern from Image Corrective Rework (M3.1)**
+
+v3.31.0 shipped `design_pattern(from_image)` with architecturally wrong output: vision emitted a parallel schema with inline style values, bypassing the existing `propose_design → build_structure → populate_content → verify_build` pipeline. Result: 0 global classes applied, grey placeholder image boxes, no use of site design tokens. v3.32.0 is a full rewrite of the vision path into a thin translation layer that feeds the existing pipeline.
+
+### Changed (breaking — internal tool, no users)
+
+- `design_pattern(action: "from_image")` now routes through a 3-flow orchestrator:
+  - **image only**: vision reads image → emits `{description, design_plan, global_classes_to_create, content_map}` — exact shape for `propose_design(description, design_plan)` Phase 2.
+  - **reference_json only** (no image): text-only Claude translates Bricksies globalClasses → site-BEM + replaces `var(--brxw-*)` with closest site variable.
+  - **image + reference_json**: vision with JSON as translation template + image for content adaptation.
+  When `page_id` is supplied, the handler auto-chains through the existing build pipeline. When omitted, vision output returned as pattern artifact.
+- `class_intent` field in vision output is now a BEM string label ONLY (no objects, no arrays, no `var(--*)` values). Pipeline's `ClassIntentResolver` creates the class using site design tokens.
+- Images are auto-sideloaded per element via new `ImageSideloadService` that runs `media:smart_search(content_hint + business_brief)` before `ProposalService::create`.
+- Reference JSON is now authoritative: when provided, vision's job is TRANSLATION (site-BEM rename + foreign-variable substitution), not decoration.
+- `propose_design(image_*)` args removed (v3.31 addition). Callers that supply image_* are silently ignored with text-only flow. Migrate to `design_pattern(action: "from_image", page_id: N)`.
+
+### Added
+
+- `ImageSideloadService` — content-aware per-element image sideload (walks `design_plan.elements[]`, queries `media:smart_search` with `content_hint + business_brief`, sideloads top Unsplash result, mutates element `src`).
+- `ReferenceJsonTranslator` — text-only Claude service for JSON-only flow (translates Bricksies globalClasses to site equivalents).
+- `VisionProvider::call_text_only(messages, tool_schema)` — interface method for non-vision Claude calls.
+- `ClaudeVisionProvider::do_request` — private shared helper for `analyze()` and `call_text_only()`.
+- `DesignPatternHandler::make_v32` factory — canonical construction with all orchestrator deps.
+
+### Removed
+
+- `VisionPatternGenerator` service (replaced by direct orchestration in `DesignPatternHandler::tool_from_image`).
+- `VisionResponseMapper::map_to_pattern` + `map_to_schema` methods (replaced by single `extract_tool_output` pass-through).
+- `propose_design(image_*)` image args from public tool schema.
+
+### Notes
+
+- Pattern library save deferred for `from_image` flow — the `design_plan` output shape is not canonical Bricks element-tree (yet). Live builds work; library persistence returns empty `pattern_id`. Canonical-shape save planned for M3.2.
+- Smoke tests are visual-correctness against live site, not element count.
+- Pre-existing test failures (14 total in `PageHandlerDispatchTest`, `PrerequisiteGateServiceTest`, `StarterClassesServiceTest`) unchanged — carryover from v3.6, unrelated.
+
 ## [3.31.0] — 2026-04-22
 
 **Pattern from Image + build_from_schema Removal (M3)**
