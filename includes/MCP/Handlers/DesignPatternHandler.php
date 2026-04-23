@@ -326,7 +326,7 @@ final class DesignPatternHandler {
 
 			$reference_json = $has_json ? $args['reference_json'] : null;
 			$prompt         = $this->prompt_builder->build_for_schema( $site_context, $reference_json );
-			$response       = $this->vision->analyze( $image, $prompt['messages'], $prompt['tool_schema'] );
+			$response       = $this->vision->analyze( $image, $prompt['tool_schema'], $prompt['messages'] );
 			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
