@@ -17,7 +17,7 @@ namespace BricksMCP\MCP\Handlers;
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\ImageInputResolver;
 use BricksMCP\MCP\Services\ProposalService;
-use BricksMCP\MCP\Services\VisionPatternGenerator;
+use BricksMCP\MCP\Services\VisionProvider;
 use BricksMCP\MCP\ToolRegistry;
 
 // Prevent direct access.
@@ -44,9 +44,9 @@ final class ProposalHandler {
 	private ?BricksService $bricks_service;
 
 	/**
-	 * Optional vision orchestrator (required when caller passes image_*).
+	 * Optional vision provider (image-input branch moved to design_pattern:from_image in v3.32).
 	 */
-	private ?VisionPatternGenerator $vision;
+	private ?VisionProvider $vision;
 
 	/**
 	 * Optional image resolver (required when caller passes image_*).
@@ -54,17 +54,17 @@ final class ProposalHandler {
 	private ?ImageInputResolver $image_resolver;
 
 	/**
-	 * @param ProposalService             $proposal_service Proposal orchestration service.
-	 * @param callable                    $require_bricks   Guard returning WP_Error when Bricks is missing.
-	 * @param BricksService|null          $bricks_service   Optional; required for image-input branch.
-	 * @param VisionPatternGenerator|null $vision           Optional; required for image-input branch.
-	 * @param ImageInputResolver|null     $image_resolver   Optional; required for image-input branch.
+	 * @param ProposalService        $proposal_service Proposal orchestration service.
+	 * @param callable               $require_bricks   Guard returning WP_Error when Bricks is missing.
+	 * @param BricksService|null     $bricks_service   Optional; retained for future use.
+	 * @param VisionProvider|null    $vision           Optional; image-input branch moved to design_pattern:from_image (Task 8).
+	 * @param ImageInputResolver|null $image_resolver   Optional; retained for future use.
 	 */
 	public function __construct(
 		ProposalService $proposal_service,
 		callable $require_bricks,
 		?BricksService $bricks_service = null,
-		?VisionPatternGenerator $vision = null,
+		?VisionProvider $vision = null,
 		?ImageInputResolver $image_resolver = null
 	) {
 		$this->proposal_service = $proposal_service;
@@ -102,75 +102,19 @@ final class ProposalHandler {
 			);
 		}
 
-		// v3.31: if image input provided and no design_plan, let vision produce design_plan.
+		// v3.32: image-input branch moved to design_pattern(action: from_image).
+		// propose_design no longer accepts image inputs (Task 8 will formalize).
 		if ( $has_image && ! $has_plan ) {
-			if ( null === $this->vision || null === $this->image_resolver || null === $this->bricks_service ) {
-				return new \WP_Error(
-					'propose_design_vision_unavailable',
-					'Vision pipeline not initialized. This tool must be constructed with vision dependencies to support image inputs.'
-				);
-			}
-			$image = $this->image_resolver->resolve( $args );
-			if ( is_wp_error( $image ) ) {
-				return $image;
-			}
-
-			$reference_json = null;
-			if ( isset( $args['reference_json'] ) && is_array( $args['reference_json'] ) ) {
-				$reference_json = $args['reference_json'];
-			}
-
-			$bricks_service = $this->bricks_service;
-			$variables_raw  = $bricks_service->get_global_variable_service()->get_all_with_values();
-			$site_context   = [
-				'classes'   => $bricks_service->get_global_class_service()->get_all_by_name(),
-				'variables' => $variables_raw,
-				'theme'     => ( static function ( $vars ) {
-					foreach ( $vars as $name => $_ ) {
-						$lname = strtolower( (string) $name );
-						if ( str_contains( $lname, 'base-ultra-dark' ) || str_contains( $lname, 'base-dark' ) ) {
-							return 'dark';
-						}
-					}
-					return 'light';
-				} )( $variables_raw ),
-			];
-
-			$mapped = $this->vision->generate_schema(
-				$image,
-				$site_context,
-				$reference_json,
-				[
-					'category' => sanitize_text_field( $args['category'] ?? 'generic' ),
-					'variant'  => sanitize_text_field( $args['background'] ?? '' ),
-				]
+			return new \WP_Error(
+				'propose_design_image_moved',
+				'propose_design no longer accepts image inputs. Use design_pattern(action: from_image, page_id: N) instead.'
 			);
-			if ( is_wp_error( $mapped ) ) {
-				return $mapped;
-			}
-
-			$args['design_plan']  = $mapped['design_plan'];
-			$args['vision_debug'] = [
-				'new_classes'        => $mapped['new_classes']        ?? [],
-				'reused_classes'     => $mapped['reused_classes']     ?? [],
-				'deduped_classes'    => $mapped['deduped_classes']    ?? [],
-				'vision_cost_tokens' => $mapped['vision_cost_tokens'] ?? [],
-				'conversion_log'     => $mapped['conversion_log']     ?? [],
-			];
-			// Fall-through to existing design_plan processing.
 		}
 
 		$design_plan = $args['design_plan'] ?? null;
 
 		// Pass design_plan (null for Phase 1, array for Phase 2).
-		$result = $this->proposal_service->create( $page_id, $description, is_array( $design_plan ) ? $design_plan : null );
-
-		// Surface vision_debug in successful responses when vision ran.
-		if ( isset( $args['vision_debug'] ) && is_array( $result ) && ! is_wp_error( $result ) ) {
-			$result['vision_debug'] = $args['vision_debug'];
-		}
-
-		return $result;
+		return $this->proposal_service->create( $page_id, $description, is_array( $design_plan ) ? $design_plan : null );
 	}
 
 	/**

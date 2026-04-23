@@ -30,9 +30,6 @@ use BricksMCP\MCP\Services\ValidationService;
 use BricksMCP\MCP\Services\PrerequisiteGateService;
 use BricksMCP\MCP\Services\ProposalService;
 use BricksMCP\MCP\Services\PageLayoutService;
-use BricksMCP\MCP\Services\VisionPatternGenerator;
-use BricksMCP\MCP\Services\VisionPromptBuilder;
-use BricksMCP\MCP\Services\VisionResponseMapper;
 use BricksMCP\MCP\Handlers\OnboardingHandler;
 use BricksMCP\MCP\ToolRegistry;
 use BricksMCP\Plugin;
@@ -184,17 +181,13 @@ final class Router {
 		$proposal_service     = new ProposalService( $this->bricks_service->get_global_class_service(), $this->schema_generator, $this->bricks_service );
 		$schema_handler       = new Handlers\SchemaHandler( $this->schema_generator, $this->bricks_service );
 
-		// M3 (v3.31): vision pipeline for design_pattern(action: from_image).
+		// M3 (v3.32): vision pipeline for design_pattern(action: from_image).
 		// ClaudeVisionProvider tolerates an empty API key at construction time — the
 		// actual key check happens on first analyze() call, keeping Router wiring
 		// side-effect-free for installs that don't use from_image.
-		$vision_normalizer    = new BEMClassNormalizer();
-		$vision_dedup         = new ClassDedupEngine( $vision_normalizer );
-		$vision_provider      = new ClaudeVisionProvider( Settings::get_anthropic_api_key() );
-		$vision_prompt        = new VisionPromptBuilder();
-		$vision_mapper        = new VisionResponseMapper( $vision_dedup, $vision_normalizer );
-		$vision_generator     = new VisionPatternGenerator( $vision_provider, $vision_prompt, $vision_mapper );
-		$image_resolver       = new ImageInputResolver();
+		// VisionPatternGenerator removed in v3.32; DesignPatternHandler orchestrates directly (Task 7).
+		$vision_provider = new ClaudeVisionProvider( Settings::get_anthropic_api_key() );
+		$image_resolver  = new ImageInputResolver();
 
 		// All handlers indexed by short name.
 		$this->handlers = [
@@ -217,7 +210,7 @@ final class Router {
 				$proposal_service,
 				$require_bricks,
 				$this->bricks_service,
-				$vision_generator,
+				$vision_provider,
 				$image_resolver
 			),
 			'build'         => $build_handler = new Handlers\BuildHandler(
@@ -242,7 +235,7 @@ final class Router {
 			'design_pattern'   => new Handlers\DesignPatternHandler(
 				$this->bricks_service,
 				$require_bricks,
-				$vision_generator,
+				$vision_provider,
 				$image_resolver
 			),
 		];

@@ -17,7 +17,7 @@ use BricksMCP\MCP\Services\DesignPatternService;
 use BricksMCP\MCP\Services\ImageInputResolver;
 use BricksMCP\MCP\Services\PatternCapture;
 use BricksMCP\MCP\Services\PatternValidator;
-use BricksMCP\MCP\Services\VisionPatternGenerator;
+use BricksMCP\MCP\Services\VisionProvider;
 use BricksMCP\MCP\ToolRegistry;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -44,11 +44,11 @@ final class DesignPatternHandler {
 	private $require_bricks;
 
 	/**
-	 * Vision pattern generator (Flow A: image -> pattern).
+	 * Vision provider (Flow A: image -> pattern). Orchestration rewritten in Task 7.
 	 *
-	 * @var VisionPatternGenerator|null
+	 * @var VisionProvider|null
 	 */
-	private ?VisionPatternGenerator $vision;
+	private ?VisionProvider $vision;
 
 	/**
 	 * Image input resolver (url/id/base64 -> provider payload).
@@ -60,15 +60,15 @@ final class DesignPatternHandler {
 	/**
 	 * Constructor.
 	 *
-	 * @param BricksService               $bricks_service  Bricks service instance.
-	 * @param callable                    $require_bricks  Callback that returns \WP_Error|null.
-	 * @param VisionPatternGenerator|null $vision          Optional vision orchestrator (required for action=from_image).
-	 * @param ImageInputResolver|null     $image_resolver  Optional image resolver (required for action=from_image).
+	 * @param BricksService          $bricks_service  Bricks service instance.
+	 * @param callable               $require_bricks  Callback that returns \WP_Error|null.
+	 * @param VisionProvider|null    $vision          Optional vision provider (orchestration rewritten in Task 7).
+	 * @param ImageInputResolver|null $image_resolver  Optional image resolver (required for action=from_image).
 	 */
 	public function __construct(
 		BricksService $bricks_service,
 		callable $require_bricks,
-		?VisionPatternGenerator $vision = null,
+		?VisionProvider $vision = null,
 		?ImageInputResolver $image_resolver = null
 	) {
 		$this->bricks_service = $bricks_service;
@@ -161,149 +161,14 @@ final class DesignPatternHandler {
 	/**
 	 * Generate a pattern from an image via server-side vision.
 	 *
-	 * Required: name, category, and one of image_url/image_id/image_base64.
-	 * Optional: reference_json, tags, dry_run.
+	 * Stub: full orchestration rewritten in Task 7 (v3.32).
+	 * Kept as a callable shell so Task 7 can replace the body without changing the signature.
 	 */
 	private function tool_from_image( array $args ): array|\WP_Error {
-		if ( null === $this->vision || null === $this->image_resolver ) {
-			return new \WP_Error(
-				'from_image_unavailable',
-				'from_image requires vision dependencies; DesignPatternHandler was constructed without VisionPatternGenerator/ImageInputResolver.'
-			);
-		}
-
-		$name     = sanitize_text_field( $args['name'] ?? '' );
-		$category = sanitize_text_field( $args['category'] ?? '' );
-		if ( $name === '' )     { return new \WP_Error( 'missing_field', 'Argument "name" is required.' ); }
-		if ( $category === '' ) { return new \WP_Error( 'missing_field', 'Argument "category" is required.' ); }
-
-		$image = $this->image_resolver->resolve( $args );
-		if ( is_wp_error( $image ) ) {
-			return $image;
-		}
-
-		$reference_json = null;
-		if ( isset( $args['reference_json'] ) ) {
-			$ref = $args['reference_json'];
-			if ( ! is_array( $ref ) || ! isset( $ref['structure'] ) ) {
-				return new \WP_Error( 'invalid_reference_json', 'reference_json must be an object with a "structure" key.' );
-			}
-			$reference_json = $ref;
-		}
-
-		$classes   = $this->bricks_service->get_global_class_service();
-		$variables = $this->bricks_service->get_global_variable_service();
-		$site_context = [
-			'classes'   => $classes->get_all_by_name(),
-			'variables' => $variables->get_all_with_values(),
-			'theme'     => $this->infer_theme( $variables->get_all_with_values() ),
-		];
-
-		$meta   = [ 'category' => $category, 'variant' => sanitize_text_field( $args['background'] ?? '' ) ];
-		$mapped = $this->vision->generate_pattern( $image, $site_context, $reference_json, $meta );
-		if ( is_wp_error( $mapped ) ) {
-			return $mapped;
-		}
-
-		$dry_run = (bool) ( $args['dry_run'] ?? false );
-
-		if ( $dry_run ) {
-			return [
-				'dry_run'            => true,
-				'structure'          => $mapped['structure'],
-				'layout'             => $mapped['layout']     ?? '',
-				'background'         => $mapped['background'] ?? '',
-				'new_classes'        => $mapped['new_classes'],
-				'reused_classes'     => $mapped['reused_classes'],
-				'deduped_classes'    => $mapped['deduped_classes'],
-				'new_variables'      => $mapped['new_variables'],
-				'conversion_log'     => $mapped['conversion_log'],
-				'vision_cost_tokens' => $mapped['vision_cost_tokens'],
-			];
-		}
-
-		// Auto-provision new classes. GlobalClassService::create_from_payload
-		// accepts a single payload array and returns the final class name (empty on failure).
-		$orphaned_classes = [];
-		foreach ( $mapped['new_classes'] as $cls ) {
-			$payload = [
-				'name'     => $cls['name'] ?? '',
-				'settings' => $cls['style_tokens'] ?? [],
-			];
-			$created = $classes->create_from_payload( $payload );
-			if ( '' === $created ) {
-				$orphaned_classes[] = $cls['name'] ?? '';
-			}
-		}
-
-		// Auto-provision new variables via the plain value-creation API.
-		$orphaned_vars = [];
-		foreach ( $mapped['new_variables'] as $var ) {
-			$vname   = (string) ( $var['name'] ?? '' );
-			$vvalue  = (string) ( $var['value'] ?? '' );
-			$created = $variables->create_global_variable( $vname, $vvalue );
-			if ( is_wp_error( $created ) ) {
-				$orphaned_vars[] = $vname;
-			}
-		}
-
-		$tags         = array_values( array_filter( array_map( 'sanitize_text_field', (array) ( $args['tags'] ?? [] ) ) ) );
-		$meta_pattern = [
-			'id'         => sanitize_key( $args['id'] ?? $this->slugify( $name ) ),
-			'name'       => $name,
-			'category'   => $category,
-			'tags'       => $tags,
-			'layout'     => $mapped['layout']     ?? '',
-			'background' => $mapped['background'] ?? '',
-		];
-
-		$validator = new PatternValidator();
-
-		// Refresh class map so any just-provisioned classes are visible to the validator.
-		$refreshed_classes = $classes->get_all_by_name();
-
-		// Pass site variables through unchanged — PatternValidator::validate_with_context
-		// normalizes both shapes (full Bricks variable records or scalar strings). Matches
-		// PatternCapture::capture() behavior — no re-wrapping.
-		$pattern_input = array_merge( $meta_pattern, [ 'structure' => $mapped['structure'] ] );
-		$validated     = $validator->validate_with_context(
-			$pattern_input,
-			[
-				'variables' => $site_context['variables'],
-				'classes'   => $refreshed_classes,
-			]
+		return new \WP_Error(
+			'from_image_pending_rewrite',
+			'tool_from_image pending Task 7 rewrite — v3.32 orchestrator.'
 		);
-		if ( isset( $validated['error'] ) ) {
-			return new \WP_Error(
-				$validated['error'],
-				$validated['message'] ?? 'Pattern validation failed.',
-				[
-					'validation_details' => $validated,
-					'orphaned_resources' => [
-						'classes'           => $orphaned_classes,
-						'variables'         => $orphaned_vars,
-						'created_classes'   => array_column( $mapped['new_classes'], 'name' ),
-						'created_variables' => array_column( $mapped['new_variables'], 'name' ),
-					],
-				]
-			);
-		}
-
-		$saved = DesignPatternService::create( $validated );
-		if ( is_wp_error( $saved ) ) {
-			return $saved;
-		}
-
-		return [
-			'captured'           => true,
-			'pattern'            => $saved,
-			'reused_classes'     => $mapped['reused_classes'],
-			'new_classes'        => $mapped['new_classes'],
-			'deduped_classes'    => $mapped['deduped_classes'],
-			'new_variables'      => $mapped['new_variables'],
-			'conversion_log'     => $mapped['conversion_log'],
-			'vision_cost_tokens' => $mapped['vision_cost_tokens'],
-		];
 	}
 
 	/**
