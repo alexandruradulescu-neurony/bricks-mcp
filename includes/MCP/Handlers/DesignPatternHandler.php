@@ -773,7 +773,7 @@ final class DesignPatternHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'design_pattern',
-			__( "Manage design patterns \u2014 reusable section compositions for the build pipeline.\n\nActions: capture, list, get, create, update, delete, export, import, mark_required, from_image.\n\nUse capture to snapshot an existing built section into the pattern library. Use from_image to generate a new pattern from an image via server-side vision (provides a dry_run preview mode). All patterns live in the database (managed via admin UI or MCP). Use export/import for cross-site sharing.", 'bricks-mcp' ),
+			__( "Manage design patterns \u2014 reusable section compositions for the build pipeline.\n\nActions: capture, list, get, create, update, delete, export, import, mark_required, from_image.\n\nUse capture to snapshot an existing built section into the pattern library. Use from_image to create a pattern via vision/JSON translation — supports three input modes:\n  - image only: vision reads the image, emits design_plan; classes auto-created via ClassIntentResolver; images auto-sideloaded via media:smart_search + business_brief.\n  - reference_json only: text-only Claude translates foreign classes \u2192 site BEM, foreign var(--brxw-*) \u2192 site variables.\n  - image + reference_json: vision translates + adapts content per image language/intent.\nAt least one of image_*/reference_json is required. When page_id is supplied, the pattern is ALSO built on that page via the existing propose_design \u2192 build_structure \u2192 populate_content \u2192 verify_build pipeline. Set dry_run=true for a preview without saving/building.\n\nAll patterns live in the database (managed via admin UI or MCP). Use export/import for cross-site sharing.", 'bricks-mcp' ),
 			[
 				'type'       => 'object',
 				'properties' => [
@@ -784,7 +784,7 @@ final class DesignPatternHandler {
 					],
 					'page_id'  => [
 						'type'        => 'integer',
-						'description' => __( 'Page ID containing the section to capture (capture: required)', 'bricks-mcp' ),
+						'description' => __( 'Page ID. capture: required (section source). from_image: optional — when supplied, pattern is auto-built on that page via the normal pipeline; when omitted, pattern is saved to library only.', 'bricks-mcp' ),
 					],
 					'block_id' => [
 						'type'        => 'string',
@@ -842,7 +842,7 @@ final class DesignPatternHandler {
 					],
 					'image_url' => [
 						'type'        => 'string',
-						'description' => __( 'HTTPS image URL (from_image: one of image_url/image_id/image_base64 required)', 'bricks-mcp' ),
+						'description' => __( 'HTTPS image URL (from_image: one of image_*/reference_json required)', 'bricks-mcp' ),
 					],
 					'image_id' => [
 						'type'        => 'integer',
@@ -854,11 +854,11 @@ final class DesignPatternHandler {
 					],
 					'reference_json' => [
 						'type'        => 'object',
-						'description' => __( 'Optional known-good pattern for calibration (from_image: used as few-shot + post-vision diff)', 'bricks-mcp' ),
+						'description' => __( 'Bricksies clipboard JSON (from_image: authoritative template for translation — site-BEM rename + var(--brxw-*) \u2192 site variables). Alternative to image_*. When supplied WITH image_*, both drive translation.', 'bricks-mcp' ),
 					],
 					'dry_run' => [
 						'type'        => 'boolean',
-						'description' => __( 'Preview only, no save (from_image: optional, default false)', 'bricks-mcp' ),
+						'description' => __( 'Preview only — vision runs, but no save/build side-effects (from_image: optional, default false)', 'bricks-mcp' ),
 					],
 				],
 				'required'   => [ 'action' ],
