@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.33.0
+Stable tag: 3.33.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,14 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.33.1 =
+**Hard gate: class writes require knowledge read first**
+
+Bricks style-setting keys have non-obvious conventions (kebab inside `_typography`, camel at top-level, object for `_border.radius`, child-theme tag specificity). Writing classes without reading the knowledge docs silently ships broken CSS.
+
+* Added: hard gate on `global_class:create` / `batch_create` / `update` — blocks operations carrying underscore-prefixed style keys until `bricks:get_knowledge('global-classes')` and `bricks:get_knowledge('building')` have been called in the session. Returns `knowledge_gate_blocked` error with fix instruction.
+* Fixed: `VisionPromptBuilder` Rule 8a — corrected typography subkey convention from camelCase to kebab-case. The v3.33.0 rule was wrong; emitted classes only rendered `color`. Also added heading `font-size` specificity warning (child-theme h1..h6 tag selectors beat class styles).
 
 = 3.33.0 =
 **Intelligence layer final polish**

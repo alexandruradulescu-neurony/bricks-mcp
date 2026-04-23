@@ -143,7 +143,7 @@ CRITICAL RULES (deviation = wrong):
 - NESTED object keys (emit as `"_key": { top|right|bottom|left: "value" }`):
   `_padding`, `_margin`, `_border.radius`, `_border.width`.
   Example: `"_padding": {"top": "var(--space-s)", "bottom": "var(--space-s)"}`.
-- TYPOGRAPHY object (`_typography`): keys are camelCase (`fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `textTransform`, `color`). `color` is `{ "raw": "var(--token)" }`.
+- TYPOGRAPHY object (`_typography`): keys are KEBAB-CASE (`font-size`, `font-weight`, `line-height`, `letter-spacing`, `text-transform`, `text-align`, `color`). NOT camelCase — Bricks CSS compiler silently drops `fontSize` etc and only `color` renders. `color` is `{ "raw": "var(--token)" }`. For headings (h1-h6) do NOT set `font-size` — child theme tag selectors win on specificity; rely on `var(--h1)..var(--h6)` or use `text-basic` if you need custom size.
 - BACKGROUND object (`_background`): `{ "backgroundColor": "var(--token)" }` or `{ "color": { "raw": "var(--token)" } }`.
 
 9. content_map is OPTIONAL — include when image text is legible and intent-specific (e.g. Romanian text reading "Tractări 24/7"). Map role → literal content string. Omit for generic image intent.

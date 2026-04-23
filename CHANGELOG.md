@@ -4,6 +4,24 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.33.1] — 2026-04-23
+
+**Hard gate: class writes require knowledge read first**
+
+Discovered during live build: Bricks has non-obvious per-key conventions (kebab-case inside `_typography`, camelCase at top-level, object shape for `_border.radius`, child-theme specificity rules for heading tag selectors). Writing classes without reading `data/knowledge/global-classes.md` + `building.md` produces silently broken CSS (wrong key case → rule not emitted).
+
+### Added
+
+- `GlobalClassHandler::gate_style_operations` — blocks `create` / `batch_create` / `update` actions when the call carries underscore-prefixed style keys AND the session has not fetched `global-classes` + `building` knowledge domains. Returns `knowledge_gate_blocked` error with actionable fix instruction. Checks existing `BricksToolHandler::get_fetched_knowledge` session tracker (v3.22.0 infrastructure).
+
+### Fixed
+
+- `VisionPromptBuilder` Rule 8a — typography subkey convention corrected from camelCase (`fontSize`, `fontWeight`) to **kebab-case** (`font-size`, `font-weight`). The v3.33.0 rule was wrong; vision-emitted classes since then have been silently shipping with only the `color` rule (everything else dropped by Bricks CSS compiler). Rule now also warns about the heading `font-size` specificity trap: child-theme `h1..h6` tag selectors beat class styles; use `text-basic` or no size override for headings.
+
+### Notes
+
+- Existing hero__* classes created earlier in this release cycle are affected by the kebab-case bug — they have camelCase typography and only emit `color`. Admin cleanup recommended.
+
 ## [3.33.0] — 2026-04-23
 
 **Intelligence layer final polish**

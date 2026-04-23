@@ -14,6 +14,7 @@ namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\ToolRegistry;
+use BricksMCP\MCP\Handlers\BricksToolHandler;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -64,6 +65,19 @@ final class GlobalClassHandler {
 
 		$action = sanitize_text_field( $args['action'] ?? '' );
 
+		// v3.33.1 HARD GATE: class creation/update with style payload requires prior
+		// knowledge fetch. Bricks has non-obvious per-key conventions (kebab-case inside
+		// _typography, camelCase at top-level, child theme specificity rules for headings).
+		// Writing classes without reading global-classes.md + building.md silently
+		// produces broken classes (wrong key case → CSS rule not emitted; h1/h2 font-size
+		// loses to child theme selector). Force the read.
+		if ( in_array( $action, [ 'create', 'batch_create', 'update' ], true ) ) {
+			$gate_error = $this->gate_style_operations( $action, $args );
+			if ( null !== $gate_error ) {
+				return $gate_error;
+			}
+		}
+
 		// Param aliasing: category_name -> name for create_category handler.
 		if ( 'create_category' === $action && isset( $args['category_name'] ) && ! isset( $args['name'] ) ) {
 			$args['name'] = $args['category_name'];
@@ -100,6 +114,83 @@ final class GlobalClassHandler {
 				)
 			),
 		};
+	}
+
+	/**
+	 * v3.33.1 HARD GATE: block class style writes until knowledge fetched.
+	 *
+	 * Bricks has non-obvious per-key conventions:
+	 * - _typography subkeys are KEBAB-case (font-size, line-height, text-transform)
+	 * - Top-level _alignItems / _justifyContent / _columnGap are CAMEL-case
+	 * - _border.radius is OBJECT {top, right, bottom, left} not scalar
+	 * - h1/h2/h3 font-size loses specificity to child theme tag selectors
+	 *
+	 * All of this is documented in data/knowledge/global-classes.md and
+	 * data/knowledge/building.md. Writing classes without reading those files
+	 * produces silently broken CSS (wrong key case → rule not emitted).
+	 *
+	 * Returns null to allow operation, or WP_Error to block.
+	 *
+	 * @param string              $action 'create' | 'batch_create' | 'update'
+	 * @param array<string,mixed> $args
+	 * @return \WP_Error|null
+	 */
+	private function gate_style_operations( string $action, array $args ): ?\WP_Error {
+		// Determine if this call carries any underscore-prefixed style keys.
+		$has_style = false;
+		if ( 'batch_create' === $action && is_array( $args['classes'] ?? null ) ) {
+			foreach ( $args['classes'] as $cls ) {
+				if ( is_array( $cls ) && is_array( $cls['styles'] ?? null ) && $this->has_style_keys( $cls['styles'] ) ) {
+					$has_style = true;
+					break;
+				}
+			}
+		} elseif ( in_array( $action, [ 'create', 'update' ], true ) && is_array( $args['styles'] ?? null ) ) {
+			$has_style = $this->has_style_keys( $args['styles'] );
+		}
+
+		if ( ! $has_style ) {
+			return null; // pass-through (rename, category change, etc.)
+		}
+
+		$fetched = BricksToolHandler::get_fetched_knowledge();
+		$required = [ 'global-classes', 'building' ];
+		$missing  = array_values( array_filter(
+			$required,
+			static fn( $d ) => empty( $fetched[ $d ] )
+		) );
+
+		if ( empty( $missing ) ) {
+			return null;
+		}
+
+		return new \WP_Error(
+			'knowledge_gate_blocked',
+			sprintf(
+				/* translators: %1$s: action name, %2$s: comma-separated missing domain list */
+				__( 'global_class:%1$s with styles requires prior knowledge fetch. Missing domain(s): %2$s. Call bricks:get_knowledge(domain) for each missing domain first. Reason: Bricks has non-obvious key conventions (kebab-case inside _typography, camelCase at top level, object shape for _border.radius, child-theme heading specificity). Writing classes blind silently ships broken CSS.', 'bricks-mcp' ),
+				$action,
+				implode( ', ', $missing )
+			),
+			[
+				'missing_knowledge' => $missing,
+				'fetch_action'      => 'bricks:get_knowledge(domain: "global-classes")',
+			]
+		);
+	}
+
+	/**
+	 * True if the styles array contains any underscore-prefix style key.
+	 *
+	 * @param array<string,mixed> $styles
+	 */
+	private function has_style_keys( array $styles ): bool {
+		foreach ( array_keys( $styles ) as $key ) {
+			if ( is_string( $key ) && str_starts_with( $key, '_' ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
