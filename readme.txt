@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.33.1
+Stable tag: 3.33.2
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -162,6 +162,12 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 3.33.2 =
+**Documentation — key conventions, specificity trap, verification**
+
+* Changed: `data/knowledge/global-classes.md` — added explicit "Setting Key Conventions (CRITICAL — silent failure)" section with camelCase-vs-kebab tables, object-shape reference, heading specificity trap + `text-basic` workaround, `render_sample` verification workflow. 3 new pitfall entries.
+* Changed: `data/knowledge/building.md` — added key-convention warning up front, heading specificity explanation, v3.33.1 gate reference.
 
 = 3.33.1 =
 **Hard gate: class writes require knowledge read first**

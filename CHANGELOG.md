@@ -4,6 +4,17 @@ All notable changes to the Bricks MCP plugin are documented here. The format is 
 
 For the WordPress.org plugin update system, see also `readme.txt` (same content, WP format).
 
+## [3.33.2] — 2026-04-23
+
+**Documentation — key conventions + specificity trap + verification**
+
+Live debugging in v3.33.0/.1 surfaced that Bricks has TWO case conventions in the same settings object (camelCase at top-level, kebab-case inside `_typography` / `_border.*`) and child-theme `h1..h6` tag selectors override class-level `font-size`. Both were discoverable only by reading source or failing live. Now documented explicitly.
+
+### Changed
+
+- `data/knowledge/global-classes.md` — added "Setting Key Conventions (CRITICAL — silent failure)" section with camelCase-vs-kebab-case tables, object-shape reference, full worked example, heading font-size specificity trap + workaround (use `text-basic` with `tag: h1` for custom giant sizes), and `render_sample`-based verification workflow. Added 3 new pitfalls (#9 camelCase typography, #10 heading font-size, #11 skipping render_sample).
+- `data/knowledge/building.md` — added "Setting Key Conventions" section up front with the silent-failure warning. Expanded "DO NOT Duplicate Child Theme CSS" heading rule with specificity-war explanation + `text-basic` workaround. Added "v3.33.1 Knowledge Gate" section explaining the new blocker.
+
 ## [3.33.1] — 2026-04-23
 
 **Hard gate: class writes require knowledge read first**

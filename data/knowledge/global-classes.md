@@ -49,6 +49,105 @@ Key rules:
 
 See `bricks:get_knowledge('building')` → "Composite Key Format" + "Color Object Format" for full reference.
 
+## Setting Key Conventions (CRITICAL — silent failure)
+
+Bricks uses **two case conventions in the same object** — if you get this wrong the CSS compiler silently drops the rule and only some styles render. No error, no warning. The v3.33.1 knowledge gate now blocks class writes with styles until you've read this file, but you still have to apply the rules correctly.
+
+### camelCase (top-level underscore-prefixed keys)
+
+```json
+{
+  "_display": "flex",
+  "_direction": "row",
+  "_alignItems": "center",
+  "_justifyContent": "center",
+  "_columnGap": "var(--space-s)",
+  "_rowGap": "var(--space-s)",
+  "_flexWrap": "wrap",
+  "_flexGrow": "1",
+  "_flexBasis": "0",
+  "_aspectRatio": "3/4",
+  "_objectFit": "cover",
+  "_textAlign": "center",
+  "_width": "100%",
+  "_widthMax": "var(--max-width)",
+  "_widthMin": "var(--container-width)",
+  "_height": "auto",
+  "_heightMax": "80vh",
+  "_heightMin": "var(--min-height)"
+}
+```
+
+### kebab-case (INSIDE `_typography`, `_border.*`, etc.)
+
+```json
+{
+  "_typography": {
+    "font-size": "var(--h2)",
+    "font-weight": "700",
+    "line-height": "1.2",
+    "letter-spacing": "-0.02em",
+    "text-transform": "uppercase",
+    "text-align": "center",
+    "color": { "raw": "var(--base-ultra-dark)" }
+  }
+}
+```
+
+**Wrong:** `"fontSize": "var(--h2)"` inside `_typography` — Bricks silently drops it. Only the `color` rule survives.
+
+### Object shape (NOT scalar) for these keys
+
+| Key | Shape |
+|---|---|
+| `_padding` | `{ top, right, bottom, left }` object |
+| `_margin` | `{ top, right, bottom, left }` object |
+| `_border.radius` | `{ top, right, bottom, left }` object |
+| `_border.width` | `{ top, right, bottom, left }` object |
+| `*.color` | `{ raw: "var(...)" }` OR `{ hex: "#..." }` object |
+
+Scalar for: `_width`, `_widthMax`, `_widthMin`, `_height`, `_heightMax`, `_heightMin`, `_display`, `_aspectRatio`, everything listed in "camelCase (top-level)".
+
+Example — fully working button class:
+```json
+{
+  "_typography": {
+    "font-size": "var(--text-m)",
+    "font-weight": "600",
+    "color": { "raw": "var(--white)" }
+  },
+  "_background": { "color": { "raw": "var(--base-ultra-dark)" } },
+  "_padding": {
+    "top": "var(--space-s)", "right": "var(--space-l)",
+    "bottom": "var(--space-s)", "left": "var(--space-l)"
+  },
+  "_border": {
+    "radius": {
+      "top": "var(--radius-pill)", "right": "var(--radius-pill)",
+      "bottom": "var(--radius-pill)", "left": "var(--radius-pill)"
+    }
+  },
+  "_display": "inline-flex",
+  "_alignItems": "center",
+  "_columnGap": "var(--space-s)"
+}
+```
+
+### Heading font-size specificity trap
+
+Child theme CSS has tag selectors: `h1 { font-size: var(--h1) }` through `h6`. Setting `_typography.font-size` on a class applied to an `<h1>` element LOSES the specificity war — your font-size doesn't win. Options:
+
+- Use `var(--h1)..var(--h6)` variables which already produce the right size per tag
+- Override heading font-size via a more specific selector — not possible through classes alone
+- Use `type: text-basic` with `tag: h1` instead of `type: heading` (text-basic has no tag-level theme rule)
+- Use inline `_cssCustom` via element settings (blocked by DANGEROUS_SETTINGS_BLOCKED in v3.33.0 — you'd have to allow it per-element)
+
+For standard hero sizes just use the `var(--h1)` tokens. For giant custom sizes (e.g. `clamp(3rem, 12vw, 11rem)` landing hero) use `text-basic` with `tag: div` or `p` to bypass the heading theme rules.
+
+### Verification before committing a build
+
+After creating/updating a class with styles, ALWAYS call `global_class:render_sample(class_name)` and inspect the `css_rules` field. If any setting you passed isn't showing up as a CSS rule, the key shape is wrong. Fix before building elements that use the class.
+
 ## Available Actions (16)
 
 ### Core CRUD
@@ -187,6 +286,9 @@ Warnings returned when auto-fixes are applied.
 6. **`batch_delete` without confirmation** — destructive action, requires confirmation token (see `confirm_destructive_action` tool).
 7. **`import_css` selector naming** — `.my-class` becomes class named `my-class`. Nested selectors (`.parent .child`) get flattened.
 8. **Responsive styles on wrong breakpoint** — `_padding:mobile` is NOT valid. Use `_padding:mobile_portrait` or `_padding:mobile_landscape`.
+9. **camelCase inside `_typography`** — silent failure. `"_typography": {"fontSize": ...}` emits NO CSS for that property; only `color` survives. Use kebab: `"font-size"`, `"font-weight"`, `"line-height"`, `"letter-spacing"`, `"text-transform"`, `"text-align"`. See "Setting Key Conventions" above.
+10. **`font-size` on heading classes** — loses specificity war against child-theme `h1..h6` tag selectors. Your size doesn't render. Use `var(--h1)..var(--h6)` tokens OR switch the element to `type: text-basic` with `tag: h1` if you need a custom giant size.
+11. **Not verifying via `render_sample`** — classes can store wrong-shape settings and return success. The silent-drop happens in the CSS compiler, not the save. Always call `global_class:render_sample(class_name)` after any class write that includes styles; inspect `css_rules` for all properties you passed.
 
 ## Reference
 

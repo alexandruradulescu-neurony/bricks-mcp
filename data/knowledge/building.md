@@ -57,11 +57,15 @@ container with _alignItems: center
 The child theme globally handles:
 - **Section padding**: `padding: var(--padding-section)` — do NOT set `_padding` on sections
 - **Container/block gap**: `gap: var(--content-gap)` — do NOT set `_gap` on containers
-- **Heading sizes**: `h1 { font-size: var(--h1) }` through `h6` — do NOT set `_typography.font-size` on headings
+- **Heading sizes**: `h1 { font-size: var(--h1) }` through `h6` — do NOT set `_typography.font-size` on headings. Child theme tag selectors `h1..h6` win the specificity war against class-level `_typography.font-size`. Setting it has NO visible effect.
 - **Heading styles**: color, line-height, font-weight — do NOT set these on headings
 - **Body text**: font-size, color, line-height — do NOT set these on text elements
 
-Setting these inline overrides the responsive fluid values with static ones.
+Setting these inline overrides the responsive fluid values with static ones (where it wins at all — see heading specificity warning above).
+
+### Massive custom heading sizes (landing-page style)
+
+If a design needs `font-size: clamp(3rem, 12vw, 11rem)` for a giant typographic hero, use `type: text-basic` with `tag: h1` / `tag: div` instead of `type: heading`. `text-basic` has no child-theme tag selector governing its size, so your class-level `_typography.font-size` renders correctly. Semantically-equivalent (`tag: h1` preserves `<h1>` in HTML) but bypasses the theme override.
 
 ## Class-First Workflow
 
@@ -139,6 +143,25 @@ The `element_settings` key passes type-specific Bricks settings that don't fit `
 - Defaults exist when `element_settings` is omitted: counter `countTo`=100, pie-chart `percent`=75, rating `rating`=5, slider-nested `perPage`="3" + `gap`="var(--content-gap)".
 - Auto-fixes: counter `"500+"` → `countTo: 500` + `suffix: "+"`. Pie-chart `"92%"` → `percent: 92`. YouTube URLs → `ytId` extraction. Rating clamped to scale range.
 - Underscore-prefixed keys inside `element_settings` are validated against the settings key registry — use `style_overrides` for CSS properties instead.
+
+## Setting Key Conventions (critical)
+
+Bricks mixes TWO case conventions in the same settings object. Getting this wrong silently drops CSS rules — no error, no warning, just missing styles.
+
+- **Top-level `_*` keys = camelCase**: `_alignItems`, `_justifyContent`, `_columnGap`, `_rowGap`, `_flexWrap`, `_aspectRatio`, `_objectFit`, `_widthMax`, `_widthMin`, `_heightMax`, `_heightMin`, `_textAlign`.
+- **Inside `_typography`, `_border.*` = kebab-case**: `font-size`, `font-weight`, `line-height`, `letter-spacing`, `text-transform`, `text-align`, `color`.
+- **Object shape (not scalar)**: `_padding`, `_margin`, `_border.radius`, `_border.width` are `{top, right, bottom, left}` objects. `*.color` is `{raw}` or `{hex}` object.
+
+Wrong: `"_typography": { "fontSize": "var(--h2)" }` — silently dropped.
+Right: `"_typography": { "font-size": "var(--h2)" }`.
+
+**Always verify with `global_class:render_sample(class_name)`** after class creation. If a setting you passed isn't in the `css_rules` output, the key shape is wrong.
+
+Full reference + pitfalls: `bricks:get_knowledge('global-classes')` → "Setting Key Conventions".
+
+## v3.33.1 Knowledge Gate
+
+`global_class:create` / `batch_create` / `update` with styles now requires the session to have fetched `bricks:get_knowledge('global-classes')` + `bricks:get_knowledge('building')`. Non-compliant calls return `knowledge_gate_blocked`. This exists because silent key-case failures were producing broken classes that rendered only `color` and nothing else.
 
 ## Composite Key Format
 
