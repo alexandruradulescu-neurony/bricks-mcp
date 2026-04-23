@@ -43,6 +43,8 @@ final class VisionPromptBuilder {
         // BRICKS_MCP_PLUGIN_DIR may not point at the plugin root.
         $registry_path = BRICKS_MCP_PLUGIN_DIR . 'data/elements.json';
         if ( ! is_readable( $registry_path ) ) {
+            // Fallback for test bootstrap where BRICKS_MCP_PLUGIN_DIR points at dev/.
+            // Depth 4: Services → MCP → includes → plugin root.
             $registry_path = dirname( __FILE__, 4 ) . '/data/elements.json';
         }
         if ( ! is_readable( $registry_path ) ) {
