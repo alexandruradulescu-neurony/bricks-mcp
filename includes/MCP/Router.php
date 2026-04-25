@@ -10,23 +10,16 @@ declare(strict_types=1);
 
 namespace BricksMCP\MCP;
 
-use BricksMCP\Admin\Settings;
 use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\ClassIntentResolver;
-use BricksMCP\MCP\Services\ClaudeVisionProvider;
 use BricksMCP\MCP\Services\DesignSchemaValidator;
 use BricksMCP\MCP\Services\DesignSystemIntrospector;
 use BricksMCP\MCP\Services\ElementSettingsGenerator;
-use BricksMCP\MCP\Services\ImageInputResolver;
-use BricksMCP\MCP\Services\ImageSideloadService;
 use BricksMCP\MCP\Services\MediaService;
 use BricksMCP\MCP\Services\MenuService;
 use BricksMCP\MCP\Services\OnboardingService;
 use BricksMCP\MCP\Services\PendingActionService;
-use BricksMCP\MCP\Services\ReferenceJsonTranslator;
-use BricksMCP\MCP\Services\VisionPromptBuilder;
-use BricksMCP\MCP\Services\VisionResponseMapper;
 use BricksMCP\MCP\Services\SchemaExpander;
 use BricksMCP\MCP\Services\SchemaGenerator;
 use BricksMCP\MCP\Services\ValidationService;
@@ -139,15 +132,7 @@ final class Router {
 		$proposal_service     = new ProposalService( $this->bricks_service->get_global_class_service(), $this->schema_generator, $this->bricks_service );
 		$schema_handler       = new Handlers\SchemaHandler( $this->schema_generator, $this->bricks_service );
 
-		// M3 (v3.32): vision pipeline for design_pattern(action: from_image).
-		// ClaudeVisionProvider tolerates an empty API key at construction time — the
-		// actual key check happens on first analyze() call, keeping Router wiring
-		// side-effect-free for installs that don't use from_image.
-		// VisionPatternGenerator removed in v3.32; DesignPatternHandler orchestrates directly (Task 7).
-		$vision_provider = new ClaudeVisionProvider( Settings::get_anthropic_api_key() );
-		$image_resolver  = new ImageInputResolver();
-
-		// Shared services for DesignPatternHandler v3.32 wiring (make_v32).
+		// v5.1: vision pipeline removed. design_pattern is CRUD-only; no LLM provider lives in this plugin.
 		$onboarding_service = new OnboardingService( $this->bricks_service );
 
 		// BuildHandler, BuildStructureHandler, PopulateContentHandler, VerifyHandler:
@@ -207,33 +192,7 @@ final class Router {
 			'onboarding'    => new OnboardingHandler( $onboarding_service ),
 			'verify'        => $verify_handler,
 			'page_layout'      => new Handlers\PageLayoutHandler( new PageLayoutService(), $require_bricks ),
-			'design_pattern'   => Handlers\DesignPatternHandler::make_v32(
-				$proposal_service,
-				$require_bricks,
-				$build_structure_handler,
-				$populate_content_handler,
-				$verify_handler,
-				$this->media_service,
-				new ImageSideloadService(
-					$this->media_service,
-					static function ( string $url ): int {
-						if ( ! function_exists( 'media_sideload_image' ) ) {
-							require_once ABSPATH . 'wp-admin/includes/media.php';
-							require_once ABSPATH . 'wp-admin/includes/file.php';
-							require_once ABSPATH . 'wp-admin/includes/image.php';
-						}
-						$id = media_sideload_image( $url, 0, null, 'id' );
-						return is_int( $id ) ? $id : 0;
-					}
-				),
-				new ReferenceJsonTranslator( $vision_provider ),
-				$vision_provider,
-				$image_resolver,
-				new VisionPromptBuilder(),
-				new VisionResponseMapper(),
-				$this->bricks_service,
-				$onboarding_service
-			),
+			'design_pattern'   => new Handlers\DesignPatternHandler( $this->bricks_service, $require_bricks ),
 		];
 
 		$this->pending_action_service = new PendingActionService();

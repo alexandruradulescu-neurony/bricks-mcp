@@ -203,23 +203,8 @@ final class Settings {
 			'bricks_mcp_advanced'
 		);
 
-		// Vision section — Anthropic API key used by pattern-from-image / image-driven build.
-		add_settings_section(
-			'bricks_mcp_vision_section',
-			__( 'Vision features', 'bricks-mcp' ),
-			function () {
-				echo '<p>' . esc_html__( 'Required for pattern-from-image and image-driven build. Key is stored in bricks_mcp_settings option.', 'bricks-mcp' ) . '</p>';
-			},
-			self::PAGE_SLUG . '_advanced'
-		);
-
-		add_settings_field(
-			'anthropic_api_key',
-			__( 'Anthropic API key (vision features)', 'bricks-mcp' ),
-			[ $this, 'render_anthropic_api_key_field' ],
-			self::PAGE_SLUG . '_advanced',
-			'bricks_mcp_vision_section'
-		);
+		// v5.1: Vision section removed. The plugin no longer ships an LLM provider —
+		// design_pattern is CRUD-only; from_image was retired.
 	}
 
 	/**
@@ -234,7 +219,6 @@ final class Settings {
 			'dangerous_actions' => false,
 			'rate_limit_rpm'    => self::RATE_LIMIT_RPM_DEFAULT,
 			'protected_pages'   => '',
-			'anthropic_api_key' => '',
 		];
 	}
 
@@ -261,26 +245,7 @@ final class Settings {
 			? sanitize_text_field( $input['protected_pages'] )
 			: '';
 
-		// Anthropic API key (vision features). Accept empty (clears key) or
-		// a key shaped like sk-ant-... . On invalid input, preserve the
-		// previous value and surface a settings-page error.
-		if ( isset( $input['anthropic_api_key'] ) ) {
-			$raw = trim( (string) $input['anthropic_api_key'] );
-			if ( '' === $raw || preg_match( '/^sk-ant-[A-Za-z0-9_\-]+$/', $raw ) ) {
-				$sanitized['anthropic_api_key'] = $raw;
-			} else {
-				add_settings_error(
-					self::OPTION_NAME,
-					'invalid_anthropic_key',
-					__( 'Anthropic API key must start with sk-ant- and contain only alphanumerics, dashes, underscores.', 'bricks-mcp' )
-				);
-				$existing                       = get_option( self::OPTION_NAME, [] );
-				$sanitized['anthropic_api_key'] = is_array( $existing ) ? (string) ( $existing['anthropic_api_key'] ?? '' ) : '';
-			}
-		} else {
-			$existing                       = get_option( self::OPTION_NAME, [] );
-			$sanitized['anthropic_api_key'] = is_array( $existing ) ? (string) ( $existing['anthropic_api_key'] ?? '' ) : '';
-		}
+		// v5.1: anthropic_api_key dropped — vision pipeline removed.
 
 		return $sanitized;
 	}
@@ -801,28 +766,6 @@ final class Settings {
 			<?php esc_html_e( 'Comma-separated list of post/page IDs that AI tools cannot modify or delete. Use this to protect critical pages like the homepage or landing pages from accidental changes.', 'bricks-mcp' ); ?>
 		</p>
 		<?php
-	}
-
-	/**
-	 * Render the Anthropic API key input field.
-	 *
-	 * @return void
-	 */
-	public function render_anthropic_api_key_field(): void {
-		$settings = get_option( self::OPTION_NAME, [] );
-		$value    = is_array( $settings ) && isset( $settings['anthropic_api_key'] )
-			? (string) $settings['anthropic_api_key']
-			: '';
-		$masked   = '' === $value ? '' : str_repeat( '•', max( 0, strlen( $value ) - 4 ) ) . substr( $value, -4 );
-		printf(
-			'<input type="password" name="%s[anthropic_api_key]" value="%s" size="50" autocomplete="off" placeholder="sk-ant-..." />',
-			esc_attr( self::OPTION_NAME ),
-			esc_attr( $value )
-		);
-		if ( '' !== $value ) {
-			printf( '<p class="description"><code>%s</code></p>', esc_html( $masked ) );
-		}
-		echo '<p class="description">' . esc_html__( 'Get a key at console.anthropic.com. Format: sk-ant-... . Used only for design_pattern(from_image) and propose_design with image input.', 'bricks-mcp' ) . '</p>';
 	}
 
 	/**
@@ -2002,23 +1945,6 @@ final class Settings {
 		wp_send_json_error( [
 			'message' => __( 'Connect an AI assistant and use the MCP design_brief:parse action.', 'bricks-mcp' ),
 		] );
-	}
-
-	/**
-	 * Return the configured Anthropic API key, or empty string.
-	 *
-	 * Static accessor used by vision features (pattern-from-image,
-	 * image-driven build) so callers don't need to pull the whole
-	 * settings array.
-	 *
-	 * @return string
-	 */
-	public static function get_anthropic_api_key(): string {
-		$settings = get_option( self::OPTION_NAME, [] );
-		if ( ! is_array( $settings ) ) {
-			return '';
-		}
-		return isset( $settings['anthropic_api_key'] ) ? (string) $settings['anthropic_api_key'] : '';
 	}
 
 }
