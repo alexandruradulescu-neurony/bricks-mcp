@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 5.0.0-alpha.3
+Stable tag: 5.1.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -193,6 +193,34 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 5.1.0 =
+**Lean — −2,810 LOC trim across 19 files + mode-explicit prompts**
+
+v5.0.0-alpha.x proved the HTML hybrid pipeline works end-to-end. v5.1 trims everything that v5's HTML mode + audit trail made marginal, plus borrows one missing pattern from agent-to-bricks. Net result: smaller surface, clearer responsibilities, same user-facing capability for HTML/schema builds.
+
+**Removed (~3K LOC):**
+
+* Vision pipeline — `ClaudeVisionProvider`, `VisionPromptBuilder`, `VisionResponseMapper`, `VisionProvider`, `ImageInputResolver`, `ImageSideloadService`, `ReferenceJsonTranslator`. The plugin no longer ships an LLM provider; `design_pattern(action: from_image)` is gone. To seed a pattern from a screenshot now: write HTML via `build_from_html`, then `design_pattern:capture` the result.
+* Pattern composition — `PatternAdapter`, `PatternToSchemaBridge`, `SchemaSkeletonGenerator::generate_from_pattern()` and the `use_pattern` branch. Pattern slot-fill was supplanted by HTML mode (AI writes the section directly). Pattern CRUD (capture, list, get, create, update, delete, export, import, mark_required) stays.
+* `DesignPlanNormalizationService` heavy instance — was vision-pipeline scaffolding. Trimmed from 407 LOC to 30 LOC; only the static `normalize_role_key()` and `infer_semantic_component_role()` helpers remain. ProposalService inlines a 10-line role normalization in place of the full `normalize()` call.
+* Dead pattern-provisioning code — `_use_pattern` / `_provisioning_manifest` / `_adaptation_log` / `_conversion_log` detection in `ProposalService::create_proposal()` and `BuildStructureHandler::handle()` removed (those fields are no longer emitted post-Phase 2).
+* Settings: `Vision features` section + `anthropic_api_key` field + `Settings::get_anthropic_api_key()` getter + sanitization branch + form rendering removed.
+
+**Added (~120 LOC):**
+
+* `build_from_html` accepts a `mode` argument (`section` | `page` | `modify`):
+  - `section` (default) — single-section append. Warns when converter produced more than one top-level `<section>`.
+  - `page` — multi-section full-page build. Auto-coerces `action=replace`.
+  - `modify` — guardrail for restructure of an existing section. Auto-coerces `action=replace`. Narrow edits should still use `element:update` / `bulk_update` per the modify-workflow knowledge doc.
+* Response gains `html_mode.{mode, mode_warnings}` so AI clients can audit intent vs structural outcome.
+* `data/knowledge/html-build.md` documents the modes.
+
+**Changed:**
+
+* `populate_content` tool description — explicitly schema-mode-only ("NOT needed when building via build_from_html — HTML mode embeds content inline. Use only as a post-build content patch for popups, components, query loops").
+
+**No breaking changes for HTML mode users.** Schema-mode users who relied on `design_pattern(from_image)` need to migrate to writing HTML via `build_from_html`. Pattern CRUD users are unaffected.
 
 = 5.0.0-alpha.3 =
 **Fix: `<article>` stays grouped + flex-* props mapped**
