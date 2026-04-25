@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 3.33.7
+Stable tag: 4.0.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -18,7 +18,7 @@ The plugin supports four workflows:
 
 1. **Direct operations** — Edit text, move elements, swap images, update menus. The AI uses element/page/menu tools directly.
 2. **Instructed builds** — Add a heading and two columns, insert a form. The AI uses bulk_add or append_content with awareness of your global classes.
-3. **Design builds** — Design a services page, build a landing page, redesign the hero. Server-enforced four-step pipeline: **propose_design** (Phase 1 discovery returns site context + element capabilities + reference patterns; Phase 2 consumes a design_plan and returns a proposal_id + validated schema) → **build_structure** (writes the structural element tree with class creation + variable resolution + auto-fixes, no content) → **populate_content** (injects content_map into role-tagged elements) → **verify_build** (human-readable section descriptions, content extraction, min-height + background-color per section, placeholder detection).
+3. **Design builds** — Design a services page, build a landing page, redesign the hero. Two-step flow: **propose_design** (optional — returns proposal_id + suggested_schema + site context) → **build_structure** (writes the complete element tree with content inline, class creation, variable resolution, media sideload, and auto-fixes) → **verify_build** (optional — human-readable section descriptions, content extraction, placeholder detection). Content goes inline in the schema — no separate populate step needed. For post-build content updates, **populate_content** is available as an optional patch tool.
 4. **Vision-driven pattern capture** — Paste a screenshot or Bricks clipboard JSON; the AI vision translator (`design_pattern(action: from_image)`) produces a site-BEM design_plan with global_classes_to_create (inferring styles from the image using site variables), auto-sideloads per-element images via business-brief-enriched Unsplash search, and — when a target page_id is supplied — auto-chains through the design-build pipeline above. Supports three input modes: image only, reference_json only (text-only Claude translates foreign classes → site BEM + foreign variables → site equivalents), image + JSON. The incoming plan is normalized before build: role keys are canonicalized, duplicate/empty class creates are dropped, and invalid class guesses are remapped to resolved semantic roles or generated fallback component classes.
 
 Tell your AI assistant "design a services section with three feature cards" and the design-build pipeline analyzes your existing site, picks a reference pattern, generates a valid schema, and writes the final Bricks elements with proper global classes and CSS variables.
@@ -53,13 +53,9 @@ Phase 1 of `propose_design` automatically scopes the catalog to the detected sec
 - New class intents without a style source → rejected before write
 - `from_image` / `reference_json` class guesses with no valid style source → normalized or dropped before pre-creating classes
 - Proposal/build role keys are canonicalized before validation and content injection; duplicate direct roles are rejected early, and `build_structure` returns `role_collisions` if built labels still collide
-- `propose_design` Phase 2 and `design_pattern(from_image)` surface `design_plan_warnings` for weak but still-buildable plans before anything is written
-- Weak generic roles in direct/image plans are enriched before validation/build. The pipeline can rewrite roles like `heading`, `text`, `button`, and `image` into more useful semantic roles and synthesize missing `content_hint` values.
-- If a direct/image plan is still structurally thin after enrichment, the server can repair it before validation/build by inserting missing singleton anchors like `main_heading`, `subtitle`, `section_heading`, `primary_cta`, or a split-layout media element. Responses include `repair_log` when this happens.
+- `propose_design` and `design_pattern(from_image)` surface `design_plan_warnings` for weak but still-buildable plans before anything is written
 - Repeated `patterns[]` items now expand to unique role labels per clone (for example `feature_card_1_title`, `feature_card_2_title`, `tier_3_cta`) so `build_structure` and `populate_content` can target repeated content without role collisions.
 - Proposal `content_plan` now includes indexed repeated-item hints when `patterns[]` are used, so repeated cards/tiers/testimonials have concrete keys and guidance before the content phase.
-- If a direct/image plan models repeated items inline with indexed flat roles (for example `feature_card_1_title`, `tier_price_2`), the server can automatically convert that flat shape into `patterns[]` and returns `repeat_extraction_log`.
-- An extensible composition layer now reshapes weak plans before build. It can reorder elements into a more coherent flow, infer broad composition families, and adjust obviously weak layouts like repeat-heavy centered stacks or media/text sections that should be split. Responses can include `composition_family` and `composition_log`.
 - `populate_content` enforces required content roles unless `allow_partial=true`
 
 = Design System Generator =
@@ -80,7 +76,7 @@ Apply writes to `bricks_global_variables` (namespaced replace across fourteen ow
 
 The plugin registers a REST API endpoint on your WordPress site that speaks the MCP protocol. You add the endpoint URL to your AI client's MCP configuration, authenticate with a WordPress Application Password, and your AI can start working with your site immediately.
 
-An intent router classifies every request into one of the four workflows above, each with server-enforced prerequisites (site info, global classes, CSS variables, knowledge domains). A design-build gate blocks any write operation that would introduce a root-level `section` element outside the two-tier pipeline, redirecting callers to `propose_design → build_structure → populate_content → verify_build` for validation, class resolution, and design consistency. Non-section element writes (adding a button, swapping an image, updating text) are not gated. The gate can be bypassed per-call with `bypass_design_gate: true` when there is a specific reason (e.g. restoring a clipboard paste verbatim). A knowledge-domain gate (v3.33.1+) blocks class writes that include styles until the session has fetched `bricks:get_knowledge('global-classes')` + `bricks:get_knowledge('building')` — Bricks has non-obvious per-key conventions (kebab-case inside `_typography`, camelCase at top-level, child-theme heading specificity) and silent failures were shipping broken classes. All destructive operations (delete, bulk replace, cascade remove) are gated behind single-use confirmation tokens.
+An intent router classifies every request into one of the four workflows above. All MCP tool calls require authentication via WordPress Application Passwords. Rate limiting (configurable 10-1000 RPM, default 120) protects against abuse. All destructive operations (delete, bulk replace, cascade remove) are gated behind single-use confirmation tokens.
 
 = Available Tools =
 
@@ -107,10 +103,10 @@ An intent router classifies every request into one of the four workflows above, 
 * **wordpress** — Get posts/users/plugins, activate/deactivate plugins, create/update users
 * **metabox** — Read Meta Box custom fields, list field groups, get dynamic tags
 * **woocommerce** — WooCommerce status, elements, dynamic tags, template scaffolding
-* **propose_design** — Two-phase design proposal: Phase 1 returns site context + element capabilities + reference patterns + recommended_knowledge domains; Phase 2 (with design_plan) returns proposal_id + validated suggested_schema + `design_plan_warnings` + enrichment/normalization traces when the server had to improve weak role/hint data. The schema is structure-only — content is injected separately via populate_content for reliability.
+* **propose_design** — Optional design proposal: returns site context + element capabilities + reference patterns + recommended knowledge domains + validated suggested_schema + `design_plan_warnings`. The schema includes content inline — no separate populate step needed.
 * **propose_page_layout** — Maps page intent (landing, services, about, product, contact) to a sequenced list of section types with recommended pattern IDs and ready-to-use design_plan skeletons
-* **build_structure** — Phase 1 of the two-tier build: consumes proposal_id + structure-only schema, resolves class intents (reuse or auto-create classes with site variables), expands patterns, generates element settings, resolves CSS variables, writes elements. Returns section_id + role_map for content injection. Emits non-blocking validation warnings (grid-column vs child-count mismatches, empty content, missing responsive overrides, heading hierarchy issues like duplicate h1 / skipped levels).
-* **populate_content** — Phase 2 of the two-tier build: takes the section_id from build_structure + a role → content map, injects text / image-object / link values into the right elements. Role keys match `role` fields on schema elements; prefix a key with `#` to target a specific element ID directly.
+* **build_structure** — Consumes proposal_id + schema (content inline), resolves class intents (reuse or auto-create classes with site variables), expands patterns, generates element settings, resolves CSS variables, writes elements, runs media sideload for unsplash: URLs. Returns section_id + role_map + content_contract. Emits non-blocking validation warnings (grid-column vs child-count mismatches, empty content, missing responsive overrides, heading hierarchy issues like duplicate h1 / skipped levels).
+* **populate_content** — Optional post-build content patch tool: takes the section_id from build_structure + a role → content map, injects text / image-object / link values into the right elements. Role keys match `role` fields on schema elements; prefix a key with `#` to target a specific element ID directly.
 * **verify_build** — Post-build verification: element count, type counts, classes used, human-readable section descriptions, per-section styles (min_height, inline background_color), content_sample (extracted headings / buttons / texts + placeholder-content detection), and hierarchy tree for the last-built section so the AI can self-verify the result matches intent.
 * **design_pattern** — Manage the database-backed pattern library. Actions: `capture` a live section as a pattern, `list`, `get`, `create`, `update`, `delete`, `export`, `import`, `mark_required` (roles that must be populated during use), and **`from_image`** — vision-based pattern creation with three input modes (image only, reference JSON only, or both). When `page_id` is supplied to `from_image` the pattern is auto-built on the page via the pipeline. Requires Anthropic API key for `from_image`.
 
@@ -197,6 +193,29 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 4.0.1 =
+**Ship vendor in release zip — fix "Schema validation library is not available"**
+
+v4.0.0 made `opis/json-schema` a hard dependency for tool dispatch but the build script still excluded `vendor/` from the release zip. End users installing from GitHub got tools blocked with `Schema validation library is not available. Tool execution blocked for safety.`
+
+* Fixed: release zip now bundles `vendor/` (opis/json-schema, opis/string, opis/uri, composer autoload). Adds ~1.3 MB to the zip; no behavior change for sites with composer installed locally.
+
+= 4.0.0 =
+**Architectural simplification — content inline, optional propose_design, gates removed**
+
+Following a deep code-path review, the build pipeline collapses two phases into one and the prerequisite + knowledge gates are removed. `populate_content` becomes an optional patch tool for post-build edits.
+
+* Changed: `build_structure` now accepts content fields (`content`, `link`, `icon`, `src`) inline in element settings — no separate `populate_content` step required for initial builds. `BuildStructureHandler::FORBIDDEN_CONTENT_FIELDS` removed.
+* Changed: `propose_design` is optional. Simple additions go directly to `build_structure` with a hand-written schema. Complex designs still use the two-phase proposal flow.
+* Changed: `populate_content` retained as optional post-build content patch tool only.
+* Removed: `PrerequisiteGateService` — workflow gating moved to MCP server instructions.
+* Removed: `DesignPlanCompositionService`, `DesignPlanEnrichmentService`, `DesignPlanQualityService`, `DesignPlanRepeatExtractionService`, `DesignPlanStructureRepairService` — adaptive design system layer dropped.
+* Removed: `gate_style_operations` from `GlobalClassHandler` — knowledge-domain gate retired. `StyleNormalizationService` continues to silently rewrite legacy key shapes (camelCase typography, scalar border.radius, backgroundColor sub-key).
+* Removed: admin diagnostics suite — `SiteHealth`, `DiagnosticRunner`, `DiagnosticsAdmin`, all 11 diagnostic checks (AppPasswords*, BricksActive, DesignPipeline, HostingProvider, Https, McpEndpoint, PermalinkStructure, PhpTimeout, RestApiReachable, SecurityPlugin), `assets/js/admin-diagnostics.js`, `MIGRATION-v3.28.md`, `IMPLEMENTATION_STATUS.md`.
+* Changed: vendor autoloader load softened to `file_exists()` guard — plugin boots without `vendor/`, but schema-validated tools require opis. (Fixed in 4.0.1 by shipping vendor in zip.)
+* Changed: `data/knowledge/global-classes.md` — gate language softened, "Setting Key Conventions" preserved as guidance.
+* Changed: `readme.txt` main description rewritten — workflow 3 documents the collapsed two-step flow and notes content goes inline.
 
 = 3.33.7 =
 **Fix: silent class-style dropouts — pattern skeleton + normalizer backfill**

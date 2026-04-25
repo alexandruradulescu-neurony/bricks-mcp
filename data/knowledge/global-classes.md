@@ -21,7 +21,7 @@ Classes generate CSS at render time — they're NOT WordPress CSS classes in the
 
 **`_cssGlobalClasses` takes IDs, not names.** Always call `global_class:list` to get the name→ID mapping before applying.
 
-In the design-build pipeline (`propose_design` Phase 2 `design_plan` → `build_structure`), `class_intent` uses human names — the pipeline resolves them to IDs automatically. Direct element operations (`element:add`, `element:update`) require IDs.
+In the design-build pipeline (`propose_design` → `build_structure`), `class_intent` uses human names — the pipeline resolves them to IDs automatically. Direct element operations (`element:add`, `element:update`) require IDs.
 
 ## Style Shape
 
@@ -51,7 +51,7 @@ See `bricks:get_knowledge('building')` → "Composite Key Format" + "Color Objec
 
 ## Setting Key Conventions (CRITICAL — silent failure)
 
-Bricks uses **two case conventions in the same object** — if you get this wrong the CSS compiler silently drops the rule and only some styles render. No error, no warning. The v3.33.1 knowledge gate now blocks class writes with styles until you've read this file, but you still have to apply the rules correctly.
+Bricks uses **two case conventions in the same object** — if you get this wrong the CSS compiler silently drops the rule and only some styles render. No error, no warning. The server normalizes key shapes silently — use the correct format from the start to avoid issues.
 
 ### camelCase (top-level underscore-prefixed keys)
 

@@ -41,10 +41,10 @@ final class ProposalService {
 	/**
 	 * Cross-request discovery cache (second-level).
 	 *
-	 * Stored in a user-scoped transient with the same 30-min TTL as
-	 * PrerequisiteGateService. Survives across MCP HTTP requests so the
-	 * slim-response optimization also applies to the *first* discovery call
-	 * in a subsequent request (not just second+ calls in the same process).
+	 * Stored in a user-scoped transient with a 30-min TTL. Survives across MCP
+	 * HTTP requests so the slim-response optimization also applies to the *first*
+	 * discovery call in a subsequent request (not just second+ calls in the same
+	 * process).
 	 */
 	private const DISCOVERY_CACHE_TTL = 1800;
 
@@ -548,15 +548,6 @@ final class ProposalService {
 		if ( ! empty( $normalized_plan['content_map'] ) ) {
 			$design_plan['content_plan'] = $normalized_plan['content_map'];
 		}
-		$enriched_plan       = ( new DesignPlanEnrichmentService() )->enrich( $design_plan );
-		$design_plan         = $enriched_plan['design_plan'];
-		$repeat_extracted    = ( new DesignPlanRepeatExtractionService() )->extract( $design_plan );
-		$design_plan         = $repeat_extracted['design_plan'];
-		$composed_plan       = ( new DesignPlanCompositionService() )->compose( $design_plan );
-		$design_plan         = $composed_plan['design_plan'];
-		$repaired_plan       = ( new DesignPlanStructureRepairService() )->repair( $design_plan );
-		$design_plan         = $repaired_plan['design_plan'];
-		$design_plan_warnings = ( new DesignPlanQualityService() )->analyze( $design_plan );
 
 		// Validate the design plan.
 		$validation = $this->validate_design_plan( $design_plan );
@@ -743,18 +734,7 @@ final class ProposalService {
 				'style_roles'       => $style_roles,
 				'component_class_plan' => $component_classes,
 				'normalization_log' => $normalized_plan['normalization_log'] ?? [],
-				'enrichment_log'   => $enriched_plan['enrichment_log'] ?? [],
-				'repeat_extraction_log' => $repeat_extracted['extraction_log'] ?? [],
-				'composition_family' => $composed_plan['composition_family'] ?? '',
-				'composition_log'  => $composed_plan['composition_log'] ?? [],
-				'repair_log'       => $repaired_plan['repair_log'] ?? [],
-				'design_plan_warnings' => $design_plan_warnings,
 			],
-			'design_plan_warnings' => $design_plan_warnings,
-			'composition_family'   => $composed_plan['composition_family'] ?? '',
-			'composition_log'      => $composed_plan['composition_log'] ?? [],
-			'repeat_extraction_log' => $repeat_extracted['extraction_log'] ?? [],
-			'repair_log'           => $repaired_plan['repair_log'] ?? [],
 			// v3.29 pattern-flow metadata:
 			'pattern_id'            => $pattern_id,
 			'provisioning_manifest' => $provisioning_manifest,
@@ -778,18 +758,6 @@ final class ProposalService {
 		}
 		if ( ! empty( $normalized_plan['normalization_log'] ) ) {
 			$response['normalization_log'] = $normalized_plan['normalization_log'];
-		}
-		if ( ! empty( $enriched_plan['enrichment_log'] ) ) {
-			$response['enrichment_log'] = $enriched_plan['enrichment_log'];
-		}
-		if ( ! empty( $repeat_extracted['extraction_log'] ) ) {
-			$response['repeat_extraction_log'] = $repeat_extracted['extraction_log'];
-		}
-		if ( ! empty( $composed_plan['composition_log'] ) ) {
-			$response['composition_log'] = $composed_plan['composition_log'];
-		}
-		if ( ! empty( $repaired_plan['repair_log'] ) ) {
-			$response['repair_log'] = $repaired_plan['repair_log'];
 		}
 
 		return $response;

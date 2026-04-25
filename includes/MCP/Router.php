@@ -11,10 +11,8 @@ declare(strict_types=1);
 namespace BricksMCP\MCP;
 
 use BricksMCP\Admin\Settings;
-use BricksMCP\MCP\Services\BEMClassNormalizer;
 use BricksMCP\MCP\Services\BricksCore;
 use BricksMCP\MCP\Services\BricksService;
-use BricksMCP\MCP\Services\ClassDedupEngine;
 use BricksMCP\MCP\Services\ClassIntentResolver;
 use BricksMCP\MCP\Services\ClaudeVisionProvider;
 use BricksMCP\MCP\Services\DesignSchemaValidator;
@@ -32,7 +30,6 @@ use BricksMCP\MCP\Services\VisionResponseMapper;
 use BricksMCP\MCP\Services\SchemaExpander;
 use BricksMCP\MCP\Services\SchemaGenerator;
 use BricksMCP\MCP\Services\ValidationService;
-use BricksMCP\MCP\Services\PrerequisiteGateService;
 use BricksMCP\MCP\Services\ProposalService;
 use BricksMCP\MCP\Services\PageLayoutService;
 use BricksMCP\MCP\Handlers\OnboardingHandler;
@@ -62,55 +59,11 @@ final class Router {
 	public const ERROR_CONFIRM_REQUIRED = 'bricks_mcp_confirm_required';
 
 	/**
-	 * Transient prefix used by maybe_set_site_context() to track per-user prerequisite flags.
-	 *
-	 * Suffixed with get_current_user_id() at call time. Kept as a constant so the
-	 * uninstall sweep (LIKE 'bricks_mcp_%') and the composite-flag logic agree.
-	 *
-	 * @var string
-	 */
-	private const PREREQS_TRANSIENT_PREFIX = 'bricks_mcp_prereqs_';
-
-	/**
 	 * Tool registry instance.
 	 *
 	 * @var ToolRegistry
 	 */
 	private ToolRegistry $registry;
-
-	/**
-	 * Operations that require prerequisites, with tier level per action.
-	 *
-	 * Tiers: 'direct' (site_context).
-	 *
-	 * @var array<string, array<string, string>>
-	 */
-	private const GATED_OPERATIONS = [
-		'page'      => [
-			'update_content'   => 'direct',
-			'append_content'   => 'direct',
-			'create'           => 'direct',
-			'import_clipboard' => 'direct',
-		],
-		'element'   => [
-			'add'         => 'direct',
-			'bulk_add'    => 'direct',
-			'update'      => 'direct',
-			'bulk_update' => 'direct',
-		],
-		'template'  => [
-			'create' => 'direct',
-		],
-		'component' => [
-			'create'      => 'direct',
-			'update'      => 'direct',
-			'instantiate' => 'direct',
-			'fill_slot'   => 'direct',
-		],
-		'propose_design' => [
-			'_always' => 'direct',
-		],
-	];
 
 	/**
 	 * Bricks service instance.
@@ -212,7 +165,8 @@ final class Router {
 			$this->bricks_service,
 			$proposal_service,
 			$this->bricks_service->get_global_class_service(),
-			$this->bricks_service->get_global_variable_service()
+			$this->bricks_service->get_global_variable_service(),
+			$this->media_service
 		);
 		$populate_content_handler = new Handlers\PopulateContentHandler( $this->bricks_service, $this->media_service );
 		$verify_handler           = new Handlers\VerifyHandler( $this->bricks_service, $require_bricks );
@@ -311,13 +265,13 @@ final class Router {
 		// Two Router-owned tools that don't fit into a handler (introspection/auth concerns).
 		$this->register_tool(
 			'get_site_info',
-			__( "Get WordPress site information including design tokens, child theme CSS, and color palette.\n\nActions: info (default), diagnose.", 'bricks-mcp' ),
+			__( "Get WordPress site information including design tokens, child theme CSS, and color palette.", 'bricks-mcp' ),
 			array(
 				'type'       => 'object',
 				'properties' => array(
 					'action' => array(
 						'type'        => 'string',
-						'enum'        => array( 'info', 'diagnose' ),
+						'enum'        => array( 'info' ),
 						'description' => __( 'Action to perform (default: info)', 'bricks-mcp' ),
 					),
 				),
@@ -443,35 +397,6 @@ final class Router {
 			);
 		}
 
-		// Prerequisite gate: block content writes unless mandatory calls have been made.
-		$tier = $this->get_operation_tier( $name, $arguments );
-		if ( null !== $tier ) {
-			$gate_result = PrerequisiteGateService::check( $tier );
-			if ( true !== $gate_result ) {
-				$missing_tools = $gate_result['missing_tools'];
-				return Response::error(
-					'bricks_mcp_prerequisites_not_met',
-					sprintf(
-						'You must call these tools before modifying content: %s. Call them now, then retry.',
-						implode( ', ', $missing_tools )
-					),
-					422,
-					[
-						'missing'   => $gate_result['missing'],
-						'satisfied' => $gate_result['satisfied'],
-					]
-				);
-			}
-		}
-
-		// Design build gate: reject section elements — sections must flow through the
-		// two-tier build_structure + populate_content pipeline for proper validation,
-		// class resolution, and design consistency.
-		$design_gate = $this->check_design_build_gate( $name, $arguments );
-		if ( null !== $design_gate ) {
-			return $design_gate;
-		}
-
 		try {
 			$result = call_user_func( $tool['handler'], $arguments );
 
@@ -483,18 +408,7 @@ final class Router {
 				return Response::tool_error( $result );
 			}
 
-			// Set prerequisite flags for gate tracking.
-			// site_context requires BOTH get_site_info and global_class:list.
-			// A non-string 'action' from the JSON body yields strict !== 'list' (never
-			// matches), so ValidationService must reject those upstream; this branch
-			// only runs on validated string values.
-			if ( 'global_class' === $name && ( $arguments['action'] ?? '' ) === 'list' ) {
-				$this->maybe_set_site_context( 'classes_done' );
-			}
-			// Note: propose_design used to set a 'design_ready' flag to gate
-			// build_from_schema's 'design' tier. Both the tool and the tier
-			// were removed in M3 (v3.31.0); the two-tier build_structure +
-			// populate_content flow needs no extra prerequisite.
+			// Prerequisite flag tracking removed — gates removed in v4.0.
 
 			return Response::success(
 				array(
@@ -513,119 +427,6 @@ final class Router {
 				500
 			);
 		}
-	}
-
-	/**
-	 * Check if a tool call is a gated content write operation.
-	 *
-	 * @param string               $name      Tool name.
-	 * @param array<string, mixed> $arguments Tool arguments.
-	 * @return string|null Tier name ('direct') or null if not gated.
-	 */
-	private function get_operation_tier( string $name, array $arguments ): ?string {
-		if ( ! isset( self::GATED_OPERATIONS[ $name ] ) ) {
-			return null;
-		}
-
-		$ops = self::GATED_OPERATIONS[ $name ];
-
-		// Tools gated unconditionally (no action routing, e.g. propose_design).
-		if ( isset( $ops['_always'] ) ) {
-			return $ops['_always'];
-		}
-
-		$action = $arguments['action'] ?? '';
-
-		// Special case: page:create and template:create are only gated when elements are provided.
-		if ( in_array( $name, [ 'page', 'template' ], true ) && 'create' === $action ) {
-			if ( empty( $arguments['elements'] ) ) {
-				return null;
-			}
-		}
-
-		return $ops[ $action ] ?? null;
-	}
-
-	/**
-	 * Design build gate: reject section elements that should use the two-tier
-	 * build_structure + populate_content pipeline.
-	 *
-	 * Checks page:append_content, page:update_content, page:create (with elements),
-	 * page:import_clipboard, and element:bulk_add. Rejects when:
-	 * - Any root element is a section (full sections must flow through
-	 *   build_structure + populate_content for proper validation, class
-	 *   resolution, and design consistency).
-	 *
-	 * Non-section elements of any count are allowed for instructed builds.
-	 * Can be bypassed with bypass_design_gate: true in arguments.
-	 *
-	 * @param string               $name      Tool name.
-	 * @param array<string, mixed> $arguments Tool arguments.
-	 * @return \WP_REST_Response|null Error response if gate triggered, null if allowed.
-	 */
-	private function check_design_build_gate( string $name, array $arguments ): ?\WP_REST_Response {
-		// Only check specific tool + action combos.
-		$gated_combos = [
-			'page'    => [ 'append_content', 'update_content', 'create', 'import_clipboard' ],
-			'element' => [ 'bulk_add' ],
-		];
-
-		if ( ! isset( $gated_combos[ $name ] ) ) {
-			return null;
-		}
-
-		$action = $arguments['action'] ?? '';
-		if ( ! in_array( $action, $gated_combos[ $name ], true ) ) {
-			return null;
-		}
-
-		// Allow bypass for intentional instructed builds.
-		if ( ! empty( $arguments['bypass_design_gate'] ) ) {
-			return null;
-		}
-
-		// Extract elements array.
-		$elements = $arguments['elements'] ?? [];
-		if ( 'import_clipboard' === $action ) {
-			$elements = $arguments['clipboard_data']['content'] ?? [];
-		}
-
-		if ( ! is_array( $elements ) || empty( $elements ) ) {
-			return null;
-		}
-
-		// Page ID for the suggested next call (if available).
-		// Guard against non-scalar post_id/page_id from malformed input — (int) cast
-		// on an array would silently collapse to 1 and put the wrong page id into the
-		// suggested-next message that the AI follows.
-		$raw_page_id = $arguments['post_id'] ?? $arguments['page_id'] ?? 0;
-		$page_id     = is_scalar( $raw_page_id ) ? (int) $raw_page_id : 0;
-		$next_target = $page_id > 0 ? sprintf( 'page_id=%d', $page_id ) : 'page_id=<your_page_id>';
-
-		// Gate: section elements must use the design build pipeline.
-		// Non-section elements of any count are allowed for instructed builds.
-		foreach ( $elements as $el ) {
-			// Guard against malformed input — an element entry that's a string/int
-			// would otherwise emit E_WARNING on subscript access AND silently bypass
-			// the design gate (no name match → no section → fallthrough).
-			if ( ! is_array( $el ) ) {
-				continue;
-			}
-			$el_name = $el['name'] ?? '';
-			if ( 'section' === $el_name ) {
-				return Response::error(
-					'bricks_mcp_use_build_pipeline',
-					sprintf(
-						/* translators: %s: Suggested next call (e.g. propose_design(page_id=42, description='...')). */
-						__( 'Section elements must be built using the two-tier build pipeline for proper validation, class resolution, and design consistency. Start: call %s to stage a design proposal, then build_structure(proposal_id) to create the element tree, then populate_content(section_id, content_map) to fill it, then verify_build to confirm. Use bypass_design_gate: true only if you have a specific reason to bypass this.', 'bricks-mcp' ),
-						sprintf( "propose_design(%s, description='<describe the section>')", $next_target )
-					),
-					422
-				);
-			}
-		}
-
-		return null;
 	}
 
 	/**
@@ -783,11 +584,6 @@ final class Router {
 	public function tool_get_site_info( array $args ): array {
 		$action = $args['action'] ?? 'info';
 
-		if ( 'diagnose' === $action ) {
-			$runner = new \BricksMCP\Admin\DiagnosticRunner();
-			$runner->register_defaults();
-			return $runner->run_all();
-		}
 
 		// Default: return site info (existing behavior).
 		$info = array(
@@ -852,65 +648,69 @@ final class Router {
 		$info['design_system_readiness'] = $design_system->analyze();
 		$info['design_system_readiness_note'] = 'Use this before building: foundation tokens, component classes, and patterns are separate readiness layers. Reuse existing resolved style_roles when confidence is high; otherwise map or generate missing component classes instead of inventing hardcoded names.';
 
-		// Pages summary: brief overview of all Bricks-enabled pages.
-		$pages_query = new \WP_Query( [
-			'post_type'      => array_values( get_post_types( [ 'public' => true ] ) ),
-			'post_status'    => 'publish',
-			'posts_per_page' => 50,
-			'meta_query'     => [
-				[
-					'key'     => BricksService::META_KEY,
-					'compare' => 'EXISTS',
+		// Pages summary: brief overview of all Bricks-enabled pages (cached 5 min).
+		$cached_summary = get_transient( 'bricks_mcp_pages_summary' );
+		if ( false !== $cached_summary && is_array( $cached_summary ) ) {
+			$info['pages_summary'] = $cached_summary;
+		} else {
+			$pages_query = new \WP_Query( [
+				'post_type'      => array_values( get_post_types( [ 'public' => true ] ) ),
+				'post_status'    => 'publish',
+				'posts_per_page' => 50,
+				'meta_query'     => [
+					[
+						'key'     => BricksService::META_KEY,
+						'compare' => 'EXISTS',
+					],
 				],
-			],
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
-		] );
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+			] );
 
-		$pages_summary = [];
-		// Guard: $pages_query->posts can be an array of IDs (fields=ids), WP_Post objects,
-		// or even arrays of both if a plugin filters the_posts. Normalize defensively.
-		$post_ids = is_array( $pages_query->posts ?? null ) ? $pages_query->posts : [];
-		foreach ( $post_ids as $post_ref ) {
-			// Resolve to integer ID regardless of shape (int, numeric string, WP_Post).
-			if ( is_object( $post_ref ) && isset( $post_ref->ID ) ) {
-				$pid = (int) $post_ref->ID;
-			} elseif ( is_numeric( $post_ref ) ) {
-				$pid = (int) $post_ref;
-			} else {
-				continue;
-			}
-			$elements = get_post_meta( $pid, BricksService::META_KEY, true );
-			$elements = is_array( $elements ) ? $elements : [];
-			$section_count = 0;
-			$section_types = [];
-			foreach ( $elements as $el ) {
-				if ( ! is_array( $el ) ) {
+			$pages_summary = [];
+			// Guard: $pages_query->posts can be an array of IDs (fields=ids), WP_Post objects,
+			// or even arrays of both if a plugin filters the_posts. Normalize defensively.
+			$post_ids = is_array( $pages_query->posts ?? null ) ? $pages_query->posts : [];
+			foreach ( $post_ids as $post_ref ) {
+				// Resolve to integer ID regardless of shape (int, numeric string, WP_Post).
+				if ( is_object( $post_ref ) && isset( $post_ref->ID ) ) {
+					$pid = (int) $post_ref->ID;
+				} elseif ( is_numeric( $post_ref ) ) {
+					$pid = (int) $post_ref;
+				} else {
 					continue;
 				}
-				if ( ( $el['name'] ?? '' ) === 'section' && BricksCore::is_root_element( $el ) ) {
-					$section_count++;
-					$settings = is_array( $el['settings'] ?? null ) ? $el['settings'] : [];
-					$label    = $settings['label'] ?? $el['label'] ?? '';
-					if ( $label ) {
-						$section_types[] = $label;
+				$elements = get_post_meta( $pid, BricksService::META_KEY, true );
+				$elements = is_array( $elements ) ? $elements : [];
+				$section_count = 0;
+				$section_types = [];
+				foreach ( $elements as $el ) {
+					if ( ! is_array( $el ) ) {
+						continue;
+					}
+					if ( ( $el['name'] ?? '' ) === 'section' && BricksCore::is_root_element( $el ) ) {
+						$section_count++;
+						$settings = is_array( $el['settings'] ?? null ) ? $el['settings'] : [];
+						$label    = $settings['label'] ?? $el['label'] ?? '';
+						if ( $label ) {
+							$section_types[] = $label;
+						}
 					}
 				}
+
+				$post_obj        = get_post( $pid );
+				$pages_summary[] = [
+					'id'       => $pid,
+					'title'    => $post_obj ? $post_obj->post_title : '',
+					'slug'     => $post_obj ? $post_obj->post_name : '',
+					'sections' => $section_count,
+					'elements' => count( $elements ),
+					'summary'  => $section_types ? implode( ', ', $section_types ) : 'No labeled sections',
+				];
 			}
-
-			$post_obj        = get_post( $pid );
-			$pages_summary[] = [
-				'id'       => $pid,
-				'title'    => $post_obj ? $post_obj->post_title : '',
-				'slug'     => $post_obj ? $post_obj->post_name : '',
-				'sections' => $section_count,
-				'elements' => count( $elements ),
-				'summary'  => $section_types ? implode( ', ', $section_types ) : 'No labeled sections',
-			];
+			$info['pages_summary'] = $pages_summary;
+			set_transient( 'bricks_mcp_pages_summary', $pages_summary, 5 * MINUTE_IN_SECONDS );
 		}
-		$info['pages_summary'] = $pages_summary;
-
-
 
 		// Include AI notes so they are visible on the first mandatory call.
 		$ai_notes = $this->bricks_service->get_notes();
@@ -939,8 +739,6 @@ final class Router {
 				$info['business_brief_note'] = 'Business context from the site owner. Use this to generate relevant content instead of placeholder text.';
 			}
 		}
-
-		$this->maybe_set_site_context( 'site_info_done' );
 
 		return $info;
 	}
@@ -974,36 +772,6 @@ final class Router {
 				$this->handlers[ $key ]->register( $this->registry );
 			}
 		}
-	}
-
-	/**
-	 * Track sub-conditions for site_context and set the flag when both are met.
-	 *
-	 * site_context requires BOTH get_site_info and global_class:list to have been
-	 * called. This method tracks each sub-condition in the same transient and sets
-	 * the composite flag once both are satisfied.
-	 *
-	 * @param string $sub_key One of 'site_info_done', 'classes_done'.
-	 */
-	private function maybe_set_site_context( string $sub_key ): void {
-		$transient_key = self::PREREQS_TRANSIENT_PREFIX . get_current_user_id();
-		$flags         = get_transient( $transient_key );
-		if ( ! is_array( $flags ) ) {
-			$flags = [];
-		}
-
-		$flags[ $sub_key ] = true;
-
-		// Set the composite flag when both sub-conditions are met.
-		if ( ! empty( $flags['site_info_done'] ) && ! empty( $flags['classes_done'] ) ) {
-			$flags['site_context'] = true;
-		}
-
-		// Floor TTL at 60s: a misconfigured filter that returns 0 would store forever
-		// on some cache backends and evaporate immediately on others — neither is
-		// desirable for prerequisite tracking.
-		$ttl = max( 60, (int) apply_filters( 'bricks_mcp_prerequisite_ttl', 7200 ) );
-		set_transient( $transient_key, $flags, $ttl );
 	}
 
 	/**

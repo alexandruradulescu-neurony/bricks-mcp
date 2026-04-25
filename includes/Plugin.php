@@ -197,9 +197,6 @@ final class Plugin {
 		// Initialize update checker (unconditional — fires on admin and cron).
 		$this->update_checker = new Updates\UpdateChecker();
 		$this->update_checker->init();
-
-		$site_health = new Admin\SiteHealth();
-		$site_health->init();
 	}
 
 	/**

@@ -150,7 +150,6 @@ final class Activator {
 	private static function set_default_options(): void {
 		$defaults = [
 			BricksCore::SETTING_ENABLED      => true,
-			BricksCore::SETTING_REQUIRE_AUTH => true,
 		];
 
 		$existing = get_option( BricksCore::OPTION_SETTINGS, [] );

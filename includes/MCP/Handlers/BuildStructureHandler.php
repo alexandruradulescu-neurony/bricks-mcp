@@ -1,10 +1,10 @@
 <?php
 /**
- * Build structure handler (v3.28.0).
+ * Build structure handler (v4.0).
  *
- * Phase 1 of the two-tier build pipeline. Takes a structure-only schema,
- * emits elements with classes + role_map, returns section_id for phase 2
- * (populate_content).
+ * Unified build tool: accepts a complete schema with content inline.
+ * Validates, resolves classes, generates settings, writes elements,
+ * runs media sideload, and enforces content contract — all in one call.
  *
  * @package BricksMCP
  * @license GPL-2.0-or-later
@@ -16,6 +16,7 @@ namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\ToolRegistry;
 use BricksMCP\MCP\Services\ContentContractService;
+use BricksMCP\MCP\Services\MediaService;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -23,36 +24,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class BuildStructureHandler {
 
-	/**
-	 * Content fields forbidden in build_structure schemas.
-	 *
-	 * Excluded deliberately:
-	 *   - label: Bricks structural metadata (section/container organization), not user-facing content
-	 *   - title: commonly used as tooltip/aria on interactive elements, not only content
-	 *   - description: same
-	 *
-	 * Content generation belongs in populate_content; these rejected fields are the ones
-	 * the suggested_schema from propose_design never emits but user-modified schemas might.
-	 */
-	private const FORBIDDEN_CONTENT_FIELDS = [
-		'content', 'content_example', 'text',
-		'link', 'href',
-		'icon', 'image', 'src', 'url',
-		'placeholder',
-	];
-
-	/**
-	 * Top-level keys that must be skipped by the content-field scanner.
-	 * These are schema-routing / structural metadata, not element content.
-	 */
-	private const SCAN_SKIP_TOP_KEYS = [ 'target', 'design_context', 'intent' ];
-
 	public function __construct(
 		private BuildHandler $delegate,
 		private ?\BricksMCP\MCP\Services\BricksService $bricks = null,
 		private ?\BricksMCP\MCP\Services\ProposalService $proposal_service = null,
 		private ?\BricksMCP\MCP\Services\GlobalClassService $classes = null,
-		private ?\BricksMCP\MCP\Services\GlobalVariableService $variables = null
+		private ?\BricksMCP\MCP\Services\GlobalVariableService $variables = null,
+		private ?MediaService $media = null
 	) {}
 
 	/**
@@ -65,18 +43,6 @@ final class BuildStructureHandler {
 		$schema = $args['schema'] ?? [];
 		if ( ! is_array( $schema ) || empty( $schema ) ) {
 			return new \WP_Error( 'missing_schema', 'schema is required.' );
-		}
-
-		$offending = $this->scan_for_content_fields( $schema );
-		if ( ! empty( $offending ) ) {
-			return new \WP_Error(
-				'content_in_structure',
-				'build_structure schema must not contain content fields. Use populate_content after.',
-				[
-					'offending_paths' => $offending,
-					'next_step'       => 'Remove content fields from schema. Pass content separately via populate_content with section_id from this response.',
-				]
-			);
 		}
 
 		// v3.28.6: tag each element carrying a `role` with `label = role` so
@@ -166,6 +132,8 @@ final class BuildStructureHandler {
 		$section_id      = null;
 		$role_map        = [];
 		$role_collisions = [];
+		$media_errors    = [];
+		$final_elements  = null; // Reused for content_contract analysis (avoids redundant DB read).
 		if ( $page_id > 0 && $this->bricks !== null ) {
 			$post_elements = $this->bricks->get_elements( $page_id );
 			if ( is_array( $post_elements ) ) {
@@ -191,6 +159,18 @@ final class BuildStructureHandler {
 						$role_map[ $label ] = $id;
 					}
 				}
+
+				// Media sideload pass: resolve unsplash:query → attachment ID in image elements.
+				if ( $this->media !== null ) {
+					$post_elements = $this->sideload_media( $post_elements, $media_errors );
+					$save_result   = $this->bricks->save_elements( $page_id, $post_elements );
+					if ( is_wp_error( $save_result ) ) {
+						$media_errors[] = [ 'error' => $save_result->get_error_code(), 'query' => 'post_build_save' ];
+					}
+				}
+
+				// Keep reference for content_contract analysis (avoids redundant DB read).
+				$final_elements = $post_elements;
 			}
 		}
 
@@ -198,16 +178,14 @@ final class BuildStructureHandler {
 			$result,
 			[
 				'role_map'  => $role_map,
-				'next_step' => 'Call populate_content with section_id + content_map keyed by role. Use content_contract.required_roles when present; populate_content rejects missing required roles unless allow_partial=true.',
+				'next_step' => 'Build complete. Content is inline in the schema. Use populate_content(section_id, content_map) only for post-build content updates.',
 			]
 		);
 		if ( $section_id !== null ) {
 			$response['section_id'] = $section_id;
-			if ( $page_id > 0 && $this->bricks !== null ) {
-				$post_elements = $this->bricks->get_elements( $page_id );
-				if ( is_array( $post_elements ) ) {
-					$response['content_contract'] = ( new ContentContractService() )->analyze( $post_elements, $section_id );
-				}
+			// Reuse already-loaded elements instead of re-reading from DB.
+			if ( null !== $final_elements && is_array( $final_elements ) ) {
+				$response['content_contract'] = ( new ContentContractService() )->analyze( $final_elements, $section_id );
 			}
 		}
 		if ( ! empty( $role_collisions ) ) {
@@ -215,7 +193,7 @@ final class BuildStructureHandler {
 				static fn( array $ids ): array => array_values( array_unique( $ids ) ),
 				$role_collisions
 			);
-			$response['next_step'] = 'Call populate_content with section_id + content_map keyed by role. This build has role_collisions; use #element-id keys for collided roles, or rebuild with unique roles. populate_content rejects ambiguous role keys unless you target exact IDs.';
+			$response['next_step'] = 'Build has role_collisions; use #element-id keys in populate_content for collided roles, or rebuild with unique roles.';
 		}
 		if ( ! empty( $provisioned_classes ) ) {
 			$response['classes_provisioned_from_pattern'] = $provisioned_classes;
@@ -225,6 +203,9 @@ final class BuildStructureHandler {
 		}
 		if ( ! empty( $provisioning_errors ) ) {
 			$response['provisioning_warnings'] = $provisioning_errors;
+		}
+		if ( ! empty( $media_errors ) ) {
+			$response['media_errors'] = $media_errors;
 		}
 		return $response;
 	}
@@ -250,28 +231,56 @@ final class BuildStructureHandler {
 	}
 
 	/**
-	 * Recursively scan a schema node for forbidden content field keys.
+	 * Walk elements and resolve unsplash:query → attachment ID in image elements.
 	 *
-	 * @param array<string, mixed> $node  Schema node to scan.
-	 * @param string               $path  Dot-separated path prefix for reporting.
-	 * @return list<string> Dot-separated paths of offending keys.
+	 * @param array<int, array<string, mixed>> $elements    Element tree.
+	 * @param array<int, array<string, string>> &$media_errors Error accumulator.
+	 * @return array<int, array<string, mixed>> Modified element tree.
 	 */
-	private function scan_for_content_fields( array $node, string $path = '' ): array {
-		$offending = [];
-		foreach ( $node as $key => $value ) {
-			// Skip schema-routing / structural metadata at top level.
-			if ( $path === '' && in_array( $key, self::SCAN_SKIP_TOP_KEYS, true ) ) {
-				continue;
+	private function sideload_media( array $elements, array &$media_errors ): array {
+		foreach ( $elements as $idx => $el ) {
+			if ( ( $el['name'] ?? '' ) === 'image' ) {
+				$settings = $el['settings'] ?? [];
+				$image    = $settings['image'] ?? null;
+				$url      = is_array( $image ) ? ( $image['url'] ?? '' ) : '';
+
+				if ( is_string( $url ) && str_starts_with( $url, 'unsplash:' ) ) {
+					$query   = substr( $url, 9 );
+					$results = $this->media->search_photos( $query, 1 );
+					if ( is_wp_error( $results ) ) {
+						$media_errors[] = [ 'error' => $results->get_error_code(), 'query' => $query ];
+					} elseif ( ! empty( $results['results'] ) ) {
+						$photo       = $results['results'][0];
+						$photo_url   = $photo['urls']['regular'] ?? $photo['urls']['full'] ?? '';
+						$alt_text    = $photo['description'] ?? '';
+						$unsplash_id = $photo['id'] ?? null;
+						$dl_location = $photo['links']['download_location'] ?? null;
+						if ( $photo_url !== '' ) {
+							$sideloaded = $this->media->sideload_from_url( $photo_url, $alt_text, '', $unsplash_id, $dl_location );
+							if ( is_wp_error( $sideloaded ) ) {
+								$media_errors[] = [ 'error' => $sideloaded->get_error_code(), 'query' => $query ];
+								// Clear invalid unsplash URL so Bricks doesn't try to render it.
+								$elements[ $idx ][ 'settings' ][ 'image' ] = [];
+							} else {
+								$elements[ $idx ]['settings']['image']['id']    = (int) $sideloaded['attachment_id'];
+								$elements[ $idx ]['settings']['image']['url']   = '';
+								$elements[ $idx ]['settings']['image']['size'] = 'full';
+							}
+						} else {
+							$media_errors[] = [ 'error' => 'unsplash_no_url', 'query' => $query ];
+						}
+					} else {
+						$media_errors[] = [ 'error' => 'unsplash_no_results', 'query' => $query ];
+					}
+				}
 			}
-			$sub_path = $path === '' ? (string) $key : $path . '.' . $key;
-			if ( in_array( $key, self::FORBIDDEN_CONTENT_FIELDS, true ) ) {
-				$offending[] = $sub_path;
-			}
-			if ( is_array( $value ) ) {
-				$offending = array_merge( $offending, $this->scan_for_content_fields( $value, $sub_path ) );
+
+			// Recurse into children.
+			if ( ! empty( $el['children'] ) && is_array( $el['children'] ) ) {
+				$elements[ $idx ]['children'] = $this->sideload_media( $el['children'], $media_errors );
 			}
 		}
-		return $offending;
+		return $elements;
 	}
 
 	/**
@@ -303,50 +312,6 @@ final class BuildStructureHandler {
 		}
 		return $node;
 	}
-
-	/**
-	 * Extract a role_map from the input schema.
-	 *
-	 * BuildHandler::handle() does not return element IDs or role keys in its
-	 * non-dry-run response (only counts + tree_summary). Role extraction must
-	 * therefore happen against the input schema nodes, using class_intent as
-	 * the stable role identifier that populate_content can reference.
-	 *
-	 * Returns an array keyed by class_intent (or label when class_intent is
-	 * absent) with null values; populate_content resolves the actual element
-	 * IDs by querying the page after building.
-	 *
-	 * @param array<string, mixed> $schema Full design schema.
-	 * @return array<string, null> role => null placeholder map.
-	 */
-	private function extract_role_map_from_schema( array $schema ): array {
-		$map = [];
-		foreach ( $schema['sections'] ?? [] as $section ) {
-			if ( ! empty( $section['structure'] ) && is_array( $section['structure'] ) ) {
-				$this->collect_roles_recursive( $section['structure'], $map );
-			}
-		}
-		return $map;
-	}
-
-	/**
-	 * Walk a structure node tree and collect every class_intent (or label).
-	 *
-	 * @param array<string, mixed>  $node Schema structure node.
-	 * @param array<string, null>  &$map  Role map accumulator (passed by reference).
-	 */
-	private function collect_roles_recursive( array $node, array &$map ): void {
-		$role = $node['class_intent'] ?? $node['role'] ?? null;
-		if ( is_string( $role ) && $role !== '' ) {
-			$map[ $role ] = null;
-		}
-		foreach ( $node['children'] ?? [] as $child ) {
-			if ( is_array( $child ) ) {
-				$this->collect_roles_recursive( $child, $map );
-			}
-		}
-	}
-
 	/**
 	 * Register the build_structure tool with the MCP tool registry.
 	 *
@@ -355,7 +320,7 @@ final class BuildStructureHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'build_structure',
-			__( "Phase 1 of two-tier build. Takes structure-only schema (no content). Returns section_id + role_map + content_contract + class creation summary. Call populate_content next.", 'bricks-mcp' ),
+			__( "Build a section from a complete schema (structure + content inline). Validates, resolves classes, generates settings, writes elements, runs media sideload for unsplash: URLs, and returns section_id + role_map + content_contract. Content (text, links, images) goes directly in element settings — no separate populate_content step needed for initial builds. Use populate_content only for post-build content updates.", 'bricks-mcp' ),
 			[
 				'type'       => 'object',
 				'properties' => [
@@ -365,7 +330,7 @@ final class BuildStructureHandler {
 					],
 					'schema'      => [
 						'type'        => 'object',
-						'description' => __( 'Structure-only schema. Content fields (content, label, link, etc.) forbidden.', 'bricks-mcp' ),
+						'description' => __( 'Complete schema with structure + content inline. Each element can have content, link, icon, src fields in its settings.', 'bricks-mcp' ),
 					],
 				],
 				'required'   => [ 'proposal_id', 'schema' ],

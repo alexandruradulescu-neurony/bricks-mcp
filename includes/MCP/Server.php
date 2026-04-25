@@ -281,43 +281,24 @@ final class Server {
 			);
 		}
 
-		// Check if authentication is required.
-		if ( ! empty( $settings[ BricksCore::SETTING_REQUIRE_AUTH ] ) ) {
-			if ( ! is_user_logged_in() ) {
-				return new \WP_Error(
-					'bricks_mcp_unauthorized',
-					__( 'Authentication is required to access the MCP server.', 'bricks-mcp' ),
-					[ 'status' => 401 ]
-				);
-			}
-
-			// Check user capabilities.
-			if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
-				return new \WP_Error(
-					'bricks_mcp_forbidden',
-					__( 'You do not have permission to access the MCP server.', 'bricks-mcp' ),
-					[ 'status' => 403 ]
-				);
-			}
-		} else {
-			// Even when require_auth is disabled, write operations always need authentication.
-			if ( 'GET' !== $request->get_method() && ! is_user_logged_in() ) {
-				return new \WP_Error(
-					'bricks_mcp_unauthorized',
-					__( 'Authentication is required for write operations.', 'bricks-mcp' ),
-					[ 'status' => 401 ]
-				);
-			}
-
-			if ( is_user_logged_in() && ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
-				return new \WP_Error(
-					'bricks_mcp_forbidden',
-					__( 'You do not have permission to access the MCP server.', 'bricks-mcp' ),
-					array( 'status' => 403 )
-				);
-			}
+		// MCP only uses POST for all tool calls (including read-only tools).
+		// Authentication is mandatory for all MCP endpoints.
+		if ( ! is_user_logged_in() ) {
+			return new \WP_Error(
+				'bricks_mcp_unauthorized',
+				__( 'Authentication is required to access the MCP server.', 'bricks-mcp' ),
+				[ 'status' => 401 ]
+			);
 		}
 
+		// Check user capabilities.
+		if ( ! current_user_can( BricksCore::REQUIRED_CAPABILITY ) ) {
+			return new \WP_Error(
+				'bricks_mcp_forbidden',
+				__( 'You do not have permission to access the MCP server.', 'bricks-mcp' ),
+				[ 'status' => 403 ]
+			);
+		}
 		// Rate limit all requests (authenticated by user ID, anonymous by IP).
 		// Resolve client IP with proxy awareness: X-Forwarded-For / CF-Connecting-IP
 		// headers are consulted ONLY when a bricks_mcp_trust_proxy filter returns true

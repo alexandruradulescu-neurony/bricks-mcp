@@ -105,7 +105,7 @@ class BricksCore {
 	/**
 	 * Shared admin AJAX nonce action.
 	 *
-	 * Used by Settings, PatternsAdmin, and DiagnosticsAdmin for
+	 * Used by Settings and PatternsAdmin for
 	 * wp_create_nonce() / check_ajax_referer() calls. Centralized to
 	 * avoid drift between the producer (wp_create_nonce) and each
 	 * consumer (check_ajax_referer) — a typo in one site breaks auth
@@ -133,7 +133,6 @@ class BricksCore {
 	 * consumer reference the same symbol.
 	 */
 	public const SETTING_ENABLED      = 'enabled';
-	public const SETTING_REQUIRE_AUTH = 'require_auth';
 
 	/**
 	 * Maximum items per batch across bulk operations (element:bulk_add, bulk_update,

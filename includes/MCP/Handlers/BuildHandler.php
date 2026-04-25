@@ -129,9 +129,9 @@ final class BuildHandler {
 		if ( empty( $args['_internal'] ) ) {
 			return new \WP_Error(
 				'tool_deprecated',
-				'build_from_schema replaced by build_structure + populate_content in v3.28.0.',
+				'build_from_schema replaced by build_structure in v3.28.0. Use build_structure(proposal_id, schema) which accepts content inline.',
 				[
-					'next_step'           => '1) Call build_structure (strip content fields). 2) Call populate_content with section_id + content_map keyed by role.',
+					'next_step'           => 'Call build_structure with proposal_id + schema (content goes inline in element settings).',
 					'migration_guide_url' => 'https://github.com/alexandruradulescu-neurony/bricks-mcp/blob/main/MIGRATION-v3.28.md',
 				]
 			);
@@ -393,9 +393,6 @@ final class BuildHandler {
 			];
 		}
 
-		// Consume the proposal (one-time use) — all validation passed, about to write.
-		$this->proposal_service->consume( $proposal_id );
-
 		// Step 10: Auto-snapshot before writing for safety.
 		$snapshot = $this->bricks_service->snapshot_page( $page_id, 'Pre build_from_schema' );
 		$snapshot_id = is_array( $snapshot ) ? ( $snapshot['snapshot_id'] ?? null ) : null;
@@ -441,6 +438,9 @@ final class BuildHandler {
 				]
 			);
 		}
+
+		// Consume the proposal (one-time use) — write succeeded, safe to consume.
+		$this->proposal_service->consume( $proposal_id );
 
 		$response = [
 			'success'          => true,

@@ -95,11 +95,6 @@ final class Settings {
 	private PatternsAdmin $patterns_admin;
 
 	/**
-	 * Diagnostics admin handler.
-	 */
-	private DiagnosticsAdmin $diagnostics_admin;
-
-	/**
 	 * Initialize admin settings.
 	 *
 	 * @return void
@@ -110,9 +105,6 @@ final class Settings {
 
 		$this->patterns_admin = new PatternsAdmin();
 		$this->patterns_admin->init();
-
-		$this->diagnostics_admin = new DiagnosticsAdmin();
-		$this->diagnostics_admin->init();
 
 		add_action( 'admin_menu', [ $this, 'add_settings_page' ], 99 );
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
@@ -172,15 +164,6 @@ final class Settings {
 			'bricks_mcp_server'
 		);
 
-		add_settings_field(
-			'require_auth',
-			__( 'Require Authentication', 'bricks-mcp' ),
-			[ $this, 'render_require_auth_field' ],
-			self::PAGE_SLUG . '_server',
-			'bricks_mcp_server'
-		);
-
-		// Advanced section — rate limits, URLs, safety.
 		add_settings_section(
 			'bricks_mcp_advanced',
 			__( 'Advanced', 'bricks-mcp' ),
@@ -247,7 +230,6 @@ final class Settings {
 	private function get_defaults(): array {
 		return [
 			'enabled'           => true,
-			'require_auth'      => true,
 			'custom_base_url'   => '',
 			'dangerous_actions' => false,
 			'rate_limit_rpm'    => self::RATE_LIMIT_RPM_DEFAULT,
@@ -266,7 +248,6 @@ final class Settings {
 		$sanitized = [];
 
 		$sanitized['enabled']         = ! empty( $input['enabled'] );
-		$sanitized['require_auth']    = ! empty( $input['require_auth'] );
 		$sanitized['custom_base_url'] = isset( $input['custom_base_url'] )
 			? esc_url_raw( trim( $input['custom_base_url'] ) )
 			: '';
@@ -327,7 +308,7 @@ final class Settings {
 			}
 			if ( $has_issues ) {
 				echo '<div class="notice notice-warning is-dismissible"><p><strong>' . esc_html__( 'Bricks MCP: Some configuration issues were detected during activation.', 'bricks-mcp' ) . '</strong> ';
-				echo esc_html__( 'Click "Run Diagnostics" in the Diagnostics tab for details and fix instructions.', 'bricks-mcp' ) . '</p></div>';
+				echo esc_html__( 'Check the plugin settings for configuration issues.', 'bricks-mcp' ) . '</p></div>';
 			}
 		}
 
@@ -351,9 +332,6 @@ final class Settings {
 				<a href="?page=bricks-mcp&tab=design-system" class="nav-tab <?php echo 'design-system' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Design System', 'bricks-mcp' ); ?>
 				</a>
-				<a href="?page=bricks-mcp&tab=diagnostics" class="nav-tab <?php echo 'diagnostics' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'System Health', 'bricks-mcp' ); ?>
-				</a>
 			</nav>
 
 			<div class="bricks-mcp-tab-content">
@@ -370,9 +348,6 @@ final class Settings {
 					break;
 				case 'connection':
 					$this->render_tab_connection();
-					break;
-				case 'diagnostics':
-					$this->diagnostics_admin->render();
 					break;
 			}
 			?>
@@ -750,25 +725,6 @@ final class Settings {
 		</p>
 		<?php
 	}
-
-	/**
-	 * Render require authentication field.
-	 *
-	 * @return void
-	 */
-	public function render_require_auth_field(): void {
-		$settings = get_option( self::OPTION_NAME, $this->get_defaults() );
-		?>
-		<label for="bricks-mcp-require-auth">
-			<input type="checkbox" id="bricks-mcp-require-auth" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[require_auth]" value="1" <?php checked( ! empty( $settings[ BricksCore::SETTING_REQUIRE_AUTH ] ) ); ?>>
-			<?php esc_html_e( 'Require user authentication for MCP endpoints', 'bricks-mcp' ); ?>
-		</label>
-		<p class="description">
-			<?php esc_html_e( 'When enabled, only authenticated users with manage_options capability can access the MCP server.', 'bricks-mcp' ); ?>
-		</p>
-		<?php
-	}
-
 	/**
 	 * Render custom base URL field.
 	 *
@@ -938,9 +894,6 @@ final class Settings {
 				break;
 			case 'patterns':
 				$this->patterns_admin->enqueue_assets();
-				break;
-			case 'diagnostics':
-				$this->diagnostics_admin->enqueue_assets();
 				break;
 		}
 	}

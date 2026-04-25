@@ -600,81 +600,81 @@ final class StreamableHttpHandler {
 	private function generate_dynamic_instructions(): string {
 		$site_name = get_bloginfo( 'name' );
 
-		// Count pages and global classes.
-		$page_count  = 0;
-		$class_count = 0;
+		// Site context (page count, class count, patterns) — cached 10 min.
+		$site_context = get_transient( 'bricks_mcp_site_context' );
+		if ( false === $site_context || ! is_string( $site_context ) ) {
+			$pages_query = new \WP_Query( [
+				'post_type'      => array_values( get_post_types( [ 'public' => true ] ) ),
+				'post_status'    => 'publish',
+				'posts_per_page' => 20,
+				'meta_query'     => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					[ 'key' => BricksService::META_KEY, 'compare' => 'EXISTS' ],
+				],
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+			] );
+			$page_count = count( $pages_query->posts );
 
-		$pages_query = new \WP_Query( [
-			'post_type'      => array_values( get_post_types( [ 'public' => true ] ) ),
-			'post_status'    => 'publish',
-			'posts_per_page' => 100,
-			'meta_query'     => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				[ 'key' => BricksService::META_KEY, 'compare' => 'EXISTS' ],
-			],
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
-		] );
-		$page_count = count( $pages_query->posts );
+			$global_classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
+			$class_count    = is_array( $global_classes ) ? count( $global_classes ) : 0;
 
-		$global_classes = get_option( BricksCore::OPTION_GLOBAL_CLASSES, [] );
-		$class_count    = is_array( $global_classes ) ? count( $global_classes ) : 0;
-
-		// Detect design system from class naming.
-		$design_system = '';
-		if ( is_array( $global_classes ) ) {
-			foreach ( $global_classes as $gc ) {
-				$name = $gc['name'] ?? '';
-				if ( str_starts_with( $name, 'brxw-' ) ) {
-					$design_system = 'Auron wireframe';
-					break;
+			// Detect design system from class naming.
+			$design_system = '';
+			if ( is_array( $global_classes ) ) {
+				foreach ( $global_classes as $gc ) {
+					$name = $gc['name'] ?? '';
+					if ( str_starts_with( $name, 'brxw-' ) ) {
+						$design_system = 'Auron wireframe';
+						break;
+					}
 				}
 			}
-		}
 
-		// Detect recurring patterns.
-		$patterns = [];
-		// Guard: $pages_query->posts can be array of IDs, WP_Post objects, or mixed
-		// after plugin filters. Normalize defensively.
-		$post_refs = is_array( $pages_query->posts ?? null ) ? $pages_query->posts : [];
-		foreach ( $post_refs as $post_ref ) {
-			if ( is_object( $post_ref ) && isset( $post_ref->ID ) ) {
-				$pid = (int) $post_ref->ID;
-			} elseif ( is_numeric( $post_ref ) ) {
-				$pid = (int) $post_ref;
-			} else {
-				continue;
-			}
-			$raw = get_post_meta( $pid, BricksService::META_KEY, true );
-			if ( ! is_array( $raw ) ) {
-				continue;
-			}
-			foreach ( $raw as $el ) {
-				if ( ! is_array( $el ) ) {
+			// Detect recurring patterns.
+			$patterns = [];
+			$post_refs = is_array( $pages_query->posts ?? null ) ? $pages_query->posts : [];
+			foreach ( $post_refs as $post_ref ) {
+				if ( is_object( $post_ref ) && isset( $post_ref->ID ) ) {
+					$pid = (int) $post_ref->ID;
+				} elseif ( is_numeric( $post_ref ) ) {
+					$pid = (int) $post_ref;
+				} else {
 					continue;
 				}
-				if ( 'section' !== ( $el['name'] ?? '' ) || ! BricksCore::is_root_element( $el ) ) {
+				$raw = get_post_meta( $pid, BricksService::META_KEY, true );
+				if ( ! is_array( $raw ) ) {
 					continue;
 				}
-				$settings = is_array( $el['settings'] ?? null ) ? $el['settings'] : [];
-				$label    = $settings['label'] ?? $el['label'] ?? '';
-				if ( $label && ! in_array( $label, $patterns, true ) ) {
-					$patterns[] = $label;
+				foreach ( $raw as $el ) {
+					if ( ! is_array( $el ) ) {
+						continue;
+					}
+					if ( 'section' !== ( $el['name'] ?? '' ) || ! BricksCore::is_root_element( $el ) ) {
+						continue;
+					}
+					$settings = is_array( $el['settings'] ?? null ) ? $el['settings'] : [];
+					$label    = $settings['label'] ?? $el['label'] ?? '';
+					if ( $label && ! in_array( $label, $patterns, true ) ) {
+						$patterns[] = $label;
+					}
 				}
 			}
-		}
 
-		// Build site context line.
-		$context_parts = [];
-		$context_parts[] = sprintf( 'Site "%s"', $site_name );
-		$context_parts[] = sprintf( '%d Bricks page%s', $page_count, 1 === $page_count ? '' : 's' );
-		$context_parts[] = sprintf( '%d global class%s', $class_count, 1 === $class_count ? '' : 'es' );
-		if ( $design_system ) {
-			$context_parts[] = $design_system . ' design system';
-		}
-		$site_context = implode( ', ', $context_parts ) . '.';
+			// Build site context line.
+			$context_parts = [];
+			$context_parts[] = sprintf( 'Site "%s"', $site_name );
+			$context_parts[] = sprintf( '%d Bricks page%s', $page_count, 1 === $page_count ? '' : 's' );
+			$context_parts[] = sprintf( '%d global class%s', $class_count, 1 === $class_count ? '' : 'es' );
+			if ( $design_system ) {
+				$context_parts[] = $design_system . ' design system';
+			}
+			$site_context = implode( ', ', $context_parts ) . '.';
 
-		if ( ! empty( $patterns ) ) {
-			$site_context .= ' Section patterns found: ' . implode( ', ', array_slice( $patterns, 0, 8 ) ) . '.';
+			if ( ! empty( $patterns ) ) {
+				$site_context .= ' Section patterns found: ' . implode( ', ', array_slice( $patterns, 0, 8 ) ) . '.';
+			}
+
+			set_transient( 'bricks_mcp_site_context', $site_context, 10 * MINUTE_IN_SECONDS );
 		}
 
 		// Load AI notes to embed directly in instructions.
@@ -700,29 +700,18 @@ final class StreamableHttpHandler {
 			. "   Signals: \"add a section with\", \"insert a heading and two columns\", \"put a form here\"\n"
 			. "   Prerequisites: get_site_info + global_class:list\n"
 			. "   Call bricks:get_element_schemas(elements='heading,slider-nested,image') to batch-fetch only the element schemas you need (max 20). More efficient than fetching all.\n\n"
-			. "3. DESIGN BUILD → 4-step flow (ALL steps required, server-enforced):\n\n"
-			. "   Step 1 — DISCOVER: Call propose_design(page_id, description) WITHOUT design_plan.\n"
-			. "   You receive: site context, available element types with PURPOSE descriptions, layouts, classes, variables, briefs.\n"
-			. "   No proposal_id is returned — you CANNOT skip to building.\n\n"
-			. "   Step 2 — DESIGN: Think as a designer. Using the discovery data, decide:\n"
-			. "   - section_type (hero, features, pricing, cta, testimonials, split, generic)\n"
-			. "   - layout (centered, split-60-40, split-50-50, grid-2, grid-3, grid-4)\n"
-			. "   - background (dark or light)\n"
-			. "   - elements: list each element with type, role, and content_hint\n"
-			. "   - patterns: for repeating elements (cards, testimonials, etc.)\n"
-			. "   Then call propose_design again WITH your design_plan object.\n"
-			. "   You receive: proposal_id + suggested_schema built from YOUR decisions.\n\n"
-			. "   Step 3 — STRUCTURE: Call build_structure(proposal_id) to create the element tree from the suggested_schema. Do NOT modify structure or style_overrides.\n"
-			. "   Step 4 — POPULATE: Call populate_content(section_id, content_map) with content keyed by role to fill the tree with real text/media.\n"
-			. "   Step 5 — VERIFY: Call verify_build(page_id) to confirm the result matches your design intent.\n"
-			. "   Compare type_counts and classes_used against your design_plan.\n\n"
-			. "   Signals: \"design a\", \"create a page for\", \"build me a\", \"make a services section\", \"redesign the\"\n"
-			. "   Prerequisites: get_site_info + global_class:list + global_variable:list\n\n"
+			. "3. DESIGN BUILD → propose_design (optional) + build_structure:\n\n"
+			. "   Step 1 — PROPOSE (optional): Call propose_design(page_id, description) for complex designs.\n"
+			. "   You receive: proposal_id + suggested_schema + site context.\n"
+			. "   For simple additions, skip propose_design and use build_structure directly.\n\n"
+			. "   Step 2 — BUILD: Call build_structure(proposal_id, schema) to create the section.\n"
+			. "   Content (text, links, images) goes inline in element settings — no separate populate step needed.\n"
+			. "   build_structure validates, resolves classes, generates settings, writes elements, and runs media sideload.\n\n"
+			. "   Step 3 — VERIFY (optional): Call verify_build(page_id) to confirm the result.\n\n"
+			. "   Signals: \"design a\", \"create a page for\", \"build me a\", \"make a services section\", \"redesign the\"\n\n"
 			. "ENFORCEMENT:\n"
-			. "- Prerequisites are server-enforced per workflow — write operations REJECTED if skipped.\n"
-			. "- Design build gate: append_content, bulk_add, and create with SECTION elements will be REJECTED — use build_structure + populate_content instead. Non-section elements are allowed for instructed builds.\n"
-			. "- build_structure requires a valid proposal_id from the PROPOSAL phase (not discovery).\n"
-			. "- Destructive actions (delete, replace) require token-based confirmation.\n\n"
+			. "- Destructive actions (delete, replace) require token-based confirmation.\n"
+			. "- build_structure requires a valid proposal_id from propose_design.\n\n"
 			. "KNOWLEDGE: For domain-specific guidance, call bricks:get_knowledge(domain). "
 			. "Available domains: " . implode( ', ', \BricksMCP\MCP\Handlers\BricksToolHandler::discover_knowledge_domains() ) . ". "
 			. "Call without domain to list all. Key domains: query-loops (pagination, nested loops), templates (conditions, scoring), global-classes (IDs vs names, style shape), forms (18 field types, 7 actions), animations (interactions, parallax).\n\n"

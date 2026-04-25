@@ -174,19 +174,13 @@ final class PageLayoutService {
 				'background'   => $background,
 				'elements'     => self::ELEMENT_SKELETONS[ $section_type ] ?? self::ELEMENT_SKELETONS['generic'],
 			];
-			$composed = ( new DesignPlanCompositionService() )->compose( $design_plan );
-			$design_plan = $composed['design_plan'];
 
 			$section_entry = [
 				'order'        => $order,
 				'section_type' => $section_type,
 				'design_plan'  => $design_plan,
 				'rationale'    => $defaults['rationale'],
-				'composition_family' => $composed['composition_family'] ?? 'content_stack',
 			];
-			if ( ! empty( $composed['composition_log'] ) ) {
-				$section_entry['composition_log'] = $composed['composition_log'];
-			}
 
 			if ( null !== $pattern ) {
 				$section_entry['recommended_pattern_id'] = $pattern['id'] ?? $pattern['name'] ?? '';

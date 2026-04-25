@@ -1,9 +1,9 @@
 <?php
 /**
- * Populate content handler (v3.28.0).
+ * Populate content handler (v4.0).
  *
- * Phase 2 of the two-tier build. Takes section_id + content_map (role → content),
- * injects content into matching elements. Supports #element-id direct targeting.
+ * Optional post-build content patch tool. Injects content_map (role → content)
+ * into a built section. Supports #element-id direct targeting.
  *
  * @package BricksMCP
  * @license GPL-2.0-or-later
@@ -161,20 +161,41 @@ final class PopulateContentHandler {
 
 	private function locate_page( string $section_id ): ?int {
 		global $wpdb;
+		// Use a reverse-index transient to avoid N+1 queries. Falls back to full scan if not cached.
+		$index = get_transient( 'bricks_mcp_section_page_index' ) ?: [];
+		if ( is_array( $index ) && isset( $index[ $section_id ] ) ) {
+			$page_id = (int) $index[ $section_id ];
+			// Verify the page still exists and has Bricks content.
+			if ( get_post( $page_id ) && get_post_meta( $page_id, '_bricks_page_content_2', true ) ) {
+				return $page_id;
+			}
+			// Stale entry — remove and fall through to full scan.
+			unset( $index[ $section_id ] );
+			set_transient( 'bricks_mcp_section_page_index', $index, HOUR_IN_SECONDS );
+		}
+
+		// Full scan fallback — only runs when reverse index is missing/stale.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$posts = $wpdb->get_col( "SELECT ID FROM {$wpdb->posts} WHERE post_status IN ('publish','draft','private') AND post_type IN ('page','post','bricks_template')" );
 		foreach ( $posts as $post_id ) {
 			$elements = get_post_meta( (int) $post_id, '_bricks_page_content_2', true );
-			if ( is_array( $elements ) && $this->has_element_id( $elements, $section_id ) ) {
+			if ( is_array( $elements ) && $this->has_element_id_recursive( $elements, $section_id ) ) {
+				// Update reverse index for future lookups.
+				$index[ $section_id ] = (int) $post_id;
+				set_transient( 'bricks_mcp_section_page_index', $index, HOUR_IN_SECONDS );
 				return (int) $post_id;
 			}
 		}
 		return null;
 	}
 
-	private function has_element_id( array $elements, string $id ): bool {
+	/** Check if an element ID exists anywhere in the element tree (recursive). */
+	private function has_element_id_recursive( array $elements, string $id ): bool {
 		foreach ( $elements as $el ) {
 			if ( ( $el['id'] ?? '' ) === $id ) {
+				return true;
+			}
+			if ( ! empty( $el['children'] ) && is_array( $el['children'] ) && $this->has_element_id_recursive( $el['children'], $id ) ) {
 				return true;
 			}
 		}
@@ -305,7 +326,7 @@ final class PopulateContentHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'populate_content',
-			__( "Phase 2 of two-tier build. Injects content_map (role → content values) into a built section. Use # prefix on keys to target specific element IDs.", 'bricks-mcp' ),
+			__( "Inject content_map (role → content values) into a built section. Use # prefix on keys to target specific element IDs. Optional — build_structure now accepts content inline.", 'bricks-mcp' ),
 			[
 				'type'       => 'object',
 				'properties' => [

@@ -71,18 +71,14 @@ If a design needs `font-size: clamp(3rem, 12vw, 11rem)` for a giant typographic 
 
 - Use `_cssGlobalClasses` on every element when possible
 - Inline styles (`style_overrides`) only for instance-specific overrides
-- When using the design-build pipeline (`propose_design` Phase 2 `design_plan` → `build_structure`), reuse resolved `style_roles` from discovery before inventing class names
+- When using the design-build pipeline (`propose_design` → `build_structure`), reuse resolved `style_roles` from discovery before inventing class names
 - If an existing site uses custom names, map semantic roles with `style_role` first (for example `button.primary` → an existing primary CTA class, `color.primary` → an existing brand variable)
 - If you set a new `class_intent`, include `style_overrides`. The build contract rejects new class names with no style source because they create empty visual classes.
 - `design_pattern:from_image` and `reference_json` imports are normalized before proposal/build: role keys are canonicalized, duplicate or empty class-create entries are dropped, and unsupported class guesses can be remapped to semantic role fallbacks.
 - Direct `design_plan` input is normalized too. Keep direct element roles unique; `build_structure.role_collisions` means you must use `#element-id` keys in `populate_content` or rebuild with clearer roles.
-- Read `design_plan_warnings` from `propose_design` Phase 2 or `design_pattern:from_image`. They are non-blocking signals that the plan is likely weak (missing visual anchor in split layout, generic roles, missing media/button hints, repeated cards modeled inline).
-- The server may also enrich weak plans before validation: generic roles can be rewritten to better semantic roles, missing `content_hint` values can be synthesized, and rewritten roles propagate into `content_plan` / `content_map`.
-- If a plan is still under-specified after enrichment, the server can apply a structural repair pass and return `repair_log` (for example inserting a missing hero heading, CTA button, or split-layout media anchor). Treat this as a correction signal and tighten the next plan you send.
+- Read `design_plan_warnings` from `propose_design` or `design_pattern:from_image`. They are non-blocking signals that the plan is likely weak (missing visual anchor in split layout, generic roles, missing media/button hints, repeated cards modeled inline).
 - Repeated `patterns[]` children are expanded into unique role labels per clone during schema expansion (for example `feature_card_2_title`, `testimonial_3_author`). Use those returned role keys from `build_structure.role_map` / `content_contract` when calling `populate_content`.
 - Proposal `content_plan` now expands repeated pattern child hints into indexed keys too. If your design uses `patterns[]`, expect hints like `feature_card_1_title`, `feature_card_2_text`, `tier_3_cta` instead of one shared unindexed key.
-- If a direct/image plan already contains indexed repeated flat roles (for example `feature_card_1_title`, `feature_card_2_cta`, `tier_title_2`), the server may auto-convert them into `patterns[]` and return `repeat_extraction_log`. This is a repair of plan structure, not a pattern-library dependency.
-- The server also applies an extensible composition pass before build. `section_type` remains a coarse bucket; the composition pass can infer a broader family/trait profile, reorder direct elements into a clearer intro/body/action/media flow, and adjust obviously weak layouts. Watch `composition_family` / `composition_log` in proposal responses when the server had to reshape the plan.
 - After `build_structure`, use the returned `content_contract.required_roles` to build the `populate_content.content_map`. By default `populate_content` rejects unmatched keys and missing required text/button roles; set `allow_partial: true` only for intentional partial updates.
 
 ## Labels on Structural Elements
@@ -171,9 +167,6 @@ Right: `"_typography": { "font-size": "var(--h2)" }`.
 
 Full reference + pitfalls: `bricks:get_knowledge('global-classes')` → "Setting Key Conventions".
 
-## v3.33.1 Knowledge Gate
-
-`global_class:create` / `batch_create` / `update` with styles now requires the session to have fetched `bricks:get_knowledge('global-classes')` + `bricks:get_knowledge('building')`. Non-compliant calls return `knowledge_gate_blocked`. This exists because silent key-case failures were producing broken classes that rendered only `color` and nothing else.
 
 ## Composite Key Format
 
@@ -329,7 +322,7 @@ Database-backed pattern library. The plugin does NOT ship a bundled pattern seed
 
 - `design_pattern:list(category?, tags?)` — all patterns, filterable by category / tag
 - `design_pattern:get(id, include_drift?)` — fetch single pattern, optionally with drift report (live class divergence vs pattern fingerprint)
-- `propose_design` Phase 1 automatically returns best-matching patterns (scoped to the detected `section_type`) with `structural_summary` + `ai_description` + `ai_usage_hints` for AI selection
+- `propose_design` automatically returns best-matching patterns (scoped to the detected `section_type`) with `structural_summary` + `ai_description` + `ai_usage_hints` for AI selection
 
 ### Pattern metadata
 
@@ -350,6 +343,6 @@ Registered actions (exhaustive): `capture`, `list`, `get`, `create`, `update`, `
 - `design_pattern:export(ids?)` — export patterns as JSON for cross-site sharing
 - `design_pattern:import(patterns)` — import a JSON array of patterns (auto-suffixes conflicting IDs)
 - `design_pattern:mark_required(id, role, required?)` — mark / unmark a pattern role as required to be supplied during use
-- `design_pattern:from_image(name, category, image_*?|reference_json?, page_id?, dry_run?)` — vision-based pattern creation; if `page_id` supplied, auto-builds on the page through the two-tier pipeline
+- `design_pattern:from_image(name, category, image_*?|reference_json?, page_id?, dry_run?)` — vision-based pattern creation; if `page_id` supplied, auto-builds on the page through the design-build pipeline
 
-Note: category CRUD (`list_categories`, `create_category`, `delete_category`) lives on the `global_class` handler, NOT `design_pattern`. Normalization / semantic search / prompt generation actions are not provided on this handler — use `propose_design` Phase 1 for pattern scoring and site-context-aware suggestions.
+Note: category CRUD (`list_categories`, `create_category`, `delete_category`) lives on the `global_class` handler, NOT `design_pattern`. Normalization / semantic search / prompt generation actions are not provided on this handler — use `propose_design` for pattern scoring and site-context-aware suggestions.

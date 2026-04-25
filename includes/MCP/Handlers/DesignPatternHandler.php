@@ -14,13 +14,8 @@ namespace BricksMCP\MCP\Handlers;
 
 use BricksMCP\MCP\Services\BricksService;
 use BricksMCP\MCP\Services\ComponentClassGenerator;
-use BricksMCP\MCP\Services\DesignPlanCompositionService;
-use BricksMCP\MCP\Services\DesignPlanEnrichmentService;
 use BricksMCP\MCP\Services\DesignPlanNormalizationService;
 use BricksMCP\MCP\Services\DesignPatternService;
-use BricksMCP\MCP\Services\DesignPlanQualityService;
-use BricksMCP\MCP\Services\DesignPlanRepeatExtractionService;
-use BricksMCP\MCP\Services\DesignPlanStructureRepairService;
 use BricksMCP\MCP\Services\DesignSystemIntrospector;
 use BricksMCP\MCP\Services\ImageInputResolver;
 use BricksMCP\MCP\Services\ImageSideloadService;
@@ -375,14 +370,9 @@ final class DesignPatternHandler {
 			is_array( $extracted['global_classes_to_create'] ?? null ) ? $extracted['global_classes_to_create'] : [],
 			is_array( $extracted['content_map'] ?? null ) ? $extracted['content_map'] : []
 		);
-		$enriched = ( new DesignPlanEnrichmentService() )->enrich( $normalized['design_plan'] );
-		$repeat_extracted = ( new DesignPlanRepeatExtractionService() )->extract( $enriched['design_plan'] );
-		$composed = ( new DesignPlanCompositionService() )->compose( $repeat_extracted['design_plan'] );
-		$repaired = ( new DesignPlanStructureRepairService() )->repair( $composed['design_plan'] );
-		$design_plan_warnings = ( new DesignPlanQualityService() )->analyze( $repaired['design_plan'] );
-		$extracted['design_plan']              = $repaired['design_plan'];
+		$extracted['design_plan']              = $normalized['design_plan'];
 		$extracted['global_classes_to_create'] = $normalized['global_classes_to_create'];
-		$extracted['content_map']              = $this->rewrite_content_map_keys( $normalized['content_map'], $enriched['role_key_map'] ?? [] );
+		$extracted['content_map']              = $normalized['content_map'];
 
 		if ( $dry_run ) {
 			return [
@@ -392,12 +382,6 @@ final class DesignPatternHandler {
 				'global_classes'     => $extracted['global_classes_to_create'],
 				'content_map'        => $extracted['content_map'],
 				'normalization_log'  => $normalized['normalization_log'],
-				'enrichment_log'     => $enriched['enrichment_log'],
-				'repeat_extraction_log' => $repeat_extracted['extraction_log'],
-				'composition_family' => $composed['composition_family'],
-				'composition_log'    => $composed['composition_log'],
-				'repair_log'         => $repaired['repair_log'],
-				'design_plan_warnings' => $design_plan_warnings,
 				'vision_cost_tokens' => $extracted['usage'],
 			];
 		}
@@ -445,12 +429,6 @@ final class DesignPatternHandler {
 			'sideload_misses'        => $sideload_out['misses'],
 			'content_map'            => $extracted['content_map'],
 			'normalization_log'      => $normalized['normalization_log'],
-			'enrichment_log'         => $enriched['enrichment_log'],
-			'repeat_extraction_log'  => $repeat_extracted['extraction_log'],
-			'composition_family'     => $composed['composition_family'],
-			'composition_log'        => $composed['composition_log'],
-			'repair_log'             => $repaired['repair_log'],
-			'design_plan_warnings'   => $design_plan_warnings,
 			'vision_cost_tokens'     => $extracted['usage'],
 		];
 
@@ -468,21 +446,6 @@ final class DesignPatternHandler {
 		}
 		$proposal_id                    = (string) ( $proposal['proposal_id'] ?? '' );
 		$response_payload['proposal_id'] = $proposal_id;
-		if ( ! empty( $proposal['design_plan_warnings'] ) && is_array( $proposal['design_plan_warnings'] ) ) {
-			$response_payload['design_plan_warnings'] = array_values( $proposal['design_plan_warnings'] );
-		}
-		if ( ! empty( $proposal['repeat_extraction_log'] ) && is_array( $proposal['repeat_extraction_log'] ) ) {
-			$response_payload['repeat_extraction_log'] = array_values( $proposal['repeat_extraction_log'] );
-		}
-		if ( ! empty( $proposal['composition_log'] ) && is_array( $proposal['composition_log'] ) ) {
-			$response_payload['composition_log'] = array_values( $proposal['composition_log'] );
-		}
-		if ( ! empty( $proposal['composition_family'] ) && is_string( $proposal['composition_family'] ) ) {
-			$response_payload['composition_family'] = $proposal['composition_family'];
-		}
-		if ( ! empty( $proposal['repair_log'] ) && is_array( $proposal['repair_log'] ) ) {
-			$response_payload['repair_log'] = array_values( $proposal['repair_log'] );
-		}
 
 		if ( null === $this->build_structure_handler ) {
 			return $response_payload;   // No build handler → stop after proposal.
@@ -545,21 +508,6 @@ final class DesignPatternHandler {
 		}
 
 		return $response_payload;
-	}
-
-	/**
-	 * @param array<string, mixed>  $content_map
-	 * @param array<string, string> $role_key_map
-	 * @return array<string, mixed>
-	 */
-	private function rewrite_content_map_keys( array $content_map, array $role_key_map ): array {
-		$rewritten = [];
-		foreach ( $content_map as $key => $value ) {
-			$normalized = DesignPlanNormalizationService::normalize_role_key( (string) $key );
-			$target     = $role_key_map[ $normalized ] ?? $normalized;
-			$rewritten[ $target !== '' ? $target : (string) $key ] = $value;
-		}
-		return $rewritten;
 	}
 
 	/**
