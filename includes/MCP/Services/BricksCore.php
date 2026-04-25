@@ -749,7 +749,9 @@ class BricksCore {
 		foreach ( $elements as $index => $element ) {
 			$parent = $element['parent'];
 
-			if ( 0 !== $parent ) {
+			// Root elements may carry parent as int 0 or string "0" depending on writer.
+			// Normalize both shapes before linkage check.
+			if ( 0 !== $parent && '0' !== $parent ) {
 				$parent_str = (string) $parent;
 				if ( ! isset( $id_map[ $parent_str ] ) ) {
 					return new \WP_Error(
