@@ -11,7 +11,7 @@
  * Plugin Name:       Bricks WP MCP
  * Plugin URI:        https://github.com/alexandruradulescu-neurony/bricks-mcp
  * Description:       Connect AI assistants to your Bricks Builder site. Build pages, manage templates, and control your website using natural language through any MCP-compatible tool.
- * Version:           4.0.2
+ * Version:           5.0.0-alpha
  * Requires at least: 6.4
  * Requires PHP:      8.2
  * Author:            Alex Radulescu
@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin version.
-define( 'BRICKS_MCP_VERSION', '4.0.2' );
+define( 'BRICKS_MCP_VERSION', '5.0.0-alpha' );
 
 // Minimum PHP version.
 define( 'BRICKS_MCP_MIN_PHP_VERSION', '8.2' );

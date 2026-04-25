@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 4.0.2
+Stable tag: 5.0.0-alpha
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -193,6 +193,20 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 5.0.0-alpha =
+**HTML hybrid pipeline — alpha release**
+
+Architectural pivot. LLMs are strong at HTML/CSS, weak at Bricks element JSON. v5 stops asking AI clients to write Bricks JSON for content sections and accepts HTML instead, converting deterministically into the same schema build_structure already understands. Schema mode (build_structure) stays for popups, components, query loops, and complex layouts.
+
+* Added: `HtmlToElements` service (`includes/MCP/Services/HtmlToElements.php`) — clean-room HTML → Bricks schema converter. Pure parser, stateless. Output drops directly into `DesignSchemaValidator`. Audit trail in output: `class_names_seen`, `css_rules_dropped`, `warnings`, `stats`. License: clean-room reimplementation of agent-to-bricks's HTML converter (GPL-3.0); bricks-mcp ships GPL-2.0-or-later, no source copied.
+* Added: `build_from_html` MCP tool (`includes/MCP/Handlers/BuildFromHtmlHandler.php`). Accepts an HTML fragment + page_id; runs HtmlToElements → wraps in build_structure schema → delegates to existing pipeline so resolve / normalize / validate / write / verify still apply. Refuses popups, components, query loops with `html_mode_unsupported` error — those need schema mode.
+* Added: `data/knowledge/html-build.md` — AI guidance for HTML mode. Documents the CSS-property → Bricks-setting map, element conventions, the dark split hero example, and the `var(--padding-section)` shorthand trap.
+* Changed: `verify_build` response gains `verification_plan` field. Includes `page_url`, `section_selector`, `expected_features` checklist, and a ready-to-paste `evaluate_snippet` JS function for Playwright MCP `browser_evaluate`. Returns section root + up to 60 descendants with computed styles, text snippet, image src — enough to catch silent CSS drops the element-data verify misses. Fully backward compatible: callers ignoring `verification_plan` see no behavior change.
+* Added: `data/knowledge/modify-workflow.md` — decision tree for in-place edits using existing tools (`element:update`, `bulk_update`, `move`, `duplicate`, `copy_styling`, `remove`). Rebuild via `build_from_html` only when structure must change.
+* Added: `data/knowledge/build-verify-correct.md` — the build → verify → correct loop using existing tools + Playwright MCP. No new MCP tool; the loop is AI orchestration. Iteration cap of 2 passes; specific drift → tool mapping; behavior when Playwright is unavailable.
+
+ALPHA QUALIFIER: this is an experimental build alongside the stable 4.0.x line. Install only on test sites / when you want to evaluate HTML mode. To roll back, re-install the 4.0.2 zip from the earlier GitHub release.
 
 = 4.0.2 =
 **Fix: build_structure root parent linkage check**
