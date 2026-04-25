@@ -48,7 +48,11 @@ final class HtmlToElements {
 		'header'     => 'section',
 		'footer'     => 'section',
 		'main'       => 'section',
-		'article'    => 'section',
+		// <article> is a content unit (card, post, item) — it stays as a
+		// styled block so its children remain grouped. Other wrapper tags
+		// (header/footer/main) collapse via SKIP_TAGS_RECURSE because they
+		// rarely carry their own styling.
+		'article'    => 'block',
 		// HTML <div> maps to Bricks `block`, not `div`. Both accept the same
 		// children and parents, but Bricks ships `.brxe-div` with a default
 		// `display: flex; flex-direction: column` rule that beats inline
@@ -97,7 +101,7 @@ final class HtmlToElements {
 	 *
 	 * @var array<int, string>
 	 */
-	private const SKIP_TAGS_RECURSE = [ 'main', 'article', 'header', 'footer' ];
+	private const SKIP_TAGS_RECURSE = [ 'main', 'header', 'footer' ];
 
 	/**
 	 * HTML tags that are skipped entirely (no recursion).
@@ -138,6 +142,10 @@ final class HtmlToElements {
 		'display'                => '_display',
 		'flex-direction'         => '_direction',
 		'flex-wrap'              => '_flexWrap',
+		'flex-grow'              => '_flexGrow',
+		'flex-shrink'            => '_flexShrink',
+		'flex-basis'             => '_flexBasis',
+		'order'                  => '_order',
 		'justify-content'        => '_justifyContent',
 		'align-items'            => '_alignItems',
 		'align-content'          => '_alignContent',

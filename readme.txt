@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 5.0.0-alpha.2
+Stable tag: 5.0.0-alpha.3
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -193,6 +193,15 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 5.0.0-alpha.3 =
+**Fix: `<article>` stays grouped + flex-* props mapped**
+
+Modern card layouts use `<article>` per card. v5.0.0-alpha.2's converter dropped articles into `SKIP_TAGS_RECURSE`, which promoted each article's children straight into the parent grid. Result: a 3×card grid (3 articles × 4 elements each) flattened into 12 sibling cells, breaking the card grouping.
+
+* Fixed: `<article>` removed from `SKIP_TAGS_RECURSE`. Now maps to Bricks `block` (per TAG_MAP) so each article remains a styled card wrapper with its children intact.
+* `<main>`, `<header>`, `<footer>` still collapse via SKIP_TAGS_RECURSE — they're typically wrapper-only tags without their own styling.
+* Added `flex-grow`, `flex-shrink`, `flex-basis`, `order` to `TOP_LEVEL_PROPS` (map to `_flexGrow`, `_flexShrink`, `_flexBasis`, `_order`). Previously dropped silently.
 
 = 5.0.0-alpha.2 =
 **Fix: HtmlToElements maps `<div>` to Bricks `block` so layout intent survives**
