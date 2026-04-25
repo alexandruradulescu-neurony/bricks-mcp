@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 5.1.2
+Stable tag: 5.1.3
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -193,6 +193,20 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 5.1.3 =
+**Fix: element-level `style_overrides` now win over the matched class**
+
+`ElementSettingsGenerator::build_settings()` had a guard added in v3 (commit 4be34e3) that *skipped* `style_overrides` whenever the element's `class_intent` resolved to an existing class with non-empty styles. The reasoning ("class has styles → overrides are redundant") was backwards: overrides exist precisely because the AI wants to differ from the class. Today an AI writing `class="hero__cta-primary" style="background: var(--primary)"` expects the primary color to win over the class's default base-ultra-dark; the strip silently swallowed it.
+
+Affected scenarios:
+* `<a class="hero__cta-primary" style="background: var(--primary)">` rendered the class's bg, dropping the override.
+* Any inline color/typography/spacing tweak on top of an existing styled class was lost.
+* Did NOT affect inline overrides on auto-created classes (because those weren't in `classes_with_styles`).
+
+Fix: the strip block is gone. `style_overrides` is always merged onto the element settings. Top-level `array_merge` is intentional — it lets a single overridden nested key (e.g. `_background.color.raw`) replace the class's entire `_background` object at element level. Class still wins for keys NOT listed in overrides (because the class is in `_cssGlobalClasses` and Bricks applies it at render time).
+
+The `classes_with_styles` parameter is now unused but kept on `ElementSettingsGenerator::build_settings()` for binary compat — will be removed in a later cleanup.
 
 = 5.1.2 =
 **Fix: linear-gradient now renders when pushed into auto-created classes**

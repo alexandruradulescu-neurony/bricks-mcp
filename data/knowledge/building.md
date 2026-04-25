@@ -74,9 +74,9 @@ If a design needs `font-size: clamp(3rem, 12vw, 11rem)` for a giant typographic 
 - When using the design-build pipeline (`propose_design` → `build_structure`), reuse resolved `style_roles` from discovery before inventing class names
 - If an existing site uses custom names, map semantic roles with `style_role` first (for example `button.primary` → an existing primary CTA class, `color.primary` → an existing brand variable)
 - If you set a new `class_intent`, include `style_overrides`. The build contract rejects new class names with no style source because they create empty visual classes.
-- `design_pattern:from_image` and `reference_json` imports are normalized before proposal/build: role keys are canonicalized, duplicate or empty class-create entries are dropped, and unsupported class guesses can be remapped to semantic role fallbacks.
+- For most builds, prefer **HTML mode** (`build_from_html`) over schema mode — write HTML using existing site classes and CSS variables, the converter handles Bricks shape conventions deterministically. Schema mode (`build_structure`) remains for popups, components, query loops, and complex layouts that don't have a clean HTML analog.
 - Direct `design_plan` input is normalized too. Keep direct element roles unique; `build_structure.role_collisions` means you must use `#element-id` keys in `populate_content` or rebuild with clearer roles.
-- Read `design_plan_warnings` from `propose_design` or `design_pattern:from_image`. They are non-blocking signals that the plan is likely weak (missing visual anchor in split layout, generic roles, missing media/button hints, repeated cards modeled inline).
+- Read `design_plan_warnings` from `propose_design`. They are non-blocking signals that the plan is likely weak (missing visual anchor in split layout, generic roles, missing media/button hints, repeated cards modeled inline).
 - Repeated `patterns[]` children are expanded into unique role labels per clone during schema expansion (for example `feature_card_2_title`, `testimonial_3_author`). Use those returned role keys from `build_structure.role_map` / `content_contract` when calling `populate_content`.
 - Proposal `content_plan` now expands repeated pattern child hints into indexed keys too. If your design uses `patterns[]`, expect hints like `feature_card_1_title`, `feature_card_2_text`, `tier_3_cta` instead of one shared unindexed key.
 - After `build_structure`, use the returned `content_contract.required_roles` to build the `populate_content.content_map`. By default `populate_content` rejects unmatched keys and missing required text/button roles; set `allow_partial: true` only for intentional partial updates.
@@ -311,12 +311,15 @@ These common mistakes are silently corrected with a warning attached to the buil
 
 ## Design Pattern Library
 
-Database-backed pattern library. The plugin does NOT ship a bundled pattern seed — new installs start with an empty library. Patterns live in the `bricks_mcp_patterns` WP option and are populated via one of four creation paths:
+Database-backed pattern library. The plugin does NOT ship a bundled pattern seed — new installs start with an empty library. Patterns live in the `bricks_mcp_patterns` WP option and are populated via one of three creation paths:
 
 - **Manual authoring** — `design_pattern:create(pattern)` or the Patterns admin tab under **Bricks → Bricks WP MCP → Patterns**
 - **Capture live section** — `design_pattern:capture(page_id, block_id, name, category)` snapshots an existing built section (including style fingerprints) into the library
 - **Import portable JSON** — `design_pattern:import(patterns)` — imports an array of pattern objects, auto-suffixing conflicting IDs
-- **Vision capture** — `design_pattern:from_image` reads a screenshot or Bricksies-format clipboard JSON and produces a site-BEM pattern
+
+> **v5.1 change:** vision-driven pattern creation (`from_image`) was retired. The plugin no longer ships an LLM provider. To seed a pattern from a screenshot now: write HTML via `build_from_html` (HTML mode), then `design_pattern:capture` the resulting section.
+
+> **v5.1 change:** pattern *composition* (slot-fill from a saved pattern via `design_plan.use_pattern`) was supplanted by HTML mode. AI now writes HTML directly. Pattern CRUD remains for snapshot / restore / cross-site sharing use cases.
 
 ### Discovery
 
@@ -330,11 +333,11 @@ Each pattern has optional AI metadata:
 - `ai_description` — 1-2 sentence description of what the pattern looks like when built
 - `ai_usage_hints` — array of tips for when/how to use the pattern
 
-Use these to pick the right pattern for the task. Capture and from_image flows backfill this metadata automatically; manually-created patterns can add it via `design_pattern:update(id, pattern: {ai_description, ai_usage_hints})`.
+Use these to pick the right pattern for the task. Capture flow backfills this metadata automatically; manually-created patterns can add it via `design_pattern:update(id, pattern: {ai_description, ai_usage_hints})`.
 
 ### Managing patterns
 
-Registered actions (exhaustive): `capture`, `list`, `get`, `create`, `update`, `delete`, `export`, `import`, `mark_required`, `from_image`.
+Registered actions (exhaustive): `capture`, `list`, `get`, `create`, `update`, `delete`, `export`, `import`, `mark_required`.
 
 - `design_pattern:capture(page_id, block_id, name, category, id?, tags?)` — snapshot a live section
 - `design_pattern:create(pattern)` — save a new pattern (required: id, name, category, tags)
@@ -343,6 +346,5 @@ Registered actions (exhaustive): `capture`, `list`, `get`, `create`, `update`, `
 - `design_pattern:export(ids?)` — export patterns as JSON for cross-site sharing
 - `design_pattern:import(patterns)` — import a JSON array of patterns (auto-suffixes conflicting IDs)
 - `design_pattern:mark_required(id, role, required?)` — mark / unmark a pattern role as required to be supplied during use
-- `design_pattern:from_image(name, category, image_*?|reference_json?, page_id?, dry_run?)` — vision-based pattern creation; if `page_id` supplied, auto-builds on the page through the design-build pipeline
 
-Note: category CRUD (`list_categories`, `create_category`, `delete_category`) lives on the `global_class` handler, NOT `design_pattern`. Normalization / semantic search / prompt generation actions are not provided on this handler — use `propose_design` for pattern scoring and site-context-aware suggestions.
+Note: category CRUD (`list_categories`, `create_category`, `delete_category`) lives on the `global_class` handler, NOT `design_pattern`.

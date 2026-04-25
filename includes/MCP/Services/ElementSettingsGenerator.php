@@ -470,19 +470,23 @@ final class ElementSettingsGenerator {
 			$settings['_direction'] = 'column';
 		}
 
-		// 10. Apply style overrides — but SKIP if the class already has these styles.
-		// When class_intent has styles embedded in the class, style_overrides are redundant.
+		// 10. Apply style overrides (instance-specific inline styles).
+		//
+		// v5.1.3: previously this block was guarded with "skip when class has
+		// styles" because overrides were considered redundant. That conflated
+		// "class has SOME styles" with "class has THESE specific styles" —
+		// overrides exist precisely to differ from the class. Today an AI
+		// using class="hero__cta-primary" + style="background: var(--primary)"
+		// expects the primary color to win, not the class's base-ultra-dark.
+		//
+		// Behavior now: ALWAYS merge style_overrides on top of $settings.
+		// Top-level array_merge is intentional — it lets a single overridden
+		// nested key (e.g. _background.color.raw) replace the class's entire
+		// _background object at element level. The class still wins for any
+		// keys NOT listed in style_overrides (because the class lives in
+		// _cssGlobalClasses and Bricks applies it at render time).
 		if ( ! empty( $node['style_overrides'] ) && is_array( $node['style_overrides'] ) ) {
-			$intent = $node['class_intent'] ?? '';
-			if ( '' !== $intent && in_array( $intent, $classes_with_styles, true ) ) {
-				// Class has styles — only merge _hidden (structural, not styling).
-				if ( isset( $node['style_overrides']['_hidden'] ) ) {
-					$settings['_hidden'] = $node['style_overrides']['_hidden'];
-				}
-			} else {
-				// No styled class — merge all overrides inline as before.
-				$settings = array_merge( $settings, $node['style_overrides'] );
-			}
+			$settings = array_merge( $settings, $node['style_overrides'] );
 		}
 
 		// 10a-ii. Quarantine _cssCustom on non-structural element types.

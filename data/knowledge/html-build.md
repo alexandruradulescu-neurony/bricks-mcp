@@ -60,11 +60,28 @@ The converter parses `style="..."` and translates each declaration:
 | `width / max-width / min-width` | `_width` / `_widthMax` / `_widthMin` |
 | `aspect-ratio: 4/3` | `_aspectRatio = 4/3` |
 | `object-fit: cover` | `_objectFit = cover` |
-| `background: linear-gradient(...)` | `_background.image.gradient = linear-gradient(...)` + `_background.useGradient = true` |
+| `background: linear-gradient(...)` | Three keys emitted (v5.1.2+): `_background.image.gradient` + `_background.useGradient = true` + `_background.color.raw` (first stop) + `_gradient.{type, angle, colors[]}` at top level. The triple shape is required because Bricks's class-level CSS compiler reads `_gradient.colors[]` while the element-level renderer reads `_background.image.gradient`. Single-key shapes render in only one of the two contexts. |
 | `background: var(--primary)` | `_background.color.raw = var(--primary)` |
 | `transition / transform / box-shadow / opacity / cursor / position / top/right/bottom/left / z-index` | corresponding `_*` keys |
+| `flex-grow / flex-shrink / flex-basis / order` | `_flexGrow / _flexShrink / _flexBasis / _order` |
 
 CSS rules that don't map to a Bricks key are dropped and surfaced in the response as `html_mode.css_rules_dropped` so you can inspect what didn't survive.
+
+### Gradient parser (v5.1.2+)
+
+`background: linear-gradient(...)` declarations are parsed by `HtmlToElements::parse_linear_gradient()` and emit the structured `_gradient` shape:
+
+- Angles: `135deg` → `angle: "135"`. `to bottom right` → translated to `135` (other direction keywords also handled).
+- Stops: `var(--primary) 0%` → `{color: {raw: "var(--primary)"}, stop: "0%"}`. Position is optional; first stop defaults to `0%`, last to `100%`.
+- `var(--*)`, `rgba(...)`, hex colors all preserved verbatim in the `color.raw` field. Parens-aware comma splitting keeps them intact.
+
+If the parser can't make sense of the value (e.g., an unknown direction keyword, fewer than 2 stops), only `_background.image.gradient` is emitted — the element-level renderer still works, but the gradient may not render when the rule lands on a class.
+
+### Dark-section auto-stamping
+
+The handler infers a dark section when its computed `_background` references an "ultra-dark" / black variable. Without explicit overrides, the section gets `background: dark` flagged so `ElementSettingsGenerator` can apply contrasting text-color defaults to descendants.
+
+**v5.1.1+ safety:** the auto-stamp is skipped when your HTML already supplied an explicit `_background` block in `style_overrides` (which is the case for any `<section style="background: ...">` declaration). Without this guard, the dark-flag's defaults would clobber your explicit gradient + text colors.
 
 ## Element conventions
 
