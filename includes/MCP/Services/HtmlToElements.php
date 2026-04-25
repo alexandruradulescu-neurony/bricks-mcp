@@ -616,10 +616,27 @@ final class HtmlToElements {
 			if ( 'background' === $prop || 'background-color' === $prop || 'background-image' === $prop ) {
 				$overrides['_background'] = $overrides['_background'] ?? [];
 				if ( str_contains( $value, 'gradient(' ) ) {
-					// Bricks reads gradient at _background.image.gradient (verified empirically).
+					// Bricks needs different gradient shapes at element-level vs
+					// class-level (the auto-class-pushdown moves these into a
+					// generated class). Emit all three keys to satisfy both:
+					//   - _background.image.gradient — element-level renderer
+					//   - _gradient.{type,angle,colors[]} — class-level compiler
+					//   - _background.color.raw — fallback solid + first-stop color
 					$overrides['_background']['useGradient'] = true;
 					$overrides['_background']['image']       = $overrides['_background']['image'] ?? [];
 					$overrides['_background']['image']['gradient'] = $value;
+
+					$parsed = self::parse_linear_gradient( $value );
+					if ( null !== $parsed ) {
+						if ( ! isset( $overrides['_background']['color'] ) && ! empty( $parsed['colors'] ) ) {
+							$overrides['_background']['color'] = $parsed['colors'][0]['color'];
+						}
+						$overrides['_gradient'] = [
+							'type'   => $parsed['type'],
+							'angle'  => $parsed['angle'],
+							'colors' => $parsed['colors'],
+						];
+					}
 				} elseif ( 'background-image' === $prop ) {
 					$overrides['_background']['image'] = $overrides['_background']['image'] ?? [];
 					$overrides['_background']['image']['url'] = $value;
@@ -717,6 +734,119 @@ final class HtmlToElements {
 			default:
 				return [ 'top' => $parts[0], 'right' => $parts[1], 'bottom' => $parts[2], 'left' => $parts[3] ];
 		}
+	}
+
+	/**
+	 * Parse a `linear-gradient(...)` value into Bricks _gradient shape.
+	 *
+	 * Returns null when the value isn't a linear-gradient or can't be parsed.
+	 * Output:
+	 *   {
+	 *     type: 'linear',
+	 *     angle: '135',
+	 *     colors: [
+	 *       { id: 'g0', color: { raw: 'var(--primary)' }, stop: '0%' },
+	 *       { id: 'g1', color: { raw: '#fff' },           stop: '100%' },
+	 *     ]
+	 *   }
+	 *
+	 * @param string $value
+	 * @return array<string, mixed>|null
+	 */
+	private static function parse_linear_gradient( string $value ): ?array {
+		$value = trim( $value );
+		if ( ! preg_match( '/^linear-gradient\((.*)\)$/is', $value, $m ) ) {
+			return null;
+		}
+		$inner = $m[1];
+
+		// Top-level comma split, respecting parens (var(--x), rgba(...)).
+		$parts = [];
+		$buf   = '';
+		$depth = 0;
+		for ( $i = 0, $len = strlen( $inner ); $i < $len; $i++ ) {
+			$ch = $inner[ $i ];
+			if ( '(' === $ch ) {
+				$depth++;
+				$buf .= $ch;
+			} elseif ( ')' === $ch ) {
+				$depth--;
+				$buf .= $ch;
+			} elseif ( ',' === $ch && 0 === $depth ) {
+				$parts[] = trim( $buf );
+				$buf     = '';
+			} else {
+				$buf .= $ch;
+			}
+		}
+		$tail = trim( $buf );
+		if ( '' !== $tail ) {
+			$parts[] = $tail;
+		}
+
+		if ( count( $parts ) < 2 ) {
+			return null;
+		}
+
+		// First part may be the angle (e.g., "135deg") or the first color stop.
+		$angle      = '180';
+		$first_part = $parts[0];
+		if ( preg_match( '/^([\-]?\d+(?:\.\d+)?)\s*deg\s*$/i', $first_part, $am ) ) {
+			$angle = $am[1];
+			array_shift( $parts );
+		} elseif ( preg_match( '/^to\s+/i', $first_part ) ) {
+			// "to right", "to top right" etc. — translate to a numeric default.
+			$direction_map = [
+				'to top'         => '0',
+				'to top right'   => '45',
+				'to right'       => '90',
+				'to bottom right'=> '135',
+				'to bottom'      => '180',
+				'to bottom left' => '225',
+				'to left'        => '270',
+				'to top left'    => '315',
+			];
+			$key = strtolower( preg_replace( '/\s+/', ' ', trim( $first_part ) ) );
+			if ( isset( $direction_map[ $key ] ) ) {
+				$angle = $direction_map[ $key ];
+			}
+			array_shift( $parts );
+		}
+
+		$colors = [];
+		foreach ( $parts as $idx => $part ) {
+			// Each remaining part = "<color> [<stop>]". Split at last whitespace
+			// so var(--x) stays intact.
+			$part = trim( $part );
+			if ( '' === $part ) {
+				continue;
+			}
+			$stop_pos = strrpos( $part, ' ' );
+			$has_stop = false !== $stop_pos
+				&& preg_match( '/^[\d.\-]+%?$/', substr( $part, $stop_pos + 1 ) );
+			if ( $has_stop ) {
+				$color_part = trim( substr( $part, 0, $stop_pos ) );
+				$stop       = trim( substr( $part, $stop_pos + 1 ) );
+			} else {
+				$color_part = $part;
+				$stop       = $idx === 0 ? '0%' : '100%';
+			}
+			$colors[] = [
+				'id'    => 'g' . $idx,
+				'color' => [ 'raw' => $color_part ],
+				'stop'  => $stop,
+			];
+		}
+
+		if ( count( $colors ) < 2 ) {
+			return null;
+		}
+
+		return [
+			'type'   => 'linear',
+			'angle'  => $angle,
+			'colors' => $colors,
+		];
 	}
 
 	/**

@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 5.1.1
+Stable tag: 5.1.2
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -193,6 +193,21 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 5.1.2 =
+**Fix: linear-gradient now renders when pushed into auto-created classes**
+
+v5.1.1 fixed the dark-stamp cascade (gradient survived in the auto-created class settings) but Bricks's class-level CSS compiler didn't render the `_background.image.gradient` shape. Element-level rendering had worked because Bricks evaluates element settings differently than class settings.
+
+To make gradients render at both levels, three keys are needed:
+- `_gradient.{type, angle, colors[]}` at the top level — for the class-level CSS compiler
+- `_background.image.gradient` raw CSS string — for the element-level renderer
+- `_background.color.raw` (the first stop's color) — fallback solid + class-compiler hint
+
+`HtmlToElements::parse_inline_styles` now emits all three when the converter sees `background: linear-gradient(...)`. A new private helper `parse_linear_gradient()` extracts the angle (or `to <direction>` keyword) and per-stop colors + positions, including `var(--*)` references.
+
+* Fixed: gradient declarations on sections now render correctly whether the section's bg lives on the element or the auto-created class.
+* Added: `parse_linear_gradient()` handles `Ndeg` angles, `to bottom right`-style direction keywords, parens-aware stop parsing, and `var(--*)` color references.
 
 = 5.1.1 =
 **Fix: don't stamp `background: dark` when section already has explicit `_background` overrides**
