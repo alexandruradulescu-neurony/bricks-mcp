@@ -541,12 +541,30 @@ final class ProposalService {
 	 * Validate design_plan, generate skeleton, return proposal.
 	 */
 	private function create_proposal( int $page_id, string $description, array $design_plan ): array|\WP_Error {
-		$all_classes       = $this->class_service->get_global_classes();
-		$plan_normalizer   = new DesignPlanNormalizationService( $this->class_service->get_all_by_name() );
-		$normalized_plan   = $plan_normalizer->normalize( $design_plan, [], is_array( $design_plan['content_plan'] ?? null ) ? $design_plan['content_plan'] : [] );
-		$design_plan       = $normalized_plan['design_plan'];
-		if ( ! empty( $normalized_plan['content_map'] ) ) {
-			$design_plan['content_plan'] = $normalized_plan['content_map'];
+		$all_classes = $this->class_service->get_global_classes();
+
+		// v5.1: heavy plan normalization (vision-pipeline-era cleanup of AI
+		// design plans coming back from from_image) was retired. We still
+		// canonicalize role keys on each element + content_plan key so they
+		// match downstream lookups in ContentContractService and
+		// PopulateContentHandler.
+		if ( isset( $design_plan['elements'] ) && is_array( $design_plan['elements'] ) ) {
+			foreach ( $design_plan['elements'] as &$el ) {
+				if ( is_array( $el ) && isset( $el['role'] ) && is_string( $el['role'] ) ) {
+					$el['role'] = DesignPlanNormalizationService::normalize_role_key( $el['role'] );
+				}
+			}
+			unset( $el );
+		}
+		if ( isset( $design_plan['content_plan'] ) && is_array( $design_plan['content_plan'] ) ) {
+			$normalized_content = [];
+			foreach ( $design_plan['content_plan'] as $key => $value ) {
+				$nkey = is_string( $key ) ? DesignPlanNormalizationService::normalize_role_key( $key ) : (string) $key;
+				if ( '' !== $nkey ) {
+					$normalized_content[ $nkey ] = $value;
+				}
+			}
+			$design_plan['content_plan'] = $normalized_content;
 		}
 
 		// Validate the design plan.
