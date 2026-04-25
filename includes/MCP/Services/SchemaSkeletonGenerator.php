@@ -56,17 +56,14 @@ final class SchemaSkeletonGenerator {
 		$layout       = $plan['layout'] ?? 'centered';
 		$background   = $plan['background'] ?? 'light';
 
-		// NEW: use_pattern branch.
+		// v5.1: use_pattern branch removed — pattern composition (slot-fill from
+		// a saved pattern) was supplanted by HTML mode. Pattern CRUD remains;
+		// build via build_from_html with the desired classes instead.
 		if ( ! empty( $plan['use_pattern'] ) ) {
-			return $this->generate_from_pattern(
-				$page_id,
-				(string) $plan['use_pattern'],
-				(array) ( $plan['content_map'] ?? [] ),
-				$suggested_classes,
-				$scoped_variables,
-				$style_roles,
-				$component_classes
-			);
+			return [
+				'error'   => 'pattern_composition_removed',
+				'message' => 'use_pattern was removed in v5.1. To rebuild from a saved pattern, fetch it via design_pattern:get and translate to HTML, then call build_from_html.',
+			];
 		}
 
 		$elements     = $plan['elements'] ?? [];
@@ -991,66 +988,5 @@ final class SchemaSkeletonGenerator {
 	// pricing, testimonials, split, generic). They were only called by the
 	// deleted generate() method. generate_from_plan() builds schemas
 	// directly from the AI's design_plan without hardcoded skeletons.
-
-	// ──────────────────────────────────────────────
-	// Pattern-driven generation
-	// ──────────────────────────────────────────────
-
-	/**
-	 * Generate schema by adapting a pattern + content_map.
-	 *
-	 * @param int                   $page_id          Target page ID.
-	 * @param string                $pattern_id       Pattern ID to look up.
-	 * @param array<string, mixed>  $content_map      role => content value map.
-	 * @param array<string, string> $suggested_classes class_name => class_id map.
-	 * @param array<string, array>  $scoped_variables  category => variable names.
-	 * @return array<string, mixed>
-	 */
-	private function generate_from_pattern( int $page_id, string $pattern_id, array $content_map, array $suggested_classes, array $scoped_variables, array $style_roles = [], array $component_classes = [] ): array {
-		$pattern = DesignPatternService::get( $pattern_id );
-		if ( null === $pattern ) {
-			return [
-				'error'   => 'pattern_not_found',
-				'message' => sprintf( 'Pattern "%s" does not exist. Call design_pattern(action: "list") for valid IDs.', $pattern_id ),
-			];
-		}
-
-		// Adapt (PatternAdapter handles required-role gate, shape-mismatch gate,
-		// repeat expansion, role insertion, optional-drop).
-		$adapter = new PatternAdapter( new PatternCatalog() );
-		$adapted = $adapter->adapt( $pattern, $content_map );
-		if ( isset( $adapted['error'] ) ) {
-			return $adapted;
-		}
-
-		// Bridge adapted pattern → schema.
-		$core         = new BricksCore( new ElementNormalizer( new ElementIdGenerator() ) );
-		$class_service = new GlobalClassService( $core );
-		$bridge       = new PatternToSchemaBridge(
-			$class_service->get_all_by_name(),
-			$style_roles,
-			$component_classes
-		);
-		$bridged = $bridge->pattern_to_schema( $adapted, [
-			'page_id'    => $page_id,
-			'pattern_id' => $pattern_id,
-			'action'     => 'append',
-			'background' => $pattern['background'] ?? 'light',
-		] );
-
-		// Return schema augmented with pattern trace metadata. Underscore-prefixed
-		// keys are extracted by ProposalService::create_proposal before storage
-		// and before the schema hits build_structure.
-		return [
-			'_use_pattern'           => true,
-			'_pattern_id'            => $pattern_id,
-			'_provisioning_manifest' => [
-				'classes'   => $pattern['classes'] ?? [],
-				'variables' => $pattern['variables'] ?? [],
-			],
-			'_adaptation_log' => $adapted['adaptation_log'] ?? [],
-			'_conversion_log' => $bridged['conversion_log'],
-		] + $bridged['schema'];
-	}
 
 }
