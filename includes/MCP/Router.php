@@ -171,6 +171,13 @@ final class Router {
 		$populate_content_handler = new Handlers\PopulateContentHandler( $this->bricks_service, $this->media_service );
 		$verify_handler           = new Handlers\VerifyHandler( $this->bricks_service, $require_bricks );
 
+		// v5 (Phase B): HTML input mode wraps BuildStructureHandler so the
+		// resolve / normalize / validate / write / verify pipeline still applies.
+		$build_from_html_handler = new Handlers\BuildFromHtmlHandler(
+			$build_structure_handler,
+			$require_bricks
+		);
+
 		// All handlers indexed by short name.
 		$this->handlers = [
 			'component'     => new Handlers\ComponentHandler( $this->bricks_service, $require_bricks ),
@@ -195,6 +202,7 @@ final class Router {
 			),
 			'build'         => $build_handler,
 			'build_structure'  => $build_structure_handler,
+			'build_from_html'  => $build_from_html_handler,
 			'populate_content' => $populate_content_handler,
 			'onboarding'    => new OnboardingHandler( $onboarding_service ),
 			'verify'        => $verify_handler,
@@ -764,7 +772,7 @@ final class Router {
 			'bricks_tool', 'page', 'element', 'template', 'global_class',
 			'design_system', 'media', 'menu', 'component', 'woocommerce',
 			'font', 'code', 'proposal', 'verify', 'page_layout',
-			'design_pattern', 'build_structure', 'populate_content',
+			'design_pattern', 'build_structure', 'build_from_html', 'populate_content',
 		];
 
 		foreach ( $bricks_handler_keys as $key ) {
