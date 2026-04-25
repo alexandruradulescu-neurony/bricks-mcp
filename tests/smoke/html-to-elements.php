@@ -100,7 +100,7 @@ if ( assert_not_wp_error( 'heading converts', $res ) ) {
 	assert_eq( 'heading wraps in synthetic section', 1, count( $res['sections'] ) );
 	$root = $res['sections'][0]['structure'];
 	assert_eq( 'synthetic root is section', 'section', $root['type'] );
-	$h1 = $root['children'][0] ?? [];
+	$h1 = $root['children'][0]['children'][0] ?? [];
 	assert_eq( 'child is heading', 'heading', $h1['type'] ?? '' );
 	assert_eq( 'heading tag preserved', 'h1', $h1['tag'] ?? '' );
 	assert_eq( 'heading content', 'Hello', $h1['content'] ?? '' );
@@ -152,8 +152,12 @@ if ( assert_not_wp_error( 'hero converts', $res ) ) {
 	assert_eq( 'section first class is intent', 'hero', $sec['class_intent'] ?? null );
 	assert_eq( 'section extra class in _cssClasses', 'hero--dark', $sec['element_settings']['_cssClasses'] ?? null );
 
+	// Auto-inserted container (Bricks hierarchy: section's only valid child is container).
+	$container = $sec['children'][0] ?? [];
+	assert_eq( 'auto-inserted container under section', 'container', $container['type'] ?? null );
+
 	// Grid block.
-	$grid = $sec['children'][0] ?? [];
+	$grid = $container['children'][0] ?? [];
 	assert_eq( 'grid block class_intent',          'hero__content',   $grid['class_intent']                         ?? null );
 	assert_eq( 'grid display=grid',                'grid',            $grid['style_overrides']['_display']          ?? null );
 	assert_eq( 'grid template columns',            '1fr 1fr',         $grid['style_overrides']['_gridTemplateColumns'] ?? null );
@@ -207,7 +211,7 @@ if ( assert_not_wp_error( 'hero converts', $res ) ) {
 // ─── Test 4: data-* preserved ──────────────────────────────────────
 $res = HtmlToElements::convert( '<div data-track="cta-click" data-id="42">Hi</div>' );
 if ( assert_not_wp_error( 'data attrs convert', $res ) ) {
-	$div   = $res['sections'][0]['structure']['children'][0] ?? [];
+	$div   = $res['sections'][0]['structure']['children'][0]['children'][0] ?? [];
 	$attrs = $div['element_settings']['_attributes'] ?? [];
 	assert_eq( 'two data attrs preserved', 2, count( $attrs ) );
 	assert_eq( 'data-track preserved',     'data-track', $attrs[0]['name']  ?? '' );
@@ -231,7 +235,7 @@ if ( assert_not_wp_error( 'css drops surface', $res ) ) {
 	$properties = array_column( $drops, 'property' );
 	assert_true( 'will-change dropped', in_array( 'will-change', $properties, true ) );
 	// transition is a known top-level prop in our map, should NOT be dropped.
-	$div = $res['sections'][0]['structure']['children'][0] ?? [];
+	$div = $res['sections'][0]['structure']['children'][0]['children'][0] ?? [];
 	assert_eq( 'transition mapped',    'all 0.3s', $div['style_overrides']['_transition'] ?? null );
 	assert_eq( 'padding still there',  '1rem',     $div['style_overrides']['_padding']['top'] ?? null );
 }

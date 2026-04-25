@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 5.0.0-alpha
+Stable tag: 5.0.0-alpha.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -193,6 +193,15 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 5.0.0-alpha.1 =
+**Fix: Bricks hierarchy auto-wrap in HtmlToElements**
+
+Live test of v5.0.0-alpha against a real `<section><div>...</div></section>` failed validation — `DesignSchemaValidator` rejects `div` as a direct child of `section` (Bricks expects `section > container > [...]`). HTML naturally puts content directly in section.
+
+* Fixed: `HtmlToElements::build_node` now auto-inserts a synthetic `container` between an emitted `section` and its non-container children. The AI doesn't need to write the Bricks-specific layer; the converter adds it transparently.
+* Fixed: same auto-wrap applied to the synthetic section that `convert()` creates around loose top-level content.
+* Smoke tests updated; 62 assertions pass.
 
 = 5.0.0-alpha =
 **HTML hybrid pipeline — alpha release**

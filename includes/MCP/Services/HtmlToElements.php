@@ -214,12 +214,21 @@ final class HtmlToElements {
 			}
 		}
 		if ( ! empty( $loose ) ) {
+			// Synthetic section gets the same auto-container wrap that build_node
+			// applies for explicit <section> nodes — section's only valid Bricks
+			// child is container.
 			$sections[] = [
 				'intent'    => 'html_converted_loose_content',
 				'structure' => [
 					'type'     => 'section',
 					'label'    => 'Converted Content',
-					'children' => $loose,
+					'children' => [
+						[
+							'type'     => 'container',
+							'label'    => 'Container',
+							'children' => $loose,
+						],
+					],
 				],
 			];
 		}
@@ -433,6 +442,28 @@ final class HtmlToElements {
 		if ( ! in_array( $type, [ 'heading', 'text-basic', 'text-link', 'button', 'image', 'video', 'divider' ], true ) ) {
 			$inner = self::process_children( $el, $path, $context );
 			if ( ! empty( $inner ) ) {
+				// Bricks hierarchy: <section>'s only valid child is <container>.
+				// HTML naturally puts <div> right inside <section>; auto-wrap to
+				// keep the schema valid without forcing the AI to write the
+				// extra Bricks-specific layer.
+				if ( 'section' === $type ) {
+					$needs_wrap = false;
+					foreach ( $inner as $child_node ) {
+						if ( ( $child_node['type'] ?? '' ) !== 'container' ) {
+							$needs_wrap = true;
+							break;
+						}
+					}
+					if ( $needs_wrap ) {
+						$inner = [
+							[
+								'type'     => 'container',
+								'label'    => 'Container',
+								'children' => $inner,
+							],
+						];
+					}
+				}
 				$node['children'] = $inner;
 			}
 		}
