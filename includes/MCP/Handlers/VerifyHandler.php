@@ -191,22 +191,122 @@ final class VerifyHandler {
 			$content_contract = ( new ContentContractService() )->analyze( $elements, $contract_section_id );
 		}
 
+		// v5/C: live render verification plan — AI client with Playwright MCP can
+		// execute this against the published page to catch silent CSS drops that
+		// element-data inspection misses.
+		$plan_section_id = is_string( $section_id ) ? $section_id : ( is_array( $last_section ) ? (string) ( $last_section['id'] ?? '' ) : '' );
+		$verification_plan = $this->build_verification_plan(
+			$page_id,
+			$plan_section_id,
+			array_values( array_unique( $class_names ) ),
+			$type_counts
+		);
+
 		return [
-			'page_id'           => $page_id,
-			'page_description'  => $page_description,
-			'sections'          => $described_sections,
-			'element_count'     => count( $elements ),
-			'type_counts'       => $type_counts,
-			'classes_used'      => array_values( array_unique( $class_names ) ),
-			'quality_checks'    => $quality,
-			'labels'            => $labels,
-			'last_section'      => $hierarchy,
-			'section_count'     => count( $sections ),
-			'content_sample'    => $content_sample,
-			'content_contract'  => $content_contract,
-			'status'            => 'ok',
-			'verification'      => 'Compare page_description and sections[*].description with your design intent. Check quality_checks, content_sample.headings and .buttons for actual text. If has_placeholder_content is true, replace [PLACEHOLDER] text. Compare type_counts and classes_used against your design_plan.',
-			'notes_hint'        => 'If you learned something about this site during the build (e.g. preferred layouts, naming conventions, design patterns that work well, corrections you had to make), save it via bricks:add_note(text="..."). Notes persist across sessions and are shown in future discovery responses.',
+			'page_id'            => $page_id,
+			'page_description'   => $page_description,
+			'sections'           => $described_sections,
+			'element_count'      => count( $elements ),
+			'type_counts'        => $type_counts,
+			'classes_used'       => array_values( array_unique( $class_names ) ),
+			'quality_checks'     => $quality,
+			'labels'             => $labels,
+			'last_section'       => $hierarchy,
+			'section_count'      => count( $sections ),
+			'content_sample'     => $content_sample,
+			'content_contract'   => $content_contract,
+			'verification_plan'  => $verification_plan,
+			'status'             => 'ok',
+			'verification'       => 'Compare page_description and sections[*].description with your design intent. Check quality_checks, content_sample.headings and .buttons for actual text. If has_placeholder_content is true, replace [PLACEHOLDER] text. Compare type_counts and classes_used against your design_plan. For visual verification, follow verification_plan: navigate to page_url, run evaluate_snippet via Playwright (or any headless browser), and compare results to expected_features.',
+			'notes_hint'         => 'If you learned something about this site during the build (e.g. preferred layouts, naming conventions, design patterns that work well, corrections you had to make), save it via bricks:add_note(text="..."). Notes persist across sessions and are shown in future discovery responses.',
+		];
+	}
+
+	/**
+	 * Build a live-render verification plan for an AI client with Playwright
+	 * MCP (or any headless browser). Returns the URL to navigate, the section
+	 * selector to inspect, a JS snippet that gathers computed styles, and the
+	 * expected feature checklist the AI should compare against.
+	 *
+	 * If the AI client lacks a headless browser, the existing element-data
+	 * fields above are the fallback signal — the plan is purely additive.
+	 *
+	 * @param int                  $page_id
+	 * @param string               $section_id
+	 * @param array<int, string>   $class_names_used
+	 * @param array<string, int>   $type_counts
+	 * @return array<string, mixed>
+	 */
+	private function build_verification_plan(
+		int $page_id,
+		string $section_id,
+		array $class_names_used,
+		array $type_counts
+	): array {
+		$permalink = get_permalink( $page_id );
+		$page_url  = is_string( $permalink ) ? $permalink : '';
+		$section_selector = '' !== $section_id ? '#brxe-' . $section_id : '';
+
+		// Heuristic expected-features list. Each item is a one-line assertion the
+		// AI can score against the snippet's output. None is fatal; this is signal,
+		// not enforcement.
+		$expected_features = [];
+
+		$expected_features[] = sprintf( 'page renders 200 OK at %s', $page_url );
+
+		if ( '' !== $section_selector ) {
+			$expected_features[] = sprintf( 'section element %s exists in the rendered DOM', $section_selector );
+			$expected_features[] = 'section computed padding-top > 0 (i.e. theme/section spacing applied)';
+			$expected_features[] = 'section computed background-color or background-image is non-default';
+		}
+
+		if ( ! empty( $class_names_used ) ) {
+			$expected_features[] = sprintf(
+				'%d global class(es) appear in element class chains: %s',
+				count( $class_names_used ),
+				implode( ', ', array_slice( $class_names_used, 0, 8 ) )
+				. ( count( $class_names_used ) > 8 ? ', …' : '' )
+			);
+		}
+
+		if ( ! empty( $type_counts['heading'] ) ) {
+			$expected_features[] = sprintf( '%d heading element(s) render with non-empty text', $type_counts['heading'] );
+		}
+		if ( ! empty( $type_counts['image'] ) ) {
+			$expected_features[] = sprintf( '%d image element(s) have a resolved src (not literal "unsplash:*")', $type_counts['image'] );
+		}
+		if ( ! empty( $type_counts['text-link'] ) || ! empty( $type_counts['button'] ) ) {
+			$cta_count = ( $type_counts['text-link'] ?? 0 ) + ( $type_counts['button'] ?? 0 );
+			$expected_features[] = sprintf( '%d clickable element(s) carry a usable href', $cta_count );
+		}
+
+		// JS snippet for browser_evaluate. Returns enough computed-style data to
+		// catch the silent failures we hit historically (no padding, no gradient,
+		// dropped overrides) without bloating the response.
+		$snippet = '() => {'
+			. 'const sel = ' . wp_json_encode( $section_selector ) . ';'
+			. 'const wanted = ["padding","padding-top","padding-right","padding-bottom","padding-left","margin","color","background-color","background-image","display","grid-template-columns","grid-template-rows","gap","row-gap","column-gap","flex-direction","justify-content","align-items","width","height","font-size","font-weight","text-align","letter-spacing","text-transform","border-radius","border-width","border-color","aspect-ratio","object-fit","opacity","position","z-index"];'
+			. 'const grab = (el) => { const cs = getComputedStyle(el); const out = {tag: el.tagName.toLowerCase(), id: el.id || null, classes: el.className, rect: { w: el.getBoundingClientRect().width, h: el.getBoundingClientRect().height }, text: (el.tagName === "IMG" || el.tagName === "VIDEO") ? null : (el.innerText || "").substring(0,180), src: (el.tagName === "IMG" || el.tagName === "VIDEO") ? el.getAttribute("src") : null, styles: {} }; for (const p of wanted) { out.styles[p] = cs.getPropertyValue(p); } return out; };'
+			. 'if (!sel) return { error: "no section_id known", title: document.title };'
+			. 'const root = document.querySelector(sel);'
+			. 'if (!root) return { error: "section not found in rendered DOM", selector: sel, title: document.title };'
+			. 'const out = { selector: sel, root: grab(root), descendants: [] };'
+			. 'const all = root.querySelectorAll("*");'
+			. 'const cap = Math.min(all.length, 60);'
+			. 'for (let i = 0; i < cap; i++) { out.descendants.push(grab(all[i])); }'
+			. 'out.truncated = all.length > cap;'
+			. 'out.descendant_count = all.length;'
+			. 'return out;'
+			. '}';
+
+		return [
+			'requires_renderer'  => 'playwright_mcp_or_headless_browser',
+			'page_url'           => $page_url,
+			'section_selector'   => $section_selector,
+			'expected_features'  => $expected_features,
+			'evaluate_snippet'   => $snippet,
+			'evaluate_usage'     => 'Pass evaluate_snippet to the Playwright MCP browser_evaluate tool (or any equivalent). The snippet returns a structured object with section root + up to 60 descendants — for each element: tag, classes, computed styles (padding, background, gradient, grid, typography, etc.), text snippet, image src. Compare against expected_features and your original design intent.',
+			'fallback'           => 'If no headless browser is available, the element-data fields above (type_counts, classes_used, quality_checks, content_sample) are the verification signal.',
 		];
 	}
 
