@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 5.0.0-alpha.1
+Stable tag: 5.0.0-alpha.2
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -193,6 +193,17 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 5.0.0-alpha.2 =
+**Fix: HtmlToElements maps `<div>` to Bricks `block` so layout intent survives**
+
+Live render of the v5.0.0-alpha.1 trust-strip test caught a CSS specificity issue: a `<div style="display: grid">` was emitted as Bricks `div` element, but `.brxe-div { display: flex; flex-direction: column }` from Bricks's base CSS overrode the inline `display: grid` from the generated class. Result: layout collapsed to a single column.
+
+Bricks ships two functionally similar layout containers — `div` and `block`. Both accept the same children and parents, but `block` has neutral default CSS so `display: grid` (or any inline display value) renders as written.
+
+* Fixed: `HtmlToElements::TAG_MAP` now maps `<div>`, `<aside>`, `<nav>`, `<figure>`, `<li>` to Bricks `block` (was `div`). All HTML containers preserve layout intent at render time.
+* Smoke tests still pass — the type swap is transparent to existing assertions.
+* Verified: build → render via Playwright now shows `display: grid; grid-template-columns: repeat(3, 1fr)` actually applied.
 
 = 5.0.0-alpha.1 =
 **Fix: Bricks hierarchy auto-wrap in HtmlToElements**

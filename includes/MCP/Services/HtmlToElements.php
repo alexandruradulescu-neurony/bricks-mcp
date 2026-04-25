@@ -49,11 +49,18 @@ final class HtmlToElements {
 		'footer'     => 'section',
 		'main'       => 'section',
 		'article'    => 'section',
-		'div'        => 'div',
-		'aside'      => 'div',
-		'nav'        => 'div',
-		'figure'     => 'div',
-		'li'         => 'div',
+		// HTML <div> maps to Bricks `block`, not `div`. Both accept the same
+		// children and parents, but Bricks ships `.brxe-div` with a default
+		// `display: flex; flex-direction: column` rule that beats inline
+		// `display: grid` style overrides through specificity. `.brxe-block`
+		// has neutral defaults, so layout intent set via inline style is
+		// honored at render. Verified empirically with a 3-column grid that
+		// rendered as flex-column under `div` and as grid under `block`.
+		'div'        => 'block',
+		'aside'      => 'block',
+		'nav'        => 'block',
+		'figure'     => 'block',
+		'li'         => 'block',
 
 		// Headings.
 		'h1'         => 'heading',
