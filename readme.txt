@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 5.1.0
+Stable tag: 5.1.1
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -193,6 +193,15 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 5.1.1 =
+**Fix: don't stamp `background: dark` when section already has explicit `_background` overrides**
+
+`BuildFromHtmlHandler::detect_dark_section()` previously stamped a `background: dark` flag on every section the converter inferred to be dark. Downstream, `ElementSettingsGenerator` interprets that flag by adding a default `_background.color.raw: var(--base-ultra-dark)` to the section element AND `_typography.color.raw: var(--white)` to every text descendant. When the AI's HTML already supplied an explicit `_background` (e.g., a gradient) and explicit text colors (e.g., `var(--accent)` for an eyebrow), the cascade overrode the user's intent.
+
+Symptom from a v5.1.0 closing-CTA test: section rendered as solid base-ultra-dark instead of the linear-gradient I declared; eyebrow rendered white instead of accent; CTA primary background dropped entirely. Class settings preserved correctly — element-level cascade was the culprit.
+
+* Fixed: handler now skips the dark-flag stamp when `section.structure.style_overrides._background` is set. The class-driven render takes over and explicit overrides survive.
 
 = 5.1.0 =
 **Lean — −2,810 LOC trim across 19 files + mode-explicit prompts**

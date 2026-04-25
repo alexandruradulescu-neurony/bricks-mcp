@@ -151,6 +151,11 @@ final class BuildFromHtmlHandler {
 		}
 
 		// 3. Wrap into the build_structure schema shape.
+		// v5.1.1: only stamp section-level `background: dark` flag when the
+		// converter did NOT already place an explicit `_background` block in
+		// style_overrides. The dark-flag triggers ElementSettingsGenerator's
+		// default `var(--base-ultra-dark)` which would clobber a user-supplied
+		// gradient or color.
 		$is_dark = $this->detect_dark_section( $convert['sections'] );
 		$schema  = [
 			'target'         => [
@@ -163,7 +168,13 @@ final class BuildFromHtmlHandler {
 			],
 			'sections'       => array_map(
 				static function ( array $section ) use ( $is_dark ): array {
-					if ( $is_dark && empty( $section['background'] ) ) {
+					if ( ! $is_dark || ! empty( $section['background'] ) ) {
+						return $section;
+					}
+					$has_explicit_bg = isset( $section['structure']['style_overrides']['_background'] )
+						&& is_array( $section['structure']['style_overrides']['_background'] )
+						&& ! empty( $section['structure']['style_overrides']['_background'] );
+					if ( ! $has_explicit_bg ) {
 						$section['background'] = 'dark';
 					}
 					return $section;
