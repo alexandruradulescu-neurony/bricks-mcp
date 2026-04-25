@@ -326,7 +326,7 @@ final class PopulateContentHandler {
 	public function register( ToolRegistry $registry ): void {
 		$registry->register(
 			'populate_content',
-			__( "Inject content_map (role → content values) into a built section. Use # prefix on keys to target specific element IDs. Optional — build_structure now accepts content inline.", 'bricks-mcp' ),
+			__( "Schema-mode only. Inject content_map (role → content values) into a section built via build_structure. Use # prefix on keys to target specific element IDs. NOT needed when building via build_from_html — HTML mode embeds content inline. Use this only as a post-build content patch tool when working in schema mode (popups, components, query loops).", 'bricks-mcp' ),
 			[
 				'type'       => 'object',
 				'properties' => [

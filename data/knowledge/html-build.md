@@ -2,6 +2,18 @@
 
 The `build_from_html` tool accepts an HTML fragment and writes Bricks elements to the target page. The conversion is deterministic — there is no AI in the plugin's pipeline. Your job is to write good HTML; the converter handles the Bricks shape.
 
+## Modes (the `mode` argument)
+
+`mode` declares your intent so the response can flag mismatches between intent and what the converter actually did. Three values, default `section`:
+
+- **`section`** (default) — one new section. The handler keeps `action=append` by default. The response warns if your HTML produced more than one top-level `<section>`. Use for adding a single section to a page.
+
+- **`page`** — multi-section full-page build. The handler forces `action=replace` regardless of what you sent (a "page build" with `append` would double up content). Your HTML should contain every section of the new page, top to bottom.
+
+- **`modify`** — guardrail for restructuring an existing section. The handler forces `action=replace`. **Prefer `element:update` / `element:bulk_update` for narrow edits** (text changes, single-style tweaks, content swaps); reach for `modify` mode only when the structural shape of the section must change. See the `modify-workflow` knowledge doc for the decision tree.
+
+The mode does not change the conversion. It only adjusts the action default and surfaces `mode_warnings` in the response.
+
 ## When to use HTML mode
 
 Use HTML mode for **content sections**:

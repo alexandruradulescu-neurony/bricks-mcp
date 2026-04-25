@@ -71,6 +71,7 @@ final class BuildFromHtmlHandler {
 		$html    = isset( $args['html'] ) && is_string( $args['html'] ) ? $args['html'] : '';
 		$page_id = (int) ( $args['page_id'] ?? $args['template_id'] ?? 0 );
 		$action  = isset( $args['action'] ) && is_string( $args['action'] ) ? $args['action'] : 'append';
+		$mode    = isset( $args['mode'] ) && is_string( $args['mode'] ) ? $args['mode'] : 'section';
 
 		if ( '' === trim( $html ) ) {
 			return new \WP_Error(
@@ -89,6 +90,37 @@ final class BuildFromHtmlHandler {
 				'invalid_action',
 				__( 'action must be "append" or "replace".', 'bricks-mcp' )
 			);
+		}
+		if ( ! in_array( $mode, [ 'section', 'page', 'modify' ], true ) ) {
+			return new \WP_Error(
+				'invalid_mode',
+				__( 'mode must be "section", "page", or "modify".', 'bricks-mcp' )
+			);
+		}
+
+		// v5.1: mode-specific guardrails (borrowed from agent-to-bricks
+		// templates/system-prompt.php pattern). The mode is informational —
+		// it lets the AI client signal intent so the response can flag
+		// mismatches between intent and what the converter actually did.
+		$convert_count_hint = null; // multi-section expectation when known
+		if ( 'section' === $mode ) {
+			// Single section expected. If converter produced more, return a
+			// warning rather than rejecting (sometimes <header> + <section>
+			// inside the source unintentionally split).
+			$convert_count_hint = 1;
+		}
+		if ( 'page' === $mode && 'append' === $action ) {
+			// Page mode targets a fresh build. Strongly prefer replace.
+			$action = 'replace';
+		}
+		if ( 'modify' === $mode ) {
+			// Modify mode is experimental. The AI is asked to use existing
+			// element tools (element:update, bulk_update) for in-place
+			// edits; this is here as a guardrail for AI clients that
+			// nevertheless call build_from_html with the modify intent.
+			if ( 'replace' !== $action ) {
+				$action = 'replace';
+			}
 		}
 
 		// 1. Convert HTML → Bricks schema.
@@ -165,7 +197,19 @@ final class BuildFromHtmlHandler {
 		}
 
 		// 6. Augment response with HTML-mode audit data.
+		$mode_warnings = [];
+		if ( null !== $convert_count_hint && ( $convert['stats']['sections_count'] ?? 1 ) !== $convert_count_hint ) {
+			$mode_warnings[] = sprintf(
+				/* translators: 1: requested mode, 2: expected sections, 3: actual sections */
+				__( 'mode "%1$s" expected %2$d top-level <section>, got %3$d', 'bricks-mcp' ),
+				$mode,
+				$convert_count_hint,
+				$convert['stats']['sections_count'] ?? 1
+			);
+		}
 		$result['html_mode'] = [
+			'mode'              => $mode,
+			'mode_warnings'     => $mode_warnings,
 			'class_names_seen'  => $convert['class_names_seen'],
 			'css_rules_dropped' => $convert['css_rules_dropped'],
 			'warnings'          => $convert['warnings'],
@@ -248,7 +292,7 @@ final class BuildFromHtmlHandler {
 		$registry->register(
 			'build_from_html',
 			__(
-				"Build a Bricks section from an HTML fragment. The AI writes HTML using the site's existing classes and CSS variables; the converter transforms it deterministically into Bricks elements, then the standard pipeline resolves classes, normalizes shapes, validates, writes, and verifies.\n\nUse this for content sections (heroes, features, CTAs, content blocks). For popups, components, and query loops, use build_structure (schema mode) instead.\n\nGuidelines for the HTML you emit:\n- Wrap the section in <section class=\"...\"> at the top level.\n- Use ONLY classes from this site (call global_class:list to see them). Inventing class names will leave styling undone.\n- Use CSS variables for colors and spacing — e.g. var(--primary), var(--space-l). Available variables come from get_site_info.\n- Inline styles (style=\"...\") are honored. Padding/margin/border-radius accept CSS shorthand.\n- For dark backgrounds use background: linear-gradient(135deg, var(--primary-ultra-dark), var(--base-ultra-dark)).\n- Buttons: <a class=\"hero__cta-primary\" href=\"...\">Label</a> for links, <button> for non-link CTAs.\n- Images: <img src=\"unsplash:query terms\" alt=\"...\"> triggers media sideload at write time.\n- Do NOT use <details>, <dialog>, or custom elements; they are dropped with a warning.\n- Do NOT try to express popups, components, or query loops.\n\nThe response includes html_mode.class_names_seen, html_mode.css_rules_dropped, and html_mode.warnings so you can see what survived the conversion.",
+				"Build Bricks elements from an HTML fragment. The AI writes HTML using the site's existing classes and CSS variables; the converter transforms it deterministically into Bricks elements, then the standard pipeline resolves classes, normalizes shapes, validates, writes, and verifies.\n\nUse this for content sections (heroes, features, CTAs, content blocks). For popups, components, and query loops, use build_structure (schema mode) instead.\n\nMODES (set via the `mode` argument):\n- section (default) — single <section> build. Append-by-default. Use for adding one new section to a page.\n- page — multi-section page build. Forces action=replace; intended for fresh full-page builds. The HTML should contain multiple top-level <section> elements covering the whole page.\n- modify — guardrail mode for AI clients that intend to alter an existing section. Forces action=replace. Note that for narrow modifications (text changes, single-style tweaks) you should prefer element:update / element:bulk_update — see knowledge doc modify-workflow. Use modify mode only when the structure of a section needs to change.\n\nGuidelines for the HTML you emit:\n- Wrap each section in <section class=\"...\"> at the top level.\n- Use ONLY classes from this site (call global_class:list first). Inventing class names leaves styling undone.\n- Use CSS variables for colors and spacing — var(--primary), var(--space-l). See get_site_info for the catalog.\n- Inline styles (style=\"...\") are honored. Padding/margin/border-radius accept CSS shorthand.\n- For dark backgrounds: background: linear-gradient(135deg, var(--primary-ultra-dark), var(--base-ultra-dark)).\n- Buttons: <a class=\"hero__cta-primary\" href=\"...\">Label</a> for links, <button> for non-link CTAs.\n- Images: <img src=\"unsplash:query\" alt=\"...\"> triggers media sideload at write time.\n- Do NOT use <details>, <dialog>, or custom elements — dropped with a warning.\n- Do NOT try to express popups, components, or query loops — rejected with html_mode_unsupported.\n\nResponse includes html_mode.{mode, mode_warnings, class_names_seen, css_rules_dropped, warnings, stats} so you can audit what survived conversion and whether your mode intent matched the structural outcome.",
 				'bricks-mcp'
 			),
 			[
@@ -256,7 +300,7 @@ final class BuildFromHtmlHandler {
 				'properties' => [
 					'html'    => [
 						'type'        => 'string',
-						'description' => __( 'The HTML fragment to convert. Top-level should be one or more <section> elements.', 'bricks-mcp' ),
+						'description' => __( 'The HTML fragment to convert.', 'bricks-mcp' ),
 					],
 					'page_id' => [
 						'type'        => 'integer',
@@ -266,10 +310,15 @@ final class BuildFromHtmlHandler {
 						'type'        => 'integer',
 						'description' => __( 'Target template ID (alternative to page_id).', 'bricks-mcp' ),
 					],
+					'mode'    => [
+						'type'        => 'string',
+						'enum'        => [ 'section', 'page', 'modify' ],
+						'description' => __( 'Intent of the build. section (default) = one new section; page = multi-section full-page replace; modify = guardrail for restructure of an existing section (forces replace).', 'bricks-mcp' ),
+					],
 					'action'  => [
 						'type'        => 'string',
 						'enum'        => [ 'append', 'replace' ],
-						'description' => __( 'append (default) adds new sections; replace overwrites existing page content.', 'bricks-mcp' ),
+						'description' => __( 'append (default in section mode) adds new sections; replace overwrites existing page content. page and modify modes auto-coerce action=replace.', 'bricks-mcp' ),
 					],
 				],
 				'required'   => [ 'html' ],
