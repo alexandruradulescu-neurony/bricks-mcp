@@ -194,32 +194,43 @@ final class VerifyHandler {
 		// v5/C: live render verification plan — AI client with Playwright MCP can
 		// execute this against the published page to catch silent CSS drops that
 		// element-data inspection misses.
-		$plan_section_id = is_string( $section_id ) ? $section_id : ( is_array( $last_section ) ? (string) ( $last_section['id'] ?? '' ) : '' );
-		$verification_plan = $this->build_verification_plan(
-			$page_id,
-			$plan_section_id,
-			array_values( array_unique( $class_names ) ),
-			$type_counts
-		);
+		// v5.1.4: opt-in. The plan carries a ~2 KB JS snippet for browser_evaluate;
+		// most verify calls don't need it. Pass include_visual_plan=true to receive it.
+		$include_visual_plan = ! empty( $args['include_visual_plan'] );
+		$verification_plan   = null;
+		if ( $include_visual_plan ) {
+			$plan_section_id = is_string( $section_id ) ? $section_id : ( is_array( $last_section ) ? (string) ( $last_section['id'] ?? '' ) : '' );
+			$verification_plan = $this->build_verification_plan(
+				$page_id,
+				$plan_section_id,
+				array_values( array_unique( $class_names ) ),
+				$type_counts
+			);
+		}
 
-		return [
-			'page_id'            => $page_id,
-			'page_description'   => $page_description,
-			'sections'           => $described_sections,
-			'element_count'      => count( $elements ),
-			'type_counts'        => $type_counts,
-			'classes_used'       => array_values( array_unique( $class_names ) ),
-			'quality_checks'     => $quality,
-			'labels'             => $labels,
-			'last_section'       => $hierarchy,
-			'section_count'      => count( $sections ),
-			'content_sample'     => $content_sample,
-			'content_contract'   => $content_contract,
-			'verification_plan'  => $verification_plan,
-			'status'             => 'ok',
-			'verification'       => 'Compare page_description and sections[*].description with your design intent. Check quality_checks, content_sample.headings and .buttons for actual text. If has_placeholder_content is true, replace [PLACEHOLDER] text. Compare type_counts and classes_used against your design_plan. For visual verification, follow verification_plan: navigate to page_url, run evaluate_snippet via Playwright (or any headless browser), and compare results to expected_features.',
-			'notes_hint'         => 'If you learned something about this site during the build (e.g. preferred layouts, naming conventions, design patterns that work well, corrections you had to make), save it via bricks:add_note(text="..."). Notes persist across sessions and are shown in future discovery responses.',
+		$response = [
+			'page_id'           => $page_id,
+			'page_description'  => $page_description,
+			'sections'          => $described_sections,
+			'element_count'     => count( $elements ),
+			'type_counts'       => $type_counts,
+			'classes_used'      => array_values( array_unique( $class_names ) ),
+			'quality_checks'    => $quality,
+			'labels'            => $labels,
+			'last_section'      => $hierarchy,
+			'section_count'     => count( $sections ),
+			'content_sample'    => $content_sample,
+			'content_contract'  => $content_contract,
+			'status'            => 'ok',
+			'verification'      => 'Compare page_description and sections[*].description with your design intent. Check quality_checks, content_sample.headings and .buttons for actual text. If has_placeholder_content is true, replace [PLACEHOLDER] text. Compare type_counts and classes_used against your design_plan. For visual verification with Playwright, call verify_build again with include_visual_plan=true to get a page_url + section_selector + evaluate_snippet.',
+			'notes_hint'        => 'If you learned something about this site during the build (e.g. preferred layouts, naming conventions, design patterns that work well, corrections you had to make), save it via bricks:add_note(text="..."). Notes persist across sessions and are shown in future discovery responses.',
 		];
+
+		if ( null !== $verification_plan ) {
+			$response['verification_plan'] = $verification_plan;
+		}
+
+		return $response;
 	}
 
 	/**
@@ -499,6 +510,10 @@ final class VerifyHandler {
 					'section_id'  => array(
 						'type'        => 'string',
 						'description' => __( 'Optional: specific section element ID to verify. If omitted, verifies the whole page.', 'bricks-mcp' ),
+					),
+					'include_visual_plan' => array(
+						'type'        => 'boolean',
+						'description' => __( 'Default false. When true, response includes verification_plan with page_url + section_selector + a ~2 KB Playwright JS snippet for browser_evaluate. Skip this unless you have a headless browser; element-data verification works without it.', 'bricks-mcp' ),
 					),
 				),
 			),

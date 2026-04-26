@@ -85,6 +85,27 @@ final class ProposalHandler {
 		}
 
 		$design_plan = $args['design_plan'] ?? null;
+		$if_hash     = isset( $args['if_hash'] ) && is_string( $args['if_hash'] ) ? trim( $args['if_hash'] ) : '';
+
+		// v5.1.4: client-supplied site_context_hash short-circuit.
+		// AI clients that already cached site_context from a prior call can pass
+		// `if_hash: <hash>`. When the live hash matches, propose_design returns a
+		// slim "not_modified" payload without re-shipping site_context, classes,
+		// variables, element catalog, or design_system_readiness.
+		if ( '' !== $if_hash && null === $design_plan ) {
+			$current_hash = $this->proposal_service->compute_site_context_hash( $page_id );
+			if ( $if_hash === $current_hash ) {
+				return [
+					'phase'                => 'discovery',
+					'page_id'              => $page_id,
+					'description'          => $description,
+					'site_context_hash'    => $current_hash,
+					'site_context_changed' => false,
+					'note'                 => 'site_context unchanged since the hash you supplied. Use cached context. Call again WITHOUT if_hash for a full payload.',
+				];
+			}
+		}
+
 		return $this->proposal_service->create( $page_id, $description, is_array( $design_plan ) ? $design_plan : null );
 	}
 
@@ -106,6 +127,7 @@ final class ProposalHandler {
 					'template_id' => [ 'type' => 'integer', 'description' => __( 'Target template ID (alternative).', 'bricks-mcp' ) ],
 					'description' => [ 'type' => 'string',  'description' => __( 'Free-text description of what to build.', 'bricks-mcp' ) ],
 					'design_plan' => [ 'type' => 'object',  'description' => __( 'Phase 2 design_plan object.', 'bricks-mcp' ) ],
+					'if_hash'     => [ 'type' => 'string',  'description' => __( 'Phase 1 only. Site_context hash from a prior discovery. When it matches the live hash, the response skips site_context / classes / variables / element catalog / design_system_readiness — saves ~30 KB on cached follow-ups.', 'bricks-mcp' ) ],
 				],
 				'required' => [],
 			],

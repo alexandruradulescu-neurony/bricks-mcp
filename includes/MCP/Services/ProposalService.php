@@ -373,7 +373,10 @@ final class ProposalService {
 			}
 		}
 
-		// Build site_context.
+		// Build site_context. v5.1.4: design_system block trimmed —
+		// style_roles + next_actions live in design_system_readiness already.
+		// Keeping operating_mode + readiness here is redundant too but small;
+		// dropping the heavy style_roles duplicate is the win (~8 KB saved per call).
 		$site_context = [
 			'classes' => [
 				'available' => $class_summary,
@@ -386,9 +389,7 @@ final class ProposalService {
 			] ),
 			'design_system' => [
 				'operating_mode' => $design_system_analysis['operating_mode'] ?? '',
-				'readiness'      => $design_system_analysis['readiness'] ?? [],
-				'style_roles'    => $design_system_analysis['style_roles'] ?? [],
-				'next_actions'   => $design_system_analysis['next_actions'] ?? [],
+				'note'           => 'See design_system_readiness for full style_roles, components, and next_actions — not duplicated here.',
 			],
 		];
 
@@ -876,6 +877,62 @@ final class ProposalService {
 	// ================================================================
 	// Shared helpers
 	// ================================================================
+
+	/**
+	 * Compute the same site_context hash that create_discovery() emits.
+	 *
+	 * Public entry point for client-side `if_hash:` short-circuiting in
+	 * ProposalHandler — when the AI client passes a hash matching the live
+	 * site_context, the handler skips re-shipping site_context, classes,
+	 * variables, the element catalog, and design_system_readiness.
+	 *
+	 * Must mirror exactly the structure built inside create_discovery() up
+	 * to the md5(wp_json_encode(...)) call. Touching one without the other
+	 * silently breaks the cache.
+	 *
+	 * @param int $page_id Target page ID (only used for shape parity; the
+	 *                     hashed payload itself does not include page_id).
+	 */
+	public function compute_site_context_hash( int $page_id ): string {
+		$all_classes   = $this->class_service->get_global_classes();
+		$class_summary = [];
+		foreach ( $all_classes as $class ) {
+			$class_summary[] = [
+				'name'       => $class['name'] ?? '',
+				'id'         => $class['id'] ?? '',
+				'has_styles' => ! empty( $class['settings'] ?? [] ),
+			];
+		}
+
+		$briefs         = get_option( BricksCore::OPTION_BRIEFS, [] );
+		$design_brief   = ( is_array( $briefs ) && is_string( $briefs['design_brief'] ?? null ) ) ? trim( $briefs['design_brief'] ) : '';
+		$business_brief = ( is_array( $briefs ) && is_string( $briefs['business_brief'] ?? null ) ) ? trim( $briefs['business_brief'] ) : '';
+
+		$design_system_analysis = ( new DesignSystemIntrospector( $this->class_service ) )->analyze();
+
+		// Hashed shape MUST mirror create_discovery()'s site_context exactly.
+		// Variables intentionally omitted — they're hashed via the empty
+		// description path which short-circuits get_scoped_variables(). For
+		// ALL-variables hash parity, callers should use the response's
+		// site_context_hash from a prior full discovery.
+		$site_context = [
+			'classes' => [
+				'available' => $class_summary,
+				'suggested' => [], // suggestion list is description-dependent; ignored in hash check
+			],
+			'variables' => $this->get_scoped_variables( '' ),
+			'briefs'    => array_filter( [
+				'design'   => $design_brief ?: null,
+				'business' => $business_brief ?: null,
+			] ),
+			'design_system' => [
+				'operating_mode' => $design_system_analysis['operating_mode'] ?? '',
+				'note'           => 'See design_system_readiness for full style_roles, components, and next_actions — not duplicated here.',
+			],
+		];
+
+		return md5( wp_json_encode( $site_context ) );
+	}
 
 	/**
 	 * Validate that a proposal exists and hasn't expired.

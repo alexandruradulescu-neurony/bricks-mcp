@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 5.1.3
+Stable tag: 5.1.4
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -193,6 +193,21 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 5.1.4 =
+**Efficiency: ~24 KB / ~6K tokens off the typical propose+verify cycle**
+
+Spot-audit of session payload sizes surfaced four redundant blocks shipped on every relevant call. Trimmed without changing functional behavior; default responses get smaller, callers that need the heavier shape opt in.
+
+* **Removed duplicate `style_roles` from `site_context.design_system`** (`ProposalService::create_discovery`). The full `style_roles` block (~8 KB) already lives at the top level of `design_system_readiness` — no reason to ship it twice in the same response. `site_context.design_system` now carries only `operating_mode` plus a pointer note.
+* **`verify_build` `verification_plan` is now opt-in** via `include_visual_plan: true`. The Playwright JS snippet (~2 KB) is only useful for AI clients with a headless browser; default verifies skip it. Tool description still flags Playwright as the visual-audit path; pass the flag when you need the snippet.
+* **`propose_design` accepts `if_hash`** for client-side caching. AI clients that already have the site_context can pass `if_hash: <prior_hash>`. When the live hash matches, the response is a slim `not_modified` payload (~200 bytes) instead of the full ~30 KB discovery dump. New `ProposalService::compute_site_context_hash($page_id)` mirrors the discovery hash logic so the short-circuit checks the same shape.
+* **`global_class:list` accepts `compact: true`**. Returns just `{id, name, category, has_styles}` per class instead of the full settings tree. Saves 50–80% on payload size for the common case where the AI just needs to know which class names exist before a build. Default behavior unchanged.
+
+What I deliberately left for later:
+* Element catalog trim (76 → ~12 common types) was in the audit list but skipped — discovery's element catalog is more useful as a complete reference than a curated subset.
+
+Behaviorally identical; smaller pipes.
 
 = 5.1.3 =
 **Fix: element-level `style_overrides` now win over the matched class**

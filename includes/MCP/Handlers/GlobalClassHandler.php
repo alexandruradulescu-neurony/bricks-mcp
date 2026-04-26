@@ -115,6 +115,7 @@ final class GlobalClassHandler {
 	private function tool_get_global_classes( array $args ): array|\WP_Error {
 		$search   = isset( $args['search'] ) ? sanitize_text_field( $args['search'] ) : '';
 		$category = isset( $args['category'] ) ? sanitize_text_field( $args['category'] ) : '';
+		$compact  = ! empty( $args['compact'] );
 		$classes  = $this->bricks_service->get_global_classes( $search, $category );
 
 		$total  = count( $classes );
@@ -125,10 +126,35 @@ final class GlobalClassHandler {
 			$classes = array_values( array_slice( $classes, $offset, $limit ) );
 		}
 
+		// v5.1.4: compact mode returns just identifiers + a has_styles flag.
+		// Saves 50–80% on payload size for callers that just want to know
+		// which class names exist (the common case before a build).
+		if ( $compact ) {
+			$classes = array_map(
+				static function ( $cls ): array {
+					if ( ! is_array( $cls ) ) {
+						return [];
+					}
+					return [
+						'id'         => $cls['id']   ?? '',
+						'name'       => $cls['name'] ?? '',
+						'category'   => $cls['category'] ?? '',
+						'has_styles' => ! empty( $cls['settings'] ?? [] ),
+					];
+				},
+				$classes
+			);
+		}
+
 		$result = array(
 			'total'   => $total,
 			'classes' => $classes,
 		);
+
+		if ( $compact ) {
+			$result['compact'] = true;
+			$result['note']    = 'Compact mode — call list again with compact=false (or omit) for full class settings.';
+		}
 
 		if ( $offset > 0 || null !== $limit ) {
 			$result['offset']   = $offset;
@@ -701,6 +727,10 @@ final class GlobalClassHandler {
 					'limit'          => array(
 						'type'        => 'integer',
 						'description' => __( 'Max classes to return (list: optional, default all)', 'bricks-mcp' ),
+					),
+					'compact'        => array(
+						'type'        => 'boolean',
+						'description' => __( 'Compact output for list. When true, each class returns only id/name/category/has_styles instead of full settings — saves 50–80% on payload. Use this when you just need to know which class names exist (the common case before a build).', 'bricks-mcp' ),
 					),
 					'query'          => array(
 						'type'        => 'string',
