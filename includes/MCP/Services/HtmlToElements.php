@@ -97,6 +97,21 @@ final class HtmlToElements {
 	];
 
 	/**
+	 * Rich Bricks elements addressable from HTML via the
+	 * `data-bricks-element="..."` convention. Maps the keyword to the
+	 * builder method that synthesizes the full Bricks element shape.
+	 *
+	 * @var array<string, string>
+	 */
+	private const RICH_ELEMENTS = [
+		'icon'             => 'build_icon_node',
+		'counter'          => 'build_counter_node',
+		'accordion-nested' => 'build_accordion_nested_node',
+		'tabs-nested'      => 'build_tabs_nested_node',
+		'slider-nested'    => 'build_slider_nested_node',
+	];
+
+	/**
 	 * HTML tags that are always skipped (their children are still walked).
 	 *
 	 * @var array<int, string>
@@ -146,6 +161,7 @@ final class HtmlToElements {
 		'flex-shrink'            => '_flexShrink',
 		'flex-basis'             => '_flexBasis',
 		'order'                  => '_order',
+		'align-self'             => '_alignSelf',
 		'justify-content'        => '_justifyContent',
 		'align-items'            => '_alignItems',
 		'align-content'          => '_alignContent',
@@ -327,8 +343,15 @@ final class HtmlToElements {
 				continue;
 			}
 
+			// v5.2.0: rich-element marker overrides tag mapping. An element
+			// like <i data-bricks-element="icon"> is a valid rich-element
+			// placeholder even though <i> isn't in TAG_MAP — let build_node
+			// route it via RICH_ELEMENTS.
+			$rich_marker = strtolower( trim( $child->getAttribute( 'data-bricks-element' ) ) );
+			$has_rich    = '' !== $rich_marker && isset( self::RICH_ELEMENTS[ $rich_marker ] );
+
 			$mapped_type = self::TAG_MAP[ $tag ] ?? null;
-			if ( null === $mapped_type ) {
+			if ( null === $mapped_type && ! $has_rich ) {
 				$context['warnings'][] = sprintf(
 					/* translators: %s: HTML tag */
 					__( 'Skipped unknown tag: <%s>', 'bricks-mcp' ),
@@ -341,6 +364,13 @@ final class HtmlToElements {
 					$children[] = $node;
 				}
 				continue;
+			}
+			if ( null === $mapped_type ) {
+				// Tag not in TAG_MAP but a rich-element marker is present —
+				// build_node will dispatch through RICH_ELEMENTS based on the
+				// marker, ignoring the tag name. Use a placeholder type so the
+				// pipeline doesn't choke before build_node runs.
+				$mapped_type = $rich_marker;
 			}
 
 			$context['tags_processed']++;
@@ -365,6 +395,17 @@ final class HtmlToElements {
 	 * @return array<string, mixed>
 	 */
 	private static function build_node( DOMElement $el, string $tag, string $type, string $path, array &$context ): array {
+		// v5.2.0: rich-element override. data-bricks-element="icon|counter|
+		// accordion-nested|tabs-nested|slider-nested" routes to a dedicated
+		// builder that emits the proper Bricks element shape (icon library +
+		// name, counter target/duration, the deeply-nested accordion/tabs/
+		// slider structures) — things HTML's vocabulary can't express.
+		$bricks_override = strtolower( trim( $el->getAttribute( 'data-bricks-element' ) ) );
+		if ( '' !== $bricks_override && isset( self::RICH_ELEMENTS[ $bricks_override ] ) ) {
+			$method = self::RICH_ELEMENTS[ $bricks_override ];
+			return self::$method( $el, $path, $context );
+		}
+
 		$node = [ 'type' => $type ];
 
 		if ( 'heading' === $type ) {
@@ -400,8 +441,12 @@ final class HtmlToElements {
 		}
 
 		// Inline text content for text-bearing elements.
+		// v5.2.0: use concatenated extraction so inline child elements (spans,
+		// strong, em, etc.) contribute their text. Mixed-color heading/text
+		// runs lose their per-span styling at this stage (Bricks heading is a
+		// single styled run) but the text content survives.
 		if ( in_array( $type, [ 'heading', 'text-basic', 'text-link', 'button' ], true ) ) {
-			$text = self::extract_direct_text( $el );
+			$text = self::extract_concatenated_text( $el );
 			if ( '' !== $text ) {
 				$node['content'] = $text;
 			}
@@ -480,6 +525,23 @@ final class HtmlToElements {
 					}
 				}
 				$node['children'] = $inner;
+			} else {
+				// v5.2.0: a layout-type element (block/div/etc) with no element
+				// children but with direct text content (e.g. <div class="icon">🚛</div>
+				// or <div class="badge">99+</div>) — synthesize a text-basic child
+				// so the text actually renders. Without this, layout containers
+				// silently drop their direct-text content.
+				if ( in_array( $type, [ 'block', 'div', 'container' ], true ) ) {
+					$direct_text = self::extract_direct_text( $el );
+					if ( '' !== $direct_text ) {
+						$node['children'] = [
+							[
+								'type'    => 'text-basic',
+								'content' => $direct_text,
+							],
+						];
+					}
+				}
 			}
 		}
 
@@ -852,6 +914,11 @@ final class HtmlToElements {
 	/**
 	 * Direct text content of a node (excluding text inside child elements).
 	 *
+	 * Used when we want only the bare text nodes that sit at this level,
+	 * skipping any element children entirely. Layout containers (block/div)
+	 * use this to detect "is there text I should hoist into a synthetic
+	 * text-basic child?".
+	 *
 	 * @param DOMNode $node
 	 * @return string
 	 */
@@ -863,6 +930,45 @@ final class HtmlToElements {
 			}
 		}
 		return trim( $text );
+	}
+
+	/**
+	 * Concatenated text content for a text-bearing element.
+	 *
+	 * v5.2.0: replacement for `extract_direct_text` when emitting content
+	 * for heading / text-basic / text-link / button. Includes both direct
+	 * text nodes AND the textContent of inline element children (spans,
+	 * em, strong, etc.) so mixed-color or mixed-weight runs survive.
+	 *
+	 * Skips child elements that carry `data-bricks-element` — those are
+	 * placeholders for rich elements that own their own rendering and
+	 * shouldn't have their text leaked into the parent's content string.
+	 *
+	 * @param DOMNode $node
+	 * @return string
+	 */
+	private static function extract_concatenated_text( DOMNode $node ): string {
+		$parts = [];
+		foreach ( $node->childNodes as $child ) {
+			if ( XML_TEXT_NODE === $child->nodeType ) {
+				$parts[] = $child->textContent;
+				continue;
+			}
+			if ( $child instanceof DOMElement ) {
+				$rich_marker = trim( $child->getAttribute( 'data-bricks-element' ) );
+				if ( '' !== $rich_marker ) {
+					// Rich element placeholder — owns its own content; don't merge it
+					// into the parent text run.
+					continue;
+				}
+				$parts[] = $child->textContent;
+			}
+		}
+		// Collapse runs of whitespace introduced by interleaved text + element
+		// children (e.g., "Increase of <span>126</span> this month").
+		$joined = implode( '', $parts );
+		$joined = preg_replace( '/\s+/', ' ', $joined );
+		return trim( (string) $joined );
 	}
 
 	/**
@@ -911,5 +1017,346 @@ final class HtmlToElements {
 	private static function humanize( string $value ): string {
 		$spaced = str_replace( [ '-', '_' ], ' ', $value );
 		return ucfirst( trim( $spaced ) );
+	}
+
+	// ─────────────────────────────────────────────────────────────────────
+	// Rich-element builders (v5.2.0).
+	//
+	// Each method emits the full Bricks element shape — including any
+	// required nested children that Bricks expects but HTML can't model
+	// faithfully (e.g. accordion-item title-row + content-pane structure).
+	// ─────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Apply class + style + label common attributes to a rich-element node.
+	 *
+	 * Mirrors the per-element handling that build_node() does for normal
+	 * tag-mapped elements. Returns the node with class_intent, label,
+	 * style_overrides applied.
+	 *
+	 * @param array<string, mixed> $node
+	 * @param DOMElement           $el
+	 * @param string               $path
+	 * @param array<string, mixed> $context
+	 * @return array<string, mixed>
+	 */
+	private static function apply_common_attrs( array $node, DOMElement $el, string $path, array &$context ): array {
+		$class_attr = trim( $el->getAttribute( 'class' ) );
+		if ( '' !== $class_attr ) {
+			$class_list = preg_split( '/\s+/', $class_attr, -1, PREG_SPLIT_NO_EMPTY );
+			if ( is_array( $class_list ) && ! empty( $class_list ) ) {
+				foreach ( $class_list as $cls ) {
+					$context['class_names_seen'][] = $cls;
+				}
+				$node['class_intent'] = $class_list[0];
+				if ( count( $class_list ) > 1 ) {
+					$extras                                  = array_slice( $class_list, 1 );
+					$node['element_settings']                = $node['element_settings'] ?? [];
+					$node['element_settings']['_cssClasses'] = implode( ' ', $extras );
+				}
+				$node['label'] = self::label_from_class( $class_list[0] );
+			}
+		}
+
+		$style_attr = trim( $el->getAttribute( 'style' ) );
+		if ( '' !== $style_attr ) {
+			$style_overrides = self::parse_inline_styles( $style_attr, $path, $context );
+			if ( ! empty( $style_overrides ) ) {
+				$node['style_overrides'] = $style_overrides;
+			}
+		}
+
+		return $node;
+	}
+
+	/**
+	 * Pull a `data-bricks-{prefix}-{key}` attribute, falling back to a default.
+	 */
+	private static function attr( DOMElement $el, string $name, string $default = '' ): string {
+		$value = trim( $el->getAttribute( $name ) );
+		return '' !== $value ? $value : $default;
+	}
+
+	/**
+	 * Build an `icon` Bricks element from a `<i data-bricks-element="icon" ...>`
+	 * (or any tag with the right marker).
+	 *
+	 * Recognized data-bricks-* attributes:
+	 * - data-bricks-icon-library  (themify | ionicons | fontawesome | bxs | …)
+	 * - data-bricks-icon-name     (e.g. ti-truck, ion-ios-arrow-forward)
+	 * - data-bricks-icon-size     (e.g. 24px, 1em)
+	 * - data-bricks-icon-color    (CSS color or var(--*))
+	 *
+	 * @return array<string, mixed>
+	 */
+	private static function build_icon_node( DOMElement $el, string $path, array &$context ): array {
+		$library = self::attr( $el, 'data-bricks-icon-library', 'themify' );
+		$name    = self::attr( $el, 'data-bricks-icon-name', '' );
+		$size    = self::attr( $el, 'data-bricks-icon-size', '' );
+		$color   = self::attr( $el, 'data-bricks-icon-color', '' );
+
+		$settings = [
+			'icon' => [
+				'library' => $library,
+				'icon'    => $name,
+			],
+		];
+		if ( '' !== $size ) {
+			$settings['iconSize'] = $size;
+		}
+
+		$node = [
+			'type'             => 'icon',
+			'element_settings' => $settings,
+		];
+		if ( '' !== $color ) {
+			$node['style_overrides']         = $node['style_overrides'] ?? [];
+			$node['style_overrides']['_color'] = [ 'raw' => $color ];
+		}
+
+		// Optional: data-bricks-icon-link-href for clickable icons.
+		$href = self::attr( $el, 'data-bricks-icon-link-href' );
+		if ( '' !== $href ) {
+			$new_tab                       = strtolower( self::attr( $el, 'data-bricks-icon-link-target' ) ) === '_blank';
+			$settings['link']              = self::build_link_setting( $href, $new_tab );
+			$node['element_settings']      = $settings;
+		}
+
+		return self::apply_common_attrs( $node, $el, $path, $context );
+	}
+
+	/**
+	 * Build a `counter` Bricks element from a `<span data-bricks-element="counter" ...>`.
+	 *
+	 * Recognized data-bricks-* attributes:
+	 * - data-bricks-count-to        (target number — required, e.g. 1951)
+	 * - data-bricks-count-from      (start number, default 0)
+	 * - data-bricks-count-prefix    (e.g. "$")
+	 * - data-bricks-count-suffix    (e.g. "+", "%")
+	 * - data-bricks-count-duration  (animation duration in ms, default Bricks default)
+	 *
+	 * @return array<string, mixed>
+	 */
+	private static function build_counter_node( DOMElement $el, string $path, array &$context ): array {
+		$count_to = self::attr( $el, 'data-bricks-count-to', '0' );
+		$settings = [ 'countTo' => $count_to ];
+
+		foreach ( [ 'count-from' => 'countFrom', 'count-prefix' => 'prefix', 'count-suffix' => 'suffix', 'count-duration' => 'duration' ] as $attr_suffix => $bricks_key ) {
+			$v = self::attr( $el, 'data-bricks-' . $attr_suffix );
+			if ( '' !== $v ) {
+				$settings[ $bricks_key ] = $v;
+			}
+		}
+
+		$node = [
+			'type'             => 'counter',
+			'element_settings' => $settings,
+		];
+
+		return self::apply_common_attrs( $node, $el, $path, $context );
+	}
+
+	/**
+	 * Build an `accordion-nested` Bricks element from
+	 * `<div data-bricks-element="accordion-nested"><div data-bricks-accordion-title="Q1">A1</div>…</div>`.
+	 *
+	 * Each child div with `data-bricks-accordion-title="..."` becomes one
+	 * accordion item. The plugin synthesizes the title-wrapper + content-wrapper
+	 * structure Bricks needs (block > [block(_hidden=accordion-title-wrapper) >
+	 * [heading + icon], block(_hidden=accordion-content-wrapper) > [text-basic]]).
+	 *
+	 * @return array<string, mixed>
+	 */
+	private static function build_accordion_nested_node( DOMElement $el, string $path, array &$context ): array {
+		$items = [];
+		$idx   = 0;
+
+		foreach ( $el->childNodes as $child ) {
+			if ( ! ( $child instanceof DOMElement ) ) {
+				continue;
+			}
+			$title = trim( $child->getAttribute( 'data-bricks-accordion-title' ) );
+			if ( '' === $title ) {
+				continue;
+			}
+			$idx++;
+			$item_path = $path . '/accordion-item[' . $idx . ']';
+			$body_text = self::extract_concatenated_text( $child );
+
+			$items[] = [
+				'type'  => 'block',
+				'label' => 'Accordion Item',
+				'children' => [
+					[
+						'type'             => 'block',
+						'label'            => 'Title',
+						'element_settings' => [
+							'_direction'      => 'row',
+							'_justifyContent' => 'space-between',
+							'_alignItems'     => 'center',
+							'_hidden'         => [ '_cssClasses' => 'accordion-title-wrapper' ],
+						],
+						'children'         => [
+							[
+								'type'    => 'heading',
+								'tag'     => 'h3',
+								'content' => $title,
+							],
+							[
+								'type'             => 'icon',
+								'element_settings' => [
+									'icon'             => [ 'library' => 'ionicons', 'icon' => 'ion-ios-arrow-forward' ],
+									'iconSize'         => '1em',
+									'isAccordionIcon'  => true,
+								],
+							],
+						],
+					],
+					[
+						'type'             => 'block',
+						'label'            => 'Content',
+						'element_settings' => [
+							'_hidden' => [ '_cssClasses' => 'accordion-content-wrapper' ],
+						],
+						'children'         => [
+							[
+								'type'    => 'text-basic',
+								'content' => '' !== $body_text ? $body_text : '',
+							],
+						],
+					],
+				],
+			];
+		}
+
+		$node = [
+			'type'     => 'accordion-nested',
+			'children' => $items,
+		];
+
+		return self::apply_common_attrs( $node, $el, $path, $context );
+	}
+
+	/**
+	 * Build a `tabs-nested` Bricks element from
+	 * `<div data-bricks-element="tabs-nested"><div data-bricks-tab-label="Day 1">…content…</div>…</div>`.
+	 *
+	 * Bricks's tabs require TWO sibling blocks: a tab-menu (with .tab-title divs
+	 * per label) and a tab-content (with .tab-pane blocks per content).
+	 *
+	 * @return array<string, mixed>
+	 */
+	private static function build_tabs_nested_node( DOMElement $el, string $path, array &$context ): array {
+		$labels  = [];
+		$contents = [];
+		$idx     = 0;
+
+		foreach ( $el->childNodes as $child ) {
+			if ( ! ( $child instanceof DOMElement ) ) {
+				continue;
+			}
+			$label = trim( $child->getAttribute( 'data-bricks-tab-label' ) );
+			if ( '' === $label ) {
+				continue;
+			}
+			$idx++;
+			$labels[]   = $label;
+			$contents[] = self::process_children( $child, $path . '/tab[' . $idx . ']', $context );
+		}
+
+		$tab_menu_children = [];
+		foreach ( $labels as $label ) {
+			$tab_menu_children[] = [
+				'type'             => 'div',
+				'element_settings' => [ '_hidden' => [ '_cssClasses' => 'tab-title' ] ],
+				'children'         => [
+					[ 'type' => 'text-basic', 'content' => $label ],
+				],
+			];
+		}
+
+		$tab_content_children = [];
+		foreach ( $contents as $pane_kids ) {
+			$tab_content_children[] = [
+				'type'             => 'block',
+				'element_settings' => [ '_hidden' => [ '_cssClasses' => 'tab-pane' ] ],
+				'children'         => $pane_kids,
+			];
+		}
+
+		$node = [
+			'type'     => 'tabs-nested',
+			'children' => [
+				[
+					'type'             => 'block',
+					'label'            => 'Tab Menu',
+					'element_settings' => [
+						'_direction' => 'row',
+						'_hidden'    => [ '_cssClasses' => 'tab-menu' ],
+					],
+					'children'         => $tab_menu_children,
+				],
+				[
+					'type'             => 'block',
+					'label'            => 'Tab Content',
+					'element_settings' => [ '_hidden' => [ '_cssClasses' => 'tab-content' ] ],
+					'children'         => $tab_content_children,
+				],
+			],
+		];
+
+		return self::apply_common_attrs( $node, $el, $path, $context );
+	}
+
+	/**
+	 * Build a `slider-nested` Bricks element from
+	 * `<div data-bricks-element="slider-nested" data-bricks-slider-autoplay="true">
+	 *    <div data-bricks-slide>…content…</div>…
+	 *  </div>`.
+	 *
+	 * Each `<div data-bricks-slide>` becomes one slide block (Bricks's expected
+	 * shape). Slider-level attributes (autoplay/arrows/dots/perPage) move into
+	 * element_settings.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private static function build_slider_nested_node( DOMElement $el, string $path, array &$context ): array {
+		$slides = [];
+		$idx    = 0;
+		foreach ( $el->childNodes as $child ) {
+			if ( ! ( $child instanceof DOMElement ) ) {
+				continue;
+			}
+			$is_slide = $child->hasAttribute( 'data-bricks-slide' )
+				|| trim( $child->getAttribute( 'data-bricks-element' ) ) === 'slide';
+			if ( ! $is_slide ) {
+				continue;
+			}
+			$idx++;
+			$slide_kids = self::process_children( $child, $path . '/slide[' . $idx . ']', $context );
+			$slides[]   = [
+				'type'     => 'block',
+				'label'    => 'Slide',
+				'children' => $slide_kids,
+			];
+		}
+
+		$settings = [];
+		foreach ( [ 'autoplay' => 'autoplay', 'arrows' => 'arrows', 'dots' => 'dots', 'per-page' => 'perPage', 'gap' => 'gap', 'speed' => 'speed', 'loop' => 'loop' ] as $attr_suffix => $bricks_key ) {
+			$v = self::attr( $el, 'data-bricks-slider-' . $attr_suffix );
+			if ( '' !== $v ) {
+				$settings[ $bricks_key ] = ( 'true' === strtolower( $v ) ) ? true : ( ( 'false' === strtolower( $v ) ) ? false : $v );
+			}
+		}
+
+		$node = [
+			'type'     => 'slider-nested',
+			'children' => $slides,
+		];
+		if ( ! empty( $settings ) ) {
+			$node['element_settings'] = $settings;
+		}
+
+		return self::apply_common_attrs( $node, $el, $path, $context );
 	}
 }

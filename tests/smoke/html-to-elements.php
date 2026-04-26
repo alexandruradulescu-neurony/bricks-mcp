@@ -240,6 +240,103 @@ if ( assert_not_wp_error( 'css drops surface', $res ) ) {
 	assert_eq( 'padding still there',  '1rem',     $div['style_overrides']['_padding']['top'] ?? null );
 }
 
+// ─── Test 7 (v5.2.0): mixed text inside heading ────────────────────
+$res = HtmlToElements::convert( '<h1>The Future of Manufacturing with <span style="color: var(--primary)">Latest Technology</span></h1>' );
+if ( assert_not_wp_error( 'mixed-text heading converts', $res ) ) {
+	$h1 = $res['sections'][0]['structure']['children'][0]['children'][0] ?? [];
+	assert_eq( 'h1 type', 'heading', $h1['type'] ?? null );
+	assert_eq( 'h1 content includes span text', 'The Future of Manufacturing with Latest Technology', $h1['content'] ?? null );
+}
+
+// ─── Test 8 (v5.2.0): block with text-only content gets synthetic child ──
+$res = HtmlToElements::convert( '<div class="badge">99+</div>' );
+if ( assert_not_wp_error( 'block text fallback', $res ) ) {
+	$block = $res['sections'][0]['structure']['children'][0]['children'][0] ?? [];
+	assert_eq( 'block class_intent', 'badge', $block['class_intent'] ?? null );
+	$child = $block['children'][0] ?? [];
+	assert_eq( 'synthetic child is text-basic', 'text-basic', $child['type'] ?? null );
+	assert_eq( 'synthetic child carries the text', '99+', $child['content'] ?? null );
+}
+
+// ─── Test 9 (v5.2.0): data-bricks-element="icon" ───────────────────
+$res = HtmlToElements::convert( '<i data-bricks-element="icon" data-bricks-icon-library="themify" data-bricks-icon-name="ti-truck" data-bricks-icon-size="24px" data-bricks-icon-color="var(--primary)"></i>' );
+if ( assert_not_wp_error( 'icon rich element converts', $res ) ) {
+	$icon = $res['sections'][0]['structure']['children'][0]['children'][0] ?? [];
+	assert_eq( 'icon type', 'icon', $icon['type'] ?? null );
+	assert_eq( 'icon library', 'themify', $icon['element_settings']['icon']['library'] ?? null );
+	assert_eq( 'icon name', 'ti-truck', $icon['element_settings']['icon']['icon'] ?? null );
+	assert_eq( 'icon size', '24px', $icon['element_settings']['iconSize'] ?? null );
+	assert_eq( 'icon color', 'var(--primary)', $icon['style_overrides']['_color']['raw'] ?? null );
+}
+
+// ─── Test 10 (v5.2.0): data-bricks-element="counter" ───────────────
+$res = HtmlToElements::convert( '<span data-bricks-element="counter" data-bricks-count-to="1951" data-bricks-count-suffix="+" data-bricks-count-duration="2000"></span>' );
+if ( assert_not_wp_error( 'counter rich element converts', $res ) ) {
+	$counter = $res['sections'][0]['structure']['children'][0]['children'][0] ?? [];
+	assert_eq( 'counter type', 'counter', $counter['type'] ?? null );
+	assert_eq( 'counter target', '1951', $counter['element_settings']['countTo'] ?? null );
+	assert_eq( 'counter suffix', '+', $counter['element_settings']['suffix'] ?? null );
+	assert_eq( 'counter duration', '2000', $counter['element_settings']['duration'] ?? null );
+}
+
+// ─── Test 11 (v5.2.0): data-bricks-element="accordion-nested" ─────
+$res = HtmlToElements::convert(
+	'<div data-bricks-element="accordion-nested">' .
+	'  <div data-bricks-accordion-title="Q1">A1 answer text.</div>' .
+	'  <div data-bricks-accordion-title="Q2">A2 answer text.</div>' .
+	'</div>'
+);
+if ( assert_not_wp_error( 'accordion-nested converts', $res ) ) {
+	$acc = $res['sections'][0]['structure']['children'][0]['children'][0] ?? [];
+	assert_eq( 'accordion type', 'accordion-nested', $acc['type'] ?? null );
+	assert_eq( 'two accordion items', 2, count( $acc['children'] ?? [] ) );
+	$first_item = $acc['children'][0] ?? [];
+	$first_title_block = $first_item['children'][0] ?? [];
+	$first_title_heading = $first_title_block['children'][0] ?? [];
+	assert_eq( 'first item title heading content', 'Q1', $first_title_heading['content'] ?? null );
+	assert_eq( 'title block has accordion-title-wrapper', 'accordion-title-wrapper', $first_title_block['element_settings']['_hidden']['_cssClasses'] ?? null );
+	$first_content_block = $first_item['children'][1] ?? [];
+	$first_content_text = $first_content_block['children'][0] ?? [];
+	assert_eq( 'first item answer content', 'A1 answer text.', $first_content_text['content'] ?? null );
+}
+
+// ─── Test 12 (v5.2.0): data-bricks-element="tabs-nested" ──────────
+$res = HtmlToElements::convert(
+	'<div data-bricks-element="tabs-nested">' .
+	'  <div data-bricks-tab-label="Day 1"><p>Day 1 content here.</p></div>' .
+	'  <div data-bricks-tab-label="Day 2"><p>Day 2 content here.</p></div>' .
+	'</div>'
+);
+if ( assert_not_wp_error( 'tabs-nested converts', $res ) ) {
+	$tabs = $res['sections'][0]['structure']['children'][0]['children'][0] ?? [];
+	assert_eq( 'tabs type', 'tabs-nested', $tabs['type'] ?? null );
+	$tab_menu = $tabs['children'][0] ?? [];
+	$tab_content = $tabs['children'][1] ?? [];
+	assert_eq( 'tab menu cssClass', 'tab-menu', $tab_menu['element_settings']['_hidden']['_cssClasses'] ?? null );
+	assert_eq( 'tab content cssClass', 'tab-content', $tab_content['element_settings']['_hidden']['_cssClasses'] ?? null );
+	assert_eq( 'two tab labels', 2, count( $tab_menu['children'] ?? [] ) );
+	$first_label_div = $tab_menu['children'][0] ?? [];
+	$first_label_text = $first_label_div['children'][0] ?? [];
+	assert_eq( 'first tab label text', 'Day 1', $first_label_text['content'] ?? null );
+}
+
+// ─── Test 13 (v5.2.0): data-bricks-element="slider-nested" ────────
+$res = HtmlToElements::convert(
+	'<div data-bricks-element="slider-nested" data-bricks-slider-autoplay="true" data-bricks-slider-arrows="true">' .
+	'  <div data-bricks-slide><h2>Slide 1</h2></div>' .
+	'  <div data-bricks-slide><h2>Slide 2</h2></div>' .
+	'</div>'
+);
+if ( assert_not_wp_error( 'slider-nested converts', $res ) ) {
+	$slider = $res['sections'][0]['structure']['children'][0]['children'][0] ?? [];
+	assert_eq( 'slider type', 'slider-nested', $slider['type'] ?? null );
+	assert_true( 'slider autoplay coerced to bool', ( $slider['element_settings']['autoplay'] ?? null ) === true );
+	assert_eq( 'two slides', 2, count( $slider['children'] ?? [] ) );
+	$first_slide = $slider['children'][0] ?? [];
+	$first_slide_h2 = $first_slide['children'][0] ?? [];
+	assert_eq( 'first slide heading content', 'Slide 1', $first_slide_h2['content'] ?? null );
+}
+
 // ─── Report ────────────────────────────────────────────────────────
 echo "\n";
 echo str_repeat( '─', 60 ) . "\n";

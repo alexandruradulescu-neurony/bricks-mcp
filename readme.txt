@@ -3,7 +3,7 @@ Contributors: alexradulescu
 Tags: ai, bricks builder, mcp, artificial intelligence, page builder
 Requires at least: 6.4
 Tested up to: 6.9
-Stable tag: 5.1.4
+Stable tag: 5.2.0
 Requires PHP: 8.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -193,6 +193,33 @@ Yes, when configured correctly. The plugin includes multiple security layers: Wo
 3. An AI assistant creating a Bricks Builder hero section from a plain-text prompt.
 
 == Changelog ==
+
+= 5.2.0 =
+**Rich Bricks elements via `data-bricks-element` + text-extraction fixes**
+
+A complex-section test exposed three converter gaps. v5.2.0 closes them all in one release: small text-extraction polish (formerly v5.1.5 plan) + the `data-bricks-element` extension (formerly v5.2.0 Option B).
+
+**Text-extraction fixes (Part A)**
+
+* Mixed text inside heading / text-basic / text-link / button now flattens correctly. Previously `<h1>Foo <span style="color: ...">Bar</span></h1>` lost the span content. New `extract_concatenated_text()` includes both text nodes and child element textContent. Per-span styling is sacrificed (Bricks heading is a single styled run) — text content survives.
+* Block / div / container with text-only content (no element children) now gets a synthetic `text-basic` child carrying the text. Previously `<div class="badge">99+</div>` rendered as an empty styled badge. Now the "99+" lands as a child text element. Affects any layout container used to display a single character / emoji / glyph.
+* Added `align-self` → `_alignSelf` to the top-level CSS prop map (caught as a dropped rule in the future-mfg test).
+
+**Rich elements via `data-bricks-element` convention (Part B)**
+
+Five Bricks element types accessible from HTML when the AI marks them with `data-bricks-element="..."`:
+
+* `data-bricks-element="icon"` — Bricks icon element with library + name. Attributes: `data-bricks-icon-library` (themify | ionicons | fontawesome | bxs), `data-bricks-icon-name`, `data-bricks-icon-size`, `data-bricks-icon-color`, optional `data-bricks-icon-link-href` + `data-bricks-icon-link-target`.
+* `data-bricks-element="counter"` — animated counter. Attributes: `data-bricks-count-to` (target), optional `data-bricks-count-from`, `data-bricks-count-prefix`, `data-bricks-count-suffix`, `data-bricks-count-duration` (ms).
+* `data-bricks-element="accordion-nested"` — Q&A accordion. Each child `<div data-bricks-accordion-title="Q">A...</div>` becomes one accordion item. Plugin synthesizes the title-wrapper + content-wrapper structure Bricks expects.
+* `data-bricks-element="tabs-nested"` — tabbed content. Each child `<div data-bricks-tab-label="Day 1">…</div>` becomes one tab. Plugin builds the two-block structure (tab-menu + tab-content with tab-pane per item).
+* `data-bricks-element="slider-nested"` — carousel. Each child `<div data-bricks-slide>…</div>` becomes one slide. Slider-level attrs (`data-bricks-slider-autoplay`, `-arrows`, `-dots`, `-per-page`, `-gap`, `-speed`, `-loop`) map to element settings; string `"true"`/`"false"` are coerced to booleans.
+
+`process_children` now allows tags outside TAG_MAP through the rich-element path. So `<i data-bricks-element="icon">` works even though `<i>` isn't in the standard tag map.
+
+Knowledge doc `data/knowledge/html-build.md` documents all five conventions with examples.
+
+Smoke runner extended: 97 assertions (was 62) covering the new behaviors — mixed-text heading, block-with-text fallback, all five rich elements, tabs/accordion/slider nested structure.
 
 = 5.1.4 =
 **Efficiency: ~24 KB / ~6K tokens off the typical propose+verify cycle**

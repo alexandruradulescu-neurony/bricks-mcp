@@ -132,6 +132,84 @@ After calling `build_from_html`, the response contains:
 
 Inspect `html_mode.css_rules_dropped` after the build. If a style you cared about doesn't appear there AND doesn't appear in the rendered result, that's a normalizer drop — switch to `style_overrides` via schema mode for that property.
 
+## Rich Bricks elements via `data-bricks-element` (v5.2.0+)
+
+HTML's vocabulary doesn't cover Bricks-specific element types like icons (with library + name picker), counters (animated 0→N), or the nested accordion / tabs / slider components. The converter recognizes a small `data-bricks-element` convention so you can request these directly from HTML.
+
+### `data-bricks-element="icon"` — Bricks icon picker
+
+```html
+<i data-bricks-element="icon"
+   data-bricks-icon-library="themify"
+   data-bricks-icon-name="ti-truck"
+   data-bricks-icon-size="24px"
+   data-bricks-icon-color="var(--primary)"></i>
+```
+
+Recognized libraries: `themify` (`ti-*`), `ionicons` (`ion-ios-*`, `ion-md-*`), `fontawesome` (`fa-*`), `bxs` (`bxs-*`). Optional `data-bricks-icon-link-href` + `data-bricks-icon-link-target="_blank"` makes the icon clickable.
+
+The renderer uses Bricks's icon-picker so the icon shows up correctly in the editor sidebar.
+
+### `data-bricks-element="counter"` — animated counter
+
+```html
+<span data-bricks-element="counter"
+      data-bricks-count-to="1951"
+      data-bricks-count-suffix="+"
+      data-bricks-count-duration="2000"></span>
+```
+
+All settings optional except `data-bricks-count-to`. Also supported: `data-bricks-count-from`, `data-bricks-count-prefix`. Animates from `from` to `to` over `duration` milliseconds when scrolled into view.
+
+### `data-bricks-element="accordion-nested"` — collapsible Q&A
+
+```html
+<div data-bricks-element="accordion-nested" class="faq">
+  <div data-bricks-accordion-title="How fast can you arrive?">
+    Average response time is 15 minutes in Bucharest.
+  </div>
+  <div data-bricks-accordion-title="What does it cost?">
+    Tariffs start at 200 lei for distances under 10 km.
+  </div>
+</div>
+```
+
+Each child div with `data-bricks-accordion-title="..."` becomes one accordion item. The plugin synthesizes the Bricks-required nested structure (title-wrapper block + content-wrapper block per item).
+
+The default Bricks accordion icon (`ion-ios-arrow-forward`) is auto-applied; override per item via inline classes if needed.
+
+### `data-bricks-element="tabs-nested"` — tabbed content
+
+```html
+<div data-bricks-element="tabs-nested" class="services-tabs">
+  <div data-bricks-tab-label="Tractări">
+    <p>Asistență rutieră 24/7 pentru orice tip de vehicul.</p>
+  </div>
+  <div data-bricks-tab-label="Intervenții">
+    <p>Echipa noastră ajunge la tine în maxim 30 de minute.</p>
+  </div>
+</div>
+```
+
+Each child div with `data-bricks-tab-label="..."` becomes one tab. The plugin builds the two-block structure Bricks needs: a tab-menu (label divs) + tab-content (pane blocks). Inner content of each item is converted normally — paragraphs, headings, images all work.
+
+### `data-bricks-element="slider-nested"` — carousel
+
+```html
+<div data-bricks-element="slider-nested"
+     data-bricks-slider-autoplay="true"
+     data-bricks-slider-arrows="true"
+     data-bricks-slider-dots="false"
+     data-bricks-slider-per-page="2"
+     data-bricks-slider-gap="20"
+     data-bricks-slider-speed="500">
+  <div data-bricks-slide><h2>Slide 1</h2><p>...</p></div>
+  <div data-bricks-slide><h2>Slide 2</h2><p>...</p></div>
+</div>
+```
+
+Each `<div data-bricks-slide>` becomes one slide block. Slider-level `data-bricks-slider-*` attrs map to element settings (autoplay, arrows, dots, perPage, gap, speed, loop). String "true"/"false" are coerced to booleans.
+
 ## Common mistakes
 
 - **Inventing classes**: writing `class="my-cool-button"` when the site has `cta--primary` instead. Always read `global_class:list` first and pick from real names.
